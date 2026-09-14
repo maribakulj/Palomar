@@ -1,4 +1,4 @@
-# WP-0 spike — FRBRisation on real INTERMARC (findings)
+# WP-0 spike — WEMI derivation on real INTERMARC (findings)
 
 - Status: **spike (throwaway)** — empirical input to ADR 0016 (D5 / D6 / D11),
   not production code.
@@ -146,7 +146,7 @@ WEMI / D8 claim was an artefact of a showcase example.**
   other set** (Hugo, Gracq, monographs, music, periodicals, youth, analytics) —
   **~7% overall**. Verified: `145` (and 240/740 uniform titles) are genuinely
   *absent* elsewhere, not a parser gap. *Madame Bovary* is the BnF's flagship
-  FRBR-ised example; for the **bulk of the catalogue, Works are not linked → they
+  WEMI-derived example; for the **bulk of the catalogue, Works are not linked → they
   must be inferred, not looked up.**
 
 **Caveat on this figure (verified 2026-06-01) — it is contaminated; the number
@@ -157,7 +157,7 @@ is a category error. Among *bibliographic* records only it is ≈12%, still
 essentially just the *Madame Bovary* showcase; and even that under-counts,
 because work-link fields are **material-type-specific** (monographs `145`; music
 links to Work authorities via `7XX`/`730`). The *direction* (explicit Work links
-are sparse in bib records outside FRBR pilots) likely holds; the *rate* needs
+are sparse in bib records outside LRM pilots) likely holds; the *rate* needs
 record-type- and material-type-aware parsing. Note too: **Works do exist as
 authorities** — `aut-oeuvres-musicales` are F1 Works (`144` heading + `100`
 composer + ISNI) — so "Works aren't catalogued" is too strong for domains like
@@ -169,7 +169,7 @@ What stands, what is retracted:
 - ✅ **Agent reconciliation is a lookup, robustly** — `100 $3` (and `6XX`/`7XX`
   $3) is present across *all* genres. The first spike's finding generalises.
 - ❌ **"WEMI linking is a lookup → D8 resolved" is retracted.** True only for the
-  ~7% already FRBR-ised. The dominant path is **inference**, which the spikes did
+  ~7% already WEMI-derived. The dominant path is **inference**, which the spikes did
   *not* exercise (the showcase clustered by lookup, with no Work-synthesis
   cascade). **D8 reverts to unconfirmed.**
 - ⚠️ **The fallback key is fragile.** Even within *Madame Bovary*, the one Work
@@ -180,7 +180,7 @@ What stands, what is retracted:
 - ⚠️ **Work-link fields are heterogeneous by material type** (`145` monographs;
   `730`/`7XX` name-title for music). The monograph-centric `145` assumption does
   not generalise.
-- ⚠️ **Measuring FRBRisation fidelity is itself hard:** ground truth is sparse
+- ⚠️ **Measuring WEMI-derivation fidelity is itself hard:** ground truth is sparse
   exactly on the genres that need inference. A real evaluation needs labelled
   data / BnF's own Work authorities — risk **R4** (data + oracle) biting as the
   roadmap warned.
@@ -188,7 +188,7 @@ What stands, what is retracted:
 ## Net (corrected)
 
 The substrate decisions hold and **agent reconciliation is de-risked**. But
-**Work / FRBRisation is *characterised, not de-risked*** — and it looks *harder*
+**Work / WEMI derivation is *characterised, not de-risked*** — and it looks *harder*
 than the showcase suggested: inference dominates, ground truth is sparse, the
 fallback key needs uniform titles. **D8 is reopened** pending an inference-path
 spike. This is the spike phase doing its job — failing cheaply now, before WP-1

@@ -9,8 +9,8 @@
 ;;
 ;; Run: clojure -M:sandbox -i dev/spike/entity_resolution.clj
 (require '[clojure.string :as str]
-         '[regesta.plugins.intermarc :as im]
-         '[regesta.text :as text])
+         '[palomar.plugins.intermarc :as im]
+         '[palomar.text :as text])
 
 (defn one [r p] (->> (:assertions r) (filter #(= p (:predicate %))) first :value))
 

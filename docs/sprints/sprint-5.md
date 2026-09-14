@@ -34,18 +34,18 @@ Read this file first, then:
    compiler emits ordinary assertions whose subjects happen to be
    fragment ids. This is the single most important design constraint
    for M4.
-2. ADR 0012 — fragment id scheme and `regesta.model/mint-fragment-id`,
+2. ADR 0012 — fragment id scheme and `palomar.model/mint-fragment-id`,
    already in code.
 3. ADR 0009 §Decision, §Qualifier (revised), and §Schema (revised) —
    the mapping schema, the qualifier semantics M4 must implement, and
    the clarification that "compiled rule-DSL rules" means
    runtime-shaped compiled rules with bespoke runners, not data-form
    `Rule` maps. M4.A's design choice (Piste 2) lives there.
-4. `src/regesta/plugins/mapping.clj` — namespace docstring covers the
-   compiler shape and the M4.A/M4.B split. `regesta.rules/compiled-rule`
+4. `src/palomar/plugins/mapping.clj` — namespace docstring covers the
+   compiler shape and the M4.A/M4.B split. `palomar.rules/compiled-rule`
    is the small constructor used to bridge mapping-compilation output
    into the runtime's compiled-rule contract.
-5. `src/regesta/plugins.clj` — namespace docstring explains the design
+5. `src/palomar/plugins.clj` — namespace docstring explains the design
    choices made during M2 (registration is order-insensitive,
    `:rules` / `:mapping` are shallow-validated, etc.).
 6. The git log on `claude/epic-wozniak-osQSK` for the sequence of
@@ -75,10 +75,10 @@ qualifier semantics.
 
 ## Modules
 
-### M1 — Fragment minting (`regesta.model`)
+### M1 — Fragment minting (`palomar.model`)
 
-Files: extend `src/regesta/model.clj`, extend
-`test/unit/regesta/model_test.clj`.
+Files: extend `src/palomar/model.clj`, extend
+`test/unit/palomar/model_test.clj`.
 
 Deliverables:
 
@@ -95,10 +95,10 @@ Deliverables:
 Dependencies: none.
 Estimate: ~50 LOC + ~150 LOC tests. Under one day.
 
-### M2 — Plugin protocol and registry (`regesta.plugins`)
+### M2 — Plugin protocol and registry (`palomar.plugins`)
 
-Files: replace the current `src/regesta/plugins.clj` stub with a full
-implementation, create `test/unit/regesta/plugins_test.clj`.
+Files: replace the current `src/palomar/plugins.clj` stub with a full
+implementation, create `test/unit/palomar/plugins_test.clj`.
 
 Deliverables:
 
@@ -118,10 +118,10 @@ Deliverables:
 Dependencies: none.
 Estimate: ~250 LOC + ~300 LOC tests. About two days.
 
-### M3 — Transform stdlib (`regesta.plugins.transforms`)
+### M3 — Transform stdlib (`palomar.plugins.transforms`)
 
-Files: create `src/regesta/plugins/transforms.clj`, create
-`test/unit/regesta/plugins/transforms_test.clj`.
+Files: create `src/palomar/plugins/transforms.clj`, create
+`test/unit/palomar/plugins/transforms_test.clj`.
 
 Deliverables:
 
@@ -136,10 +136,10 @@ Deliverables:
 Dependencies: M2 (extension mechanism lives in the registry).
 Estimate: ~120 LOC + ~150 LOC tests. About one day.
 
-### M4 — Mapping schema and compiler (`regesta.plugins.mapping`)
+### M4 — Mapping schema and compiler (`palomar.plugins.mapping`)
 
-Files: create `src/regesta/plugins/mapping.clj`, create
-`test/unit/regesta/plugins/mapping_test.clj`.
+Files: create `src/palomar/plugins/mapping.clj`, create
+`test/unit/palomar/plugins/mapping_test.clj`.
 
 Deliverables:
 
@@ -168,11 +168,11 @@ Estimate: ~200 LOC + ~350 LOC tests. About two days. Down from the
 initial ~300 LOC estimate because mapping rules never mint fragments
 themselves — that work is M5's.
 
-### M5 — Generic shape adapter (`regesta.plugins.shape`)
+### M5 — Generic shape adapter (`palomar.plugins.shape`)
 
-Files: create `src/regesta/plugins/shape.clj`, create
-`test/unit/regesta/plugins/shape_test.clj`, create
-`test/integration/regesta/shape_integration_test.clj`.
+Files: create `src/palomar/plugins/shape.clj`, create
+`test/unit/palomar/plugins/shape_test.clj`, create
+`test/integration/palomar/shape_integration_test.clj`.
 
 Deliverables:
 
@@ -199,11 +199,11 @@ ingest config).
 
 Estimate: ~350 LOC + ~400 LOC tests. About three days.
 
-### M6 — Reference plugin and integration (`regesta.plugins.shape`)
+### M6 — Reference plugin and integration (`palomar.plugins.shape`)
 
-Files: extend `src/regesta/plugins/shape.clj` with the plugin map
+Files: extend `src/palomar/plugins/shape.clj` with the plugin map
 itself, extend
-`test/integration/regesta/shape_integration_test.clj`.
+`test/integration/palomar/shape_integration_test.clj`.
 
 Deliverables:
 
@@ -265,7 +265,7 @@ path is about eight days; M1/M2/M3 fit alongside without extending it.
    landed in PW.2 before M5.A consumes them.
 2. **Cross-format equivalence definition.** *Resolved by M5.B.* The
    pair fixture (one logical record, two serializations) lives in
-   `regesta.plugins.shape-test/cross-format-record-pairs`, and the
+   `palomar.plugins.shape-test/cross-format-record-pairs`, and the
    equivalence claim is split into four assertions: fragment ids
    match, record references match, fragment value coords match, and
    qualifier values match (under format-specific predicate names —

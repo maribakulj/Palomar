@@ -23,16 +23,16 @@ the work-package plan.
 | # | Original sprint | Status today |
 |---|-----------------|--------------|
 | 0 | Foundations (scaffolding, CI, ADRs 0001–0006, `:sandbox`) | **KEPT** |
-| 1 | Canonical model (`regesta.model`, Malli, EDN round-trip) | **KEPT** |
-| 2 | Rule DSL (`regesta.rules`) | **KEPT** |
-| 3 | Runtime (`regesta.runtime`, phases) | **KEPT** |
-| 4 | Pipeline + diagnostics (`regesta.diagnostics`) | **KEPT** |
+| 1 | Canonical model (`palomar.model`, Malli, EDN round-trip) | **KEPT** |
+| 2 | Rule DSL (`palomar.rules`) | **KEPT** |
+| 3 | Runtime (`palomar.runtime`, phases) | **KEPT** |
+| 4 | Pipeline + diagnostics (`palomar.diagnostics`) | **KEPT** |
 | 5 | Shape adapter + plugins + mapping + fragments | **KEPT** |
-| 6 | Canonical vocabulary plugin (`regesta.plugins.canonical`) | **KEPT, extended (8→9 predicates)** |
+| 6 | Canonical vocabulary plugin (`palomar.plugins.canonical`) | **KEPT, extended (8→9 predicates)** |
 | 7 | Dublin Core | **DELIVERED** (under WP-4) |
 | 8 | **CSV adapter + MARC-XML-lite** | **DEAD** — never built; superseded by *full* MARC21 / UNIMARC / INTERMARC |
-| 9 | Repair + apply-repairs | **DELIVERED** (`regesta.curate`, WP-8) |
-| 10 | CLI | **DELIVERED** (`regesta.cli`, WP-8) |
+| 9 | Repair + apply-repairs | **DELIVERED** (`palomar.curate`, WP-8) |
+| 10 | CLI | **DELIVERED** (`palomar.cli`, WP-8) |
 | 11 | Hardening | **= WP-9 (this pass)** |
 | 12 | Docs + release | **= WP-9 (pending)** |
 
@@ -47,13 +47,13 @@ confirmed by the consumer map (`model` has 20+ requirers, `diagnostics` 13+, `ru
 
 | Component | ADR | Status | Evidence |
 |-----------|-----|--------|----------|
-| `regesta.model` (assertion IR) | 0001 | **KEPT** | ground truth; 20+ src requirers |
-| `regesta.rules` (rule DSL) | 0002 | **KEPT** | 5 requirers; compiles all rules/mappings |
-| `regesta.runtime` (phases) | 0004 | **KEPT** | 4 requirers; `run-phase`/`run-pipeline` everywhere |
-| `regesta.diagnostics` | 0005 | **KEPT** | 13+ requirers; status model now also feeds `curate` |
-| `regesta.plugins` / `.transforms` / `.mapping` / `.shape` | 0007/0009/0010 | **KEPT** | plugin spine; `shape` used by DC |
+| `palomar.model` (assertion IR) | 0001 | **KEPT** | ground truth; 20+ src requirers |
+| `palomar.rules` (rule DSL) | 0002 | **KEPT** | 5 requirers; compiles all rules/mappings |
+| `palomar.runtime` (phases) | 0004 | **KEPT** | 4 requirers; `run-phase`/`run-pipeline` everywhere |
+| `palomar.diagnostics` | 0005 | **KEPT** | 13+ requirers; status model now also feeds `curate` |
+| `palomar.plugins` / `.transforms` / `.mapping` / `.shape` | 0007/0009/0010 | **KEPT** | plugin spine; `shape` used by DC |
 | fragments (`mint-fragment-id`) | 0011/0012 | **KEPT** | minting lifted to `infer` by 0014 |
-| `regesta.plugins.canonical` | 0003 | **KEPT, EXTENDED** | required by `validate`; vocab grew 8→9 (`:canon/uniform-title`) this line |
+| `palomar.plugins.canonical` | 0003 | **KEPT, EXTENDED** | required by `validate`; vocab grew 8→9 (`:canon/uniform-title`) this line |
 
 **No Sprint 0–6 component is dead.** The only substrate thing ever removed was the
 cargo-culted `dev` extra-path (CHANGELOG › Removed).
@@ -64,22 +64,22 @@ cargo-culted `dev` extra-path (CHANGELOG › Removed).
 - **Core (4):** `model`, `rules`, `runtime`, `diagnostics`.
 - **Plugin infra (6):** `plugins`, `plugins.transforms`, `plugins.mapping`, `plugins.shape`, `plugins.canonical`, `text`.
 - **Spokes (8 importers):** `intermarc`, `marc21`, `unimarc`, `marcxml`, `dc`, `mods`, `iiif`, `intermarc-ng`.
-- **Pivot + exporters (12):** `lrmoo`, `lrmoo.project`, `lrmoo.view`, `lrmoo.crm`, `lrmoo.export`, `lrmoo.linked-art`, `lrmoo.crm-import`, `intermarc.frbrise`; `dc.export`, `marc21.export`, `mods.export`, `iiif.export`.
+- **Pivot + exporters (12):** `lrmoo`, `lrmoo.project`, `lrmoo.view`, `lrmoo.crm`, `lrmoo.export`, `lrmoo.linked-art`, `lrmoo.crm-import`, `intermarc.wemi`; `dc.export`, `marc21.export`, `mods.export`, `iiif.export`.
 - **Pipeline + entry (8):** `convert`, `validate`, `conformance`, `curate`, `reconcile`, `loss-report`, `spokes`, `cli`.
-- **CI:** `test/junit/regesta/junit_runner.clj` (drives the JUnit CI job — *not* dead).
+- **CI:** `test/junit/palomar/junit_runner.clj` (drives the JUnit CI job — *not* dead).
 - **ADRs:** all 19 (0001–0019, Accepted).
 - **Docs:** `roadmap-v1`, the 7 `eval/` docs, the 2 `cleanup/` docs, the spike, `sprints/sprint-5+6`, the `wp0-*` docs, `museum-spoke-scoping`.
 - **Fixtures + provenance:** everything a test reads, plus `MANIFEST.tsv` / `documentary/README.md` (the provenance record) and `c2-gold/bovary/workmanifested.rq` (the SPARQL that *built* the C2 gold — reproducibility provenance, keep).
 
-> Two survey claims corrected by manual check: `regesta.plugins.canonical` **is**
+> Two survey claims corrected by manual check: `palomar.plugins.canonical` **is**
 > `:require`d by `validate.clj`; `test/junit/` holds the **CI runner** (both KEEP).
 
 ### DELETE — genuinely dead (one item)
-1. **`src/regesta/app.clj`** — an empty *"Not yet implemented"* stub listing
-   aspirational commands; the real CLI is `regesta.cli`. Referenced only by
+1. **`src/palomar/app.clj`** — an empty *"Not yet implemented"* stub listing
+   aspirational commands; the real CLI is `palomar.cli`. Referenced only by
    `smoke_test.clj` (a `find-ns` load-check). → remove the file **and** the
-   `[regesta.app]` require + the `(find-ns 'regesta.app)` assertion in
-   `test/unit/regesta/smoke_test.clj`.
+   `[palomar.app]` require + the `(find-ns 'palomar.app)` assertion in
+   `test/unit/palomar/smoke_test.clj`.
 
 ### MODIFY — stale docs (the DoD #7 "README reflects V1" work)
 1. **`CHANGELOG.md` `[Unreleased]` header (l.14–15)** — *"Sprint 7 (Dublin Core
@@ -88,7 +88,7 @@ cargo-culted `dev` extra-path (CHANGELOG › Removed).
 2. **`README.md`** — half-updated: it carries the redefinition note + the accurate
    scope-reversal, but still **foregrounds the old 12-sprint plan** and a
    Sprint-labelled structure diagram, and **omits** the delivered surface
-   (conformance, streaming, curation, the 8 spokes, the loss report, FRBRisation,
+   (conformance, streaming, curation, the 8 spokes, the loss report, WEMI derivation,
    the CLI verbs). DoD #7 → restructure so the **rich-pivot V1 is primary** and the
    sprint history is clearly historical.
 3. **`docs/roadmap-v1.md`** — the "Current state (2026-06-03)" header is date-stale
@@ -99,7 +99,7 @@ cargo-culted `dev` extra-path (CHANGELOG › Removed).
 
 ### DECIDE — unused fixtures for formats with no spoke (your call)
 A cluster of committed fixtures are real third-party samples (from the earlier
-data-acquisition pass) for formats Regesta has **no importer** for, so no test reads
+data-acquisition pass) for formats Palomar has **no importer** for, so no test reads
 them: **EAD** (2002/3), **EAC-CPF**, **MADS** (`.ttl`/`.rdf`), **METS** (×3),
 **ALTO** (`gallica/alto`), `bnf-rdf/machiavel.json`, the **CIDOC_CRM_v7.1.3.rdf**
 ontology (424 KB), and the INTERMARC **ISO-2709 `.not`** binaries (×4 — a different
@@ -117,7 +117,7 @@ future-spoke seeds *or* dead weight. Two honest options:
 After keep/delete/modify lands: the **security statement** — plugin-trust model
 (ADR 0010 trust-on-require vs institutional deployment) plus XML input hardening
 (DTD refusal closing billion-laughs / XXE; **landed** in `SECURITY.md` +
-`regesta.xml`) — then edge-case + golden tests, loss-report UX, and the
+`palomar.xml`) — then edge-case + golden tests, loss-report UX, and the
 **v1.0.0** cut.
 
 ---

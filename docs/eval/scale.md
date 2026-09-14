@@ -1,19 +1,19 @@
 # Scale & performance budget (WP-7 / DoD #6)
 
-What `regesta.convert/convert-stream` does, measured, and where the remaining bound
-is — stated, not hidden. Tests: `regesta.convert-stream-test`.
+What `palomar.convert/convert-stream` does, measured, and where the remaining bound
+is — stated, not hidden. Tests: `palomar.convert-stream-test`.
 
 ## Why streaming is sound here (not the roadmap's "hard" clustering)
 
 WP-7 flagged "cross-record Work clustering at scale, inherently global/stateful and
-in tension with streaming" as the hard part. It is **not** hard in Regesta's design,
+in tension with streaming" as the hard part. It is **not** hard in Palomar's design,
 because clustering is **id-collision**, not a pairwise join: a Work's id is a pure
 content hash of `agent + uniform/transcribed title` (ADR 0008). Two records of the
 same Work mint the *same* id **without being compared** — convergence is a property
 of the ids, realised when the emitted triples are aggregated by a downstream store
 (roadmap §10, "converter → store"). So per-record conversion has **no cross-record
 state**, and the converter can stream its triples in constant memory; the store (or
-any `sort -u`) deduplicates by id. Regesta need never hold the corpus to "cluster".
+any `sort -u`) deduplicates by id. Palomar need never hold the corpus to "cluster".
 
 ## The mechanism
 
@@ -44,7 +44,7 @@ constant) and the **working set does not grow with N** — 100 000 records ran i
 footprint growth). Reproduce:
 
 ```
-clojure -J-Xmx512m -M:sandbox:test/unit -n regesta.convert-stream-test
+clojure -J-Xmx512m -M:sandbox:test/unit -n palomar.convert-stream-test
 ```
 
 (Numbers are machine-relative; the committed tests assert the *properties* —
@@ -60,7 +60,7 @@ single large *flat* MARCXML dump streams in bounded memory. It is wired as a plu
 `convert/stream-source`) and surfaced as the CLI verb:
 
 ```
-regesta convert <big.xml> --from marc21 --to ntriples --stream --out <file>
+palomar convert <big.xml> --from marc21 --to ntriples --stream --out <file>
 ```
 
 **End-to-end CLI measurement** (the 56 000-record / 97 MB flat dump → N-Triples,

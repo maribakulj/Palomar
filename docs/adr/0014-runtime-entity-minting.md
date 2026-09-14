@@ -6,7 +6,7 @@
 - Builds on: ADR 0005 (status model), ADR 0008 (idempotency at merge),
   ADR 0012 (fragment identity scheme), ADR 0013 (the rich pivot it serves)
 - Detailed elsewhere: the synthesized-entity identity scheme, clustering, and
-  reconciliation — FRBRisation ADR (forthcoming; D5 / D6 / D11)
+  reconciliation — WEMI-derivation ADR (forthcoming; D5 / D6 / D11)
 - Decision record: [`../wp0-decisions.md`](../wp0-decisions.md) (D4)
 
 ## Context
@@ -17,7 +17,7 @@ Deriving Works and Expressions that exist in *no* source record means the
 importer produced.
 
 ADR 0011 introduced minting but restricted it to **ingest** ("ingest-only").
-FRBRisation cannot honour that: it is inference *over* normalized assertions,
+WEMI derivation cannot honour that: it is inference *over* normalized assertions,
 clustering across many records, so it must mint during `infer`.
 
 Three constraints bound the decision:
@@ -38,20 +38,20 @@ Three constraints bound the decision:
    inferred-vs-ingested distinction lives in *provenance*, not status — ADR 0005;
    this also preserves dedup, since assertion identity excludes provenance,
    ADR 0008) plus a `:confidence`. By the engine default
-   (`regesta.rules/default-status-for-phase`), `:infer` / `:repair` productions
+   (`palomar.rules/default-status-for-phase`), `:infer` / `:repair` productions
    are **`:proposed`** — proposals until confirmed (the conservative,
    precision-first default). The D7 hybrid's *high-confidence auto-commit*
    (promotion to `:asserted`) is **now implemented** as a commit policy: a minting
    rule sets `:status :asserted` for claims resting on a determinate identifier
    (the embedded `145 $3` link, the record ARK) and leaves fuzzy claims
-   `:proposed` (`intermarc/frbrise`); the string-key floor projection
+   `:proposed` (`intermarc.wemi`); the string-key floor projection
    (`lrmoo/project`) proposes everything; and the export can ship just the
    certified subgraph (`:certified-only?`). There is **no** `:inferred` status
    (ADR 0005). The entity
    *declaration* itself is structural — it goes into `:entities`, statusless.
 
 3. **`repair` proposes, never commits, entities.** Per the dual status model and
-   the confidence-gated FRBRisation decision (D7), entity creation in `repair`
+   the confidence-gated WEMI-derivation decision (D7), entity creation in `repair`
    is `:proposed` and surfaced via `apply-repairs`. The high-confidence
    automatic path is `infer`; the uncertain tail is proposed.
 
@@ -59,7 +59,7 @@ Three constraints bound the decision:
    does **not** compute entity identity. The minting rule obtains a stable id
    from a resolver provided by the plugin / configuration (the identity-resolver
    seam, D5). The runtime only (a) permits minting and (b) merges by that id.
-   Because the id is a deterministic function of content (FRBRisation ADR, D5),
+   Because the id is a deterministic function of content (WEMI-derivation ADR, D5),
    the existing idempotent merge (ADR 0008) deduplicates re-mints with **no new
    machinery**: same content → same id → same entity. This keeps the core change
    to a minimal, vocabulary-blind *permission* — no identity policy enters the
@@ -71,7 +71,7 @@ Three constraints bound the decision:
 ## Alternatives considered
 
 - **Keep ingest-only; pre-compute entities before the pipeline.** Rejected:
-  FRBRisation is inference over normalized assertions (cross-record clustering);
+  WEMI derivation is inference over normalized assertions (cross-record clustering);
   it cannot run before ingest/normalize. Minting must be a pipeline phase.
 - **Mint freely in any phase (normalize / infer / repair).** Rejected: enlarges
   the idempotency surface and makes "where do entities appear?" hard to reason
@@ -99,12 +99,12 @@ Three constraints bound the decision:
   lists its manifestations); diagnostics and reporting should render it.
 - The cascade case (mint a Work, then link its Expressions in the same phase)
   interacts with ADR 0004 (fixed passes vs fixpoint, D8); decided empirically in
-  the FRBRisation ADR / WP-0 spike.
+  the WEMI-derivation ADR / WP-0 spike.
 
 ## What this ADR does not decide
 
 - *How* identity is computed — the work-key, the authority resolver, clustering
-  — FRBRisation ADR (D5 / D6), extending ADR 0012.
-- FRBRisation control thresholds (D7) and reconciliation scope (D11) —
-  FRBRisation ADR.
+  — WEMI-derivation ADR (D5 / D6), extending ADR 0012.
+- WEMI-derivation control thresholds (D7) and reconciliation scope (D11) —
+  WEMI-derivation ADR.
 - Fixed passes vs scoped fixpoint (D8) — note on ADR 0004.

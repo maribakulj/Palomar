@@ -5,7 +5,7 @@
   keeps a veto on any. Residual tuning (key composition, exact vocab lists) is
   noted per decision and resolved during the WP-0 spike/build.
 - Date: 2026-05-31
-- Feeds: the WP-0 ADRs (Pivot, Loss-model, FRBRisation, the ADR 0011 minting
+- Feeds: the WP-0 ADRs (Pivot, Loss-model, WEMI-derivation, the ADR 0011 minting
   amendment, the ADR 0008/0004 reconciliations) defined in
   [`roadmap-v1.md`](./roadmap-v1.md).
 
@@ -14,7 +14,7 @@ truth + derived typed view in a plugin) and **LRMoo** as the pivot vocabulary.
 C stays valid as long as ADR 0003 (agnostic core) stands.
 
 The decisions below are grouped: **A. Pivot shape · B. Identity & minting ·
-C. FRBRisation control · D. Loss & institutional scope.** Each is load-bearing
+C. WEMI-derivation control · D. Loss & institutional scope.** Each is load-bearing
 for at least one WP-0 ADR, so each must be settled before that ADR is written.
 
 > **Design rule (added 2026-05-31, per maintainer).** The test for deferring
@@ -34,7 +34,7 @@ for at least one WP-0 ADR, so each must be settled before that ADR is written.
 | D4 | Mint in `infer`; `repair` proposes | ✅ accepted |
 | D5 | Identity = resolver seam + hash + dump-based authority (V1) | ✅ accepted (key/snapshot tuned in spike) |
 | D6 | Batch-local clustering + authority IRIs | ✅ accepted |
-| D7 | Confidence-gated hybrid FRBRisation | ✅ accepted |
+| D7 | Confidence-gated hybrid WEMI derivation | ✅ accepted |
 | D8 | Bounded fixed passes | ✅ accepted (revisit only if spike forces) |
 | D9 | Loss = source-native unit, both edges, categorised | ✅ accepted |
 | D10 | Universal / dialect-agnostic MARC (MARC21 + UNIMARC) | ✅ accepted (first target with partner) |
@@ -147,7 +147,7 @@ equal across records describing the same Work (clustering).
     heavier; partly V2.
 - **Local blank-node identity, reconcile later.**
   - *Pro:* simplest minting; no premature identity commitment.
-  - *Con:* no clustering → every record gets its own Work → defeats FRBRisation.
+  - *Con:* no clustering → every record gets its own Work → defeats WEMI derivation.
 
 **Recommendation (revised per the design rule above): build an *identity-
 resolver seam* in V1 — `resolve-identity(key-material) -> stable-id [+ authority
@@ -169,13 +169,13 @@ Manifestation / Item) is itself a sub-decision. **Decision: accepted — resolve
 Across what set do we cluster Works?
 
 - **Batch-local only** (within one run; no persistence).
-  - *Pro:* honours "Regesta is not a storage system"; deterministic per run.
+  - *Pro:* honours "Palomar is not a storage system"; deterministic per run.
   - *Con:* can't cluster against unloaded records; cross-run consistency relies
     entirely on key stability (D5).
 - **External authority lookup** (online reconciliation, no local store).
   - *Pro:* better cross-institution identity.
   - *Con:* network / coverage / non-determinism; V2-ish.
-- **Persistent identity store** maintained by Regesta.
+- **Persistent identity store** maintained by Palomar.
   - *Pro:* true incremental cross-run clustering.
   - *Con:* violates the no-storage principle; large architectural addition.
 
@@ -227,18 +227,18 @@ differ wildly in tractability.
 
 ---
 
-## C. FRBRisation control
+## C. WEMI-derivation control
 
-### D7 — Automatic vs human-in-the-loop FRBRisation
-When Regesta synthesizes WEMI, is it machine truth, or proposals a cataloguer
+### D7 — Automatic vs human-in-the-loop WEMI derivation
+When Palomar synthesizes WEMI, is it machine truth, or proposals a cataloguer
 accepts/rejects (ADR 0005)?
 
 - **Automatic in `infer`** (minted = `:asserted` machine truth, `:pass :infer`
   provenance, exported directly).
   - *Pro:* scales to millions; fits batch conversion; confidence + loss convey
     uncertainty.
-  - *Con:* wrong FRBRisation ships unattended; institutions may distrust it.
-- **Human-in-the-loop** (FRBRisation emits `:proposed` repairs; `apply-repairs`
+  - *Con:* a wrong WEMI derivation ships unattended; institutions may distrust it.
+- **Human-in-the-loop** (WEMI derivation emits `:proposed` repairs; `apply-repairs`
   surfaces them).
   - *Pro:* control, auditability; matches cataloguer trust.
   - *Con:* doesn't scale to millions; turns conversion into a review project.
@@ -255,7 +255,7 @@ for the low-confidence tail. The threshold is a documented, tunable policy.
 ### D8 — Fixpoint vs bounded passes for `infer` (ADR 0004)
 WEMI inference can cascade (mint a Work, then link sibling Expressions).
 
-- **Keep fixed/bounded passes,** designing FRBRisation to converge in a small
+- **Keep fixed/bounded passes,** designing WEMI derivation to converge in a small
   declared number (e.g. synthesize, then link).
   - *Pro:* preserves ADR 0004 + "explicit over implicit"; predictable cost; no
     termination risk.
@@ -265,7 +265,7 @@ WEMI inference can cascade (mint a Work, then link sibling Expressions).
   - *Pro:* expressive; natural for graph inference.
   - *Con:* reopens ADR 0004; less predictable; oscillation risk (capped).
 
-**Recommendation: keep bounded fixed passes; design FRBRisation to converge in a
+**Recommendation: keep bounded fixed passes; design WEMI derivation to converge in a
 small declared number,** and escalate to scoped-fixpoint-with-cap *only if the
 WP-0 spike proves fixed passes can't express WEMI linking.* Decide empirically
 from the spike, not a priori. **Decision: accepted — bounded fixed passes (by recommendation, 2026-05-31); escalate to scoped-fixpoint-with-cap only if proven necessary. Spike (2026-06-01) — corrected: explicit `145 $3` Work links are sparse in bibliographic records (essentially only the Madame Bovary showcase; the first 7% figure wrongly mixed in authority records — withdrawn); the inference path was not exercised, so bounded passes remain the default but D8 is *unconfirmed* pending a Work-synthesis spike.**
@@ -305,7 +305,7 @@ partner decision (roadmap § 7).
   - *Pro:* best-documented, most tooling, broadest applicability.
   - *Con:* not BnF's native dialect.
 - **UNIMARC first** (IFLA; closer to BnF's public data).
-  - *Pro:* aligns with the French ecosystem; FRBR-friendly heritage.
+  - *Pro:* aligns with the French ecosystem; LRM-friendly heritage.
   - *Con:* less anglophone tooling.
 - **INTERMARC** (BnF internal).
   - *Pro:* exactly BnF's data.

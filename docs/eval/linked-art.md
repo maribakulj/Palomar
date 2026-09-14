@@ -1,19 +1,19 @@
 # Linked Art export — the verified WEMI → Linked Art mapping
 
-`regesta.plugins.lrmoo.linked-art` serialises the WEMI view as
+`palomar.plugins.lrmoo.linked-art` serialises the WEMI view as
 [Linked Art](https://linked.art) JSON-LD — the museum-sector output (the Louvre
 target). Linked Art is a profile of CIDOC-CRM expressed as a structured JSON-LD
 tree (not RDF triples-as-JSON-LD), so the export builds the resource tree Linked
 Art consumers expect.
 
 The mapping is **grounded in the official Linked Art model examples**, not guessed
-— the load-bearing decision (how to represent FRBR Work/Expression/Manifestation,
-which Linked Art has no native FRBR levels for) was taken from the examples below,
+— the load-bearing decision (how to represent the LRM Work/Expression/Manifestation
+levels, which Linked Art has no native equivalent for) was taken from the examples below,
 fetched and read directly.
 
 ## Entity mapping
 
-The FRBR chain maps to three *distinct* Linked Art resources (no collapse — Linked
+The WEMI chain maps to three *distinct* Linked Art resources (no collapse — Linked
 Art is more precise here than plain CRM, where F2/F3 both become E73):
 
 | WEMI | Linked Art type | linked by | source example |
@@ -68,7 +68,7 @@ identifier, and the Linked Art `created_by` Person carries it as `id` — an
 
 Because the ISNI is a *determinate* identifier, the agent identity is certified
 (D7) — exactly the signal real agent reconciliation needs. V1 mints it for
-INTERMARC's 100 `$1` ISNI (`regesta.plugins.intermarc.frbrise/with-identified-agent`);
+INTERMARC's 100 `$1` ISNI (`palomar.plugins.intermarc.wemi/with-identified-agent`);
 the string-only canonical floor (ADR 0003) cannot hold an authority-linked agent,
 so the floor spokes still emit a label-only creator. Cross-record agent
 de-duplication is ADR 0018 proper (deliberately not done here, though two records
@@ -79,7 +79,7 @@ with the same ISNI already mint the same agent id by content).
 - A Linked Art-**profile** serialisation, now validated with the **real**
   draft-2020-12 validator (`com.networknt/json-schema-validator`, a test-only dep
   from Maven Central) against the official `$ref`-resolved schema set, in
-  `regesta.eval.linked-art-conformance-test`. Honest calibration: that schema is
+  `palomar.eval.linked-art-conformance-test`. Honest calibration: that schema is
   *stricter than real Linked Art* (it models `carries`/`part_of` as id-only refs and
   is `additionalProperties:false`), so even Getty's own Mona Lisa example fails it.
   Our output is **cleaner** than that example — zero root-level errors, the only
