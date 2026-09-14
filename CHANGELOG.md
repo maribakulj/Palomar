@@ -171,6 +171,15 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Fixed
 
+- **README licence badge** — the badge was the dynamic
+  `img.shields.io/github/license/...` endpoint, which re-derives the licence from
+  the GitHub API on every render and is then frozen in GitHub's camo image cache;
+  it could read `unknown` even though `LICENSE` is the canonical Apache-2.0 text
+  (byte-identical) and the API reports `"spdx_id": "Apache-2.0"`. Replaced with a
+  static `badge/License-Apache_2.0-blue` badge: no API call, nothing to
+  rate-limit or stale-cache, and the licence cannot change without `LICENSE`
+  changing too.
+
 - Self-review remediation of this line's WP-6/7 work: (1) the WEMI projection's
   loss accounting (`lrmoo.project` `language-losses`/`ambiguity-losses`) now keys
   on the same `work-title` condition that decides whether an Expression is minted

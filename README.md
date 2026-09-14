@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/maribakulj/palomar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maribakulj/palomar/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/maribakulj/palomar/branch/main/graph/badge.svg)](https://codecov.io/gh/maribakulj/palomar)
-[![License](https://img.shields.io/github/license/maribakulj/palomar?color=blue)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Clojure](https://img.shields.io/badge/Clojure-1.12-5881D8?logo=clojure&logoColor=white)](https://clojure.org)
 [![Java](https://img.shields.io/badge/Java-21%2B-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
 
