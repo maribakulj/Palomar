@@ -44,7 +44,7 @@ jobs:
           cljfmt: "latest"
 
       - name: Cache Clojure deps
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.m2/repository
@@ -92,7 +92,7 @@ jobs:
           cli: "latest"
 
       - name: Cache Clojure deps
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.m2/repository
@@ -147,7 +147,7 @@ jobs:
           cli: "latest"
 
       - name: Cache Clojure deps
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.m2/repository
