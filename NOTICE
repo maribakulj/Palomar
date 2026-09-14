@@ -1,0 +1,13 @@
+Palomar
+Copyright 2026 maribakulj
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file for the
+full terms.
+
+Third-party material redistributed in this repository keeps its own licence and
+is not covered by the above. All of it lives under test/fixtures/, and each
+directory's README.md names the source and the licence it carries — among them
+BnF open data (Licence Ouverte / Etalab), the BIB-R benchmark gold (CC BY-NC,
+non-commercial evaluation only), OpenLibrary data (CC0), Library of Congress
+MARC crosswalk stylesheets (US Government work, public domain) and the Linked
+Art JSON schemas (Apache-2.0).

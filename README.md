@@ -221,7 +221,8 @@ plugin (ADR 0013), never the core.
 ├── .github/workflows/ci.yml # Lint, format, test on every push
 ├── .clj-kondo/config.edn    # Linter config
 ├── .cljfmt.edn              # Formatter config
-└── LICENSE
+├── LICENSE                  # Apache License 2.0
+└── NOTICE                   # Copyright line + third-party data licences
 ```
 
 ---
@@ -506,4 +507,9 @@ the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ## License
 
-See [LICENSE](./LICENSE).
+Palomar is licensed under the **Apache License, Version 2.0** — see
+[LICENSE](./LICENSE) for the full terms and [NOTICE](./NOTICE) for the
+copyright line.
+
+Third-party material redistributed under `test/fixtures/` keeps its own
+licence; each fixture directory's `README.md` names its source and licence.
