@@ -13,7 +13,7 @@ collapse the same person across records *and keep distinct people apart*?
   variants), the reconciliation reference. **9/10 are real**; entry 1 is the
   glitch below.
 
-## The finding (used by `regesta.eval.bnf-agent-reconciliation-test`)
+## The finding (used by `palomar.eval.bnf-agent-reconciliation-test`)
 
 Of the 100 records, **43 carry a main-entry (100 `$1`) ISNI**; they reconcile to
 **12 distinct certified agents** — because "Victor Hugo" / "Jules Verne" as a

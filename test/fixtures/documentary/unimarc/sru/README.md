@@ -2,7 +2,7 @@
 
 Real UNIMARC bibliographic records from the BnF Catalogue général SRU API
 (`recordSchema=unimarcXchange`), the BnF's public **diffusion** format. Used by
-`regesta.plugins.unimarc-test` — the third MARC-family spoke (MARC21 / INTERMARC /
+`palomar.plugins.unimarc-test` — the third MARC-family spoke (MARC21 / INTERMARC /
 UNIMARC).
 
 | File | Query | Records |

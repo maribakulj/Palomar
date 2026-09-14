@@ -5,10 +5,10 @@
   validated on a spec-faithful synthetic corpus pending native NG data)
 - Date: 2026-06-04
 - Builds on: ADR 0013 (LRMoo rich pivot — the hub), ADR 0015 (loss model — the
-  receipt of irreversibility), ADR 0016 (FRBRisation — the inference path), ADR 0017
+  receipt of irreversibility), ADR 0016 (WEMI derivation — the inference path), ADR 0017
   (entities on records — the graph IR), ADR 0001 (assertions/entities/references —
   the IR *is* a graph).
-- Demonstrated, not asserted: `regesta.plugins.lrmoo.crm-import` +
+- Demonstrated, not asserted: `palomar.plugins.lrmoo.crm-import` +
   `crm-import-test` round-trip our own CRM exports back to the LRMoo view.
 
 ## Context
@@ -44,9 +44,9 @@ export" — it is whether the source carries the WEMI/entity structure:
 | source | carries WEMI? | path in |
 |--------|---------------|---------|
 | flat MARC21 / DC | no | infer (weak) → string floor (ADR 0003) |
-| classic INTERMARC | partly (the `145 $3` link) | the `frbrise` rung (ADR 0016) |
+| classic INTERMARC | partly (the `145 $3` link) | the `derive-wemi` rung (ADR 0016) |
 | **INTERMARC-NG** (entity-relation, LRM-native) | **yes, explicitly** | **map graph→graph** to LRMoo entities, ~no inference |
-| plain CIDOC-CRM (E73/E22, FRBR never modelled) | no (collapsed) | hard, inferential, ambiguous |
+| plain CIDOC-CRM (E73/E22, LRM never modelled) | no (collapsed) | hard, inferential, ambiguous |
 
 So there is a **third spoke class — the entity-relation spoke** (INTERMARC-NG;
 later BIBFRAME, native LRM/RDF). The IR already supports it: ground truth is
@@ -69,7 +69,7 @@ CRM P-properties (verified vs `LRMoo_v1.0.owl`, `lrmoo.crm`). Therefore:
   still present**:
   - CRM that keeps the LRMoo F-classes (our additive `:crm`, an INTERMARC-NG→CRM, a
     BnF LRM graph) → recovers F1/F2/F3 **losslessly** — it is already LRM;
-  - CRM flattened to E-classes only (our `:crm-only`, a museum CRM with no FRBR) →
+  - CRM flattened to E-classes only (our `:crm-only`, a museum CRM with no LRM) →
     a node typed only `E73` **cannot** be downcast (Expression or Manifestation?);
     it is reported as `:ambiguity-collapsed` (ADR 0015).
 
@@ -99,7 +99,7 @@ not carry — the same principle as the floor spokes.
   the rule is tested on real output, with zero external data.
 - **The E-R spoke seam is real and reserved — and now built (spec-faithful).**
   INTERMARC-NG → LRMoo/CRM is the least-lossy conversion in the system (both ends
-  LRM-aligned) and probably the flagship BnF case. `regesta.plugins.intermarc-ng`
+  LRM-aligned) and probably the flagship BnF case. `palomar.plugins.intermarc-ng`
   implements it: NG entity-records (Œuvre/Expression/Manifestation) → LRMoo entities,
   the OEMI `7xx $3` relations → R3/R4/R7, reusing the `marcxml` core; agents (Person
   records + `700 A pour créateur`) surface as the identified Linked Art creator, and

@@ -75,5 +75,5 @@ fi
 
 # Banner — confirms to the agent what's available without forcing it to
 # probe.
-echo "regesta session-start: $("$BIN_DIR/cljfmt" --version)"
-echo "regesta session-start: $("$BIN_DIR/clj-kondo" --version)"
+echo "palomar session-start: $("$BIN_DIR/cljfmt" --version)"
+echo "palomar session-start: $("$BIN_DIR/clj-kondo" --version)"

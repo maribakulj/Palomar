@@ -1,4 +1,4 @@
-# Contributing to Regesta
+# Contributing to Palomar
 
 Thanks for considering a contribution. This document is the workflow:
 how branches are named, how PRs are reviewed, how architectural changes
@@ -39,12 +39,12 @@ The test tree is split into three categories at the path level:
 
 | Path                    | What lives here                                                |
 |-------------------------|----------------------------------------------------------------|
-| `test/unit/regesta/`    | Fast, hermetic, isolated to one namespace's behavior           |
-| `test/property/regesta/`| Generative invariants via `test.check` and `malli.generator`   |
-| `test/integration/regesta/` | Multi-layer scenarios that exercise the full pipeline      |
+| `test/unit/palomar/`    | Fast, hermetic, isolated to one namespace's behavior           |
+| `test/property/palomar/`| Generative invariants via `test.check` and `malli.generator`   |
+| `test/integration/palomar/` | Multi-layer scenarios that exercise the full pipeline      |
 
-Namespaces stay flat (e.g. `regesta.model-test`, not
-`regesta.unit.model-test`). The split is at the *path* level so the
+Namespaces stay flat (e.g. `palomar.model-test`, not
+`palomar.unit.model-test`). The split is at the *path* level so the
 test runner can scope to one category at a time without renaming.
 
 When you write a new test:
@@ -115,7 +115,7 @@ Soft requirements (a reviewer will catch them):
   the contract rather than the implementation.
 - Surprising decisions get a comment that explains *why*, not *what*.
 - New tests cover the happy path *and* at least one boundary case.
-- Property-based tests (`test/property/regesta/property_test.clj`) for
+- Property-based tests (`test/property/palomar/property_test.clj`) for
   any invariant that should hold over a class of inputs, not just the
   hand-picked ones.
 
@@ -127,7 +127,7 @@ adding an entry, check that:
 
 - A real plugin needs it now, not in some future sprint.
 - It cannot be expressed as a composition of existing predicates.
-- The naming makes sense for non-Regesta-experts reading rule source.
+- The naming makes sense for non-Palomar-experts reading rule source.
 
 The same discipline applies to the transform stdlib introduced in
 ADR 0009. A plugin can extend either via its `:predicates` /
@@ -152,5 +152,6 @@ suspected vulnerabilities.
 
 ## License
 
-By submitting a contribution you agree that it will be released under
-the project's license (see [LICENSE](./LICENSE)).
+By submitting a contribution you agree that it will be released under the
+project's license, the **Apache License, Version 2.0** (see
+[LICENSE](./LICENSE)).

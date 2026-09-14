@@ -10,7 +10,7 @@
 
 ## Context
 
-The plugin layer is the boundary between Regesta and the outside world.
+The plugin layer is the boundary between Palomar and the outside world.
 Every external metadata standard (Dublin Core, MARC, CSV, IIIF, …) reaches
 the runtime through a plugin. The runtime itself never knows about any
 specific format.
@@ -30,7 +30,7 @@ governed by the rule schema (ADR 0002) and the mapping schema
 (ADR 0009).
 
 So the architectural question is: how is a plugin **represented** in
-Regesta? What is the shape of `regesta.plugins`?
+Palomar? What is the shape of `palomar.plugins`?
 
 Three families of answer were on the table.
 
@@ -51,7 +51,7 @@ is by data lookup, not by polymorphism.
  :matches?    (fn [opts source]  ...)   ; -> boolean (sniff for input-format dispatch)
 
  ;; --- data surface (optional) ---
- :rules       [...]   ; rule-DSL rules — schema in regesta.rules (ADR 0002)
+ :rules       [...]   ; rule-DSL rules — schema in palomar.rules (ADR 0002)
  :mapping     [...]   ; mapping rules    — schema in ADR 0009
  :predicates  {...}   ; sym -> fn        — stdlib extension (ADR 0010)
  :transforms  {...}   ; kw  -> fn        — stdlib extension (ADR 0010)
@@ -151,7 +151,7 @@ generic one's returns false. Documented as a deployment concern.
 - **`defprotocol Importer / Exporter`** with `extend-type` per format.
   Idiomatic Java-ish OO. Rejected: it puts dispatch in the type system
   rather than in data, which is the opposite of every other layer of
-  Regesta (rules are data, pipelines are data, mappings are data —
+  Palomar (rules are data, pipelines are data, mappings are data —
   ADR 0002). A protocol also obscures *what a plugin contributes*
   behind two function names; a map makes the contributions inspectable
   at a glance.
@@ -164,11 +164,11 @@ generic one's returns false. Documented as a deployment concern.
   serialization / inspection / hot reload all become harder. The DSL
   decision (ADR 0002) explicitly rejects macros for the same reason.
 - **Classpath scanning / auto-discovery** (e.g. `META-INF/services` or
-  a `regesta.plugins` namespace convention). Rejected for V1: the cost
+  a `palomar.plugins` namespace convention). Rejected for V1: the cost
   of silent registration (mystery rules firing because a transitive
   dep was pulled in) outweighs the convenience. Plugins are loaded by
   explicit `require` + `register` calls in user code or an assembly
-  namespace (e.g. `regesta.convert` / `regesta.validate`).
+  namespace (e.g. `palomar.convert` / `palomar.validate`).
 - **Eager record materialization in the importer contract** (return a
   `[Record ...]` vector). Rejected: forces every importer to fit the
   full input in memory and silently locks the V1 API away from

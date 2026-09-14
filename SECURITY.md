@@ -2,7 +2,7 @@
 
 ## Scope
 
-Regesta is a library and CLI that processes user-supplied metadata
+Palomar is a library and CLI that processes user-supplied metadata
 records and rule files. The realistic attack surface is:
 
 - A maliciously crafted rule file that exploits the compiler.
@@ -20,7 +20,7 @@ V1.
 
 Every XML importer — MARC-XML and its INTERMARC / UNIMARC /
 INTERMARC-NG dialects, MODS, Dublin Core, and the generic shape
-adapter — parses through a single façade, `regesta.xml`, and never
+adapter — parses through a single façade, `palomar.xml`, and never
 calls `clojure.data.xml` directly. That façade **refuses DTDs**
 (`:support-dtd false`), which closes two holes in the underlying
 parser's defaults:
@@ -37,8 +37,8 @@ parser's defaults:
   DTDs removes the vehicle a second way, and
   `:supporting-external-entities false` is pinned for defence in depth.
 
-No Regesta fixture or supported format legitimately uses a DTD, so the
-policy is total rather than per-format. `regesta.xml-test` pins the
+No Palomar fixture or supported format legitimately uses a DTD, so the
+policy is total rather than per-format. `palomar.xml-test` pins the
 behaviour: benign XML parses unchanged, while billion-laughs and
 external-entity payloads are rejected on both the eager and the
 streaming (WP-7) parse paths.
@@ -85,7 +85,7 @@ These are *not* considered vulnerabilities for the purposes of this
 policy:
 
 - Resource exhaustion from a deliberately enormous *input* (e.g. a
-  multi-gigabyte file). Regesta is a batch tool; raw input size is an
+  multi-gigabyte file). Palomar is a batch tool; raw input size is an
   operational concern. Note the distinction: *amplification* attacks —
   a small input that **expands** hugely, such as XML entity expansion —
   are in scope and are handled (see Hardening → XML input parsing).

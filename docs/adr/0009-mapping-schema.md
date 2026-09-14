@@ -97,7 +97,7 @@ assertions. Collapsing, deduplication, or "first wins" are
 When `:mapping/qualifier` is present, the source value is treated as
 **qualified** and lifted to a **fragment** per ADR 0011. The importer
 (typically the generic shape adapter) mints a fragment id via
-`regesta.model/mint-fragment-id` (ADR 0012), attaches one assertion
+`palomar.model/mint-fragment-id` (ADR 0012), attaches one assertion
 per coordinate to the fragment id (the value and the qualifier), and
 emits a reference assertion on the record:
 
@@ -170,7 +170,7 @@ When the source predicate is absent for a record:
 
 ### Schema
 
-The Malli schema for a mapping rule lives in `regesta.plugins.mapping`
+The Malli schema for a mapping rule lives in `palomar.plugins.mapping`
 (Sprint 5) and is referenced by the plugin schema (ADR 0007) at
 `:mapping`:
 
@@ -186,9 +186,9 @@ stdlib.
 
 The compiler's output target is the **runtime-shaped compiled rule**,
 not necessarily a `Rule` data-form map. A compiled rule, as produced
-by `regesta.rules/compile-rule`, is a map carrying enough metadata for
+by `palomar.rules/compile-rule`, is a map carrying enough metadata for
 the trace (`:id`, `:phase`, optionally `:doc`) plus an opaque runner
-function the runtime invokes via `regesta.rules/apply-rule`. The
+function the runtime invokes via `palomar.rules/apply-rule`. The
 mapping compiler emits the same shape directly: its runner does
 match-against-triples → transform-application → assertion-emission in
 one step. This keeps the rule DSL free of a transform primitive (no
@@ -309,7 +309,7 @@ not a runtime one.
   carry forward source provenance into derived assertions, possibly
   via a `:derivation` chain entry; until a concrete consumer needs it,
   rule-level provenance is treated as sufficient.
-- **Cross-plugin `:mapping/id` uniqueness.** `regesta.plugins.mapping`
+- **Cross-plugin `:mapping/id` uniqueness.** `palomar.plugins.mapping`
   derives the compiled-rule id from the `name` portion of
   `:mapping/id` only: `:plugin-a/dc-title` and `:plugin-b/dc-title`
   both compile to `:rule.from-mapping/dc-title`. The mapping schema

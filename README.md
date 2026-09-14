@@ -1,25 +1,25 @@
-# Regesta
+# Palomar
 
-[![CI](https://github.com/maribakulj/regesta/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maribakulj/regesta/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/maribakulj/regesta/branch/main/graph/badge.svg)](https://codecov.io/gh/maribakulj/regesta)
-[![License](https://img.shields.io/github/license/maribakulj/regesta?color=blue)](./LICENSE)
+[![CI](https://github.com/maribakulj/palomar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maribakulj/palomar/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/maribakulj/palomar/branch/main/graph/badge.svg)](https://codecov.io/gh/maribakulj/palomar)
+[![License](https://img.shields.io/github/license/maribakulj/palomar?color=blue)](./LICENSE)
 [![Clojure](https://img.shields.io/badge/Clojure-1.12-5881D8?logo=clojure&logoColor=white)](https://clojure.org)
 [![Java](https://img.shields.io/badge/Java-21%2B-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
 
 A documentary compiler for cultural metadata.
 
-Regesta ingests heterogeneous metadata records, normalizes them into a stable
+Palomar ingests heterogeneous metadata records, normalizes them into a stable
 internal representation, runs explicit validation, inference, and repair passes
 over that representation, and projects the result into one or more target
 formats — carrying diagnostics and provenance throughout.
 
 The architecture is deliberately modeled on a compiler: sources are parsed into
 an IR, the IR is transformed by explicit passes, and targets are emitted from
-the IR. Regesta does this for metadata rather than for code.
+the IR. Palomar does this for metadata rather than for code.
 
 ---
 
-## What Regesta is
+## What Palomar is
 
 - A **metadata transformation engine** with a stable, schema-independent core.
 - A **declarative rule system**: validation, inference, normalization, repair,
@@ -31,7 +31,7 @@ the IR. Regesta does this for metadata rather than for code.
   and proposed repairs are first-class citizens of the internal representation,
   not side channels.
 
-## What Regesta is not
+## What Palomar is not
 
 - A converter tied to a single standard.
 - An AI-first tool. The V1 stands on its own; LLM assistance is a deliberate
@@ -45,7 +45,7 @@ the IR. Regesta does this for metadata rather than for code.
 
 ### The internal representation
 
-Records in Regesta are **assertion sets**, not field maps. An assertion is:
+Records in Palomar are **assertion sets**, not field maps. An assertion is:
 
 ```clojure
 {:subject    :record/r42
@@ -61,7 +61,7 @@ Records in Regesta are **assertion sets**, not field maps. An assertion is:
 A record wraps an identity, a source pointer, an assertion set, a diagnostic
 set, and fragment pointers back into the raw source tree.
 
-This shape is what lets Regesta natively represent:
+This shape is what lets Palomar natively represent:
 
 - multiplicity (two candidate titles)
 - ambiguity (a date that is either 1823 or 1832)
@@ -88,7 +88,7 @@ expressed as **EDN data**. A rule:
 ```
 
 Rules are data — inspectable, serializable, composable. The compiler
-(`regesta.rules`) turns them into executable functions. Rules cannot call
+(`palomar.rules`) turns them into executable functions. Rules cannot call
 arbitrary Clojure; they use a curated predicate stdlib.
 
 See [ADR 0002](./docs/adr/0002-edn-as-dsl.md).
@@ -115,13 +115,13 @@ The core ships only a **structural vocabulary** (`:meta/id`, `:meta/kind`,
 `:meta/source`, `:meta/fragment`, `:meta/diagnostic`, `:meta/provenance`). It
 knows nothing about documentary content.
 
-A separate, optional plugin — `regesta.plugins.canonical` — provides a
+A separate, optional plugin — `palomar.plugins.canonical` — provides a
 **documentary vocabulary** (`:canon/title`, `:canon/uniform-title`,
 `:canon/identifier`, `:canon/agent`, `:canon/date`, `:canon/relation`,
 `:canon/note`, `:canon/digital-object`, `:canon/loss-marker`) that format plugins
 can map toward for cross-source rules and projection. The set grows only by
 justified need — `:canon/uniform-title` (the cataloguer's controlled work title)
-was added for FRBRisation Work-key bridging.
+was added for WEMI-derivation Work-key bridging.
 
 This split keeps the core authentically agnostic while still enabling
 commensurability when it is wanted. See
@@ -155,22 +155,22 @@ acceptance or rejection. See
 
 ```
    ┌───────────────────────────────────────────────────────────────┐
-   │  regesta.cli  ·  convert · validate · conformance · curate     │
+   │  palomar.cli  ·  convert · validate · conformance · curate     │
    │       command-line + the conversion / loss-report assembly      │
    └────────────────────────────┬──────────────────────────────────┘
                                 │
    ┌────────────────────────────▼──────────────────────────────────┐
-   │                        regesta.runtime                         │
+   │                        palomar.runtime                         │
    │             pipeline · pass execution · diagnostics            │
    └────────┬───────────────────────────────────────┬──────────────┘
             │                                       │
   ┌─────────▼────────┐                     ┌────────▼─────────┐
-  │  regesta.rules   │                     │  regesta.model   │
+  │  palomar.rules   │                     │  palomar.model   │
   │   DSL compiler   │                     │  IR · vocabulary │
   └─────────┬────────┘                     └────────▲─────────┘
             │                                       │
   ┌─────────▼───────────────────────────────────────┴─────────────┐
-  │  regesta.plugins  —  spoke importers/exporters (MARC21 ·        │
+  │  palomar.plugins  —  spoke importers/exporters (MARC21 ·        │
   │  UNIMARC · INTERMARC · INTERMARC-NG · Dublin Core · MODS ·      │
   │  IIIF) and the derived, typed LRMoo pivot view + its            │
   │  serialisers (RDF · CIDOC-CRM · Linked Art · the floor formats) │
@@ -188,7 +188,7 @@ plugin (ADR 0013), never the core.
 ```
 .
 ├── deps.edn                 # Clojure deps and aliases
-├── src/regesta/
+├── src/palomar/
 │   ├── model.clj            # Canonical IR (assertions, entities, fragments)
 │   ├── rules.clj            # Rule DSL + compiler
 │   ├── runtime.clj          # Pass-pipeline execution engine
@@ -199,7 +199,7 @@ plugin (ADR 0013), never the core.
 │   │                        #   spokes: marc21 · unimarc · intermarc[-ng] ·
 │   │                        #   marcxml · dc · mods · iiif (+ *.export);
 │   │                        #   lrmoo/ (pivot view · project · crm · linked-art ·
-│   │                        #   export · crm-import) · intermarc/frbrise
+│   │                        #   export · crm-import) · intermarc/wemi
 │   ├── spokes.clj           # Source-spoke registry
 │   ├── convert.clj          # Conversion assembly (source → pivot → target + loss)
 │   ├── validate.clj         # Validation gate
@@ -209,19 +209,20 @@ plugin (ADR 0013), never the core.
 │   ├── loss-report.clj      # Conversion loss report (ADR 0015)
 │   └── cli.clj              # Command-line entry point (all verbs)
 ├── test/
-│   ├── unit/regesta/        # Fast, hermetic, mirrored to src/ (+ eval/ measurements)
-│   ├── property/regesta/    # Generative invariants (test.check + malli.generator)
-│   ├── integration/regesta/ # Multi-layer end-to-end scenarios
-│   └── junit/regesta/       # JUnit XML runner (CI)
+│   ├── unit/palomar/        # Fast, hermetic, mirrored to src/ (+ eval/ measurements)
+│   ├── property/palomar/    # Generative invariants (test.check + malli.generator)
+│   ├── integration/palomar/ # Multi-layer end-to-end scenarios
+│   └── junit/palomar/       # JUnit XML runner (CI)
 ├── docs/
 │   ├── adr/                 # Architecture Decision Records (0001–0019)
-│   ├── eval/                # Measured evals (FRBRisation, BIB-R, scale, …)
+│   ├── eval/                # Measured evals (WEMI derivation, BIB-R, scale, …)
 │   ├── cleanup/             # Audit + remediation passes
 │   └── roadmap-v1.md        # The work-package roadmap + Definition of Done
 ├── .github/workflows/ci.yml # Lint, format, test on every push
 ├── .clj-kondo/config.edn    # Linter config
 ├── .cljfmt.edn              # Formatter config
-└── LICENSE
+├── LICENSE                  # Apache License 2.0
+└── NOTICE                   # Copyright line + third-party data licences
 ```
 
 ---
@@ -229,10 +230,10 @@ plugin (ADR 0013), never the core.
 ## Current status
 
 Sprints 0 through 6 are landed — the **substrate**: assertion IR
-(`regesta.model`), rule DSL (`regesta.rules`), runtime (`regesta.runtime`),
-diagnostics (`regesta.diagnostics`), the plugin layer + mapping schema + shape
-adapter (`regesta.plugins.*`), fragments for qualified values (ADR 0011,
-ADR 0012), and the canonical vocabulary plugin (`regesta.plugins.canonical`).
+(`palomar.model`), rule DSL (`palomar.rules`), runtime (`palomar.runtime`),
+diagnostics (`palomar.diagnostics`), the plugin layer + mapping schema + shape
+adapter (`palomar.plugins.*`), fragments for qualified values (ADR 0011,
+ADR 0012), and the canonical vocabulary plugin (`palomar.plugins.canonical`).
 
 **V1 has since been redefined** (2026) around a rich, **loss-aware** pivot
 grounded in **LRMoo** (the object-oriented IFLA LRM, a CIDOC-CRM extension), for
@@ -242,8 +243,8 @@ substrate is preserved as-is; the redefinition is an *extension*, not a rewrite.
 Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as of
 2026-06 the engineering is largely landed:
 
-- **WP-0…WP-5, WP-8 done** — design lock + FRBRisation spike, substrate
-  extensions, the LRMoo pivot + derived view, FRBRisation (cross-record Work
+- **WP-0…WP-5, WP-8 done** — design lock + WEMI-derivation spike, substrate
+  extensions, the LRMoo pivot + derived view, WEMI derivation (cross-record Work
   clustering by id-collision, plus uniform-title bridging), the loss-aware report,
   and the full CLI (`convert · validate · report · inspect · reconcile ·
   apply-repairs · conformance · formats`).
@@ -256,13 +257,13 @@ Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as
 - **WP-7 scale** — streaming end-to-end in constant memory (a 97 MB flat MARC dump
   converts in a 256 MB heap); true millions-scale is data-gated.
 - **WP-9 (hardening + release)** — in progress: XML input hardened against
-  entity-expansion (`billion laughs`) and XXE (DTDs refused, `regesta.xml` +
+  entity-expansion (`billion laughs`) and XXE (DTDs refused, `palomar.xml` +
   [`SECURITY.md`](./SECURITY.md)); a machine-readable loss report
   (`report --format edn`) for audit tooling; degenerate-input handling (a wrong
   `--from` warns instead of silently producing nothing). Remaining: further
   edge/golden coverage and the `v1.0.0` cut.
 
-FRBRisation fidelity is measured, not asserted — on real BnF data and an
+WEMI-derivation fidelity is measured, not asserted — on real BnF data and an
 independent third-party benchmark; see [`docs/eval/`](./docs/eval/). The honest
 remaining gates are real institutional acceptance criteria and a real at-scale
 corpus ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md) §7).
@@ -441,7 +442,7 @@ target, and CRM→LRM is a *downcast* (ADR 0019). See
 
 **Scope reversal.** The original plan (below) deliberately deferred IIIF,
 CIDOC CRM, Linked Art, and **deduplication**. The redefinition pulls them in:
-cross-record Work clustering (FRBRisation) is core to the rich pivot, and the
+cross-record Work clustering (WEMI derivation) is core to the rich pivot, and the
 museum / presentation formats are first-class spokes. The forward compatibility
 the original IR reserved — the qualified-value design,
 [ADR 0011](./docs/adr/0011-fragments-for-qualified-values.md) — is what makes
@@ -506,4 +507,9 @@ the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ## License
 
-See [LICENSE](./LICENSE).
+Palomar is licensed under the **Apache License, Version 2.0** — see
+[LICENSE](./LICENSE) for the full terms and [NOTICE](./NOTICE) for the
+copyright line.
+
+Third-party material redistributed under `test/fixtures/` keeps its own
+licence; each fixture directory's `README.md` names its source and licence.

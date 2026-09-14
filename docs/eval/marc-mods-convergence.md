@@ -7,11 +7,11 @@ documentary spine. The intermediary on the second route is a *third party's* sta
 — the LoC's own MARC→MODS — so the MODS importer is exercised against authoritative
 MODS, not our hand-written fixtures.
 
-- **Path A** — MARC21 → Regesta's MARC21 importer → canonical floor.
+- **Path A** — MARC21 → Palomar's MARC21 importer → canonical floor.
 - **Path B** — MARC21 → LoC `MARC21slim2MODS3-1.xsl` (oracle, JDK XSLT 1.0) → real
-  MODS → Regesta's MODS importer → canonical floor.
+  MODS → Palomar's MODS importer → canonical floor.
 - Input: the LoC's `loc_collection.xml` (2 records). Test:
-  `regesta.eval.marc-mods-oracle-test`; runner: `regesta.eval.loc-xslt`.
+  `palomar.eval.marc-mods-oracle-test`; runner: `palomar.eval.loc-xslt`.
 
 ## What converges (the spine survives the detour)
 
