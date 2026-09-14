@@ -68,7 +68,7 @@ property triples. A pure-CRM *replacement* is lossy and must be reported as such
   Reading the full OWL is over-engineering until the projected vocabulary grows.
 
 ### D-M4 — Where it lives.
-- A new `regesta.plugins.lrmoo.crm` namespace: the F→E / R→P maps plus a CRM-aware
+- A new `palomar.plugins.lrmoo.crm` namespace: the F→E / R→P maps plus a CRM-aware
   exporter that *transforms the existing* `export/triples` seq (no parallel graph
   walk). The N-Triples renderer is reused unchanged.
 - **Recommendation: yes** — a CRM module in the LRMoo plugin, over the existing
@@ -83,7 +83,7 @@ property triples. A pure-CRM *replacement* is lossy and must be reported as such
 
 ## Proposed first slice (pending the decisions above)
 
-`regesta.plugins.lrmoo.crm`:
+`palomar.plugins.lrmoo.crm`:
 - the verified `f-class→e-class` and `r-property→p-property` maps (WEMI subset);
 - `crm-augment` over `export/triples`: for each LRMoo type triple add the CRM
   super-type triple, for each WEMI relation add the CRM super-property triple

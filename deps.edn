@@ -19,7 +19,7 @@
  ;; :test/integration aliases run a single category for fast iteration.
 
  ;; com.networknt/json-schema-validator (Maven Central) backs the Linked Art
- ;; draft-2020-12 conformance eval (regesta.eval.linked-art-conformance-test). It
+ ;; draft-2020-12 conformance eval (palomar.eval.linked-art-conformance-test). It
  ;; is a *test-only* dependency — the conversion engine never depends on it. Added
  ;; to every alias whose :extra-paths include test/unit so the eval ns compiles.
  :aliases
@@ -31,7 +31,7 @@
   ;; Run the CLI: clojure -M:run convert <file> --from <fmt> --to <fmt>
   ;; (in the restricted sandbox prepend :sandbox — clojure -M:sandbox:run …).
   :run
-  {:main-opts ["-m" "regesta.cli"]}
+  {:main-opts ["-m" "palomar.cli"]}
 
   :test
   {:extra-paths ["test/unit" "test/property" "test/integration"]
@@ -65,13 +65,13 @@
 
   ;; Run the full suite and emit JUnit XML at target/junit/junit.xml.
   ;; Used by CI to populate GitHub's test summary panel — see
-  ;; test/junit/regesta/junit_runner.clj for rationale.
+  ;; test/junit/palomar/junit_runner.clj for rationale.
   :test/junit
   {:extra-paths ["test/junit" "test/unit" "test/property" "test/integration"]
    :extra-deps  {org.clojure/test.check         {:mvn/version "1.1.1"}
                  com.networknt/json-schema-validator {:mvn/version "3.0.3"}
                  org.clojure/tools.namespace    {:mvn/version "1.5.0"}}
-   :main-opts   ["-m" "regesta.junit-runner"]}
+   :main-opts   ["-m" "palomar.junit-runner"]}
 
   :lint
   {:replace-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}

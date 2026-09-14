@@ -77,7 +77,7 @@ Owning record id: `:record/r42`. Locators: `[:dc/title 0]` and
 
 ### Minting helper
 
-`regesta.model` exposes a single sanctioned constructor:
+`palomar.model` exposes a single sanctioned constructor:
 
 ```clojure
 (mint-fragment-id record-id locator) ; → :frag/...
@@ -121,7 +121,7 @@ exercises.
   same data) would change every fragment id, defeating cross-format
   equivalence.
 - **Map-shaped ids** (`{:record :record/r42, :locator [...]}`).
-  Rejected: the `Fragment :id` schema in `regesta.model` is a keyword,
+  Rejected: the `Fragment :id` schema in `palomar.model` is a keyword,
   matching every other `Id` in the model. Changing it would propagate
   through assertions, diagnostics, and provenance for no concrete gain
   over keyword encoding. Inspectability is achieved by the encoding
@@ -156,6 +156,6 @@ exercises.
   *names* may still contain hyphens — they round-trip, since the decoder
   splits on the first hyphen). A minted id therefore always parses back
   exactly; only a hand-built `:frag` keyword can violate the scheme.
-- Encoding lives in one function. `regesta.model/mint-fragment-id` is
+- Encoding lives in one function. `palomar.model/mint-fragment-id` is
   the only thing that knows the on-the-wire format; everything else
   treats fragment ids as opaque keywords.

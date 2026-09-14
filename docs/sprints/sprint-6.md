@@ -26,7 +26,7 @@ The validation rules had no assembled consumer before this sprint
 (`app.clj` is a stub; the Sprint 5 integration test stopped at
 `:normalize`). Three options were on the table: ship the vocabulary
 alone; ship rules exercised by a real assembled pipeline in an
-integration test; or ship rules plus a `regesta validate` CLI command.
+integration test; or ship rules plus a `palomar validate` CLI command.
 
 We took the middle path. The rule is exercised by a registry-driven
 pipeline assembled from production components — shape importer, mapping
@@ -34,7 +34,7 @@ compiler, rule engine, diagnostics report — with the diagnostics report
 (a real, already-built V1 surface) as its consumer. This is not the
 "build a consumer just to eat the producer's output" trap: nothing is
 mocked, and the report is independently justified. The only deferred
-piece is the user-facing CLI entry point (`regesta validate`), which is
+piece is the user-facing CLI entry point (`palomar validate`), which is
 its own sprint's worth of I/O scaffolding and would have turned "Sprint 6
 = canonical vocabulary" into "Sprint 6 = build the CLI."
 
@@ -59,10 +59,10 @@ qualifier vocabulary gets its own design. No ADR amendment.
 
 | Item | File |
 |---|---|
-| Documentary vocabulary (`documentary-vocabulary`) + `documentary?` | `src/regesta/plugins/canonical.clj` |
-| `title-required` `:validate` rule + the canonical `plugin` map | `src/regesta/plugins/canonical.clj` |
-| Unit tests (vocabulary, plugin shape, rule in isolation) | `test/unit/regesta/plugins/canonical_test.clj` |
-| End-to-end ingest → normalize → validate → report test | `test/integration/regesta/canonical_integration_test.clj` |
+| Documentary vocabulary (`documentary-vocabulary`) + `documentary?` | `src/palomar/plugins/canonical.clj` |
+| `title-required` `:validate` rule + the canonical `plugin` map | `src/palomar/plugins/canonical.clj` |
+| Unit tests (vocabulary, plugin shape, rule in isolation) | `test/unit/palomar/plugins/canonical_test.clj` |
+| End-to-end ingest → normalize → validate → report test | `test/integration/palomar/canonical_integration_test.clj` |
 | CHANGELOG entry | `CHANGELOG.md` |
 
 Design notes:
@@ -71,8 +71,8 @@ Design notes:
   compiler's job; the unit test asserts `compile-rules` accepts the
   shipped rule, which is the codebase's chosen point for that check
   (plugins defer deep validation to compilers to avoid load-order
-  coupling, per `regesta.plugins`).
-- `documentary?` mirrors `regesta.model/structural?`: a vocabulary set
+  coupling, per `palomar.plugins`).
+- `documentary?` mirrors `palomar.model/structural?`: a vocabulary set
   plus a membership predicate, one per layer.
 - `title-required` is a `:warning`, not an `:error`: a titleless record
   is incomplete, not malformed. The integration test demonstrates both
@@ -88,12 +88,12 @@ Design notes:
   the standalone binaries the SessionStart hook installs (the
   Clojars-backed `:lint` / `:fmt` aliases can't resolve in the sandbox;
   see ADR 0006).
-- The core stays vocabulary-blind: `regesta.architecture-test` still
-  passes — no core namespace depends on `regesta.plugins.canonical`.
+- The core stays vocabulary-blind: `palomar.architecture-test` still
+  passes — no core namespace depends on `palomar.plugins.canonical`.
 
 ## Out of scope (explicit)
 
-- `regesta validate` CLI command and the rest of `app.clj`. The
+- `palomar validate` CLI command and the rest of `app.clj`. The
   integration test assembles exactly the registry-driven pipeline the CLI
   will wire to file I/O; that wiring is the next natural unit of work.
 - Date/ISO and other cross-source validation rules. They wait for a

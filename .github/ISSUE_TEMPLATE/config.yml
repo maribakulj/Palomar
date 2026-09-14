@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security report
-    url: https://github.com/maribakulj/regesta/security/advisories/new
+    url: https://github.com/maribakulj/palomar/security/advisories/new
     about: Suspected vulnerabilities — please report privately, not as a public issue.
   - name: Architecture decisions (ADRs)
-    url: https://github.com/maribakulj/regesta/tree/main/docs/adr
+    url: https://github.com/maribakulj/palomar/tree/main/docs/adr
     about: Read the existing ADRs before proposing a structural change.

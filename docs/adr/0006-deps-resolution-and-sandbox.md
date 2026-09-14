@@ -5,7 +5,7 @@
 
 ## Context
 
-Regesta depends on libraries hosted on Clojars (Malli and its transitive
+Palomar depends on libraries hosted on Clojars (Malli and its transitive
 dependencies). Clojars is the standard distribution channel for the Clojure
 ecosystem and the natural choice for a Clojure project's `deps.edn`.
 
@@ -36,7 +36,7 @@ pinned to a specific tag and SHA. In restricted environments, contributors run
 `clojure -M:sandbox:test` (or any other alias chained with `:sandbox`) to
 bypass Clojars entirely.
 
-CI uses the unaliased Maven path. External consumers who depend on Regesta
+CI uses the unaliased Maven path. External consumers who depend on Palomar
 get Maven coordinates only.
 
 ## Alternatives considered

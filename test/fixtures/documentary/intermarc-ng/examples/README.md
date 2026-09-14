@@ -3,9 +3,9 @@
 INTERMARC-NG is the BnF's NOEMI / Transition-bibliographique production format: not
 a flat documentary record but a **graph of entity-records** (Œuvre / Expression /
 Manifestation / Item / agents…), linked by the fundamental `7xx` relations whose
-`$3` carries the identifier of the entity in relation. `regesta.plugins.intermarc-ng`
+`$3` carries the identifier of the entity in relation. `palomar.plugins.intermarc-ng`
 imports it **graph → graph** straight onto the LRMoo view (no string floor, no
-FRBRisation inference — the WEMI distinctions are given).
+WEMI-derivation inference — the WEMI distinctions are given).
 
 ## `fleurs-du-mal-oemi.xml` — SYNTHETIC, spec-faithful
 
@@ -14,7 +14,7 @@ Manifestation, and the **Person** Baudelaire — linked by **740 Matérialise**
 (Manifestation → Expression), **750 Réalise** (Expression → Œuvre) and **700 A pour
 créateur** (Work → Baudelaire). On import this becomes
 `F1_Work —R3→ F2_Expression ←R4— F3_Manifestation` with an identified
-`:crm/E21_Person` creator (ISNI from `100 $1`) — the exact shape `frbrise`
+`:crm/E21_Person` creator (ISNI from `100 $1`) — the exact shape `derive-wemi`
 synthesises, but *read* rather than inferred.
 
 | NG (kitcat manual)                | LRMoo |

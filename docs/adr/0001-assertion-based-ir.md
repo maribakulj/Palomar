@@ -5,7 +5,7 @@
 
 ## Context
 
-Regesta ingests metadata from many heterogeneous sources (MARC, Dublin Core,
+Palomar ingests metadata from many heterogeneous sources (MARC, Dublin Core,
 CIDOC CRM, institutional CSV, TEI, …) and normalizes it into a single internal
 representation that subsequent passes (validate, infer, repair, project) operate
 on. The shape of that representation is the foundational architectural choice:

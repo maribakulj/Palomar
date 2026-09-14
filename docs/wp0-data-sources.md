@@ -3,7 +3,7 @@
 - Status: **Draft** — a curated manifest of the open specs, example corpora,
   and authority datasets the universal V1 (IIIF ↔ INTERMARC) will need.
 - Date: 2026-05-31
-- Feeds: the WP-0 FRBRisation spike, the D5 identity resolver, and the WP-2/WP-4
+- Feeds: the WP-0 WEMI-derivation spike, the D5 identity resolver, and the WP-2/WP-4
   vocabulary + spoke work. See [`roadmap-v1.md`](./roadmap-v1.md),
   [`wp0-decisions.md`](./wp0-decisions.md).
 
@@ -87,7 +87,7 @@ Enough to measure work-key over/under-merge **across dialects** and validate the
 typed view on **both** the biblio and museum sides:
 
 - ~200 **MARC21** records (LoC examples + a public set) **and** ~200 **UNIMARC**
-  records (BnF `api.bnf.fr`) — cross-dialect FRBRisation;
+  records (BnF `api.bnf.fr`) — cross-dialect WEMI derivation;
 - a **data.bnf.fr** authority subset (or an **ISNI** CC0 subset) — wire resolver #2;
 - 5–6 **IIIF cookbook** manifests (image, book, A/V, ranges);
 - 5–6 **Linked Art** cookbook objects (JSON + Turtle);

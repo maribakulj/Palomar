@@ -21,7 +21,7 @@ Both stdlibs are too small to support real format plugins. Sprint 7
 - ... and roughly five to ten more.
 
 The current architecture has no extension path. `predicate-stdlib` is
-a `def` map in `regesta.rules`; adding `iso-8601?` requires a core PR.
+a `def` map in `palomar.rules`; adding `iso-8601?` requires a core PR.
 ADR 0002 explicitly flags this as the chief risk to the project ("la
 croissance de la stdlib est la principale façon dont le DSL pourrait
 déraper") but proposed no mechanism. This ADR provides one.
@@ -47,7 +47,7 @@ in the plugin map (per ADR 0007):
 For a registry of plugins, the **effective predicate stdlib** is the
 union of:
 
-1. The core stdlib (`regesta.rules/predicate-stdlib`).
+1. The core stdlib (`palomar.rules/predicate-stdlib`).
 2. Every registered plugin's `:predicates`.
 
 The **effective transform stdlib** is the analogous union over
@@ -134,7 +134,7 @@ engineering one.
 - **Sandboxing plugin functions** (eval in a restricted context, no
   classpath access). Rejected for V1: complexity well beyond what a
   trust-on-require model gives. Sandboxing is an explicit V2 question
-  if and when Regesta loads untrusted plugins (e.g. from a registry).
+  if and when Palomar loads untrusted plugins (e.g. from a registry).
 - **Late binding: rules carry plugin-id qualifiers, predicates
   resolved per rule's owning plugin.** Per-plugin isolation. Rejected
   for V1 as more complex than necessary; conflict-at-register-time is
