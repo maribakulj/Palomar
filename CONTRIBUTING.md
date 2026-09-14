@@ -152,5 +152,6 @@ suspected vulnerabilities.
 
 ## License
 
-By submitting a contribution you agree that it will be released under
-the project's license (see [LICENSE](./LICENSE)).
+By submitting a contribution you agree that it will be released under the
+project's license, the **Apache License, Version 2.0** (see
+[LICENSE](./LICENSE)).

@@ -18,6 +18,11 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **`NOTICE`** — the Apache-2.0 copyright line (`Copyright 2026 maribakulj`)
+  plus a pointer to the licences of the third-party material redistributed
+  under `test/fixtures/`. `README.md` and `CONTRIBUTING.md` now name the
+  licence explicitly instead of only linking to `LICENSE`.
+
 - **Machine-readable loss report** (WP-9, loss-report UX) — `palomar report …
   --format edn` emits the raw `conversion-report` map (ADR 0015) instead of the
   human text: the complete per-edge / per-category / **per-source-field** account
