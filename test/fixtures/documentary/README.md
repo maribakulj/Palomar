@@ -2,9 +2,9 @@
 
 Curated real-world metadata samples spanning the universal V1 scope
 (IIIF ↔ INTERMARC) plus the pivot ontologies and identity authorities. Used by
-the WP-0 FRBRisation spike (`dev/spike/`) and, later, by spoke tests (WP-4).
+the WP-0 WEMI-derivation spike (`dev/spike/`) and, later, by spoke tests (WP-4).
 
-**These are third-party samples, not Regesta's own work.** Every file is traced
+**These are third-party samples, not Palomar's own work.** Every file is traced
 to its upstream source in [`MANIFEST.tsv`](./MANIFEST.tsv) (fixture path → source
 URL). Keep that file as the attribution record.
 
@@ -12,7 +12,7 @@ URL). Keep that file as the attribution record.
 
 | Area | Files | Use |
 |---|---|---|
-| `intermarc/` | BnF INTERMARC: ISO 2709 `.not` (bib + authority, ISO-5426 + UTF-8) **and** `sru/` InterMARCXChange XML (Madame Bovary, Hugo, musical works, authorities — with explicit `145 $3` Work links + ISNI) | FRBRisation + WEMI-linking spike; the hardest dialect (D10) |
+| `intermarc/` | BnF INTERMARC: ISO 2709 `.not` (bib + authority, ISO-5426 + UTF-8) **and** `sru/` InterMARCXChange XML (Madame Bovary, Hugo, musical works, authorities — with explicit `145 $3` Work links + ISNI) | WEMI-derivation + WEMI-linking spike; the hardest dialect (D10) |
 | `bnf-rdf/` | a real data.bnf.fr record (Machiavelli, ARK cb119137957) in 5 RDF serialisations | authority resolver #2 (D5) |
 | `lrm/lrmoo/`, `cidoc-crm/` | LRMoo v1.0 OWL, CIDOC-CRM v7.1.3 RDF | the pivot vocabulary (WP-2) |
 | `marc21/`, `mods/`, `dublin-core/` | LoC MARCXML, MODS, W3C DC | bibliographic spokes (WP-4) |

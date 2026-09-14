@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-06-01
 - Builds on: ADR 0001 (assertion IR), ADR 0013 (rich pivot), ADR 0014 (minting),
-  ADR 0016 (FRBRisation)
+  ADR 0016 (WEMI derivation)
 - Decision record: [`../wp0-decisions.md`](../wp0-decisions.md) (D3);
   [`../roadmap-v1.md`](../roadmap-v1.md) §10
 
@@ -11,7 +11,7 @@
 
 ADR 0014 lets the `infer` phase **mint** synthesized entities (Works,
 Expressions…). An entity is a *subject* — but the IR's consistency contract
-(`regesta.model/known-subjects`, `record-consistent?`) currently blesses only
+(`palomar.model/known-subjects`, `record-consistent?`) currently blesses only
 the record id and its fragment ids. So minting forces a decision: **how does a
 synthesized entity live in the IR?**
 
@@ -19,7 +19,7 @@ Two facts of the system constrain the answer:
 
 - the runtime is **per-record** (`run-pipeline` takes one record; rules *enrich*
   it, they do not spawn records);
-- Regesta is a **converter that emits a graph, not a store that holds one**
+- Palomar is a **converter that emits a graph, not a store that holds one**
   (README; roadmap §10).
 
 ## Decision
@@ -53,7 +53,7 @@ agnosticism (ADR 0003) holds, and `structural-vocabulary` is unchanged.
   (per-record entity redundancy). **Rejected for now:** it re-opens ADR 0001 and
   rewrites the per-record runtime / matcher + every plugin and test (~8k lines) —
   exactly the deep refactor we avoid. **A′ becomes the right substrate only if
-  Regesta evolves from a converter into a queryable / editable store**
+  Palomar evolves from a converter into a queryable / editable store**
   (roadmap §10). Recorded as the conditional future, not a now-task.
 - **C — declare entities via a `:meta/kind` assertion; derive `known-subjects`
   from assertions.** **Rejected:** circular (a subject must be known to carry an
@@ -61,7 +61,7 @@ agnosticism (ADR 0003) holds, and `structural-vocabulary` is unchanged.
 
 ## Consequences
 
-- Minimal, additive change to `regesta.model`: an `Entity` schema, `:entities`
+- Minimal, additive change to `palomar.model`: an `Entity` schema, `:entities`
   on `Record`, `mint-entity-id`, and `known-subjects` / `record-consistent?`
   extended to entities. Existing records (no `:entities`) stay valid;
   `structural-vocabulary` stays a closed six (entities are a *collection*, like
@@ -78,7 +78,7 @@ agnosticism (ADR 0003) holds, and `structural-vocabulary` is unchanged.
 ## What this ADR does not decide
 
 - The `:kind` vocabulary (`:lrmoo/work` …) — plugin / WP-2.
-- The work-key composition feeding `mint-entity-id` — FRBRisation plugin / WP-3
+- The work-key composition feeding `mint-entity-id` — WEMI-derivation plugin / WP-3
   (D5).
 - The status of inferred assertions — settled by ADR 0005 / 0014: infer
   productions default to **`:proposed`** (the precision-first engine policy,

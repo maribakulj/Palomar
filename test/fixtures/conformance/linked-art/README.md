@@ -1,7 +1,7 @@
 # Conformance fixtures — Linked Art JSON Schema
 
 The **official** Linked Art validation schemas (draft 2020-12) + one example, used
-by `regesta.eval.linked-art-conformance-test` to validate our Linked Art export with
+by `palomar.eval.linked-art-conformance-test` to validate our Linked Art export with
 the real `com.networknt/json-schema-validator` (a test-only Maven dependency).
 
 | File | Source | Licence |

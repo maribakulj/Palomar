@@ -5,7 +5,7 @@
 
 ## Context
 
-The declarative rule layer is the center of gravity of Regesta. It must be
+The declarative rule layer is the center of gravity of Palomar. It must be
 expressive enough to describe validation, inference, normalization, repair,
 and projection logic across diverse metadata families, while remaining
 amenable to inspection, serialization, composition, and eventual machine
@@ -30,7 +30,7 @@ The rule DSL is **EDN**. A rule is a Clojure map with a fixed schema:
                          :subject  ?r}}}
 ```
 
-There is no parser. The rule compiler (`regesta.rules`) reads EDN and
+There is no parser. The rule compiler (`palomar.rules`) reads EDN and
 compiles rules into executable functions. The compiler validates rule shape
 against a Malli schema; malformed rules fail at load time with a precise,
 localized error.

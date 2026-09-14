@@ -146,7 +146,7 @@ If no, a structured value is acceptable.
   collapse; (c) cheap to compute. The canonical scheme — record id +
   source-path locator + occurrence index — is specified in
   [ADR 0012](./0012-fragment-identity-scheme.md), landed before Sprint 5
-  so the shape adapter has a complete spec. `regesta.model` exposes a
+  so the shape adapter has a complete spec. `palomar.model` exposes a
   `mint-fragment-id` helper; plugins go through it rather than rolling
   their own.
 - **Event-centric formats become representable without a model change.**

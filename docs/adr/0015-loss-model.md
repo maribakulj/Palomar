@@ -98,7 +98,7 @@ aggregation, not a new subsystem.
 The model is decided in full above; producers are wired incrementally. Honest
 current state, so the taxonomy is not mistaken for working code:
 
-- **`:dropped` / `:import`** — produced by INTERMARC FRBRisation (`frbrise`) and
+- **`:dropped` / `:import`** — produced by INTERMARC WEMI derivation (`intermarc.wemi`) and
   the canonical→WEMI projection (`lrmoo.project`): native / canonical fields the
   WEMI view does not represent.
 - **`:dropped` / `:export`** — produced by the LRMoo RDF exporter
@@ -117,7 +117,7 @@ current state, so the taxonomy is not mistaken for working code:
 
 All four loss categories now have a producer, across both edges. The
 institution-facing **conversion loss report** is assembled
-(`regesta.loss-report`): per-edge, per-category and **per-source-field**
+(`palomar.loss-report`): per-edge, per-category and **per-source-field**
 aggregation of both edges' loss, with a human-readable rendering — the
 "which of *my* fields survived?" artifact this ADR specifies. Still outstanding:
 - Plugin-contributed transforms are not yet classified for lossiness (their

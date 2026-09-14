@@ -55,7 +55,7 @@
 
 ### Session 2 — Dependency-boundary guard
 - Add a test asserting the core namespaces (`model`, `rules`, `runtime`,
-  `diagnostics`) never `require` a `regesta.plugins.*` namespace.
+  `diagnostics`) never `require` a `palomar.plugins.*` namespace.
 - Additive only; cannot change existing behaviour.
 
 ### Session 3 — `:mapping/id` collision (Decision 2 — A)

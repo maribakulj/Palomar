@@ -2,7 +2,7 @@
 
 A larger, **BnF-independent** corpus for evaluating entity-resolution clustering:
 which *editions* belong to the same *work*, from OpenLibrary's native Work↔Edition
-model. Used by `regesta.eval.openlibrary-er-test`.
+model. Used by `palomar.eval.openlibrary-er-test`.
 
 ## What it is
 

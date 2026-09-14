@@ -9,7 +9,7 @@ labels: ["enhancement"]
 
 <!--
 Two or three sentences. The use case, not the proposed solution yet.
-"I want X because Y" works better than "Regesta should do X".
+"I want X because Y" works better than "Palomar should do X".
 -->
 
 ## Why the current behavior doesn't suffice

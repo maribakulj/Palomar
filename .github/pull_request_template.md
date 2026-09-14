@@ -1,5 +1,5 @@
 <!--
-Thanks for contributing to Regesta. Please fill in the sections below.
+Thanks for contributing to Palomar. Please fill in the sections below.
 Delete any heading that doesn't apply.
 -->
 
@@ -42,7 +42,7 @@ Examples:
 ## Predicate stdlib growth
 
 <!--
-If this PR adds an entry to the rule predicate stdlib (`regesta.rules`),
+If this PR adds an entry to the rule predicate stdlib (`palomar.rules`),
 justify it with a concrete use case per the README's growth discipline.
 Otherwise: "N/A".
 -->

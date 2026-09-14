@@ -6,8 +6,8 @@
 - Date: 2026-06-02
 - Partially implemented (2026-06-04): the **certified tier** of decisions 1 and 5
   — reconcile *to an authority*, by a determinate id, never pairwise — is real for
-  agents in `regesta.reconcile`: identified `:crm/E21_Person` entities (an ISNI
-  minted by `intermarc.frbrise/with-identified-agent`) are blocked by their
+  agents in `palomar.reconcile`: identified `:crm/E21_Person` entities (an ISNI
+  minted by `intermarc.wemi/with-identified-agent`) are blocked by their
   authority `:iri` and collapsed to one reconciled agent across records (the store
   is the agent registry it returns). Exact and D7-`:asserted` — the Madame Bovary
   fixture reconciles to one Flaubert. The **fuzzy tier** (decisions 3/4) is now
@@ -16,7 +16,7 @@
   `:certifiable?` guard so a perfect name match to an id-less entry (the Victor
   Hugo *metro station*) can never be promoted. The equivalence-assertion verdict
   *store* and revisability over a maintained authority index remain proposed.
-- Builds on: ADR 0016 (FRBRisation — decides the *deferred* scale layer it names),
+- Builds on: ADR 0016 (WEMI derivation — decides the *deferred* scale layer it names),
   ADR 0013 (rich pivot / strategy C — equivalence resolved in the view), ADR 0005
   (status — `:proposed` equivalence), ADR 0001 (assertions), ADR 0008 (idempotency
   — bounded here), ADR 0003 (agnostic core — equivalence predicates stay opaque)
@@ -27,7 +27,7 @@
 ## Context
 
 The question this ADR answers, plainly: *when there are millions of records and the
-same author or work is written a dozen different ways, how does Regesta decide what
+same author or work is written a dozen different ways, how does Palomar decide what
 is the same thing?*
 
 ADR 0016 decided the **in-run** machinery — a resolver seam, a deterministic hash +
@@ -118,7 +118,7 @@ given the claims*, not of the *discovery of claims*.
   index (the authority snapshot, or a maintained local authority store) — it never
   embeds cross-record comparison. This is exactly the **converter → store ladder**
   (roadmap §10, *"from converter to store"*): fuzzy ER at scale is the rung where
-  Regesta optionally grows an indexed store. Until that rung, reconciliation stays
+  Palomar optionally grows an indexed store. Until that rung, reconciliation stays
   **batch-local** against a pinned snapshot (ADR 0016 §3).
 - **Appellation model**: the entity is keyed on its authority id; the many surface
   forms become appellation assertions (LRMoo / CIDOC `E41`-style) pointing at it.
@@ -185,7 +185,7 @@ Two findings sharpen this ADR:
 
 ## What this ADR does not decide
 
-- The store / index technology, and whether or when Regesta climbs that rung
+- The store / index technology, and whether or when Palomar climbs that rung
   (roadmap §10; V2).
 - The live reconciliation source order and its measured yield (future T1 probe).
 - Blocking-key design, the confidence-threshold value, and homonym-disambiguation

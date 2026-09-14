@@ -1,7 +1,7 @@
 # Spike — offline entity resolution (post-WP-0)
 
 **Question.** The showcase-boundary eval showed only 11.2 % of records are enriched
-beyond a bare Manifestation, because FRBRisation needs the `f145 $3` authority link
+beyond a bare Manifestation, because WEMI derivation needs the `f145 $3` authority link
 and 0/220 off-showcase records carry it. How far does *offline* clustering (no
 external authority call) close that recall gap, and what must an entity-resolution
 ADR actually buy?

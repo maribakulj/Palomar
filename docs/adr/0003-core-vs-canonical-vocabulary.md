@@ -6,7 +6,7 @@
 ## Context
 
 The core must remain agnostic to any particular metadata standard. IIIF,
-Dublin Core, CIDOC CRM, MARC, Linked Art all enter Regesta as plugins;
+Dublin Core, CIDOC CRM, MARC, Linked Art all enter Palomar as plugins;
 none of them can be privileged.
 
 At the same time, a core with *zero* vocabulary is inoperable: cross-source
@@ -19,9 +19,9 @@ So we must decide: what vocabulary, if any, lives at the core?
 
 ## Decision
 
-Regesta distinguishes two layers of vocabulary.
+Palomar distinguishes two layers of vocabulary.
 
-**Structural vocabulary — at the core** (`regesta.model`):
+**Structural vocabulary — at the core** (`palomar.model`):
 
 - `:meta/id`
 - `:meta/kind`
@@ -35,7 +35,7 @@ attached to it — not its documentary content. They are the minimal alphabet
 a generic engine needs to function at all.
 
 **Documentary vocabulary — in a standard plugin**
-(`regesta.plugins.canonical`):
+(`palomar.plugins.canonical`):
 
 - `:canon/title`
 - `:canon/identifier`
@@ -48,9 +48,9 @@ a generic engine needs to function at all.
 - `:canon/uniform-title` — *added 2026-06-06* under the growth discipline below.
   The cataloguer's controlled work title (MARC 240, MODS/UNIMARC uniform title),
   distinct from the transcribed `:canon/title`. Concrete use case: it is the
-  FRBRisation Work key that unifies an edition's transcribed-title variants, so the
+  WEMI-derivation Work key that unifies an edition's transcribed-title variants, so the
   floor projection keys the Work on it when present — a measured recall gain against
-  an independent gold (`docs/eval/bibr-frbrisation.md`).
+  an independent gold (`docs/eval/bibr-work-clustering.md`).
 
 Format plugins (DC, MARC, CIDOC) may — but are not required to — declare a
 mapping from their native predicates to `:canon/*`. Consumers that want

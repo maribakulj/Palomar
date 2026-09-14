@@ -3,7 +3,7 @@
 The recall question behind ADR 0018: off the authority link, can clustering by
 *(creator, title)* recover the work grouping? Measured on two independent corpora.
 
-## OpenLibrary — independent corroboration (`regesta.eval.openlibrary-er-test`)
+## OpenLibrary — independent corroboration (`palomar.eval.openlibrary-er-test`)
 
 ~4 555 editions / ~328 works / 18 prolific authors, from OpenLibrary's Work↔Edition
 model (CC0) — **independent of the BnF**, so gold and input no longer share one
@@ -62,7 +62,7 @@ against an external authority. That scarcity is itself the finding: reconciliati
 there is intrinsically hard and must be evidence-gated (certify the proven, propose
 the rest, document the abstention), not benchmarked into existence.
 
-## Agents — certified reconciliation on real BnF data (`regesta.eval.bnf-agent-reconciliation-test`)
+## Agents — certified reconciliation on real BnF data (`palomar.eval.bnf-agent-reconciliation-test`)
 
 The same lesson on the *agent* axis, and the cleanest demonstration yet. 100 real
 INTERMARC records (`bib.author all "victor hugo"` / `"jules verne"`, BnF SRU): 43

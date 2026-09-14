@@ -48,7 +48,7 @@ clojure -M:test  # or whatever command surfaced the bug
 
 ## Environment
 
-- Regesta version: <!-- commit SHA, tag, or "main" with date -->
+- Palomar version: <!-- commit SHA, tag, or "main" with date -->
 - Java version: <!-- e.g. Temurin 21.0.5 -->
 - Clojure CLI version: <!-- output of `clojure --version` -->
 - OS: <!-- e.g. macOS 14.5 / Ubuntu 24.04 -->
