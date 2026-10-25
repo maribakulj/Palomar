@@ -681,3 +681,17 @@
             {:id :rule/bad :phase :normalize
              :match '[[?s :flag/v ?v]]
              :produce {:assert {:subject '?s :predicate :out/x :value '?missing}}}))))))
+
+;; ---------------------------------------------------------------------------
+;; The match that fired a rule is kept in provenance (audit S27)
+;; ---------------------------------------------------------------------------
+
+(deftest a-production-records-the-bindings-that-fired-it
+  (let [rule {:id      :rule/echo-title
+              :phase   :infer
+              :match   '[[?r :canon/title ?t]]
+              :produce {:assert {:subject '?r :predicate :canon/note :value '?t}}}
+        prods (run rule (book-record :id :r/b1 :title "Les Misérables"))
+        prov  (get-in (first prods) [:value :provenance])]
+    (is (= :rule/echo-title (:rule prov)))
+    (is (= '{?r :r/b1 ?t "Les Misérables"} (:bindings prov)))))
