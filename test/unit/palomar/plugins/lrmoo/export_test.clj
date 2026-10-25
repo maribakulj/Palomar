@@ -52,12 +52,12 @@
       (is (contains? ts ["urn:palomar:ent:work" RDF-TYPE {:iri F1}])))
     (testing "a reference value becomes an object-property triple"
       (is (contains? ts ["urn:palomar:ent:work" R3 {:iri "urn:palomar:ent:expr"}])))
-    (testing "an entity's string goes through the F12 Nomen it is identified by (R33's domain)"
-      (let [n (export/nomen-iri "urn:palomar:ent:expr" "Madame Bovary")]
+    (testing "an entity's string goes through the E41 Appellation it is identified by (P1's range)"
+      (let [n (export/appellation-iri "urn:palomar:ent:expr" "Madame Bovary")]
         (is (contains? ts ["urn:palomar:ent:expr" export/identified-by {:iri n}]))
-        (is (contains? ts [n RDF-TYPE {:iri export/nomen-class}]))
-        (is (contains? ts [n R33 {:lit "Madame Bovary"}]))
-        (is (not (contains? ts ["urn:palomar:ent:expr" R33 {:lit "Madame Bovary"}])))))))
+        (is (contains? ts [n RDF-TYPE {:iri export/appellation-class}]))
+        (is (contains? ts [n export/symbolic-content {:lit "Madame Bovary"}]))
+        (is (not-any? #(= R33 (second %)) ts))))))
 
 (deftest ntriples-rendering
   (let [nt (export/->ntriples rec)]
@@ -150,11 +150,12 @@
   (let [ttl (export/->turtle rec)]
     (testing "a @prefix header for the namespace actually used (lrmoo), not rdf (a -> 'a')"
       (is (str/includes? ttl "@prefix lrmoo: <http://iflastandards.info/ns/lrm/lrmoo/> ."))
+      (is (str/includes? ttl "@prefix crm: <http://www.cidoc-crm.org/cidoc-crm/> ."))
       (is (not (str/includes? ttl "@prefix rdf:"))))
     (testing "rdf:type renders as 'a', predicates/types compact, subjects/urn objects stay full"
       (is (str/includes? ttl "a lrmoo:F1_Work"))
       (is (str/includes? ttl "lrmoo:R3_is_realised_in <urn:palomar:ent:expr>"))
-      (is (str/includes? ttl "lrmoo:R33_has_string \"Madame Bovary\""))
+      (is (str/includes? ttl "crm:P190_has_symbolic_content \"Madame Bovary\""))
       (is (str/includes? ttl "<urn:palomar:ent:work>")))
     (testing "every statement block ends in ' .'"
       (is (every? #(str/ends-with? (str/trimr %) ".")
@@ -164,19 +165,19 @@
 
 (deftest jsonld-rendering
   (let [parsed (json/read-str (export/->jsonld rec))]
-    (testing "an @context of the namespace prefixes and one node per subject (Work, Expression, its Nomen)"
+    (testing "an @context of the namespace prefixes and one node per subject (Work, Expression, its appellation)"
       (is (= "http://iflastandards.info/ns/lrm/lrmoo/" (get-in parsed ["@context" "lrmoo"])))
       (is (= 3 (count (get parsed "@graph")))))
     (let [by-id (into {} (map (juxt #(get % "@id") identity)) (get parsed "@graph"))
           work  (get by-id "urn:palomar:ent:work")
           expr  (get by-id "urn:palomar:ent:expr")
-          nomen (get by-id (export/nomen-iri "urn:palomar:ent:expr" "Madame Bovary"))]
+          appel (get by-id (export/appellation-iri "urn:palomar:ent:expr" "Madame Bovary"))]
       (testing "rdf:type -> @type (compacted); a reference -> {@id …}; a literal -> a string"
         (is (= "lrmoo:F1_Work" (get work "@type")))
         (is (= {"@id" "urn:palomar:ent:expr"} (get work "lrmoo:R3_is_realised_in")))
         (is (= "lrmoo:F2_Expression" (get expr "@type")))
-        (is (= "lrmoo:F12_Nomen" (get nomen "@type")))
-        (is (= "Madame Bovary" (get nomen "lrmoo:R33_has_string")))))
+        (is (= "crm:E41_Appellation" (get appel "@type")))
+        (is (= "Madame Bovary" (get appel "crm:P190_has_symbolic_content")))))
     (testing "a record with no LRMoo content yields the empty string"
       (is (= "" (export/->jsonld (model/record {:id :record/x :kind :book})))))))
 
@@ -218,3 +219,11 @@
     (testing "Turtle and JSON-LD carry it too"
       (is (str/includes? (export/->turtle rec) "\"Dublin Core Tutorial\"@en"))
       (is (str/includes? (export/->jsonld rec) "\"@language\":\"en\"")))))
+
+(deftest a-malformed-language-is-not-written-as-a-tag
+  (testing "en_GB is read as en-GB; a value that is no language tag is left off the literal (audit L2)"
+    (is (= "en-GB" (export/language-tag "en_GB")))
+    (is (= "fr" (export/language-tag " fr ")))
+    (is (nil? (export/language-tag "fr ench")))
+    (is (nil? (export/language-tag "")))
+    (is (nil? (export/language-tag :fr)))))

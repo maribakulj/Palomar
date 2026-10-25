@@ -200,3 +200,27 @@
       (is (some #(and (= :loss/dropped (:code %)) (= :ent/orphan (:subject %))) ls))
       (is (some #(and (= :loss/under-specified (:code %))
                       (= :canon/note (get-in % [:detail :loss/source-field]))) ls)))))
+
+(deftest names-work-iri-and-unattributed-fields
+  (let [base {:id :record/z :kind :book
+              :entities [(model/entity {:id :ent/w :kind :lrmoo/F1_Work :iri "http://ex/work"})
+                         (model/entity {:id :ent/e :kind :lrmoo/F2_Expression})
+                         (model/entity {:id :ent/m :kind :lrmoo/F3_Manifestation :iri "http://ex/m"})]
+              :assertions [(model/assertion {:subject :ent/w :predicate :lrmoo/R3_is_realised_in :value (model/reference :ent/e)})
+                           (model/assertion {:subject :ent/m :predicate :lrmoo/R4_embodies :value (model/reference :ent/e)})
+                           (model/assertion {:subject :ent/m :predicate :lrmoo/R33_has_string :value "Titre"})
+                           (model/assertion {:subject :ent/m :predicate :lrmoo/R33_has_string :value "Title"})]}
+        doc  (json/read-str (la/->jsonld (model/record base)))]
+    (testing "every string of the Manifestation is a Name; part_of uses the Work's own IRI and only its own title (audit L8/L9)"
+      (is (= ["Titre" "Title"] (map #(get % "content") (filter #(= "Name" (get % "type")) (get doc "identified_by")))))
+      (is (= "http://ex/work" (get-in doc ["part_of" 0 "id"])))
+      (is (nil? (get-in doc ["part_of" 0 "_label"])) "the Work has no title of its own"))
+    (testing "with no Manifestation, the record-level fields are reported dropped, each agent once"
+      (let [r  (model/record {:id :record/y :kind :book
+                              :assertions [(model/assertion {:subject :record/y :predicate :canon/agent :value "Illustr."})
+                                           (model/assertion {:subject :record/y :predicate :canon/note :value "n"})]})
+            ls (la/export-losses r)]
+        (is (= "" (la/->jsonld r)))
+        (is (= 1 (count (filter #(= :canon/agent (get-in % [:detail :loss/source-field])) ls))))
+        (is (every? #(= :loss/dropped (:code %))
+                    (filter #(#{:canon/agent :canon/note} (get-in % [:detail :loss/source-field])) ls)))))))

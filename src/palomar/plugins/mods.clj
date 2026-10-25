@@ -28,7 +28,7 @@
    | `originInfo/publisher`          | `:canon/agent`, `:canon/role :publisher` |
    | `originInfo/dateIssued`         | `:canon/date`        |
    | `identifier`                    | `:canon/identifier`  |
-   | `abstract`, `note`              | `:canon/note`        |
+   | `abstract`, `tableOfContents`, `note` | `:canon/note` (`:canon/note-kind` `:abstract`, `:contents`; a `note[@type=performers]` `:credits`) |
    | `location/url`                  | `:canon/digital-object` |
 
    `titleInfo/subTitle` is captured as native `:mods/subtitle` but not mapped (it
@@ -96,7 +96,13 @@
 (def handled-elements
   "Top-level MODS elements this V1 parser reads; every other top-level element is
    reported as import loss rather than silently dropped."
-  #{"titleInfo" "name" "originInfo" "identifier" "abstract" "note" "location" "recordInfo"})
+  #{"titleInfo" "name" "originInfo" "identifier" "abstract" "tableOfContents" "note" "location"
+    "recordInfo"})
+
+(defn- performers-note?
+  "True for a `<note type=\"performers\">`, the MODS form of a MARC 511 credits note."
+  [nt]
+  (= "performers" (get-in nt [:attrs :type])))
 
 (defn- assertion [rid pred v]
   (model/assertion {:subject    rid
@@ -139,9 +145,12 @@
    (for [a (children-named mods "abstract")
          :let [v (text-of a)] :when v]
      (assertion rid "abstract" v))
+   (for [toc (children-named mods "tableOfContents")
+         :let [v (text-of toc)] :when v]
+     (assertion rid "table-of-contents" v))
    (for [nt (children-named mods "note")
          :let [v (text-of nt)] :when v]
-     (assertion rid "note" v))
+     (assertion rid (if (performers-note? nt) "performers-note" "note") v))
    (for [loc (children-named mods "location")
          u   (children-named loc "url")
          :let [v (text-of u)] :when v]
@@ -231,6 +240,12 @@
    {:mapping/id :map/mods-abstract :mapping/from :mods/abstract :mapping/to :canon/note
     :mapping/transform [:trim]
     :mapping/qualifier {:value :abstract :as :canon/note-kind}}
+   {:mapping/id :map/mods-contents :mapping/from :mods/table-of-contents :mapping/to :canon/note
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contents :as :canon/note-kind}}
+   {:mapping/id :map/mods-performers :mapping/from :mods/performers-note :mapping/to :canon/note
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :credits :as :canon/note-kind}}
    {:mapping/id :map/mods-note :mapping/from :mods/note :mapping/to :canon/note
     :mapping/transform [:trim]}
    {:mapping/id :map/mods-url :mapping/from :mods/url :mapping/to :canon/digital-object

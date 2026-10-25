@@ -24,20 +24,21 @@
    - **the bibliographic identifier (LCCN)** and **the transcribed date** appear in
      both routes, both records.
    - **digital objects** (the 856 access URLs) converge exactly for the web record.
+   - **notes** converge exactly: the 505 track listing (MODS `tableOfContents`) and
+     the 511 credits (`note type=\"performers\"`) reach both floors with their kind.
 
    ## What diverges (MODS carries more, and flattens differently) — asserted, not hidden
 
-   - **agent.** Path B folds the date `namePart` into the name (\"Charles, Ray 1930-\")
-     *and* promotes `originInfo/publisher` to a second agent (\"Atlantic\"); Path A
-     keeps only the 700 $a name. Two defensible flattenings of one MARC record.
+   - **agent.** Both paths carry the publisher as a second agent, Path A from
+     260 $b with its ISBD comma (\"Atlantic,\"), Path B from `originInfo/publisher`
+     (\"Atlantic\"); Path B also folds the date `namePart` into the name (\"Charles,
+     Ray 1930-\") where Path A keeps the 700 $a name. Two defensible flattenings.
    - **date.** Path B also carries the MARC-*coded* normalised form (\"1957\";
      \"1994\"/\"9999\") that the LoC stylesheet emits as a second `dateIssued`; Path A
      has only the transcribed 260 $c.
    - **identifier.** Path B adds the 028 issue number (\"1259 Atlantic\", MODS
      `type=\"issue number\"`) and the 856 URLs (MODS `type=\"uri\"`); Path A keys on the
      control numbers (035) and routes 856 $u to a digital object, not an identifier.
-   - **note.** Path A keeps the 505 track listing; the LoC stylesheet routes it to
-     `<tableOfContents>`, which the MODS floor does not map (ADR 0003) → dropped in B.
 
    Honest framing: this is convergence on the *documentary spine through an external
    standard*, **not** round-trip equality — the two importers have different scopes
@@ -112,9 +113,9 @@
            #{"http://www.whitehouse.gov" "http://lcweb.loc.gov/staff/wpp/whitehouse.html"}))))
 
 (deftest mods-carries-more-and-flattens-differently
-  (testing "agent: MODS promotes the publisher to an agent (and folds the date namePart); MARC keeps only the 700 name"
+  (testing "agent: both routes carry the publisher; MODS folds the date namePart in, MARC keeps the ISBD punctuation"
     (is (contains? (b 0 :canon/agent) "Atlantic"))            ; originInfo/publisher -> agent
-    (is (not (contains? (a 0 :canon/agent) "Atlantic")))
+    (is (contains? (a 0 :canon/agent) "Atlantic,"))           ; 260 $b, with its comma
     (is (contains? (b 0 :canon/agent) "Charles, Ray 1930-"))  ; date namePart joined in
     (is (contains? (a 0 :canon/agent) "Charles, Ray,")))      ; MARC 700 $a, with its comma
   (testing "date: MODS also carries the MARC-coded normalised form that the direct route omits"
@@ -122,7 +123,9 @@
     (is (not (contains? (a 0 :canon/date) "1957"))))
   (testing "identifier: MODS adds the 028 issue number; the direct route does not treat 028 as an identifier"
     (is (contains? (b 0 :canon/identifier) "1259 Atlantic"))
-    (is (not (contains? (a 0 :canon/identifier) "1259 Atlantic"))))
-  (testing "note: the direct route keeps the 505 track listing; MODS routes it to tableOfContents (unmapped) -> dropped in B"
-    (is (some #(str/includes? % "My melancholy baby") (a 0 :canon/note)))
-    (is (not-any? #(str/includes? % "My melancholy baby") (b 0 :canon/note)))))
+    (is (not (contains? (a 0 :canon/identifier) "1259 Atlantic")))))
+
+(deftest notes-converge-through-tableofcontents-and-the-performers-note
+  (testing "the 505 track listing (MODS tableOfContents) and the 511 credits (note type=performers) reach both floors"
+    (is (some #(str/includes? % "My melancholy baby") (b 0 :canon/note)))
+    (is (= (a 0 :canon/note) (b 0 :canon/note)))))

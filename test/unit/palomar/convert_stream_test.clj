@@ -136,3 +136,17 @@
           batch (:records ((:importer plug) {} (slurp path)))
           strm  (with-open [r (io/reader path)] (doall (convert/stream-source :unimarc {} r)))]
       (is (= batch strm)))))
+
+(deftest a-marc21-sru-envelope-is-not-taken-for-a-record
+  (testing "zs:record wraps the MARC21slim record: both paths read the inner one, with its fields"
+    (let [xml   (str "<zs:searchRetrieveResponse xmlns:zs=\"http://docs.oasis-open.org/ns/search-ws/sruResponse\">"
+                     "<zs:records><zs:record><zs:recordData>"
+                     "<record xmlns=\"http://www.loc.gov/MARC21/slim\">"
+                     "<controlfield tag=\"001\">123</controlfield>"
+                     "<datafield tag=\"245\" ind1=\"0\" ind2=\"0\"><subfield code=\"a\">T</subfield></datafield>"
+                     "</record></zs:recordData></zs:record></zs:records></zs:searchRetrieveResponse>")
+          batch (:records ((:importer (spokes/plugin :marc21)) {} xml))
+          strm  (doall (convert/stream-source :marc21 {} (java.io.StringReader. xml)))]
+      (is (= [:marc/r123] (map :id batch) (map :id strm)))
+      (is (= batch strm))
+      (is (seq (:assertions (first strm)))))))

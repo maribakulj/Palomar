@@ -229,6 +229,15 @@
         segments      (mapv encode-locator-segment locator)]
     (keyword "frag" (str/join "." (cons record-prefix segments)))))
 
+(defn sha256-hex
+  "The first `n` hex digits of the SHA-256 of `s`'s UTF-8 bytes — the one digest
+   behind every content-derived id and IRI (entity ids, record-id suffixes,
+   appellation and activity IRIs)."
+  [s n]
+  (let [bytes (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                       (.getBytes (str s) "UTF-8"))]
+    (subs (apply str (map #(format "%02x" (bit-and (int %) 0xff)) bytes)) 0 n)))
+
 (defn mint-entity-id
   "Construct a content-based identifier for a synthesized entity. Returns a
    keyword in the `:ent` namespace whose name is the entity `kind` followed by a
@@ -261,12 +270,7 @@
     (throw (ex-info "mint-entity-id requires a keyword kind" {:kind kind})))
   (when-not (and (string? key) (seq key))
     (throw (ex-info "mint-entity-id requires a non-empty string key" {:key key})))
-  (let [canonical (pr-str [kind key])
-        digest    (.digest (java.security.MessageDigest/getInstance "SHA-256")
-                           (.getBytes canonical "UTF-8"))
-        hex       (apply str (map #(format "%02x" (bit-and (int %) 0xff))
-                                  (take 8 digest)))]
-    (keyword "ent" (str (name kind) "." hex))))
+  (keyword "ent" (str (name kind) "." (sha256-hex (pr-str [kind key]) 16))))
 
 ;; ---------------------------------------------------------------------------
 ;; Value
@@ -550,11 +554,33 @@
   [x]
   (contains? out-of-force-statuses (:status x)))
 
+(defn- referenced-ids
+  "Ids an assertion mentions: its subject and, for a reference value, its target."
+  [a]
+  (cond-> [(:subject a)]
+    (reference-value? (:value a)) (conj (:value/target (:value a)))))
+
+(defn filter-assertions
+  "`record` keeping only the assertions `keep?` accepts. An entity with no
+   authority `:iri` that some dropped assertion mentioned, and no kept one does,
+   goes too: it existed only through the dropped claims (a Work or Expression
+   inferred by a proposal a curator rejected). Entities the dropped assertions
+   never mentioned are left alone."
+  [record keep?]
+  (if-let [as (seq (:assertions record))]
+    (let [{kept true dropped false} (group-by (comp boolean keep?) as)
+          still   (into #{} (mapcat referenced-ids) kept)
+          orphans (into #{} (comp (mapcat referenced-ids) (remove still)) dropped)]
+      (cond-> (assoc record :assertions (vec kept))
+        (and (seq orphans) (:entities record))
+        (update :entities (partial filterv #(or (:iri %) (not (contains? orphans (:id %))))))))
+    record))
+
 (defn without-out-of-force
-  "`record` without its out-of-force assertions (`out-of-force?`)."
+  "`record` without its out-of-force assertions (`out-of-force?`), nor the
+   entities that existed only through them (`filter-assertions`)."
   [record]
-  (cond-> record
-    (:assertions record) (update :assertions #(filterv (complement out-of-force?) %))))
+  (filter-assertions record (complement out-of-force?)))
 
 ;; ---------------------------------------------------------------------------
 ;; Simple queries

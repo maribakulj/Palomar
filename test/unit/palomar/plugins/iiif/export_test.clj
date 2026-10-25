@@ -123,7 +123,21 @@
         (is (nil? (iex/->json rec)))
         (let [w (first (filter #(= :iiif/manifest (dx/loss-source-field %)) (iex/export-losses rec)))]
           (is (= :warning (:severity w)))
-          (is (str/includes? (:message w) (first missing))))))))
+          (is (str/includes? (:message w) (first missing))))
+        (testing "and nothing about a manifest that was not written: only the warning and the unexpressed predicates"
+          (is (every? #(or (= :iiif/manifest (dx/loss-source-field %))
+                           (re-find #"is not written by the IIIF export" (:message %)))
+                      (iex/export-losses rec))))))))
+
+(deftest the-manifest-id-is-the-first-http-uri
+  (testing "a MARC control number in :source gives way to an HTTP(S) identifier (audit S11)"
+    (let [rec (model/record (merge {:id :iiif/d :kind :iiif/manifest :source "91758335"}
+                                   (with-image :iiif/d [(model/assertion {:subject :iiif/d :predicate :canon/title :value "T"})
+                                                        (model/assertion {:subject :iiif/d :predicate :canon/identifier
+                                                                          :value "https://ex/d/manifest.json"})]
+                                     "https://ex/d.jpg" 10 10)))]
+      (is (empty? (iex/missing-required rec)))
+      (is (str/includes? (iex/->json rec) "\"id\":\"https://ex/d/manifest.json\"")))))
 
 (deftest a-multilingual-label-keeps-every-language
   (testing "label/summary language maps survive the round-trip, every string with its language (audit test 11)"

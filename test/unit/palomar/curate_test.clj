@@ -117,7 +117,7 @@
       (is (= 2 (count records)))
       (is (= 2 (count transitions))))
     (testing "the summary counts by resulting status"
-      (is (= {:accepted 2 :rejected 0 :needs-review 0 :total 2} summary)))))
+      (is (= {:accepted 2 :rejected 0 :needs-review 0 :superseded 0 :total 2} summary)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Reporting
@@ -176,9 +176,20 @@
         r   (model/record {:id :r/x :kind :t :assertions [old]})
         {:keys [record transitions]} (curate/supersede r old new "typo in the source: 1826 for 1862")]
     (is (= [:superseded :accepted] (map :status (:assertions record))))
-    (is (= [:r/x] (get-in (second (:assertions record)) [:provenance :derivation])))
+    (is (= :curate/supersede (get-in (second (:assertions record)) [:provenance :rule])))
+    (is (model/valid-record? record))
     (is (= :superseded (:to (first transitions))))
     (is (= "1862" (get-in (first transitions) [:replaced-by :value])))
     (is (= "typo in the source: 1826 for 1862" (:reason (first transitions))))
     (testing "only an in-force assertion can be superseded"
       (is (thrown? clojure.lang.ExceptionInfo (curate/supersede record old new "again"))))))
+
+(deftest a-supersession-is-reported-with-its-reason
+  (let [old {:subject :r/x :predicate :canon/date :value "1826"}          ; caller passes no status
+        r   (model/record {:id :r/x :kind :t
+                           :assertions [(model/assertion (assoc old :status :asserted))]})
+        res (curate/supersede r old {:subject :r/x :predicate :canon/date :value "1862"} "typo")
+        out (curate/format-curation res "manual")]
+    (is (= :asserted (:from (first (:transitions res)))))                 ; taken from the record
+    (is (str/includes? out "1 superseded"))
+    (is (str/includes? out "(typo)"))))

@@ -91,31 +91,34 @@
     {:accepted     (get by-to :accepted 0)
      :rejected     (get by-to :rejected 0)
      :needs-review (get by-to :needs-review 0)
+     :superseded   (get by-to :superseded 0)
      :total        (count transitions)}))
 
 (defn supersede
   "Replace, in `record`, the in-force assertion `old` by `new` (ADR 0005's
    supersession, an explicit step since the core models no cardinality and so
-   cannot tell a correction from an addition). `old` becomes `:superseded`; `new`
-   is added `:accepted`, its provenance deriving from `old`'s subject. Returns
+   cannot tell a correction from an addition). The record's matching assertion
+   becomes `:superseded`; `new` is added `:accepted`, built through
+   `model/assertion` with provenance naming this step. Returns
    `{:record record' :transitions [..]}`, the log naming the replacement and the
-   `reason` (audit S28). Throws when `old` is not an in-force assertion of
+   `reason` (ADR 0023). Throws when `old` is not an in-force assertion of
    `record`."
   [record old new reason]
   (let [same? #(and (= (:subject %) (:subject old)) (= (:predicate %) (:predicate old))
-                    (= (:value %) (:value old)) (model/in-force? %))]
-    (when-not (some same? (:assertions record))
+                    (= (:value %) (:value old)) (model/in-force? %))
+        found (first (filter same? (:assertions record)))]
+    (when-not found
       (throw (ex-info "supersede: no such in-force assertion" {:assertion old})))
     {:record      (-> record
                       (update :assertions (partial mapv #(if (same? %) (assoc % :status :superseded) %)))
                       (update :assertions conj
-                              (-> new
-                                  (assoc :status :accepted)
-                                  (update :provenance #(update (or % {}) :derivation
-                                                               (fnil conj []) (:subject old))))))
-     :transitions [{:subject     (:subject old)
-                    :predicate   (:predicate old)
-                    :from        (:status old)
+                              (model/assertion
+                               (assoc (select-keys new [:subject :predicate :value :confidence])
+                                      :status     :accepted
+                                      :provenance (model/provenance {:rule :curate/supersede})))))
+     :transitions [{:subject     (:subject found)
+                    :predicate   (:predicate found)
+                    :from        (:status found)
                     :to          :superseded
                     :verdict     :supersede
                     :replaced-by (select-keys new [:subject :predicate :value])
@@ -176,6 +179,9 @@
                   (when (not= 1 (:total summary)) "s") " curated — "
                   (:accepted summary) " accepted, "
                   (:rejected summary) " rejected, "
-                  (:needs-review summary) " needs-review")
-             (for [{:keys [subject predicate from to]} transitions]
-               (str "  " subject "  " predicate "  " (name from) " → " (name to))))))))
+                  (:needs-review summary) " needs-review"
+                  (when (pos? (:superseded summary 0))
+                    (str ", " (:superseded summary) " superseded")))
+             (for [{:keys [subject predicate from to reason]} transitions]
+               (str "  " subject "  " predicate "  " (if from (name from) "-") " → " (name to)
+                    (when reason (str "  (" reason ")")))))))))

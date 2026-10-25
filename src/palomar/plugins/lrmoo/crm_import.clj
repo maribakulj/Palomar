@@ -9,7 +9,7 @@
 
    - an LRMoo **F-class** IRI (`F1_Work`, `F2_Expression`, `F3_Manifestation`,
      `F5_Item`) ⇒ recovered unambiguously — the additive `:crm`/`:lrmoo` export keeps
-     these, so the WEMI typing, links and R33 strings round-trip; anything else
+     these, so the WEMI typing, links and entity strings round-trip; anything else
      in the graph is reported as loss, not dropped silently;
    - failing that, a node typed only by a CRM **E-class** super-class is *not*
      downcast: sub-classing does not invert. `E89_Propositional_Object` is F1's
@@ -85,9 +85,25 @@
 
 (def ^:private r33-iri (lrmoo/iri :lrmoo/R33_has_string))
 
+(def ^:private legacy-r33-twin
+  "The CRM twin earlier `:crm` exports wrote beside each R33 string."
+  (str crm/crm-base "P3_has_note"))
+
+(def ^:private appellation-types
+  "rdf:types of the node an entity's string is written on: `E41_Appellation`
+   (P1's range), and `F12_Nomen`, which earlier exports used."
+  #{export/appellation-class (lrmoo/iri :lrmoo/F12_Nomen)})
+
 (def ^:private crm-super-property
   "LRMoo R-property IRI → its CRM super-property IRI (the additive `:crm` view's twin)."
   (into {} (for [[k p] crm/property-superproperty] [(lrmoo/iri k) (str crm/crm-base p)])))
+
+(def ^:private kind->type-iris
+  "WEMI kind → the rdf:type IRIs that type it: its F-class and, in the additive
+   `:crm` view, the CRM super-class twin."
+  (into {} (for [k lrmoo/entity-kinds]
+             [k (cond-> #{(lrmoo/iri k)}
+                  (crm/class-superclass k) (conj (str crm/crm-base (crm/class-superclass k))))])))
 
 (defn recover
   "Recover the LRMoo view from CRM/LRMoo N-Triples `nt`. Returns:
@@ -96,55 +112,62 @@
       :super-class-only {node-iri #{kind}}  ; a CRM super-class with one candidate — not downcast
       :ambiguous        {node-iri #{kinds}} ; a CRM super-class with several candidates
       :relations        #{[from-iri R-pred to-iri]}  ; WEMI links (from LRMoo R-properties)
-      :strings          [[node-iri literal]]          ; R33 strings of typed nodes, in order
+      :strings          [[node-iri literal]]          ; strings of typed nodes, in order
       :unrecovered      [[s p o]]}                    ; every other triple (see `->record`)
 
-   A triple is recovered when it types a node, links two typed nodes by an
-   R-property, or gives a typed node its R33 string — through the F12 Nomen it is
-   identified by (P1), as `lrmoo.export` writes it, or directly. The additive `:crm` view's
-   CRM twins of those (the E super-class of an F-typed node, the P super-property
-   of a recovered link or string) are subsumed, not lost. Everything else is
-   `:unrecovered` and reported by `->record` (audit S17)."
+   A triple is recovered when it types a node by its F-class or that class's CRM
+   twin, links two typed nodes by an R-property, or gives a typed node its
+   string. A string is read as `lrmoo.export` writes it, entity
+   —P1_is_identified_by→ E41 Appellation —P190_has_symbolic_content→ \"s\", and
+   in the two forms earlier exports used: through an F12 Nomen with R33, and a
+   direct entity —R33→ \"s\" (with its `P3_has_note` twin). Another rdf:type
+   on a typed node (`schema:Book`) is not recovered, and is reported. Everything
+   else is `:unrecovered` and reported by `->record` (audit S17)."
   [nt]
   (let [triples   (parse-ntriples nt)
         types     (group-by first (filter (fn [[_ p o]] (and (= p export/rdf-type) (:iri o))) triples))
         resolved  (into {} (for [[s trs] types]
                              [s (node-kind (set (map (comp :iri #(nth % 2)) trs)))]))
-        tag-of    (fn [tag] (into {} (for [[s [t k]] resolved :when (= t tag)] [s k])))
-        typed     (tag-of :typed)
+        by-tag    (reduce-kv (fn [m s [t k]] (assoc-in m [t s] k)) {} resolved)
+        typed     (get by-tag :typed {})
+        sco       (get by-tag :super-class-only {})
+        amb       (get by-tag :ambiguous {})
         node      (fn [o] (nt/term-key o))
         relations (set (for [[s p o] triples
                              :let  [pred (lrmoo-prop->pred p)]
                              :when (and pred (not= p r33-iri) (node o) (typed s) (typed (node o)))]
                          [s pred (node o)]))
-        ;; an entity's string is written entity -P1-> Nomen -R33-> "s" (R33's domain
-        ;; is F12 Nomen); a direct entity -R33-> "s" (older exports) is read too
-        r33-of    (group-by first (filter (fn [[_ p o]] (and (= p r33-iri) (:lit o))) triples))
-        nomen-of  (for [[s p o] triples
-                        :when (and (= p export/identified-by) (typed s) (r33-of (node o)))]
+        string-of (group-by first (filter (fn [[_ p o]] (and (#{export/symbolic-content r33-iri} p) (:lit o)))
+                                          triples))
+        appel-of  (for [[s p o] triples
+                        :when (and (= p export/identified-by) (typed s) (string-of (node o)))]
                     [s (node o)])
-        nomens    (set (map second nomen-of))
+        appels    (set (map second appel-of))
         strings   (vec (concat
-                        (for [[s _ o] (mapcat r33-of (filter typed (keys r33-of)))] [s o])
-                        (for [[s n] nomen-of, [_ _ o] (r33-of n)] [s o])))
+                        (for [s (filter typed (keys string-of))
+                              [_ _ o] (string-of s)]
+                          [s o])
+                        (for [[s n] appel-of, [_ _ o] (string-of n)] [s o])))
         rel-twins (set (for [[s pred o] relations] [s (crm-super-property (lrmoo/iri pred)) o]))
-        str-twins (set (for [[n ts] r33-of
-                             :when (or (typed n) (nomens n))
-                             [_ _ o] ts]
-                         [n (crm-super-property r33-iri) (:lit o)]))
-        known     (fn [s] (or (typed s) (contains? (tag-of :super-class-only) s)
-                              (contains? (tag-of :ambiguous) s)))
+        str-twins (set (for [s (filter typed (keys string-of))
+                             [_ p o] (string-of s) :when (= p r33-iri)]
+                         [s legacy-r33-twin o]))
         recovered? (fn [[s p o]]
                      (cond
-                       (= p export/rdf-type) (or (known s) (contains? nomens s))
-                       (= p export/identified-by) (and (typed s) (contains? nomens (node o)))
-                       (= p r33-iri)         (and (:lit o) (or (typed s) (contains? nomens s)))
+                       (= p export/rdf-type)
+                       (cond
+                         (typed s)        (contains? (kind->type-iris (typed s)) (:iri o))
+                         (appels s)       (contains? appellation-types (:iri o))
+                         (or (sco s) (amb s)) (contains? crm-class->kinds (:iri o))  ; reported as a downcast loss
+                         :else            false)
+                       (= p export/identified-by) (and (typed s) (contains? appels (node o)))
+                       (#{export/symbolic-content r33-iri} p) (and (:lit o) (or (typed s) (contains? appels s)))
                        (lrmoo-prop->pred p)  (contains? relations [s (lrmoo-prop->pred p) (node o)])
-                       (:lit o)              (contains? str-twins [s p (:lit o)])
+                       (:lit o)              (contains? str-twins [s p o])
                        :else                 (contains? rel-twins [s p (node o)])))]
     {:typed            typed
-     :super-class-only (tag-of :super-class-only)
-     :ambiguous        (tag-of :ambiguous)
+     :super-class-only sco
+     :ambiguous        amb
      :relations        relations
      :strings          strings
      :unrecovered      (vec (remove recovered? triples))}))
@@ -177,7 +200,7 @@
                              :subject      rid
                              :edge         :import
                              :source-field :lrmoo/R33_has_string
-                             :message      "an R33 string's language tag or datatype is not carried"})])
+                             :message      "an entity string's language tag or datatype is not carried"})])
         dropped (for [[p ts] (group-by second unrecovered)]
                   (dx/loss {:category     :dropped
                             :subject      rid

@@ -133,8 +133,8 @@
                       (= :lrmoo/R33_has_string (dx/loss-source-field %))) diagnostics))  ; @fr not carried
       (is (some #(= (keyword "rdf" "http://purl.org/dc/terms/extent") (dx/loss-source-field %)) diagnostics)))))
 
-(deftest a-title-round-trips-through-its-nomen
-  (testing "R33 strings exported via P1 -> F12 Nomen come back on their entity, with nothing reported lost"
+(deftest a-title-round-trips-through-its-appellation
+  (testing "strings exported via P1 -> E41 Appellation -> P190 come back on their entity, with nothing reported lost"
     (let [rec (-> (wemi-record)
                   (update :assertions conj
                           (model/assertion {:subject :ent/manif :predicate :lrmoo/R33_has_string
@@ -144,3 +144,26 @@
              (for [a (:assertions record) :when (= :lrmoo/R33_has_string (:predicate a))]
                [(:subject a) (:value a)])))
       (is (empty? diagnostics)))))
+
+(deftest the-earlier-nomen-form-is-still-read
+  (testing "entity -P1-> F12 Nomen -R33-> \"s\", as exports before ADR 0022's revision wrote it"
+    (let [lrm "http://iflastandards.info/ns/lrm/lrmoo/"
+          rdf "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"
+          nt  (str "<urn:m> " rdf " <" lrm "F3_Manifestation> .\n"
+                   "<urn:m> <http://www.cidoc-crm.org/cidoc-crm/P1_is_identified_by> <urn:n> .\n"
+                   "<urn:n> " rdf " <" lrm "F12_Nomen> .\n"
+                   "<urn:n> <" lrm "R33_has_string> \"T\" .\n")
+          {:keys [record diagnostics]} (crm-import/->record nt :rec/n)]
+      (is (= [["urn:m" "T"]] (for [a (:assertions record) :when (= :lrmoo/R33_has_string (:predicate a))]
+                               [(:subject a) (:value a)])))
+      (is (empty? diagnostics)))))
+
+(deftest another-type-on-a-typed-node-is-reported
+  (testing "a typed Manifestation that is also a schema:Book: the extra type is not silently absorbed (audit L4)"
+    (let [lrm "http://iflastandards.info/ns/lrm/lrmoo/"
+          rdf "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"
+          nt  (str "<urn:m> " rdf " <" lrm "F3_Manifestation> .\n"
+                   "<urn:m> " rdf " <http://schema.org/Book> .\n")
+          {:keys [diagnostics]} (crm-import/->record nt :rec/t)]
+      (is (= [(keyword "rdf" "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")]
+             (map dx/loss-source-field diagnostics))))))

@@ -44,10 +44,10 @@
 
 (def canon->mods
   "Ordered canonical→MODS `[predicate open-tags close-tags]`. MODS is nested, so
-   each value is wrapped in a small element tree rather than a flat tag.
-   `abstract`/`note` collapsed onto `:canon/note` at import; export emits the
-   generic element and reports the collapse (see ns doc). Agents are placed by
-   role (`agent-elements`). Ordered for a deterministic serialisation."
+   each value is wrapped in a small element tree rather than a flat tag. Agents
+   are placed by role (`agent-elements`) and notes by kind (`note-elements`); the
+   tags here are the defaults, a `<name>` and a general `<note>`. Ordered for a
+   deterministic serialisation."
   [[:canon/title          "<titleInfo><title>"        "</title></titleInfo>"]
    [:canon/uniform-title  "<titleInfo type=\"uniform\"><title>" "</title></titleInfo>"]
    [:canon/agent          "<name><namePart>"          "</namePart></name>"]          ; publisher -> originInfo, see `agent-elements`
@@ -81,12 +81,15 @@
 
 (defn- agent-elements
   "`[open close value]` for each of `record`'s agents: a publisher is
-   `originInfo/publisher`, every other agent a `name` (`open`/`close`)."
+   `originInfo/publisher`, every other agent a `name` (`open`/`close`). One
+   element per name and kind: a name credited as creator and contributor is one
+   `<name>`, as `<name>` carries no role here."
   [record open close]
-  (for [{nm :name role :role} (distinct (agents/occurrences record))]
-    (if (= :publisher role)
-      ["<originInfo><publisher>" "</publisher></originInfo>" nm]
-      [open close nm])))
+  (distinct
+   (for [{nm :name role :role} (agents/occurrences record)]
+     (if (= :publisher role)
+       ["<originInfo><publisher>" "</publisher></originInfo>" nm]
+       [open close nm]))))
 
 (defn ->mods-xml
   "Render `record`'s canonical content as a MODS v3 `<mods>` document, or `nil` if
@@ -111,9 +114,10 @@
 ;; --- loss accounting --------------------------------------------------------
 
 (def collapsed-predicates
-  "Canonical predicates several MODS elements collapsed onto at import (derived from
+  "Canonical predicates several MODS elements collapse onto at import (derived from
    the mods mapping's many-to-one structure: name+publisher → agent, abstract+note
-   → note) — the original MODS element is not recoverable on export."
+   → note). The role and the note kind bring most of them back; `export-losses`
+   reports only what they do not (a `<name>`'s creator/contributor role)."
   (->> mods/mapping
        (group-by :mapping/to)
        (keep (fn [[to rules]]
@@ -146,12 +150,6 @@
    picks name vs originInfo/publisher)."
   (into #{:canon/role :canon/note-kind} (map first) canon->mods))
 
-(defn- expressed?
-  "What the MODS export accounts for itself: the canonical fields it writes, and
-   every `:mods/*` native (`pivot-dropped-fields` reports the unmapped ones)."
-  [p]
-  (or (contains? written-canon p) (= "mods" (namespace p))))
-
 (defn export-losses
   "Loss for the canonical→MODS round-trip (ADR 0015): the captured-but-unmapped
    natives dropped through the floor (`:import :dropped`), the many-to-one
@@ -160,7 +158,7 @@
    (`export-coverage/unexpressed`)."
   [record]
   (concat
-   (cov/unexpressed record expressed? "MODS")
+   (cov/unexpressed record written-canon "mods" "MODS")
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

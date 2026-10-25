@@ -24,7 +24,7 @@
    |-----------------------------------------|----------------------|
    | `245 $a`                                | `:canon/title`       |
    | `240 $a`                                | `:canon/uniform-title` |
-   | `100/110/111 $a`, `700/710 $a`          | `:canon/agent`       |
+   | `100/110/111 $a`, `700/710 $a`, `260 $b` | `:canon/agent`      |
    | `260/264 $c`                            | `:canon/date`        |
    | `010/020/022/035 $a`                    | `:canon/identifier`  |
    | `856 $u`                                | `:canon/digital-object` |
@@ -38,21 +38,25 @@
    ## Scope (V1)
 
    - One Record per `<record>`; id `:marc/r<001>` from the control number.
-   - Import only; a canonical→MARC21 exporter is a later slice.
+   - The canonical→MARC21 exporter is `palomar.plugins.marc21.export`.
    - Leader/008 fixed-field decoding and indicator semantics are out of scope."
-  (:require [palomar.plugins.marcxml :as marcxml]
+  (:require [clojure.data.xml :as xml]
+            [palomar.plugins.marcxml :as marcxml]
             [palomar.plugins.record-id :as record-id]))
 
 ;; ---------------------------------------------------------------------------
 ;; Record identity
 ;; ---------------------------------------------------------------------------
 
+(def ^:private marc21slim-uri "http://www.loc.gov/MARC21/slim")
+
 (defn- record-id-from-control
   "`:marc/r<001>` from the control number. The `r` prefix guards against a
    digit-leading keyword name (an EDN round-trip hazard, ADR 0001). A control
    number with characters outside `[A-Za-z0-9]` (e.g. a space in
    \"CF 91000008\") is slugged and gets a digest suffix, so two distinct control
-   numbers never share an id (`palomar.plugins.record-id`, audit S20)."
+   numbers share an id only on a 40-bit digest collision
+   (`palomar.plugins.record-id`, audit S20)."
   [control-number]
   (record-id/from-identifier "marc" "r" control-number))
 
@@ -71,8 +75,11 @@
    Several MARC fields collapse onto one canonical predicate (the agent fields,
    the identifier flavours). The agents keep their responsibility as a
    `:canon/role` coord: 1XX main entries are `:creator`, 7XX added entries
-   `:contributor`, so only a main entry keys the Work. Relator codes ($4/$e)
-   are not read yet."
+   `:contributor`, 260 $b `:publisher`, so only a main entry keys the Work.
+   264 $b is not read: its second indicator says whether it names a publisher,
+   a distributor or a manufacturer, and the flat subfields a mapping reads do
+   not carry indicators (only the field fragment's locator does). Relator
+   codes ($4/$e) are not read yet."
   [{:mapping/id :map/marc21-title :mapping/from :marc21/f245_a :mapping/to :canon/title
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-uniform-240 :mapping/from :marc21/f240_a :mapping/to :canon/uniform-title
@@ -92,6 +99,9 @@
    {:mapping/id :map/marc21-added-corporate-710 :mapping/from :marc21/f710_a :mapping/to :canon/agent
     :mapping/transform [:trim]
     :mapping/qualifier {:value :contributor :as :canon/role}}
+   {:mapping/id :map/marc21-publisher-260 :mapping/from :marc21/f260_b :mapping/to :canon/agent
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :publisher :as :canon/role}}
    {:mapping/id :map/marc21-date-260 :mapping/from :marc21/f260_c :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-date-264 :mapping/from :marc21/f264_c :mapping/to :canon/date
@@ -139,7 +149,10 @@
   "The MARCXML family policies for the MARC21 spoke (shared by `ingest`/`stream`)."
   [opts]
   {:ns        "marc21"
-   :record?   (fn [e] (= "record" (marcxml/local-name e)))
+   ;; MARC21slim's `record`, or an un-namespaced one — not an SRU envelope's
+   ;; `zs:record`, which wraps the real record in `recordData`
+   :record?   (fn [e] (and (= "record" (marcxml/local-name e))
+                           (contains? #{"" marc21slim-uri} (xml/qname-uri (:tag e)))))
    :record-id record-id
    :kind      (fn [_] (or (:kind opts) :marc21/bibliographic))
    :source    (fn [e] (marcxml/control-value e "001"))})

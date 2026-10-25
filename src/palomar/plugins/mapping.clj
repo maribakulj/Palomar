@@ -252,6 +252,17 @@
 ;; coord, not the qualifier).
 ;; ---------------------------------------------------------------------------
 
+(defn- distinct-placements
+  "`matches` (`[s p v]` triples) without the ones whose value, once transformed
+   by `transform` (when `chain` is non-empty), equals an earlier one's on the
+   same subject. Keeps first-occurrence order."
+  [transform chain matches]
+  (let [norm (fn [[s _ v]] [s (if (and (seq chain) (model/primitive-value? v)) (transform v) v)])]
+    (first (reduce (fn [[acc seen] m]
+                     (let [k (norm m)]
+                       (if (contains? seen k) [acc seen] [(conj acc m) (conj seen k)])))
+                   [[] #{}] matches))))
+
 (defn- compile-mapping-rule
   "Compile one mapping rule into a single compiled rule whose runner
    handles both the flat-rename case and, when `:mapping/qualifier` is
@@ -279,24 +290,32 @@
         q-value    (:value qualifier)
         anchor     (first from-preds)
 
+        assert-at  (fn [s p v] (assertion-production {:subject s :predicate p :value v
+                                                      :confidence confidence :rule-id rule-id}))
+
         ;; Place one canonical value. Without a constant qualifier it is the plain
-        ;; `[s to v]`. With one, a record-level primitive moves onto a fragment
-        ;; minted from the native predicate and the occurrence index (ADR 0012),
-        ;; which also carries the qualifier coord — the same shape the shape
-        ;; adapter gives an `{:from :as}` qualifier, so readers see one form.
+        ;; `[s to v]`. With one (ADR 0021), a record-level primitive moves onto a
+        ;; fragment minted from the native predicate, the occurrence index and the
+        ;; coord (`[anchor idx coord 0]`, ADR 0012 — the coord segment keeps these
+        ;; ids apart from ingest fragments such as MARC's `[:ns/fTAG n]`), which
+        ;; also carries the coord: the shape the shape adapter gives an
+        ;; `{:from :as}` qualifier, so readers see one form. A value whose subject
+        ;; is already a fragment gets the coord on that fragment.
         place
         (fn [rid s idx v]
-          (if (and constant? (= s rid) (model/primitive-value? v))
-            (let [fid (model/mint-fragment-id s [anchor idx])]
+          (cond
+            (not (and constant? (model/primitive-value? v)))
+            [(assert-at s to v)]
+
+            (= s rid)
+            (let [fid (model/mint-fragment-id s [anchor idx q-as 0])]
               [{:kind :fragment :value (model/fragment {:id fid :source [:normalize anchor idx]})}
-               (assertion-production {:subject s :predicate to :value (model/reference fid)
-                                      :confidence confidence :rule-id rule-id})
-               (assertion-production {:subject fid :predicate to :value v
-                                      :confidence confidence :rule-id rule-id})
-               (assertion-production {:subject fid :predicate q-as :value q-value
-                                      :confidence confidence :rule-id rule-id})])
-            [(assertion-production {:subject s :predicate to :value v
-                                    :confidence confidence :rule-id rule-id})]))
+               (assert-at s to (model/reference fid))
+               (assert-at fid to v)
+               (assert-at fid q-as q-value)])
+
+            :else
+            [(assert-at s to v) (assert-at s q-as q-value)]))
 
         ;; A match yields a seq of productions: the rename assertion, plus a
         ;; `:coerced` loss only when a lossy transform *actually changed* the
@@ -340,9 +359,7 @@
                            :subject record-id :rule-id rule-id
                            :message (str "Source predicate " from
                                          " not present on record")})]
-            :default    [(assertion-production
-                          {:subject record-id :predicate to :value default
-                           :confidence confidence :rule-id rule-id})]))
+            :default    (place record-id record-id 0 default)))
 
         ;; Combine: for a subject, gather each `from` predicate's (first primitive)
         ;; value in `from-preds` order, join the present ones with `sep`, then run
@@ -382,13 +399,19 @@
                     prods    (into [] (apply concat
                                              (map-indexed #(emit-combine rid %1 %2 triples) subjects)))]
                 (if (seq prods) prods (emit-on-empty rid)))
-              (let [from-matches (filterv (fn [[_ p _]] (= p from)) triples)
+              (let [from-matches (cond->> (filterv (fn [[_ p _]] (= p from)) triples)
+                                     ;; one fragment per distinct value, as an unqualified
+                                     ;; value collapses at merge (ADR 0008)
+                                   constant? (distinct-placements transform chain))
                     base-prods   (if (seq from-matches)
                                    (into [] (apply concat
                                                    (map-indexed #(emit-rename-match rid %1 %2) from-matches)))
                                    (emit-on-empty rid))]
                 (if q-from
-                  (let [qual-matches (filterv (fn [[_ p _]] (= p q-from)) triples)]
+                  ;; only the coords of a subject that carries `from`: another
+                  ;; field's fragment with the same coord is that field's rule's
+                  (let [carriers     (into #{} (keep (fn [[s p _]] (when (= p from) s))) triples)
+                        qual-matches (filterv (fn [[s p _]] (and (= p q-from) (carriers s))) triples)]
                     (into base-prods (keep emit-qualifier-match) qual-matches))
                   base-prods)))))]
     (rules/compiled-rule {:id rule-id :phase :normalize :doc doc :runner runner})))

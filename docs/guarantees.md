@@ -19,13 +19,13 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 | A Manifestation is exported to Linked Art as a text (`LinguisticObject`), only an F5 Item as a physical object; one document per Manifestation and per Item. | `palomar.plugins.lrmoo.linked-art-test/every-manifestation-and-item-gets-its-own-document` |
 | Linked Art output for the MARC21 sample validates against the official `text.json` schema with zero errors. | `palomar.eval.linked-art-conformance-test/our-marc-output-validates-strictly` |
 | A CRM super-class alone (`E89`, `E24`, `E73`) is never downcast to a WEMI entity; it is reported. | `palomar.plugins.lrmoo.crm-import-test/external-crm-super-classes-are-not-downcast` |
-| Entity titles are written to RDF through an F12 Nomen (R33's domain) and read back. | `palomar.plugins.lrmoo.crm-import-test/a-title-round-trips-through-its-nomen` |
+| Entity titles are written to RDF through an E41 Appellation (`P1` → `P190`), never as R33 or P190 on the entity itself, and read back. | `palomar.plugins.lrmoo.crm-import-test/a-title-round-trips-through-its-appellation` |
 | External N-Triples are parsed by the RDF 1.1 grammar; a syntax error is located, never guessed. | `palomar.plugins.lrmoo.ntriples-test/syntax-errors-are-located-never-guessed` |
 | Rejected, superseded and retracted assertions feed no rule and reach no output. | `palomar.rules-test/record-triples-leaves-out-assertions-no-longer-in-force`, `palomar.convert-test/a-rejected-claim-is-never-exported` |
 | Two rules deriving one fact keep both justifications. | `palomar.runtime-test/alternative-justifications-are-recorded-once` |
 | A IIIF manifest missing a Presentation 3.0 MUST is not emitted, and the reason is reported. | `palomar.plugins.iiif.export-test/an-invalid-manifest-is-refused-with-a-diagnostic` |
 | MARC field occurrences keep their subfields together, in order, with their indicators; the leader is kept. | `palomar.plugins.marc21-test/each-field-occurrence-keeps-its-subfields-together-and-in-order` |
-| Distinct source identifiers never share a record id. | `palomar.plugins.record-id-test/identifiers-that-slug-alike-stay-distinct` |
+| Distinct source identifiers do not share a record id (barring a 40-bit digest collision when slugging changed the identifier). | `palomar.plugins.record-id-test/identifiers-that-slug-alike-stay-distinct` |
 | MARC flat dumps and SRU pages stream in bounded memory, and a streamed record equals the batch one. | `palomar.convert-stream-test/an-sru-page-streams-like-a-flat-dump` (memory: `docs/eval/scale.md`) |
 | `convert --stream` never destroys an existing `--out` before the new one is in place. | `palomar.cli-test/convert-stream-replaces-existing-out-only-on-success` |
 

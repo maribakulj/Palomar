@@ -77,7 +77,11 @@
 
 (defn- first-lang [v] (second (first (lang-entries v))))
 
-(defn- many-langs? [v] (< 1 (count (distinct (map first (lang-entries v))))))
+(defn- several-strings?
+  "True when IIIF value `v` holds more than one string (several languages, or
+   several strings in one language or a plain array): `first-lang` keeps one."
+  [v]
+  (< 1 (count (lang-entries v))))
 
 (defn- as-seq [v] (cond (sequential? v) v (some? v) [v] :else []))
 
@@ -183,12 +187,21 @@
      (for [t (distinct (for [c cs, a (annotations c) :when (painting? a)
                              b (bodies a) :when (not= "Image" (get b "type"))]
                          (str (get b "type"))))]
-       (loss rid :iiif/painting-body (str "a painted " t " body is not a digital image; not carried"))))))
+       (loss rid :iiif/painting-body (str "a painted " t " body is not a digital image; not carried")))
+     (when (some #(= "Choice" (get % "type"))
+                 (for [c cs, a (annotations c) :when (painting? a), b (as-seq (get a "body"))] b))
+       [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :iiif/image
+                  :message "a Choice's alternatives are carried as separate images; that they are alternatives is not"})])
+     (when (some #(and (= "Image" (get % "type")) (not (string? (get % "id"))))
+                 (for [c cs, a (annotations c) :when (painting? a), b (bodies a)] b))
+       [(loss rid :iiif/image "a painted Image with no id cannot be carried")])
+     (when (some (fn [c] (some #(and (some? (get c %)) (not (pos-int? (get c %)))) ["width" "height"])) cs)
+       [(loss rid :iiif/canvas-extent "a Canvas width or height that is not a positive integer is not carried")]))))
 
 (defn- ingest-losses
   "Import-edge losses (ADR 0015): one `:dropped` per unmodelled top-level content
-   key, the losses inside `items` (`canvas-losses`), and one `:coerced` per
-   `metadata` pair whose label or value has several languages."
+   key, the losses inside `items` (`canvas-losses`), and one `:coerced` when a
+   `metadata` label or value holds several strings, of which one is kept."
   [rid m]
   (concat
    (for [k (keys m)
@@ -196,9 +209,9 @@
                     (not (contains? handled-keys k)))]
      (loss rid (keyword "iiif" k) (str k " not modelled by the IIIF floor mapping (ADR 0003)")))
    (canvas-losses rid m)
-   (when (some #(or (many-langs? (get % "label")) (many-langs? (get % "value"))) (get m "metadata"))
+   (when (some #(or (several-strings? (get % "label")) (several-strings? (get % "value"))) (get m "metadata"))
      [(dx/loss {:category :coerced :subject rid :edge :import :source-field :iiif/metadata
-                :message "metadata kept one language per label and value; the others are not carried"})])))
+                :message "metadata kept one string per label and value; the others are not carried"})])))
 
 ;; ---------------------------------------------------------------------------
 ;; Record identity

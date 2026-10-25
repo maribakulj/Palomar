@@ -29,7 +29,8 @@
 
    Output is a Presentation 3.0 manifest (`clojure.data.json`, slashes unescaped so
    URIs stay readable), re-importable through `palomar.plugins.iiif`; the manifest
-   `id` comes from `:source` (the original manifest URI) so the trip is id-stable.
+   `id` is the first HTTP(S) URI among `:source` (the original manifest URI) and
+   the identifiers, so the trip is id-stable.
    Synthesised canvas/annotation ids are derived from that base and are ignored by
    the importer (which reads only the `Image` body ids), so the trip is idempotent.
    Kept out of the plugin `:exporter` slot to avoid a require cycle — wired by
@@ -37,8 +38,8 @@
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
-            [palomar.model :as model]
-            [palomar.plugins.export-coverage :as cov]))
+            [palomar.plugins.export-coverage :as cov]
+            [palomar.plugins.qualified :as qualified]))
 
 (def ^:private context "http://iiif.io/api/presentation/3/context.json")
 
@@ -54,32 +55,19 @@
        (map :value)))
 
 (defn- occurrences
-  "Record-level occurrences of canonical `pred` as `{:value …coords}`, resolving a
-   fragment reference to its literal and its qualifier coords (`:lang`, `:width`,
-   `:height`). Flat literals carry no coords."
+  "`{:value :canon/lang :canon/width :canon/height}` for each `pred` literal of
+   `record` (`palomar.plugins.qualified`)."
   [record pred]
-  (let [rid (:id record)
-        by  (group-by :subject (:assertions record))
-        crd (fn [fas k] (some #(when (= k (:predicate %)) (:value %)) fas))]
-    (for [a     (:assertions record)
-          :when (and (= pred (:predicate a)) (= rid (:subject a)))
-          :let  [v (:value a)
-                 fas (when (model/reference-value? v) (get by (:value/target v)))
-                 lit (if fas (some #(when (and (= pred (:predicate %)) (string? (:value %))) (:value %)) fas) v)]
-          :when (string? lit)]
-      {:value  lit
-       :lang   (crd fas :canon/lang)
-       :width  (crd fas :canon/width)
-       :height (crd fas :canon/height)})))
+  (qualified/occurrences record pred [:canon/lang :canon/width :canon/height]))
 
 (defn- lang-map
   "A IIIF 3.0 language map of `occs`, grouped by `:lang` in first-seen order; an
    occurrence with no language goes under `none`."
   [occs]
-  (reduce (fn [m {:keys [value lang]}] (update m (or lang "none") (fnil conj []) value))
+  (reduce (fn [m {value :value lang :canon/lang}] (update m (or lang "none") (fnil conj []) value))
           (array-map) occs))
 
-(defn- placeable? [{:keys [width height]}] (and (pos-int? width) (pos-int? height)))
+(defn- placeable? [{width :canon/width height :canon/height}] (and (pos-int? width) (pos-int? height)))
 
 (defn- manifest-base
   "Strip a trailing `/manifest(.json)` from the manifest URI to form a base for the
@@ -87,7 +75,7 @@
   [id]
   (str/replace (str id) #"/manifest(\.json)?$" ""))
 
-(defn- canvas [base i {image-id :value :keys [width height]}]
+(defn- canvas [base i {image-id :value width :canon/width height :canon/height}]
   (array-map
    "id"     (str base "/canvas/" i)
    "type"   "Canvas"
@@ -102,11 +90,15 @@
                         "motivation" "painting"
                         "body"       (array-map "id" image-id "type" "Image"))])]))
 
+(defn- http-uri? [s] (and (string? s) (boolean (re-matches #"(?i)https?://\S+" s))))
+
 (defn- manifest-id
-  "The manifest `id`: `:source` (the original manifest URI), falling back to the
-   first `:canon/identifier`."
+  "The manifest `id`: the first HTTP(S) URI among `:source` (the original
+   manifest URI) and the `:canon/identifier`s — a MARC control number or an
+   LCCN in `:source` is not a manifest id — else `:source`, for the message."
   [record]
-  (or (:source record) (first (canon-literals record :canon/identifier))))
+  (or (first (filter http-uri? (cons (:source record) (canon-literals record :canon/identifier))))
+      (:source record)))
 
 (defn missing-required
   "The Presentation 3.0 MUSTs `record`'s manifest would miss, as a sorted vector of
@@ -115,7 +107,7 @@
   [record]
   (let [id (manifest-id record)]
     (cond-> []
-      (not (and (string? id) (re-matches #"(?i)https?://\S+" id))) (conj "id")
+      (not (http-uri? id))                                             (conj "id")
       (empty? (occurrences record :canon/title))                     (conj "label")
       (not-any? placeable? (occurrences record :canon/digital-object)) (conj "items"))))
 
@@ -146,50 +138,44 @@
 ;; --- loss accounting --------------------------------------------------------
 
 (defn export-losses
-  "Loss for the canonical→IIIF projection (ADR 0015): a record whose manifest is
-   not emitted (`:dropped` warning naming the missing MUSTs), images with no
-   Canvas extent, floor predicates IIIF cannot express (`:export :dropped`, e.g.
-   agent/date), the surplus identifiers beyond the single manifest `id`
-   (`:export :dropped`), and the note collapse onto `summary`
-   (`:export :under-specified`)."
+  "Loss for the canonical→IIIF projection (ADR 0015). A record whose manifest is
+   not emitted has one `:dropped` warning naming the missing MUSTs, and every
+   predicate it carries is unexpressed (`export-coverage/unexpressed`) — nothing
+   else, as nothing was written. Otherwise: images with no Canvas extent, floor
+   predicates IIIF cannot express (`:export :dropped`, e.g. agent/date), the
+   surplus identifiers beyond the single manifest `id` (`:export :dropped`), and
+   the note collapse onto `summary` (`:export :under-specified`)."
   [record]
-  (concat
-   (when-let [missing (seq (missing-required record))]
-     [(dx/loss {:category     :dropped
-                :severity     :warning
-                :subject      (:id record)
-                :edge         :export
-                :source-field :iiif/manifest
-                :message      (str "no IIIF manifest emitted: Presentation 3.0 requires "
-                                   (str/join ", " missing))})])
-   (when-let [n (seq (remove placeable? (occurrences record :canon/digital-object)))]
-     [(dx/loss {:category     :dropped
-                :subject      (:id record)
-                :edge         :export
-                :source-field :canon/digital-object
-                :message      (str (count n) " digital object(s) with no canvas extent (width/height) — "
-                                   "a IIIF Canvas must have one, so they are not placed")})])
-   ;; every predicate the manifest does not write — all of them when no manifest
-   ;; is emitted — is named (audit S11)
-   (cov/unexpressed record
-                    (if (seq (missing-required record))
-                      (constantly false)
-                      #(or (contains? emitted-predicates %)
-                           (contains? #{:canon/lang :canon/width :canon/height} %)
-                           (= "iiif" (namespace %))))
-                    "IIIF")
-   (when (> (count (canon-literals record :canon/identifier)) 1)
-     [(dx/loss {:category     :dropped
-                :subject      (:id record)
-                :edge         :export
-                :source-field :canon/identifier
-                :message      "a IIIF manifest carries a single id; surplus identifiers are dropped"})])
-   (when (seq (canon-literals record :canon/note))
-     [(dx/loss {:category     :under-specified
-                :subject      (:id record)
-                :edge         :export
-                :source-field :canon/note
-                :message      "notes emitted as a display-only summary; summary/metadata distinction (and any surplus) not recoverable"})])))
+  (if-let [missing (seq (missing-required record))]
+    (cons (dx/loss {:category     :dropped
+                    :severity     :warning
+                    :subject      (:id record)
+                    :edge         :export
+                    :source-field :iiif/manifest
+                    :message      (str "no IIIF manifest emitted: Presentation 3.0 requires "
+                                       (str/join ", " missing))})
+          (cov/unexpressed record #{} "IIIF"))
+    (concat
+     (when-let [n (seq (remove placeable? (occurrences record :canon/digital-object)))]
+       [(dx/loss {:category     :dropped
+                  :subject      (:id record)
+                  :edge         :export
+                  :source-field :canon/digital-object
+                  :message      (str (count n) " digital object(s) with no canvas extent (width/height) — "
+                                     "a IIIF Canvas must have one, so they are not placed")})])
+     (cov/unexpressed record (into emitted-predicates #{:canon/lang :canon/width :canon/height}) "IIIF")
+     (when (> (count (canon-literals record :canon/identifier)) 1)
+       [(dx/loss {:category     :dropped
+                  :subject      (:id record)
+                  :edge         :export
+                  :source-field :canon/identifier
+                  :message      "a IIIF manifest carries a single id; surplus identifiers are dropped"})])
+     (when (seq (canon-literals record :canon/note))
+       [(dx/loss {:category     :under-specified
+                  :subject      (:id record)
+                  :edge         :export
+                  :source-field :canon/note
+                  :message      "notes emitted as a display-only summary; summary/metadata distinction (and any surplus) not recoverable"})]))))
 
 (defn exporter
   "ADR 0007 exporter: render the canonical view of `records` as IIIF Presentation

@@ -21,7 +21,8 @@
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
-            [palomar.plugins.lrmoo :as lrmoo]))
+            [palomar.plugins.lrmoo :as lrmoo]
+            [palomar.plugins.qualified :as qualified]))
 
 (def rdf-type "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 (def crm-base "http://www.cidoc-crm.org/cidoc-crm/")
@@ -67,47 +68,70 @@
   [k]
   (or (lrmoo/entity-kind? k) (crm-term? k)))
 
-(def nomen-class
-  "IRI of `F12_Nomen`, the domain of `R33_has_string`."
-  (lrmoo/iri :lrmoo/F12_Nomen))
+(def appellation-class
+  "IRI of `E41_Appellation` (CIDOC CRM), the class of the node an entity's
+   string is written on."
+  (str crm-base "E41_Appellation"))
 
 (def identified-by
-  "IRI of `P1_is_identified_by` (CIDOC CRM), linking an entity to its Nomen."
+  "IRI of `P1_is_identified_by` (CIDOC CRM), linking an entity to its
+   appellation (range E41)."
   (str crm-base "P1_is_identified_by"))
 
-(defn nomen-iri
-  "A deterministic IRI for the Nomen carrying string `s` of the entity at
-   `entity-iri`: the same title of the same entity always names the same Nomen."
+(def symbolic-content
+  "IRI of `P190_has_symbolic_content` (CIDOC CRM), the string of an appellation
+   (domain E90, of which E41 is a subclass)."
+  (str crm-base "P190_has_symbolic_content"))
+
+(def ^:private string-predicates
+  "IR shorthands for an entity's string: an LRMoo entity's title and a CRM
+   entity's label (a subject concept or place)."
+  #{:lrmoo/R33_has_string :crm/P190_has_symbolic_content})
+
+(defn appellation-iri
+  "A deterministic IRI for the appellation carrying string `s` of the entity at
+   `entity-iri`: the same title of the same entity always names the same node."
   [entity-iri s]
-  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256")
-                   (.getBytes (str entity-iri "|" s) "UTF-8"))]
-    (str "urn:palomar:nomen:" (apply str (map #(format "%02x" (bit-and % 0xff)) (take 8 d))))))
+  (str "urn:palomar:appellation:" (model/sha256-hex (str entity-iri "|" s) 16)))
 
 (defn- string-triples
-  "The RDF for an entity's string `v` (`:lrmoo/R33_has_string` in the IR). The
-   domain of R33 is `F12_Nomen` (LRMoo 1.0 and 1.1.1), not a Work, Expression or
-   Manifestation, so the string hangs on a Nomen the entity is identified by:
-   entity —P1_is_identified_by→ Nomen (F12) —R33_has_string→ \"v\". In the IR
-   `R33` on an entity stays a shorthand for that path."
+  "The RDF for an entity's string `v` (`:lrmoo/R33_has_string` or
+   `:crm/P190_has_symbolic_content` in the IR). Neither may sit on the entity:
+   R33's domain is F12 Nomen and P190's E90 Symbolic Object, and a Work, an
+   Expression or a subject concept is neither. So the string hangs on an
+   appellation the entity is identified by: entity —P1_is_identified_by→
+   E41_Appellation —P190_has_symbolic_content→ \"v\" (ADR 0022). P1's range is
+   E41, which F12 Nomen is not a subclass of, so the node is an E41, not a Nomen."
   [s-iri v lang]
-  (let [n (nomen-iri s-iri v)]
+  (let [n (appellation-iri s-iri v)]
     [[s-iri identified-by {:iri n}]
-     [n rdf-type {:iri nomen-class}]
-     [n (lrmoo/iri :lrmoo/R33_has_string) (cond-> {:lit v} lang (assoc :lang lang))]]))
+     [n rdf-type {:iri appellation-class}]
+     [n symbolic-content (cond-> {:lit v} lang (assoc :lang lang))]]))
+
+(def ^:private lang-tag
+  "A well-formed BCP 47 tag, by its syntax only (`fr`, `en-GB`, `zh-Hant-TW`):
+   what N-Triples and Turtle accept after `@`."
+  #"[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*")
+
+(defn language-tag
+  "`l` as an RDF language tag (`_` read as `-`, as in `en_GB`), or nil when it is
+   not one: a value that would make the literal unparseable is not written."
+  [l]
+  (when (string? l)
+    (let [t (str/replace (str/trim l) "_" "-")]
+      (when (re-matches lang-tag t) t))))
 
 (defn- title-langs
-  "String → language for the record's language-qualified canonical titles: a
-   `:canon/title` or `:canon/uniform-title` fragment carrying `:canon/lang`. An
-   entity string equal to such a title takes its language (audit S31); a string
-   with two different languages takes none."
+  "String → language tag for the record's language-qualified canonical titles: a
+   `:canon/title` or `:canon/uniform-title` fragment carrying a well-formed
+   `:canon/lang` (`language-tag`). An entity string equal to such a title takes
+   its language (audit S31); a string with two different languages takes none."
   [record]
-  (let [by   (group-by :subject (:assertions record))
-        lang (fn [fid] (some #(when (= :canon/lang (:predicate %)) (:value %)) (by fid)))
-        hits (for [a (:assertions record)
-                   :when (and (#{:canon/title :canon/uniform-title} (:predicate a)) (string? (:value a)))
-                   :let  [l (lang (:subject a))]
-                   :when (string? l)]
-               [(:value a) l])]
+  (let [hits (for [p     [:canon/title :canon/uniform-title]
+                   {:keys [value coord]} (qualified/values record p :canon/lang)
+                   :let  [l (language-tag coord)]
+                   :when l]
+               [value l])]
     (into {} (for [[v ls] (group-by first hits)
                    :let  [ls (distinct (map second ls))]
                    :when (= 1 (count ls))]
@@ -116,8 +140,8 @@
 (defn triples
   "The LRMoo view of `record` as RDF triples. Each WEMI entity is typed to its
    F-class; each `:lrmoo/*` assertion becomes an object-property triple (when its
-   value is a reference) or a literal triple, except an entity's R33 string,
-   which is written through an F12 Nomen (`string-triples`). Each item is
+   value is a reference) or a literal triple, except an entity's string, which
+   is written through an E41 Appellation (`string-triples`). Each item is
    `[s-iri p-iri o]` with `o` = `{:iri s}` | `{:lit v}`.
 
    With `{:certified-only? true}` (D7), only `:asserted` assertions are emitted —
@@ -153,7 +177,7 @@
                     (model/reference-value? v)
                     [[(iri (:subject a)) (term-iri (:predicate a)) {:iri (iri (:value/target v))}]]
 
-                    (= :lrmoo/R33_has_string (:predicate a))
+                    (contains? string-predicates (:predicate a))
                     (string-triples (iri (:subject a)) v (get langs v))
 
                     :else

@@ -29,8 +29,36 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
   `convert/export-records` (one export path, one status policy, optional
   `:in-force-only?`); `palomar apply-repairs --to <fmt>`; `curate/supersede` and
   curation reasons; `:provenance :bindings` and `:provenance :also`; the
-  `not-in?` rule guard; three canonical validation rules (agent role, blank
-  value, date year).
+  `not-in?` rule guard; four canonical validation rules (agent role, note
+  kind, blank value, date year).
+
+- **Review of the audit follow-up (2026-10-25)** — fixes found by re-reading it:
+  - Export coverage judges a native field by whether its value is written
+    (through the canonical field a spoke mapping lifts it to), reports a
+    qualifier coord only when its field is written, and skips derived WEMI
+    strings; the fidelity audit no longer lets a projection diagnostic excuse
+    an absent value.
+  - A `{:from :as}` qualifier renames only the coords of its own field's
+    fragments (the DC title rule was giving descriptions their `:canon/lang`).
+  - MARC21: 260 $b is a publisher agent; the export writes one 260 with $b
+    and $c, keeps a publisher who is also the main creator, and orders
+    fields by tag. MODS: `tableOfContents` and `note[@type=performers]` are
+    contents and credits notes, so they round-trip.
+  - IIIF import reports a Choice, an id-less Image, a non-integer extent and
+    several metadata strings; an unemitted manifest reports nothing but the
+    warning and the unwritten predicates; the manifest id is the first
+    HTTP(S) URI.
+  - RDF: titles and concept labels go through an E41 Appellation (`P1` →
+    `P190`); language tags are validated; only title languages key an
+    Expression; crm-import reports a typed node's extra `rdf:type`; the
+    N-Triples reader rejects non-scalar escapes, relative IRIs and escaped
+    forbidden characters, and accepts the full blank-node label grammar and
+    CR line ends.
+  - Linked Art names a text by all its strings, uses the Work's own IRI and
+    title, and reports record-level fields when there is no Manifestation;
+    PROV associates activities with the engine as a `prov:SoftwareAgent` and
+    the rule as its `prov:hadPlan`.
+  - One SHA-256 helper (`model/sha256-hex`) replaces four copies.
 
 - **`NOTICE`** — the Apache-2.0 copyright line (`Copyright 2026 maribakulj`)
   plus a pointer to the licences of the third-party material redistributed
@@ -203,11 +231,15 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
   - Exports report every predicate they do not write; a refused IIIF manifest
     reports all of them; Linked Art keeps Expression and Work titles.
   - An Expression is keyed on its title's language (original vs translation).
-  - Record ids no longer collide when slugging drops information.
+  - Record ids no longer collide when slugging drops information (a 40-bit
+    digest of the full identifier is appended).
   - Two rules deriving one fact keep both justifications.
   - `convert --stream` no longer deletes `--out` before the move succeeds, and
     refuses an `--out` that is its own input.
-  - Entity titles are written to RDF through an F12 Nomen (R33's domain).
+  - Entity titles and concept labels are written to RDF through an E41
+    Appellation (`P1_is_identified_by` → `P190_has_symbolic_content`), as
+    neither R33 nor P190 may sit on a Work or a concept; the earlier Nomen form
+    is still read.
   - Eval docs (BIB-R, OpenLibrary) no longer claim more than they measure.
 
 - Self-review remediation of this line's WP-6/7 work: (1) the WEMI projection's

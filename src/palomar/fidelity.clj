@@ -23,6 +23,7 @@
             [palomar.convert :as convert]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
+            [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.xml :as rx]))
 
@@ -81,28 +82,54 @@
   [s]
   (str/replace (str/trim (str s)) #"\s+" " "))
 
-(defn- reported? [losses rid {:keys [subject predicate]}]
-  (some #(and (= predicate (dx/loss-source-field %))
-              (or (= subject (:subject %)) (= rid (:subject %))))
-        losses))
+(defn- reported?
+  "True when a loss in `losses` names `predicate` for `subject` or for the record
+   — or, for a qualifier coord, names a field it qualifies (a dropped title takes
+   its language with it, `export-coverage/coord-bases`)."
+  [losses rid {:keys [subject predicate]}]
+  (let [fields (into #{predicate} (cov/coord-bases predicate))]
+    (some #(and (contains? fields (dx/loss-source-field %))
+                (or (= subject (:subject %)) (= rid (:subject %))))
+          losses)))
+
+(defn- present?
+  "True when `value` of `predicate` is among the decoded strings `seen`. A
+   combined native is written only as a part of the joined value, so for one any
+   decoded string containing it counts (`export-coverage/combined-natives`)."
+  [seen predicate value]
+  (let [v (norm value)]
+    (or (contains? seen v)
+        (and (contains? cov/combined-natives predicate)
+             (some #(str/includes? % v) seen)))))
 
 (defn audit-record
   "Audit one WEMI `record` exported to `to`, against the loss diagnostics it
    carries, the export's own losses and the extra `losses` (e.g. the import edge).
    Returns `{:target :checked :present :reported :unaccounted [{:subject
-   :predicate :value} …]}`, or `{:target :unchecked true}` when `to` has no
-   decoder. Out-of-force assertions are not checked: the export never emits them
-   by design (`convert/export-records`)."
+   :predicate :value} …]}` over the distinct `{:subject :predicate :value}`
+   facts (so present + reported + unaccounted = checked), or `{:target
+   :unchecked true}` when `to` has no decoder.
+
+   Only the export's losses and the extra `losses` can account for an absent
+   value: a projection diagnostic on the record (a Work key built from a
+   role-less agent, …) says nothing about what the export wrote. Out-of-force
+   assertions are not checked, as the export never emits them by design
+   (`convert/export-records`); nor are those an inference or repair pass derived
+   (`export-coverage/derived?`), which copy source values checked in their own
+   right."
   ([to record] (audit-record to record []))
   ([to record losses]
    (if-let [decode (decoders to)]
      (let [{:keys [output loss]} (convert/export-records to [record])
            seen    (if (str/blank? output) #{} (into #{} (map norm) (decode output)))
-           all     (concat (dx/collect record) loss losses)
-           checked (for [a (:assertions record)
-                         :when (and (string? (:value a)) (not (model/out-of-force? a)))]
-                     (select-keys a [:subject :predicate :value]))
-           klass   (group-by #(cond (contains? seen (norm (:value %)))       :present
+           all     (concat loss losses)
+           checked (distinct
+                    (for [a (:assertions record)
+                          :when (and (string? (:value a))
+                                     (not (model/out-of-force? a))
+                                     (not (cov/derived? a)))]
+                      (select-keys a [:subject :predicate :value])))
+           klass   (group-by #(cond (present? seen (:predicate %) (:value %)) :present
                                     (reported? all (:id record) %)           :reported
                                     :else                                    :unaccounted)
                              checked)]
@@ -110,7 +137,7 @@
         :checked     (count checked)
         :present     (count (:present klass))
         :reported    (count (:reported klass))
-        :unaccounted (vec (distinct (:unaccounted klass)))})
+        :unaccounted (vec (:unaccounted klass))})
      {:target to :unchecked true})))
 
 (defn audit

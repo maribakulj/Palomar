@@ -114,8 +114,16 @@
   (testing "language loss is reported for the minted Expression even when the title is uniform-only"
     ;; regression guard: language-losses keys on the Expression-minting condition
     ;; (work-title), not on the transcribed :canon/title — else this loss is dropped.
-    (let [p  (project/project (canon :record/m :canon/uniform-title "Fables" :canon/agent "LF"
-                                     :canon/lang "fr" :canon/lang "en"))
+    (let [rid :record/m
+          ut  (fn [i v l] (let [f (keyword "frag" (str "m.ut." i))]
+                            [(model/assertion {:subject rid :predicate :canon/uniform-title :value (model/reference f)})
+                             (model/assertion {:subject f :predicate :canon/uniform-title :value v})
+                             (model/assertion {:subject f :predicate :canon/lang :value l})]))
+          p  (project/project (model/record {:id rid :kind :document
+                                             :fragments [(model/fragment {:id :frag/m.ut.0 :source [:test]})
+                                                         (model/fragment {:id :frag/m.ut.1 :source [:test]})]
+                                             :assertions (vec (concat [(model/assertion {:subject rid :predicate :canon/agent :value "LF"})]
+                                                                      (ut 0 "Fables" "fr") (ut 1 "Fables" "en")))}))
           us (filterv #(= :loss/under-specified (:code %)) (:diagnostics p))]
       (is (= 1 (count us)))
       (is (= :canon/lang (get-in (first us) [:detail :loss/source-field])))))
@@ -289,10 +297,27 @@
                                            ["Victor Hugo" :creator]]))]
       (is (= 1 (count (view/works mixed))))
       (is (= (:id (first (view/works creator-only))) (:id (first (view/works mixed)))))))
-  (testing "the role coord is a mapped qualifier — not reported as dropped loss"
+  (testing "the role coord selects the Work key but is not itself in the WEMI view — reported (audit L11)"
     (let [r      (project/project (with-agents :record/r "X" [["Hugo" :creator]]))
           fields (set (map #(get-in % [:detail :loss/source-field]) (dx/losses (:diagnostics r))))]
-      (is (not (contains? fields :canon/role))))))
+      (is (contains? fields :canon/role)))))
+
+(deftest a-notes-language-neither-keys-the-expression-nor-vanishes
+  (testing "only a title's language keys the Expression; a note's is reported dropped (audit L3)"
+    (let [rid  :record/n
+          note (fn [l] (model/record
+                        {:id rid :kind :document
+                         :fragments  [(model/fragment {:id :frag/n.0 :source [:test]})]
+                         :assertions [(model/assertion {:subject rid :predicate :canon/title :value "T"})
+                                      (model/assertion {:subject rid :predicate :canon/agent :value "A"})
+                                      (model/assertion {:subject rid :predicate :canon/note :value (model/reference :frag/n.0)})
+                                      (model/assertion {:subject :frag/n.0 :predicate :canon/note :value "n"})
+                                      (model/assertion {:subject :frag/n.0 :predicate :canon/lang :value l})]}))
+          a    (project/project (note "en"))
+          b    (project/project (note "fr"))]
+      (is (= (map :id (view/expressions a)) (map :id (view/expressions b))))
+      (is (some #(and (= :canon/lang (dx/loss-source-field %)) (= :dropped (dx/loss-category %)))
+                (dx/losses (:diagnostics a)))))))
 
 ;; --- language in the Expression key (audit S19) -------------------------------
 

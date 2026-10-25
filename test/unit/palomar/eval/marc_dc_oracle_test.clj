@@ -102,23 +102,27 @@
            (freq @oracle))
         "the LoC oracle emits its 9 known DC element types over the sample collection")))
 
-(deftest shared-documentary-spine-four-of-nine
+(deftest shared-documentary-spine-five-of-nine
   (testing "Palomar and the LoC oracle share exactly the documentary spine"
-    (is (= #{"title" "date" "description" "identifier"}
+    (is (= #{"title" "date" "description" "identifier" "publisher"}
            (set/intersection (types @oracle) (types @palomar)))))
   (testing "the only element Palomar emits that the oracle does not is contributor — the oracle's creators"
     (is (= #{"contributor"} (set/difference (types @palomar) (types @oracle))))
     (is (every? (fn [c] (some #(str/starts-with? % c) (values @oracle "creator")))
                 (values @palomar "contributor"))
         "each Palomar contributor is one of the oracle's creators (oracle keeps $d/$4 on top)"))
-  (testing "honest headline: 4 of the oracle's 9 element types are shared exactly"
+  (testing "each Palomar publisher (260 $b) is in an oracle publisher (which adds the place, $a)"
+    (is (every? (fn [p] (some #(str/includes? % p) (values @oracle "publisher")))
+                (values @palomar "publisher"))
+        (str (values @palomar "publisher") " vs " (values @oracle "publisher"))))
+  (testing "honest headline: 5 of the oracle's 9 element types are shared exactly"
     (is (= 9 (count (types @oracle))))
-    (is (= 4 (count (set/intersection (types @oracle) (types @palomar)))))))
+    (is (= 5 (count (set/intersection (types @oracle) (types @palomar)))))))
 
 (deftest the-gap-is-the-coded-and-controlled-axes
-  (testing "the uncovered types are language/publisher/subject/type — the floor's deliberate scope (ADR 0003) —
+  (testing "the uncovered types are language/subject/type — the floor's deliberate scope (ADR 0003) —
             plus creator, whose agents Palomar emits as contributor"
-    (is (= #{"creator" "language" "publisher" "subject" "type"}
+    (is (= #{"creator" "language" "subject" "type"}
            (set/difference (types @oracle) (types @palomar))))))
 
 (deftest date-agrees-exactly

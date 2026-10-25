@@ -27,7 +27,8 @@
    Output is a `<record>` string in the MARC21slim namespace (correct XML
    escaping), re-importable through `palomar.plugins.marc21`; `001` is emitted
    from the record's `:source` (its original control number) so the trip is
-   id-stable. Indicators were not captured at ingest, so blanks are emitted. Like
+   id-stable. The floor carries no indicators (ingest keeps them only on the
+   native field fragments), so blanks are emitted. Like
    the LRMoo/DC exporters this is kept out of the plugin `:exporter` slot to avoid
    a require cycle — wiring is a later assembly step."
   (:require [clojure.string :as str]
@@ -59,15 +60,17 @@
 
 (defn- agent-fields
   "`[tag code value]` for each of `record`'s agents, by role: the first creator
-   (stated, else role-less, see `agents/creators`) is the 100 main entry; every
-   other agent is a 700 added entry, except a publisher, which is 260 $b."
+   (stated, else role-less, see `agents/creators`) is the 100 main entry; a
+   publisher is 260 $b; every other agent is a 700 added entry. One field per
+   tag and name: a creator who is also the publisher is 100 and 260 $b."
   [record]
   (let [main (first (agents/creators record))]
-    (concat
-     (when main [["100" "a" main]])
-     (for [{nm :name role :role} (distinct (agents/occurrences record))
-           :when (not= nm main)]
-       (if (= :publisher role) ["260" "b" nm] ["700" "a" nm])))))
+    (distinct
+     (concat
+      (when main [["100" "a" main]])
+      (for [{nm :name role :role} (agents/occurrences record)
+            :when (or (= :publisher role) (not= nm main))]
+        (if (= :publisher role) ["260" "b" nm] ["700" "a" nm]))))))
 
 (def ^:private note-kind->tag
   "MARC field for a note of a known `:canon/note-kind`; a general note is 500."
@@ -85,26 +88,41 @@
       (str/replace "<" "&lt;")
       (str/replace ">" "&gt;")))
 
-(defn- datafield-line [tag code value]
+(defn- datafield-line [tag subfields]
   (str "  <datafield tag=\"" tag "\" ind1=\" \" ind2=\" \">"
-       "<subfield code=\"" code "\">" (xml-escape value) "</subfield>"
+       (apply str (for [[code value] subfields]
+                    (str "<subfield code=\"" code "\">" (xml-escape value) "</subfield>")))
        "</datafield>"))
+
+(defn- datafields
+  "`[tag [[code value] …]]` for `record`, sorted by tag (MARC field order). Each
+   field is its own datafield except 260, whose publishers ($b) and dates ($c)
+   make one imprint field, as MARC has them."
+  [record]
+  (let [fields (for [[p tag code] canon->marc
+                     f (case p
+                         :canon/agent (agent-fields record)
+                         :canon/note  (note-fields record)
+                         (for [v (canon-literals record p)] [tag code v]))]
+                 f)
+        imprint (->> fields (filter #(= "260" (first %))) (sort-by second) (mapv (fn [[_ c v]] [c v])))]
+    (sort-by first
+             (cond-> (vec (for [[tag code v] fields :when (not= "260" tag)] [tag [[code v]]]))
+               (seq imprint) (conj ["260" imprint])))))
 
 (defn ->marcxml
   "Render `record`'s canonical content as a MARC21slim `<record>` document, or
    `nil` if it carries nothing exportable. `001` comes from `:source` (the
-   original control number) for an id-stable round-trip."
+   original control number) for an id-stable round-trip. The floor carries no
+   indicators, so every datafield has blank indicators (`ind1`/`ind2` \" \"),
+   which MARC reads as undefined, not as a stated value."
   [record]
   (let [ctrl  (:source record)
         lines (cond-> []
                 ctrl    (conj (str "  <controlfield tag=\"001\">"
                                    (xml-escape ctrl) "</controlfield>"))
-                :always (into (for [[p tag code] canon->marc
-                                    [tag code v] (case p
-                                                   :canon/agent (agent-fields record)
-                                                   :canon/note  (note-fields record)
-                                                   (for [v (canon-literals record p)] [tag code v]))]
-                                (datafield-line tag code v))))]
+                :always (into (for [[tag subfields] (datafields record)]
+                                (datafield-line tag subfields))))]
     (when (seq lines)
       (str "<record xmlns=\"http://www.loc.gov/MARC21/slim\">\n"
            (str/join "\n" lines)
@@ -151,21 +169,23 @@
    role picks 100/700/260 $b)."
   (into #{:canon/role :canon/note-kind} (map first) canon->marc))
 
-(defn- expressed?
-  "What the MARC21 export accounts for itself: the canonical fields it writes,
-   and every `:marc21/*` native (`pivot-dropped-fields` reports the unmapped ones)."
-  [p]
-  (or (contains? written-canon p) (= "marc21" (namespace p))))
-
 (defn export-losses
   "Loss for the canonical→MARC round-trip (ADR 0015): the floor-coverage drops
-   (`:import :dropped`, per native field the floor never carried), the
+   (`:import :dropped`, per native field the floor never carried), the stated
+   indicators written blank (`:export :dropped`), the
    many-to-one collapses (`:export :under-specified`), and one `:export :dropped`
    per other predicate the export does not write (`export-coverage/unexpressed`:
    a relation, a language, another spoke's native fields)."
   [record]
   (concat
-   (cov/unexpressed record expressed? "MARC21")
+   (cov/unexpressed record written-canon "marc21" "MARC21")
+   (when (some #(some (fn [k] (not (str/blank? (get-in % [:locator k])))) [:ind1 :ind2])
+               (:fragments record))
+     [(dx/loss {:category     :dropped
+                :subject      (:id record)
+                :edge         :export
+                :source-field :marc21/indicators
+                :message      "field indicators are not carried by the floor; every datafield is written with blank indicators"})])
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

@@ -367,3 +367,12 @@
                                        "--stream" "--out" "/no/such/palomar-dir/out.nt"])]
       (is (= 2 exit))
       (is (str/includes? err "error:")))))
+
+(deftest a-record-id-that-cannot-mint-fragments-is-refused-up-front
+  (testing "a '.' or a missing namespace in --record-id gives a clear error, not a mid-run failure"
+    (doseq [bad ["x/a.b" "plain"]]
+      (let [{:keys [exit err]} (cli/run ["convert" dc "--from" "dc" "--to" "ntriples" "--record-id" bad])]
+        (is (= 2 exit) bad)
+        (is (str/includes? err "--record-id must be ns/name") bad))))
+  (testing "a well-formed id converts"
+    (is (= 0 (:exit (cli/run ["convert" dc "--from" "dc" "--to" "ntriples" "--record-id" "doc/x"]))))))

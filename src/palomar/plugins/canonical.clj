@@ -157,13 +157,26 @@
    so it is flagged."
   {:id      :rule.canonical/agent-role-known
    :phase   :validate
-   :match   '[[?f :canon/role ?role]
-              (not-in? ?role [:creator :contributor :publisher])]
+   :match   [['?f :canon/role '?role]
+             (list 'not-in? '?role (vec (sort agent-roles)))]
    :produce {:diagnostic {:severity :warning
                           :code     :unknown-agent-role
                           :subject  '?f
                           :message  "agent role is not :creator, :contributor or :publisher"}}
    :doc     "Warn on a :canon/role outside the agent-role vocabulary."})
+
+(def note-kind-known-rule
+  "A `:canon/note-kind` coord takes a value from `note-kinds`; another value
+   would send the note to no field on export."
+  {:id      :rule.canonical/note-kind-known
+   :phase   :validate
+   :match   [['?f :canon/note-kind '?kind]
+             (list 'not-in? '?kind (vec (sort note-kinds)))]
+   :produce {:diagnostic {:severity :warning
+                          :code     :unknown-note-kind
+                          :subject  '?f
+                          :message  "note kind is not :abstract, :contents or :credits"}}
+   :doc     "Warn on a :canon/note-kind outside the note-kind vocabulary."})
 
 (def no-blank-value-rule
   "A documentary value that is empty or whitespace once trimmed carries nothing
@@ -173,7 +186,7 @@
    :match   '[[?s ?p ?v]
               (in? ?p [:canon/title :canon/uniform-title :canon/identifier :canon/agent
                        :canon/date :canon/relation :canon/note :canon/digital-object])
-              (matches? ?v "^\\s*$")]
+              (matches? ?v "^[\\s\u00A0]*$")]
    :produce {:diagnostic {:severity :warning
                           :code     :blank-value
                           :subject  '?s
@@ -187,7 +200,7 @@
   {:id      :rule.canonical/date-has-a-year
    :phase   :validate
    :match   '[[?s :canon/date ?d]
-              (matches? ?d "^(?!.*\\d{3,4})")]
+              (matches? ?d "(?s)^(?!.*\\d{3,4})")]
    :produce {:diagnostic {:severity :info
                           :code     :date-without-year
                           :subject  '?s
@@ -196,13 +209,13 @@
 
 (def rules
   "The canonical validation rule set, exercised end-to-end by
-   `palomar.canonical-integration-test`: a title is present, an agent role is
-   from the vocabulary, no documentary value is blank, a date has a year
+   `palomar.canonical-integration-test`: a title is present, an agent role and a
+   note kind are from their vocabularies, no documentary value is blank, a date has a year
    (audit S26: validation was the title rule alone, so VALID meant little).
    Each rule checks a predicate a spoke actually produces (growth discipline,
    ADR 0003 §Consequences). None is an error: they report incompleteness or
    likely defects, and the caller's policy decides what fails."
-  [title-required-rule agent-role-known-rule no-blank-value-rule date-has-a-year-rule])
+  [title-required-rule agent-role-known-rule note-kind-known-rule no-blank-value-rule date-has-a-year-rule])
 
 ;; ---------------------------------------------------------------------------
 ;; Plugin map (ADR 0007)

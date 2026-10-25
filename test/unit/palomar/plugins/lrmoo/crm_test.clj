@@ -48,11 +48,11 @@
       (is (contains? ts ["urn:palomar:ent:work" P130 {:iri "urn:palomar:ent:expr"}])))
     (testing "R4 -> P165"
       (is (contains? ts ["urn:palomar:ent:manif" P165 {:iri "urn:palomar:ent:expr"}])))
-    (testing "the Nomen's R33 literal -> P3_has_note literal, and F12 -> E41_Appellation"
-      (let [n (export/nomen-iri "urn:palomar:ent:expr" "Madame Bovary")]
-        (is (contains? ts [n P3 {:lit "Madame Bovary"}]))
-        (is (contains? ts [n "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-                           {:iri "http://www.cidoc-crm.org/cidoc-crm/E41_Appellation"}]))))))
+    (testing "an entity's string is already CRM (E41 —P190→), so it gains no twin"
+      (let [n (export/appellation-iri "urn:palomar:ent:expr" "Madame Bovary")]
+        (is (contains? ts [n export/symbolic-content {:lit "Madame Bovary"}]))
+        (is (not (contains? ts [n P3 {:lit "Madame Bovary"}])))
+        (is (= 1 (count (filter #(= [n export/rdf-type] (subvec (vec %) 0 2)) ts))))))))
 
 (deftest ntriples-carries-both-vocabularies
   (let [nt (crm/->ntriples rec)]
@@ -88,11 +88,11 @@
       (is (= 2 (:loss/under-specified codes)))
       (is (contains? fields :lrmoo/F3_Manifestation))
       (is (contains? fields :lrmoo/F1_Work)))
-    (testing "each WEMI relation generalised -> :coerced (R3, R4, R33 present)"
-      (is (= 3 (:loss/coerced codes)))
+    (testing "each WEMI relation generalised -> :coerced (R3, R4); a string is CRM already"
+      (is (= 2 (:loss/coerced codes)))
       (is (contains? fields :lrmoo/R3_is_realised_in))
       (is (contains? fields :lrmoo/R4_embodies))
-      (is (contains? fields :lrmoo/R33_has_string)))))
+      (is (not (contains? fields :lrmoo/R33_has_string))))))
 
 (deftest pure-crm-ntriples-has-no-lrmoo
   (let [nt (crm/->crm-only-ntriples rec)]
