@@ -1,0 +1,58 @@
+(ns palomar.manifest-test
+  "The run manifest (ADR 0030): reproducible, and it names what changed."
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [palomar.cli :as cli]
+            [palomar.convert :as convert]
+            [palomar.manifest :as manifest]
+            [palomar.spokes :as spokes]))
+
+(def ^:private input "test/fixtures/documentary/marc21/marcxml/loc_collection.xml")
+
+(defn- run []
+  (let [res (convert/convert {:from :marc21 :to :ntriples :source (slurp input)})]
+    (manifest/manifest {:from :marc21 :to :ntriples
+                        :inputs [{:path input :content (io/file input)}]
+                        :outputs [{:path "-" :content (:output res)}]
+                        :loss (:loss res)
+                        :started-at (java.util.Date.) :finished-at (java.util.Date.)})))
+
+(deftest a-run-names-what-its-output-depends-on
+  (let [m (run)]
+    (is (= :marc21 (:from m)))
+    (is (= 64 (count (get-in m [:inputs 0 :sha256]))))
+    (is (= (:sha256 (manifest/fingerprint (io/file input))) (get-in m [:inputs 0 :sha256])))
+    (is (some #(= :palomar/marc21 (:id %)) (:plugins m)))
+    (is (every? :mapping-digest (filter #(= :palomar/marc21 (:id %)) (:plugins m))))
+    (is (= 2 (count (:ontologies m))))
+    (is (some #{:map/marc21-title} (:rules m)))
+    (is (pos? (get-in m [:loss :total])))))
+
+(deftest the-same-conversion-reproduces-its-manifest
+  (testing "two runs differ only in their times"
+    (is (empty? (manifest/diff (run) (run))))))
+
+(deftest a-changed-mapping-is-named
+  (testing "editing one mapping rule changes the plugin's digest, and diff says so"
+    (let [a (run)
+          b (with-redefs [spokes/plugins (update spokes/plugins :marc21 update :mapping
+                                                 #(vec (butlast %)))]
+              (run))]
+      (is (contains? (manifest/diff a b) :plugins))
+      (is (contains? (manifest/diff a b) :rules)))))
+
+(deftest convert-writes-the-manifest
+  (let [f (java.io.File/createTempFile "palomar-manifest" ".edn")]
+    (try
+      (let [{:keys [exit]} (cli/run ["convert" input "--from" "marc21" "--to" "ntriples" "--manifest" (str f)])
+            m (edn/read-string {:readers {'inst #(java.util.Date/from (java.time.Instant/parse %))}} (slurp f))]
+        (is (zero? exit))
+        (is (= :ntriples (:to m)))
+        (is (str/ends-with? (get-in m [:inputs 0 :path]) "loc_collection.xml"))
+        (is (inst? (:started-at m))))
+      (finally (.delete f)))))
+
+(deftest build-info-falls-back-to-dev
+  (is (string? (:version (manifest/build-info)))))

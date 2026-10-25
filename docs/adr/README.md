@@ -43,6 +43,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0027](./0027-assertion-identity-and-annotations.md) | An assertion is identified by its content; statements about it are annotations | Accepted |
 | [0028](./0028-curation-decisions-as-annotations.md) | Curation decisions are kept on the record and written to PROV-O | Accepted |
 | [0029](./0029-named-graph-datasets.md) | Facts, proposals, history and provenance in separate named graphs | Accepted |
+| [0030](./0030-run-manifest.md) | A conversion can write a manifest of everything its output depends on | Accepted |
 
 ## Template
 

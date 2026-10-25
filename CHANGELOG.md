@@ -18,6 +18,10 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Run manifest** (ADR 0030): `convert --manifest <file>` writes an EDN record
+  of the run — version, plugins with mapping and rule digests, ontology files,
+  input and output SHA-256, options, active rules, loss summary, times;
+  `manifest/diff` names what changed between two runs.
 - **Named-graph datasets** (ADR 0029): `:nquads` and `:trig` targets write
   facts, proposals, history and provenance as separate named graphs, typed in
   the default graph; `ntriples/parse-quads` reads N-Quads; `convert

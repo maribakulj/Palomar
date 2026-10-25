@@ -230,12 +230,13 @@
     (keyword "frag" (str/join "." (cons record-prefix segments)))))
 
 (defn sha256-hex
-  "The first `n` hex digits of the SHA-256 of `s`'s UTF-8 bytes — the one digest
-   behind every content-derived id and IRI (entity ids, record-id suffixes,
-   appellation and activity IRIs)."
+  "The first `n` hex digits of the SHA-256 of `s` — a byte array as is, anything
+   else as its string's UTF-8 bytes. The one digest behind every content-derived
+   id and IRI (entity ids, record-id suffixes, appellation and activity IRIs) and
+   the run manifest's file fingerprints."
   [s n]
   (let [bytes (.digest (java.security.MessageDigest/getInstance "SHA-256")
-                       (.getBytes (str s) "UTF-8"))]
+                       ^bytes (if (bytes? s) s (.getBytes (str s) "UTF-8")))]
     (subs (apply str (map #(format "%02x" (bit-and (int %) 0xff)) bytes)) 0 n)))
 
 (defn canonical
