@@ -170,7 +170,9 @@
   {:rule rule-id :pass :normalize})
 
 (defn- assertion-production
-  [{:keys [subject predicate value confidence rule-id]}]
+  "An assertion production; `evidence` (ADR 0031), the attestations of the
+   native value it was mapped from, rides on its provenance."
+  [{:keys [subject predicate value confidence rule-id evidence]}]
   {:kind :assertion
    :value (model/assertion
            {:subject    subject
@@ -178,7 +180,8 @@
             :value      value
             :confidence confidence
             :status     :asserted
-            :provenance (normalize-provenance rule-id)})})
+            :provenance (cond-> (normalize-provenance rule-id)
+                          (seq evidence) (assoc :evidence (vec (distinct evidence))))})})
 
 (defn- diagnostic-production
   [{:keys [severity code subject message rule-id]}]
@@ -290,8 +293,10 @@
         q-value    (:value qualifier)
         anchor     (first from-preds)
 
-        assert-at  (fn [s p v] (assertion-production {:subject s :predicate p :value v
-                                                      :confidence confidence :rule-id rule-id}))
+        assert-at  (fn assert-at
+                     ([s p v] (assert-at s p v nil))
+                     ([s p v ev] (assertion-production {:subject s :predicate p :value v :evidence ev
+                                                        :confidence confidence :rule-id rule-id})))
 
         ;; Place one canonical value. Without a constant qualifier it is the plain
         ;; `[s to v]`. With one (ADR 0021), a record-level primitive moves onto a
@@ -302,20 +307,22 @@
         ;; `{:from :as}` qualifier, so readers see one form. A value whose subject
         ;; is already a fragment gets the coord on that fragment.
         place
-        (fn [rid s idx v]
-          (cond
-            (not (and constant? (model/primitive-value? v)))
-            [(assert-at s to v)]
+        (fn place
+          ([rid s idx v] (place rid s idx v nil))
+          ([rid s idx v ev]
+           (cond
+             (not (and constant? (model/primitive-value? v)))
+             [(assert-at s to v ev)]
 
-            (= s rid)
-            (let [fid (model/mint-fragment-id s [anchor idx q-as 0])]
-              [{:kind :fragment :value (model/fragment {:id fid :source [:normalize anchor idx]})}
-               (assert-at s to (model/reference fid))
-               (assert-at fid to v)
-               (assert-at fid q-as q-value)])
+             (= s rid)
+             (let [fid (model/mint-fragment-id s [anchor idx q-as 0])]
+               [{:kind :fragment :value (model/fragment {:id fid :source [:normalize anchor idx]})}
+                (assert-at s to (model/reference fid))
+                (assert-at fid to v ev)
+                (assert-at fid q-as q-value)])
 
-            :else
-            [(assert-at s to v) (assert-at s q-as q-value)]))
+             :else
+             [(assert-at s to v ev) (assert-at s q-as q-value)])))
 
         ;; A match yields a seq of productions: the rename assertion, plus a
         ;; `:coerced` loss only when a lossy transform *actually changed* the
@@ -323,18 +330,18 @@
         ;; value — lowercasing already-lowercase text — discarded nothing, so it
         ;; is no loss; reporting one anyway over-counts coercion.
         emit-rename-match
-        (fn [rid idx [s _p v]]
+        (fn [rid evidence-of idx [s p v]]
           (cond
             (nil? v)
             []
 
             (or (empty? chain) (not (model/primitive-value? v)))
-            (place rid s idx v)
+            (place rid s idx v (evidence-of [s p v]))
 
             :else
             (let [v' (transform v)]
               (if (some? v')
-                (cond-> (place rid s idx v')
+                (cond-> (place rid s idx v' (evidence-of [s p v]))
                   (and lossy? (not= v' v))
                   (conj (coerced-production
                          {:subject s :from from :chain chain :rule-id rule-id})))
@@ -368,20 +375,22 @@
         ;; multi-source value, so the `:coerced`/`:transform-failed` accounting
         ;; mirrors the single-source path.
         emit-combine
-        (fn [rid idx s triples]
-          (let [parts  (for [fp from-preds
-                             :let [v (some (fn [[s2 p2 v2]]
+        (fn [rid evidence-of idx s triples]
+          (let [found  (for [fp from-preds
+                             :let [t (some (fn [[s2 p2 v2 :as t]]
                                              (when (and (= s2 s) (= p2 fp)
                                                         (model/primitive-value? v2))
-                                               v2))
+                                               t))
                                            triples)]
-                             :when (some? v)]
-                         (str v))
+                             :when t]
+                         t)
+                parts  (map #(str (nth % 2)) found)
+                ev     (mapcat evidence-of found)
                 joined (when (seq parts) (str/join sep parts))]
             (when joined
               (let [v' (if (empty? chain) joined (transform joined))]
                 (if (some? v')
-                  (cond-> (place rid s idx v')
+                  (cond-> (place rid s idx v' ev)
                     (and lossy? (not= v' joined))
                     (conj (coerced-production
                            {:subject s :from (first from-preds) :chain chain :rule-id rule-id})))
@@ -393,11 +402,19 @@
         runner
         (fn run [record]
           (let [triples (rules/record-triples record)
-                rid     (:id record)]
+                rid     (:id record)
+                ;; the attestations of each native value (ADR 0031), carried
+                ;; onto what the mapping derives from it
+                ev-idx  (reduce (fn [m a]
+                                  (if-let [ev (seq (get-in a [:provenance :evidence]))]
+                                    (update m [(:subject a) (:predicate a) (:value a)] (fnil into []) ev)
+                                    m))
+                                {} (:assertions record))
+                ev-of   #(get ev-idx (vec (take 3 %)))]
             (if multi?
               (let [subjects (distinct (keep (fn [[s p _]] (when (from-set p) s)) triples))
                     prods    (into [] (apply concat
-                                             (map-indexed #(emit-combine rid %1 %2 triples) subjects)))]
+                                             (map-indexed #(emit-combine rid ev-of %1 %2 triples) subjects)))]
                 (if (seq prods) prods (emit-on-empty rid)))
               (let [from-matches (cond->> (filterv (fn [[_ p _]] (= p from)) triples)
                                      ;; one fragment per distinct value, as an unqualified
@@ -405,7 +422,7 @@
                                    constant? (distinct-placements transform chain))
                     base-prods   (if (seq from-matches)
                                    (into [] (apply concat
-                                                   (map-indexed #(emit-rename-match rid %1 %2) from-matches)))
+                                                   (map-indexed #(emit-rename-match rid ev-of %1 %2) from-matches)))
                                    (emit-on-empty rid))]
                 (if q-from
                   ;; only the coords of a subject that carries `from`: another

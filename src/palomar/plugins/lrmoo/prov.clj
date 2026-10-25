@@ -15,6 +15,10 @@
    activities that used, and may invalidate, the statement they decided; any
    other annotation is written as a triple about the statement.
 
+   Where a value is attested in its source (`:provenance :evidence`, ADR 0031)
+   the statement `prov:wasDerivedFrom` a W3C Web Annotation `oa:SpecificResource`:
+   the document, the fragment and the selector (XPath, media fragment…).
+
    Reification keeps the output plain N-Triples (RDF-star is not in RDF 1.1).
    A statement IRI is the assertion's `model/assertion-id` (ADR 0027), so the
    same assertion always names the same statement, before and after a curator
@@ -80,6 +84,35 @@
                          [assoc (str prov "hadPlan") {:iri plan}]
                          [plan (str rdf "type") {:iri (str prov "Plan")}]])))))
 
+(def ^:private oa "http://www.w3.org/ns/oa#")
+
+(def ^:private selector-class
+  {:xpath "XPathSelector" :fragment "FragmentSelector" :text-quote "TextQuoteSelector"
+   :text-position "TextPositionSelector" :css "CssSelector"})
+
+(defn- evidence-triples
+  "Where statement `st` is attested (ADR 0031), as a W3C Web Annotation
+   `oa:SpecificResource` the statement was derived from: the document
+   (`oa:hasSource`: the evidence's `:uri`, else the record), the record fragment
+   holding the value, and the selector locating it."
+  [st doc-iri ev]
+  (let [sr  (str "urn:palomar:evidence:" (digest [st ev]))
+        uri (get-in ev [:source :uri])
+        src (if (and uri (nil? (nt/iri-problem uri))) uri doc-iri)
+        {:keys [type value conforms-to]} (:selector ev)
+        sel (str sr "#selector")]
+    (concat
+     [[st (str prov "wasDerivedFrom") {:iri sr}]
+      [sr (str rdf "type") {:iri (str prov "Entity")}]
+      [sr (str rdf "type") {:iri (str oa "SpecificResource")}]
+      [sr (str oa "hasSource") {:iri src}]]
+     (when (:fragment ev) [[sr (str pal "fragment") {:iri (export/entity-iri (:fragment ev))}]])
+     (when (and type value)
+       (concat [[sr (str oa "hasSelector") {:iri sel}]
+                [sel (str rdf "type") {:iri (str oa (selector-class type "Selector"))}]
+                [sel (str rdf "value") {:lit (str value)}]]
+               (when conforms-to [[sel "http://purl.org/dc/terms/conformsTo" {:iri conforms-to}]]))))))
+
 (defn- statement-iri
   "The IRI of the statement reifying the assertion whose id is `asr-id`."
   [asr-id]
@@ -133,9 +166,13 @@
   "The PROV-O graph of `record` as `[s p o]` triples (see the namespace doc)."
   [record]
   (let [idx (into {} (keep (fn [e] (when-let [i (:iri e)] [(:id e) i]))) (:entities record))
-        rid (:id record)]
+        rid (:id record)
+        doc (node-iri idx rid)
+        sha (get-in record [:provenance :source :sha256])]
     (distinct
      (concat
+      (when sha [[doc (str rdf "type") {:iri (str prov "Entity")}]
+                 [doc (str pal "sha256") {:lit sha}]])
       (mapcat
        (fn [a]
          (let [st    (statement-iri (model/assertion-id a))
@@ -154,6 +191,7 @@
             (mapcat (fn [d] [[st (str prov "wasDerivedFrom") {:iri (node-iri idx d)}]
                              [(node-iri idx d) (str rdf "type") {:iri (str prov "Entity")}]])
                     (:derivation p))
+            (mapcat #(evidence-triples st doc %) (model/evidence-of a))
             (for [q provs :when (or (:pass q) (:rule q))
                   t (cons [st (str prov "wasGeneratedBy") {:iri (activity-iri rid q)}]
                           (activity-triples rid q))]

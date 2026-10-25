@@ -44,6 +44,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0028](./0028-curation-decisions-as-annotations.md) | Curation decisions are kept on the record and written to PROV-O | Accepted |
 | [0029](./0029-named-graph-datasets.md) | Facts, proposals, history and provenance in separate named graphs | Accepted |
 | [0030](./0030-run-manifest.md) | A conversion can write a manifest of everything its output depends on | Accepted |
+| [0031](./0031-source-evidence.md) | Every value keeps where it was read in its source | Accepted |
 
 ## Template
 

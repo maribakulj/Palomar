@@ -118,20 +118,30 @@
 (def ^:private ingest-provenance
   {:pass :ingest})
 
+(defn- provenance-at
+  "Ingest provenance, with the evidence of a value found at XPath `xpath`
+   (relative to the record element, ADR 0031) when one is known."
+  [xpath fragment]
+  (cond-> ingest-provenance
+    xpath (assoc :evidence [(cond-> {:selector {:type :xpath :value xpath}}
+                              fragment (assoc :fragment fragment))])))
+
 (defn- emit-flat
   "Build assertions for a flat predicate. Each element of `values`
-   yields one `[record-id predicate value]` assertion. nil values are
+   yields one `[record-id predicate value]` assertion, carrying the XPath
+   of its element (the same index in `xpaths`, when given). nil values are
    skipped (an empty XML element has no text content, so emitting an
    assertion with value nil would be shape-invalid)."
-  [record-id predicate values]
-  (into []
-        (keep (fn [v]
-                (when (some? v)
-                  (model/assertion {:subject    record-id
-                                    :predicate  predicate
-                                    :value      v
-                                    :provenance ingest-provenance}))))
-        values))
+  ([record-id predicate values] (emit-flat record-id predicate values nil))
+  ([record-id predicate values xpaths]
+   (into []
+         (keep (fn [[v xp]]
+                 (when (some? v)
+                   (model/assertion {:subject    record-id
+                                     :predicate  predicate
+                                     :value      v
+                                     :provenance (provenance-at xp nil)}))))
+         (map vector values (concat xpaths (repeat nil))))))
 
 (defn- build-fragment-assertions
   "Mint one fragment and assemble its three potential assertions: the
@@ -143,7 +153,7 @@
    Fragment's `:source` field for traceability — it does not affect the
    fragment id, which depends only on `record-id`, `predicate` and `idx`
    per ADR 0012."
-  [record-id predicate qualifier-key idx main-value qual-value source-tag]
+  [record-id predicate qualifier-key idx main-value qual-value source-tag & [xpath]]
   (let [frag-id (model/mint-fragment-id record-id [predicate idx])
         base    {:fragment   (model/fragment
                               {:id     frag-id
@@ -159,7 +169,7 @@
               (model/assertion {:subject    frag-id
                                 :predicate  predicate
                                 :value      main-value
-                                :provenance ingest-provenance}))
+                                :provenance (provenance-at xpath frag-id)}))
 
       (some? qual-value)
       (update :assertions conj
@@ -174,13 +184,13 @@
    `extractor` is a two-arg fn `(occurrence, qualifier-key) →
    {:main-value :qual-value}` that the format-specific walker
    supplies."
-  [record-id predicate qualifier-key occurrences extractor source-tag]
+  [record-id predicate qualifier-key occurrences extractor source-tag & [xpaths]]
   (let [emitted (map-indexed
                  (fn [idx occ]
                    (let [{:keys [main-value qual-value]} (extractor occ qualifier-key)]
                      (build-fragment-assertions
                       record-id predicate qualifier-key idx
-                      main-value qual-value source-tag)))
+                      main-value qual-value source-tag (nth xpaths idx nil))))
                  occurrences)]
     {:fragments  (mapv :fragment emitted)
      :assertions (vec (mapcat :assertions emitted))}))
@@ -258,6 +268,13 @@
 ;; Public API
 ;; ---------------------------------------------------------------------------
 
+(defn- xpaths-of
+  "The XPath of each of `elems` — the children of the record element whose tag
+   is `tag`, in document order — relative to the record element, by local name."
+  [tag elems]
+  (vec (for [i (range (count elems))]
+         (str "*[local-name()='" (name tag) "'][" (inc i) "]"))))
+
 (defn ingest-xml
   "Walk a parsed XML element (the output of
    `clojure.data.xml/parse-str`) and produce a Record per the
@@ -295,14 +312,14 @@
              (contains? qualified-by-pred pred)
              (let [qual-key (get qualified-by-pred pred)
                    emitted  (emit-qualified record-id pred qual-key elems
-                                            extract-occurrence-xml :xml)]
+                                            extract-occurrence-xml :xml (xpaths-of pred elems))]
                (-> acc
                    (update :fragments into (:fragments emitted))
                    (update :assertions into (:assertions emitted))))
 
              :else
              (update acc :assertions into
-                     (emit-flat record-id pred (mapv xml-text-content elems)))))
+                     (emit-flat record-id pred (mapv xml-text-content elems) (xpaths-of pred elems)))))
          {:fragments [] :assertions []}
          by-tag)]
     (assemble-record record-id kind source fragments assertions)))

@@ -101,17 +101,27 @@
         anno (filter map? (get page "items"))]
     anno))
 
+(defn- target-region
+  "The `xywh=…` media fragment of an annotation's target (`…/canvas/1#xywh=0,0,10,20`),
+   or nil when it paints the whole canvas."
+  [anno]
+  (let [t (get anno "target")
+        t (if (map? t) (get t "id") t)]
+    (when (string? t) (second (re-find #"#(xywh=[^&]+)" t)))))
+
 (defn- painted-images
-  "`{:id :width :height}` for every Image painted on the manifest's canvases, in
-   canvas order, first occurrence of an id kept. `:width`/`:height` are the
-   Canvas's extent."
+  "`{:id :width :height :canvas :region}` for every Image painted on the
+   manifest's canvases, in canvas order, first occurrence of an id kept.
+   `:width`/`:height` are the Canvas's extent, `:canvas` its id and `:region`
+   the painted `xywh` when the annotation targets part of it."
   [m]
   (->> (for [canvas (canvases m)
              anno   (annotations canvas)
              :when  (painting? anno)
              body   (bodies anno)
              :when  (and (= "Image" (get body "type")) (string? (get body "id")))]
-         {:id (get body "id") :width (get canvas "width") :height (get canvas "height")})
+         {:id (get body "id") :width (get canvas "width") :height (get canvas "height")
+          :canvas (get canvas "id") :region (target-region anno)})
        (reduce (fn [acc img] (if (some #(= (:id img) (:id %)) acc) acc (conj acc img))) [])))
 
 ;; ---------------------------------------------------------------------------
@@ -139,23 +149,36 @@
 (defn- qualified
   "One occurrence of `pred` as a fragment (ADR 0011/0012): the record-level
    reference, the value on the fragment, and one coord per `coords` entry
-   (`{\"lang\" \"en\"}` → `:iiif/lang`). Returns `{:fragment :assertions}`."
-  [rid pred idx v coords]
-  (let [fid (model/mint-fragment-id rid [(keyword "iiif" pred) idx])]
-    {:fragment   (model/fragment {:id fid :source [:json (keyword "iiif" pred) idx]})
-     :assertions (into [(assertion rid pred (model/reference fid))
-                        (assertion fid pred v)]
-                       (for [[k cv] coords :when (some? cv)] (assertion fid k cv)))}))
+   (`{\"lang\" \"en\"}` → `:iiif/lang`). The value carries `evidence` (ADR
+   0031) when given. Returns `{:fragment :assertions}`."
+  ([rid pred idx v coords] (qualified rid pred idx v coords nil))
+  ([rid pred idx v coords evidence]
+   (let [fid (model/mint-fragment-id rid [(keyword "iiif" pred) idx])]
+     {:fragment   (model/fragment {:id fid :source [:json (keyword "iiif" pred) idx]})
+      :assertions (into [(assertion rid pred (model/reference fid))
+                         (cond-> (assertion fid pred v)
+                           evidence (assoc-in [:provenance :evidence] [(assoc evidence :fragment fid)]))]
+                        (for [[k cv] coords :when (some? cv)] (assertion fid k cv)))})))
+
+(defn- image-evidence
+  "Where an image is painted (ADR 0031): its canvas, as the selected resource,
+   and the region when only part of the canvas is painted (a W3C media fragment)."
+  [{:keys [canvas region]}]
+  (when (string? canvas)
+    (cond-> {:source {:uri canvas}}
+      region (assoc :selector {:type :fragment :value region
+                               :conforms-to "http://www.w3.org/TR/media-frags/"}))))
 
 (defn- manifest-content
   "`{:fragments :assertions}` — the native `:iiif/*` content of manifest `m`."
   [rid m]
   (let [langs  (fn [pred v] (map-indexed (fn [i [lang s]] (qualified rid pred i s {"lang" lang}))
                                          (lang-entries v)))
-        images (map-indexed (fn [i {:keys [id width height]}]
+        images (map-indexed (fn [i {:keys [id width height] :as img}]
                               (qualified rid "image" i id
                                          {"width"  (when (pos-int? width) width)
-                                          "height" (when (pos-int? height) height)}))
+                                          "height" (when (pos-int? height) height)}
+                                         (image-evidence img)))
                             (painted-images m))
         quals  (concat (langs "label" (get m "label")) (langs "summary" (get m "summary")) images)
         flat   (concat
