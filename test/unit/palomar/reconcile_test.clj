@@ -111,3 +111,12 @@
                                         {:name "Gustave Flaubert" :authority-id "isni:b" :certifiable? true :status :accepted}])]
         (is (empty? applied))
         (is (= [:ambiguous :ambiguous] (map :reason refused)))))))
+
+(deftest an-authority-id-that-is-no-iri-is-refused
+  (testing "an accepted, certifiable link whose id would corrupt the RDF output is refused, with its reason"
+    (let [r    (model/record {:id :rec/one :kind :doc
+                              :assertions [(model/assertion {:subject :rec/one :predicate :canon/agent :value "X"})]})
+          link {:name "X" :authority-id "isni 0000 0001" :certifiable? true :status :accepted}
+          {:keys [applied refused]} (rec/apply-agent-links [r] [link])]
+      (is (empty? applied))
+      (is (= [:invalid-iri] (map :reason refused))))))

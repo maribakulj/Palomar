@@ -35,6 +35,18 @@
 
 (defn- iri-forbidden? [c] (or (<= (int c) 0x20) (#{\< \> \" \{ \} \| \^ \` \\} c)))
 
+(defn iri-problem
+  "Why string `iri` cannot be written as an N-Triples/Turtle IRIREF, or nil when
+   it can: it must be absolute (have a scheme) and hold no character the grammar
+   forbids (controls, space, `<>\"{}|^`\\`). Writers call this so an IRI from
+   a caller never corrupts their output."
+  [iri]
+  (cond
+    (not (string? iri))                             "not a string"
+    (not (re-find #"^[A-Za-z][A-Za-z0-9+.-]*:" iri)) "not an absolute IRI (no scheme)"
+    (some iri-forbidden? iri)                       (str "holds " (pr-str (first (filter iri-forbidden? iri)))
+                                                         ", which an IRI may not")))
+
 (defn- read-iri
   "Read an IRIREF at `i` (on `<`). Returns `[iri next-i]`. A character an IRI
    may not hold is an error whether written or produced by a `\\u` escape, and

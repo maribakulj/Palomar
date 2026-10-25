@@ -21,7 +21,8 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 | A CRM super-class alone (`E89`, `E24`, `E73`) is never downcast to a WEMI entity; it is reported. | `palomar.plugins.lrmoo.crm-import-test/external-crm-super-classes-are-not-downcast` |
 | Entity titles are written to RDF through an E41 Appellation (`P1` → `P190`), never as R33 or P190 on the entity itself, and read back. | `palomar.plugins.lrmoo.crm-import-test/a-title-round-trips-through-its-appellation` |
 | External N-Triples are parsed by the RDF 1.1 grammar; a syntax error is located, never guessed. | `palomar.plugins.lrmoo.ntriples-test/syntax-errors-are-located-never-guessed` |
-| Rejected, superseded and retracted assertions feed no rule and reach no output. | `palomar.rules-test/record-triples-leaves-out-assertions-no-longer-in-force`, `palomar.convert-test/a-rejected-claim-is-never-exported` |
+| Rejected, superseded and retracted assertions feed no rule and reach no output as a fact; the PROV-O record keeps them, reified, with their status. | `palomar.rules-test/record-triples-leaves-out-assertions-no-longer-in-force`, `palomar.convert-test/a-rejected-claim-is-never-exported`, `palomar.convert-test/the-prov-record-keeps-the-history` |
+| No RDF output holds an invalid IRI: the writers refuse one, keyword ids are percent-encoded. | `palomar.plugins.lrmoo.export-test/no-invalid-iri-is-ever-written` |
 | Two rules deriving one fact keep both justifications. | `palomar.runtime-test/alternative-justifications-are-recorded-once` |
 | A IIIF manifest missing a Presentation 3.0 MUST is not emitted, and the reason is reported. | `palomar.plugins.iiif.export-test/an-invalid-manifest-is-refused-with-a-diagnostic` |
 | MARC field occurrences keep their subfields together, in order, with their indicators; the leader is kept. | `palomar.plugins.marc21-test/each-field-occurrence-keeps-its-subfields-together-and-in-order` |

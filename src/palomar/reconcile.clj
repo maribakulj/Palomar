@@ -27,6 +27,7 @@
             [clojure.string :as str]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
+            [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.text :as text]))
 
 (defn- agent-label
@@ -138,13 +139,15 @@
 
    Nothing else is applied, and every link left out is returned under `:refused`
    with a `:reason`: `:not-accepted` (a bare proposal is never applied, D7),
-   `:not-certifiable` (no determinate authority id: the metro-station guard) or
-   `:ambiguous` (one name accepted for several authority ids). Returns
+   `:not-certifiable` (no determinate authority id: the metro-station guard),
+   `:invalid-iri` (an authority id that is no IRI, which would corrupt every RDF
+   output) or `:ambiguous` (one name accepted for several authority ids). Returns
    `{:records [..] :applied [{:record :name :iri}] :refused [link…]}`."
   [records links]
   (let [accepted?   #(contains? #{:accepted :asserted} (:status %))
         certifiable #(boolean (and (:certifiable? %) (:authority-id %)))
-        candidates  (filter #(and (accepted? %) (certifiable %)) links)
+        valid-iri?  #(nil? (nt/iri-problem (:authority-id %)))
+        candidates  (filter #(and (accepted? %) (certifiable %) (valid-iri? %)) links)
         ambiguous   (set (for [[nm ls] (group-by :name candidates)
                                :when (< 1 (count (distinct (map :authority-id ls))))]
                            nm))
@@ -153,6 +156,7 @@
         refused     (vec (for [l links
                                :let [r (cond (not (accepted? l))      :not-accepted
                                              (not (certifiable l))    :not-certifiable
+                                             (not (valid-iri? l))     :invalid-iri
                                              (ambiguous (:name l))    :ambiguous)]
                                :when r]
                            (assoc l :reason r)))

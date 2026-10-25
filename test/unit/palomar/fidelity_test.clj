@@ -42,3 +42,13 @@
 
 (deftest turtle-is-reported-as-unchecked
   (is (:unchecked (audit :dc :turtle))))
+
+(deftest the-prov-audit-checks-out-of-force-assertions-too
+  (testing "PROV must record a rejected claim, so the audit counts it and finds it present"
+    (let [rec      (first (:records (convert/to-wemi :dc {:record-id :dc/x} (slurp (fixtures :dc)))))
+          rejected (update rec :assertions
+                           (partial mapv #(if (= :dc/date (:predicate %)) (assoc % :status :rejected) %)))
+          strict   (fidelity/audit-record :prov rejected)
+          plain    (fidelity/audit-record :ntriples rejected)]
+      (is (empty? (:unaccounted strict)))
+      (is (> (:checked strict) (:checked plain))))))

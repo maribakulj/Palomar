@@ -103,8 +103,9 @@
 
 (defn export-losses
   "The PROV-O export writes every assertion, with its status and provenance, so
-   it loses none of them. A record's diagnostics are not assertions and are not
-   written; that is not content loss."
+   it loses none of them: `convert` hands it the out-of-force ones too, as it
+   records rather than states them (ADR 0025). A record's diagnostics are not
+   assertions and are not written; that is not content loss."
   [_record]
   [])
 

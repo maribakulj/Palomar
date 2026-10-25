@@ -174,7 +174,8 @@
 
 (defn ->record
   "Mint an IR record from recovered CRM/LRMoo RDF: one `model/entity` per
-   F-typed node (keyed by its IRI), a relation assertion per WEMI link, and one
+   F-typed node (keyed by its IRI; a blank node gets an id minted from the record
+   and its label, and no `:iri`), a relation assertion per WEMI link, and one
    loss (ADR 0015) per node that carries only a CRM super-class:
    `:under-specified` when the super-class has a single WEMI specialisation
    (`E89`, `E24`), `:ambiguity-collapsed` when it has several (the `E73`
@@ -183,14 +184,20 @@
   [nt rid]
   (let [{:keys [typed super-class-only ambiguous relations strings unrecovered]} (recover nt)
         prov   (model/provenance {:pass :import})
-        ents   (for [[iri kind] typed]
-                 (model/entity {:id iri :kind kind :iri iri :provenance prov}))
+        ;; an IRI node is keyed by its IRI, which it also carries; a blank node
+        ;; (`_:b0`) has no IRI, so it gets a minted id, scoped to this record
+        bnode? #(str/starts-with? % "_:")
+        id-of  (into {} (for [[k kind] typed]
+                          [k (if (bnode? k) (model/mint-entity-id kind (str rid "|" k)) k)]))
+        ents   (for [[k kind] typed]
+                 (model/entity (cond-> {:id (id-of k) :kind kind :provenance prov}
+                                 (not (bnode? k)) (assoc :iri k))))
         rels   (concat
                 (for [[from pred to] relations]
-                  (model/assertion {:subject from :predicate pred
-                                    :value (model/reference to) :provenance prov}))
+                  (model/assertion {:subject (id-of from) :predicate pred
+                                    :value (model/reference (id-of to)) :provenance prov}))
                 (for [[s o] strings]
-                  (model/assertion {:subject s :predicate :lrmoo/R33_has_string
+                  (model/assertion {:subject (id-of s) :predicate :lrmoo/R33_has_string
                                     :value (:lit o) :provenance prov})))
         coerced (when (some (fn [[_ o]] (or (:lang o)
                                             (and (:datatype o)

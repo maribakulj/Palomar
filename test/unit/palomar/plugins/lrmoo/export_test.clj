@@ -227,3 +227,15 @@
     (is (nil? (export/language-tag "fr ench")))
     (is (nil? (export/language-tag "")))
     (is (nil? (export/language-tag :fr)))))
+
+(deftest no-invalid-iri-is-ever-written
+  (testing "a keyword id with a character an IRI may not hold is percent-encoded (audit P0)"
+    (is (= "urn:palomar:doc:my%20file" (export/entity-iri (keyword "doc" "my file"))))
+    (is (= "urn:palomar:ent:F1_Work.ab" (export/entity-iri :ent/F1_Work.ab))))
+  (testing "an invalid IRI from a caller is refused, in every writer"
+    (let [bad [["urn:palomar:ent:x" "http://ex/p" {:iri "http://ex/a b"}]]]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"invalid IRI" (export/render-ntriples bad)))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"invalid IRI" (export/render-turtle bad)))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"invalid IRI" (export/render-jsonld bad)))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not an absolute IRI"
+                            (export/render-ntriples [["relative" "http://ex/p" {:lit "x"}]]))))))

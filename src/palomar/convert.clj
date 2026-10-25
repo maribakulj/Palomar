@@ -60,7 +60,9 @@
 (def exporters
   "Target format -> {:render <record -> string> :losses <record -> [loss]>}.
    Every renderer takes a projected WEMI record (which retains its canonical and
-   native assertions, so the round-trip exporters read `:canon/*` off it)."
+   native assertions, so the round-trip exporters read `:canon/*` off it).
+   `:history? true` marks a target that records assertions rather than states
+   them, and so receives the out-of-force ones too (ADR 0025)."
   {:ntriples   {:render export/->ntriples            :losses export/export-losses}
    :turtle     {:render export/->turtle              :losses export/export-losses}
    :jsonld     {:render export/->jsonld              :losses export/export-losses}
@@ -71,7 +73,14 @@
    :marc21     {:render marc21-export/->marcxml      :losses marc21-export/export-losses}
    :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses}
    :iiif       {:render iiif-export/->json           :losses iiif-export/export-losses}
-   :prov       {:render prov/->ntriples              :losses prov/export-losses}})
+   :prov       {:render prov/->ntriples              :losses prov/export-losses :history? true}})
+
+(defn keeps-history?
+  "True when target `to` receives every assertion whatever its status: it
+   records them (PROV-O reifies each as a statement carrying its status) rather
+   than stating them as facts (ADR 0025)."
+  [to]
+  (boolean (get-in exporters [to :history?])))
 
 (defn source-formats [] (spokes/source-formats))
 (defn target-formats [] (set (keys exporters)))
@@ -137,15 +146,20 @@
    `:in-force-only? true` only `:asserted`/`:accepted` (or status-less) assertions
    are, so an uncurated inference never reaches the output as a fact. An entity
    that existed only through dropped claims is dropped with them
-   (`model/filter-assertions`): a rejected Work is not typed in the output either."
+   (`model/filter-assertions`): a rejected Work is not typed in the output either.
+
+   A history target (`keeps-history?`, the PROV-O record of provenance) is the
+   exception: it states no fact, it records each assertion with its status, so
+   it receives them all (ADR 0025)."
   ([to records] (export-records to records {}))
   ([to records {:keys [in-force-only?]}]
    (when-not (contains? exporters to)
      (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
    (let [{:keys [render losses]} (exporters to)
-         records (mapv (if in-force-only?
-                         #(model/filter-assertions % in-force-or-unstated?)
-                         model/without-out-of-force)
+         records (mapv (cond
+                         (keeps-history? to) identity
+                         in-force-only?      #(model/filter-assertions % in-force-or-unstated?)
+                         :else               model/without-out-of-force)
                        records)]
      {:output (->> records
                    (into [] (comp (map render) (remove str/blank?)))

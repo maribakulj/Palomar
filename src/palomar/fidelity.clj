@@ -116,7 +116,8 @@
    assertions are not checked, as the export never emits them by design
    (`convert/export-records`); nor are those an inference or repair pass derived
    (`export-coverage/derived?`), which copy source values checked in their own
-   right."
+   right. A history target (`convert/keeps-history?`, PROV-O) is checked on
+   its out-of-force assertions too, since it must record them (ADR 0025)."
   ([to record] (audit-record to record []))
   ([to record losses]
    (if-let [decode (decoders to)]
@@ -126,7 +127,7 @@
            checked (distinct
                     (for [a (:assertions record)
                           :when (and (string? (:value a))
-                                     (not (model/out-of-force? a))
+                                     (or (convert/keeps-history? to) (not (model/out-of-force? a)))
                                      (not (cov/derived? a)))]
                       (select-keys a [:subject :predicate :value])))
            klass   (group-by #(cond (present? seen (:predicate %) (:value %)) :present
