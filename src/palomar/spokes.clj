@@ -8,6 +8,7 @@
    listing formats or *validating* a source — neither of which exports — does not
    drag in the whole export stack (the coupling audit point A1)."
   (:require [palomar.plugins.dc :as dc]
+            [palomar.plugins.ead :as ead]
             [palomar.plugins.iiif :as iiif]
             [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.intermarc-ng :as intermarc-ng]
@@ -23,7 +24,8 @@
    :marc21       marc21/plugin
    :dc           dc/plugin
    :mods         mods/plugin
-   :iiif         iiif/plugin})
+   :iiif         iiif/plugin
+   :ead          ead/plugin})
 
 (defn source-formats
   "The set of supported source format keywords."

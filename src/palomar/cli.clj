@@ -70,7 +70,7 @@
     "  --policy      validate / conformance: errors-only (default), errors-and-warnings, strict, never"
     "                apply-repairs: flag (default), accept, reject"
     "  --record-id   record id for single-record spokes (Dublin Core; default: from the filename)"
-    "  --authorities reconcile: a MADS or SKOS authority file (RDF/XML, or N-Triples as .nt) to match names against"
+    "  --authorities reconcile: a MADS or SKOS authority file (RDF/XML, or N-Triples as .nt) or an EAC-CPF record to match names against"
     "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
     "  --out         write the output to a file instead of stdout (convert)"
     "  --stream      convert in bounded memory, streaming a large flat MARC dump to --out (WP-7)"
@@ -423,8 +423,8 @@
       :else
       (guard #(let [{:keys [records]} (convert/to-wemi from opts source)
                     pool  (when authorities
-                            (:entries (authorities/read-pool (if (str/ends-with? authorities ".nt") :ntriples :rdfxml)
-                                                             (slurp authorities))))
+                            (let [s (slurp authorities)]
+                              (:entries (authorities/read-pool (authorities/sniff-format authorities s) s))))
                     names (distinct (map :name (mapcat agents/occurrences records)))]
                 {:exit 0
                  :out  (str (reconcile/format-agent-reconciliation (reconcile/reconcile-agents records))

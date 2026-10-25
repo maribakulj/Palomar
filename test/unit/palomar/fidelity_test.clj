@@ -13,7 +13,8 @@
    :dc           "test/fixtures/documentary/dublin-core/w3c_dc_example1.xml"
    :marc21       "test/fixtures/documentary/marc21/marcxml/loc_collection.xml"
    :mods         "test/fixtures/documentary/mods/loc_mods_book.xml"
-   :iiif         "test/fixtures/documentary/iiif/manifest_book_simple.json"})
+   :iiif         "test/fixtures/documentary/iiif/manifest_book_simple.json"
+   :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"})
 
 (defn- audit [from to]
   (fidelity/audit {:from from :to to :source (slurp (fixtures from))

@@ -18,6 +18,12 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Archival description** (ADR 0039): an EAD 2002 / EAD3 spoke (`--from
+  ead`), one record per unit of description, with an archival projection — a
+  Manifestation per unit, `P106i_forms_part_of` its parent's, no Work or
+  Expression — and every unread element reported; EAC-CPF records read as
+  reconciliation pools (`reconcile --authorities`).
+
 - **Authority files** (ADR 0038): `palomar.rdfxml`, an RDF/XML reader;
   `palomar.plugins.authorities` reads MADS/RDF and SKOS (RDF/XML or N-Triples)
   into reconciliation pools, setting deleted MADS headings aside with their
