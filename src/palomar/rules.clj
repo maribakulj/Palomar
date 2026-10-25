@@ -20,14 +20,29 @@
    - Guards are pure predicates drawn from a curated stdlib. Rules cannot
      call arbitrary Clojure functions.
 
+   - `(optional clause…)` is a left join (ADR 0035): a row the inner clauses
+     extend is extended, any other passes through with their variables unbound.
+   - In a triple pattern, `(ref ?x)` matches a reference value and binds (or
+     checks) its target: `[?r :canon/agent (ref ?f)]` reaches the fragment.
+   - `(not clause…)` keeps a row only when the inner clauses do not extend it
+     (ADR 0035): “no agent of this record has the role :creator”. It binds
+     nothing.
+
    Production actions: `:assert`, `:diagnostic`, `:repair`, `:entity` (mint a
-   synthesized subject — ADR 0014/0017). A `:retract` / `:supersede` family is
-   a planned future addition (ADR 0008)."
+   synthesized subject — ADR 0014/0017) and `:construct`, a graph template
+   (ADR 0035): a vector of `[s p o]` triples (an optional fourth element
+   `{:status s}`) and of `(mint kind part…)` entity declarations. A term is a
+   variable, a literal, or a form of the closed `term-stdlib` — `mint` (a
+   content-derived entity id, declared once; a reference in object position),
+   `ref`, `norm`, `str`, `or`. A triple one of whose terms is unbound (an
+   `optional` that did not match) is not written. A `:retract` / `:supersede`
+   family is a planned future addition (ADR 0008)."
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.walk :as walk]
             [malli.core :as m]
-            [palomar.model :as model]))
+            [palomar.model :as model]
+            [palomar.text :as text]))
 
 ;; ---------------------------------------------------------------------------
 ;; Variables
@@ -56,8 +71,19 @@
 (defn- triple-pattern? [clause]
   (and (vector? clause) (= 3 (count clause))))
 
+(defn- optional-form?
+  "True for an `(optional clause…)` match clause (ADR 0035)."
+  [clause]
+  (and (seq? clause) (= 'optional (first clause))))
+
+(defn- not-form?
+  "True for a `(not clause…)` match clause (ADR 0035)."
+  [clause]
+  (and (seq? clause) (= 'not (first clause))))
+
 (defn- guard-form? [clause]
-  (and (sequential? clause) (not (vector? clause))))
+  (and (sequential? clause) (not (vector? clause))
+       (not (optional-form? clause)) (not (not-form? clause))))
 
 (defn- variables-bound-by-match
   "Variables introduced by triple-patterns in a `:match` vector. Guards
@@ -76,6 +102,19 @@
   (reduce (fn [acc clause]
             (if (guard-form? clause)
               (into acc (collect-variables clause))
+              acc))
+          #{}
+          match))
+
+(defn- optional-bindings
+  "Variables an `optional` clause of `match` may bind: those of its triple
+   patterns, nested optionals included."
+  [match]
+  (reduce (fn [acc clause]
+            (if (optional-form? clause)
+              (-> acc
+                  (into (variables-bound-by-match (rest clause)))
+                  (into (optional-bindings (rest clause))))
               acc))
           #{}
           match))
@@ -175,7 +214,8 @@
    'in?      (fn [_ _ value coll]
                (boolean (some #(= value %) coll)))
    'not-in?  (fn [_ _ value coll]
-               (not-any? #(= value %) coll))})
+               (not-any? #(= value %) coll))
+   'string?  (fn [_ _ value] (string? value))})
 
 (defn stdlib-predicate? [sym] (contains? predicate-stdlib sym))
 
@@ -193,6 +233,12 @@
   [current-bindings pat-val triple-val]
   (cond
     (wildcard? pat-val) {}
+
+    ;; `(ref x)` matches a reference value whose target matches `x` (ADR 0035)
+    (and (seq? pat-val) (= 'ref (first pat-val)))
+    (if (model/reference-value? triple-val)
+      (position-match current-bindings (second pat-val) (:value/target triple-val))
+      ::fail)
 
     (variable? pat-val)
     (if-let [[_ bound] (find current-bindings pat-val)]
@@ -237,24 +283,38 @@
                       {:guard guard-form :bindings bindings})))
     (apply f bindings record resolved)))
 
+(defn- match-rows
+  "Extend each of `rows` by `clauses` over `triples`."
+  [clauses record triples rows]
+  (reduce
+   (fn [binding-rows clause]
+     (cond
+       (vector? clause)
+       (mapcat #(match-pattern % clause triples) binding-rows)
+
+       (not-form? clause)
+       (remove #(seq (match-rows (rest clause) record triples [%])) binding-rows)
+
+       (optional-form? clause)
+       (mapcat (fn [row]
+                 (let [ext (match-rows (rest clause) record triples [row])]
+                   (if (seq ext) ext [row])))
+               binding-rows)
+
+       (seq? clause)
+       (filter #(run-guard % record clause) binding-rows)
+
+       :else
+       (throw (ex-info "Invalid match clause" {:clause clause}))))
+   rows
+   clauses))
+
 (defn- match-clauses
-  "Execute match clauses against `record`. Returns a sequence of fully-bound
-   binding maps (variables → values) for every matching row."
+  "Execute match clauses against `record`. Returns a sequence of binding maps
+   (variables → values) for every matching row; a variable only an `optional`
+   clause binds is absent from the rows it did not match."
   [clauses record]
-  (let [triples (record-triples record)]
-    (reduce
-     (fn [binding-rows clause]
-       (cond
-         (vector? clause)
-         (mapcat #(match-pattern % clause triples) binding-rows)
-
-         (seq? clause)
-         (filter #(run-guard % record clause) binding-rows)
-
-         :else
-         (throw (ex-info "Invalid match clause" {:clause clause}))))
-     [{}]
-     clauses)))
+  (match-rows clauses record (record-triples record) [{}]))
 
 ;; ---------------------------------------------------------------------------
 ;; Template substitution for productions
@@ -343,11 +403,86 @@
              (assoc base :provenance (merge-provenance (:provenance base)
                                                        rule-id phase bindings)))}))
 
+;; --- :construct (ADR 0035) ---------------------------------------------------
+
+(def term-stdlib
+  "The closed set of forms a `:construct` term may use, each a function of its
+   evaluated arguments (`::unbound` never reaches one but `or`):
+
+   - `(mint kind part…)` — the content-derived id of an entity of `kind`, keyed
+     by the parts joined with `|` (`model/mint-entity-id`); the entity is
+     declared with the triples that use it;
+   - `(ref x)` — a reference value to entity `x`;
+   - `(norm s)` — `palomar.text/norm`, the matching form of a string;
+   - `(str x…)` — the concatenation of the parts' printed forms;
+   - `(or x…)` — the first part that is bound and not nil."
+  #{'mint 'ref 'norm 'str 'or})
+
+(defn- eval-term
+  "The value of construct term `t` under `bindings`: a value, `{::mint id ::kind
+   kind}` for a minted entity, or `::unbound`."
+  [bindings t]
+  (cond
+    (variable? t) (if-let [[_ v] (find bindings t)] v ::unbound)
+
+    (and (seq? t) (contains? term-stdlib (first t)))
+    (let [[op & args] t]
+      (if (= 'mint op)
+        (let [[kind & parts] args
+              vs             (map #(eval-term bindings %) parts)]
+          (if (some #{::unbound} vs)
+            ::unbound
+            (let [key (str/join "|" (map #(let [v (if (::mint %) (::mint %) %)] (if (string? v) v (str v))) vs))]
+              (if (str/blank? key) ::unbound {::mint (model/mint-entity-id kind key) ::kind kind}))))
+        (let [vs (map #(eval-term bindings %) args)]
+          (case op
+            or   (or (first (remove #(or (nil? %) (= ::unbound %)) vs)) ::unbound)
+            (if (some #{::unbound} vs)
+              ::unbound
+              (case op
+                ref  (model/reference (let [v (first vs)] (if (::mint v) (::mint v) v)))
+                norm (if (string? (first vs)) (text/norm (first vs)) ::unbound)
+                str  (apply str (map #(if (::mint %) (::mint %) %) vs))))))))
+
+    (seq? t) (throw (ex-info "Unknown construct term" {:term t :supported term-stdlib}))
+    :else    t))
+
+(defn- minted [v] (when (map? v) (when-let [id (::mint v)] {:id id :kind (::kind v)})))
+
+(defn- run-construct
+  "A `:construct` template (ADR 0035) under one binding row: an assertion per
+   triple whose terms are all bound (a minted object becomes a reference), and
+   an entity per minted id one of them uses or the template declares."
+  [template bindings rule-id phase]
+  (let [prov   (merge-provenance nil rule-id phase bindings)
+        rows   (for [item template]
+                 (if (vector? item)
+                   (let [[s p o opts] item
+                         [s p o]      (map #(eval-term bindings %) [s p o])]
+                     (when-not (some #{::unbound} [s p o])
+                       {:mints (keep minted [s o])
+                        :prod  {:kind  :assertion
+                                :value (model/assertion
+                                        {:subject    (if (minted s) (::mint s) s)
+                                         :predicate  p
+                                         :value      (if (minted o) (model/reference (::mint o)) o)
+                                         :status     (or (:status opts) (default-status-for-phase phase))
+                                         :confidence 1.0
+                                         :provenance prov})}}))
+                   (let [v (eval-term bindings item)]
+                     (when-let [e (minted v)] {:mints [e]}))))
+        ents   (distinct (mapcat :mints (remove nil? rows)))]
+    (concat
+     (for [{:keys [id kind]} ents]
+       {:kind :entity :value (model/entity {:id id :kind kind :provenance prov})})
+     (keep :prod rows))))
+
 (def ^:private action-runners
   {:assert     run-assert
    :diagnostic run-diagnostic
    :repair     run-repair
-   :entity     run-entity})
+   :entity     run-entity
+   :construct  run-construct})
 
 (defn supported-actions [] (set (keys action-runners)))
 
@@ -357,12 +492,14 @@
   [produce-map binding-rows rule-id phase]
   (for [bindings binding-rows
         [action template] produce-map
-        :let [runner (get action-runners action)]]
-    (do
-      (when-not runner
-        (throw (ex-info "Unknown production action"
-                        {:action action :supported (supported-actions)})))
-      (runner template bindings rule-id phase))))
+        :let [runner (get action-runners action)]
+        p (do
+            (when-not runner
+              (throw (ex-info "Unknown production action"
+                              {:action action :supported (supported-actions)})))
+            (let [r (runner template bindings rule-id phase)]
+              (if (map? r) [r] r)))]
+    p))
 
 ;; ---------------------------------------------------------------------------
 ;; Schemas
@@ -379,13 +516,43 @@
    [:fn {:error/message "guard head must be a stdlib predicate"}
     #(stdlib-predicate? (first %))]])
 
+(declare valid-match-clause?)
+
+(def OptionalForm
+  "`(optional clause…)`: a left join over the inner clauses (ADR 0035)."
+  [:and
+   [:fn {:error/message "must be an (optional clause…) form"} optional-form?]
+   [:fn {:error/message "optional holds triple patterns, guards or optionals"}
+    #(every? valid-match-clause? (rest %))]])
+
+(def NotForm
+  "`(not clause…)`: keep a row the inner clauses do not extend (ADR 0035)."
+  [:and
+   [:fn {:error/message "must be a (not clause…) form"} not-form?]
+   [:fn {:error/message "not holds triple patterns, guards or optionals"}
+    #(every? valid-match-clause? (rest %))]])
+
 (def MatchClause
-  [:or TriplePattern GuardForm])
+  [:or TriplePattern OptionalForm NotForm GuardForm])
+
+(defn- valid-match-clause? [c] (m/validate MatchClause c))
+
+(def ConstructItem
+  "One item of a `:construct` template: `[s p o]`, `[s p o {:status s}]`, or a
+   `(mint kind part…)` declaration."
+  [:or
+   [:and vector? [:fn {:error/message "a construct triple is [s p o] or [s p o {:status s}]"}
+                  #(or (= 3 (count %)) (and (= 4 (count %)) (map? (peek %))))]]
+   [:fn {:error/message "a construct declaration is (mint kind part…)"}
+    #(and (seq? %) (= 'mint (first %)) (keyword? (second %)))]])
 
 (def Produce
-  [:map-of
-   [:enum :assert :diagnostic :repair :entity]
-   :map])
+  [:map {:closed true}
+   [:assert {:optional true} :map]
+   [:diagnostic {:optional true} :map]
+   [:repair {:optional true} :map]
+   [:entity {:optional true} :map]
+   [:construct {:optional true} [:vector ConstructItem]]])
 
 (def Rule
   [:map
@@ -427,7 +594,10 @@
         guard-used     (variables-used-in-guards (:match rule))
         produce-used   (collect-variables (:produce rule))
         unbound-guards (set/difference guard-used bound)
-        unbound-prod   (set/difference produce-used bound)]
+        ;; a variable only an optional binds may appear in a :construct
+        ;; template (its triple is skipped when unbound), not in another action
+        construct-ok   (when (contains? (:produce rule) :construct) (optional-bindings (:match rule)))
+        unbound-prod   (set/difference produce-used bound construct-ok)]
     (when (seq unbound-guards)
       (throw (ex-info "Rule references unbound variables in a guard"
                       {:rule-id (:id rule) :unbound unbound-guards})))

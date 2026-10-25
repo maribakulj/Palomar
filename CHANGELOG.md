@@ -18,6 +18,14 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Graph templates in the rule language** (ADR 0035): a `:construct`
+  production (a vector of `[s p o]` triples and `(mint kind part…)`
+  declarations), the terms `mint` / `ref` / `norm` / `str` / `or`, and the
+  match clauses `(optional …)`, `(not …)` and `(ref ?x)`, so a mapping to
+  CIDOC-CRM or a WEMI chain can be written as data. `lrmoo.wemi-rules` is the
+  floor WEMI chain as four such rules, shown equal to `project` on 126 fixture
+  records.
+
 - **Library API and EDN IR** (ADR 0034): `palomar.api`, the stable entry
   points (pivot, export, convert, curate, audit, manifest…), pinned by a
   contract test; `--to edn` writes the pivot records whole, one versioned

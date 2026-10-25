@@ -15,7 +15,7 @@ decision from being read as shipped code (an audit honesty rule).
 | # | Title | Status |
 |---|---|---|
 | [0001](./0001-assertion-based-ir.md) | Assertion-based internal representation | Accepted |
-| [0002](./0002-edn-as-dsl.md) | EDN as the rule DSL, no parser | Accepted |
+| [0002](./0002-edn-as-dsl.md) | EDN as the rule DSL, no parser | Accepted (extended by 0035) |
 | [0003](./0003-core-vs-canonical-vocabulary.md) | Structural vocabulary at core, documentary vocabulary in a plugin | Accepted (extended by 0013, 0021) |
 | [0004](./0004-fixed-passes-over-fixpoint.md) | Fixed passes in V1, fixpoint deferred | Superseded by 0020 |
 | [0005](./0005-status-model.md) | Dual status model: machine truth and human workflow | Accepted (extended by 0023, 0028) |
@@ -48,6 +48,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0032](./0032-graded-alignments.md) | Alignments are graded SKOS mapping claims, never owl:sameAs | Accepted |
 | [0033](./0033-loss-taxonomy-and-relation-fidelity.md) | Loss aspects, a projection edge, and relation fidelity | Accepted |
 | [0034](./0034-library-api-and-edn-ir.md) | A stable library API and the pivot as an EDN file | Accepted |
+| [0035](./0035-construct-templates.md) | Graph templates in the rule language: construct, mint, optional, not | Accepted |
 
 ## Template
 
