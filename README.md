@@ -268,6 +268,15 @@ independent third-party benchmark; see [`docs/eval/`](./docs/eval/). The honest
 remaining gates are real institutional acceptance criteria and a real at-scale
 corpus ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md) §7).
 
+An **interoperability audit** (2026-10-25) found conversions that were
+structurally plausible but semantically wrong (a publisher keying a Work, an
+edition exported as a physical object, external CRM silently downcast, losses
+that were declared but not observed). Its P0/P1 items are fixed, and an
+occurrence-level fidelity audit (`palomar.fidelity`) now checks every conversion
+against its own output. What is guaranteed, and what is not, is listed in
+[`docs/guarantees.md`](./docs/guarantees.md), each guarantee with the test that
+pins it.
+
 ---
 
 ## Development
