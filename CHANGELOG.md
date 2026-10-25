@@ -18,6 +18,18 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Authority files** (ADR 0038): `palomar.rdfxml`, an RDF/XML reader;
+  `palomar.plugins.authorities` reads MADS/RDF and SKOS (RDF/XML or N-Triples)
+  into reconciliation pools, setting deleted MADS headings aside with their
+  replacements; `palomar reconcile --authorities <file>` proposes matches.
+
+- **OAI-PMH and DCMI Terms** (ADR 0037): `palomar.plugins.oai` reads a
+  `GetRecord`/`ListRecords` response, imports each live record through the
+  spoke of its metadata format (`oai_dc`, `marcxml`, `mods`) with its OAI
+  header on its provenance, and `oai/harvest` follows resumption tokens
+  through a caller-supplied fetch; `--from oai --metadata-prefix …`. The Dublin
+  Core spoke reads `dcterms:` properties, reporting those with no home as loss.
+
 - **Publication and production events** (ADR 0036): `palomar.plugins.events`
   turns MARC21 260/264, UNIMARC 210/214 and INTERMARC 260 into an LRMoo
   `F30_Manifestation_Creation` that `R24_created` the Manifestation, with its

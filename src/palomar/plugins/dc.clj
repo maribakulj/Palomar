@@ -44,7 +44,9 @@
      and `:kind` (deriving an id from `dc:identifier` is a later refinement, as
      identifiers here are arbitrary URLs/strings).
    - Import only; a canonical→DC exporter is a later slice.
-   - Element-level only; DC Terms refinements / encoding schemes are out of scope."
+   - DCMI Terms (`dcterms:`) are read too (`dcterms-mapping`, ADR 0037); their
+     encoding schemes (`xsi:type=\"dcterms:W3CDTF\"`) are not.
+   - An OAI-PMH `oai_dc` record is read through `palomar.plugins.oai`."
   (:require [palomar.diagnostics :as dx]
             [palomar.plugins.shape :as shape]
             [palomar.xml :as rx]))
@@ -54,12 +56,13 @@
 ;; ---------------------------------------------------------------------------
 
 (def dc-uri "http://purl.org/dc/elements/1.1/")
+(def dcterms-uri "http://purl.org/dc/terms/")
 (def xml-uri "http://www.w3.org/XML/1998/namespace")
 
 (def aliases
   "Short-prefix aliases for `palomar.plugins.shape/rewrite-tags`, so
    `clojure.data.xml`'s URI-encoded namespaces become `:dc/*` and `:xml/lang`."
-  {:dc dc-uri :xml xml-uri})
+  {:dc dc-uri :dcterms dcterms-uri :xml xml-uri})
 
 ;; ---------------------------------------------------------------------------
 ;; DC → canonical mapping (ADR 0009)
@@ -94,6 +97,32 @@
    {:mapping/id :map/dc-description :mapping/from :dc/description :mapping/to :canon/note
     :mapping/transform [:trim] :mapping/qualifier {:from :xml/lang :as :canon/lang}}])
 
+(def dcterms-mapping
+  "DCMI Terms (ADR 0037): the `dcterms:` properties that restate a DCMES element
+   map as it does; of their refinements, those the floor has a home for —
+   `created`/`issued` (a date), `isPartOf`/`hasPart`/`isVersionOf`/`hasVersion`
+   (a relation), `abstract` and `tableOfContents` (a note, of that kind). Any
+   other `dcterms:` property present is reported as import loss."
+  (into
+   [{:mapping/id :map/dcterms-title :mapping/from :dcterms/title :mapping/to :canon/title
+     :mapping/transform [:trim] :mapping/qualifier {:from :xml/lang :as :canon/lang}}
+    {:mapping/id :map/dcterms-description :mapping/from :dcterms/description :mapping/to :canon/note
+     :mapping/transform [:trim] :mapping/qualifier {:from :xml/lang :as :canon/lang}}
+    {:mapping/id :map/dcterms-abstract :mapping/from :dcterms/abstract :mapping/to :canon/note
+     :mapping/transform [:trim] :mapping/qualifier {:value :abstract :as :canon/note-kind}}
+    {:mapping/id :map/dcterms-toc :mapping/from :dcterms/tableOfContents :mapping/to :canon/note
+     :mapping/transform [:trim] :mapping/qualifier {:value :contents :as :canon/note-kind}}]
+   (concat
+    (for [[el role] [["creator" :creator] ["contributor" :contributor] ["publisher" :publisher]]]
+      {:mapping/id (keyword "map" (str "dcterms-" el)) :mapping/from (keyword "dcterms" el) :mapping/to :canon/agent
+       :mapping/transform [:trim] :mapping/qualifier {:value role :as :canon/role}})
+    (for [[el to] [["date" :canon/date] ["created" :canon/date] ["issued" :canon/date]
+                   ["identifier" :canon/identifier]
+                   ["relation" :canon/relation] ["source" :canon/relation] ["isPartOf" :canon/relation]
+                   ["hasPart" :canon/relation] ["isVersionOf" :canon/relation] ["hasVersion" :canon/relation]]]
+      {:mapping/id (keyword "map" (str "dcterms-" el)) :mapping/from (keyword "dcterms" el) :mapping/to to
+       :mapping/transform [:trim]}))))
+
 (def dc-elements
   "The 15 DCMES 1.1 element names (as `:dc/*` keywords). Used to scope the
    unmodelled-element loss report to Dublin Core, ignoring wrapper/`xsi` noise."
@@ -102,7 +131,7 @@
     :dc/source :dc/language :dc/relation :dc/coverage :dc/rights})
 
 (def ^:private mapped-elements
-  (into #{} (map :mapping/from) mapping))
+  (into #{} (map :mapping/from) (concat mapping dcterms-mapping)))
 
 (def unmodelled-elements
   "DCMES elements with no home in the V1 canonical vocabulary (ADR 0003): they
@@ -137,7 +166,8 @@
    dropped by the mapping-driven shape walker (ADR 0015)."
   [record-id present]
   (for [tag present
-        :when (contains? unmodelled-elements tag)]
+        :when (or (contains? unmodelled-elements tag)
+                  (and (keyword? tag) (= "dcterms" (namespace tag)) (not (contains? mapped-elements tag))))]
     (dx/loss {:category     :dropped
               :subject      record-id
               :edge         :import
@@ -158,7 +188,7 @@
                     {:spoke :dc :record-id record-id})))
   (let [s      (source->string source-in)
         root   (-> (rx/parse-str s) (shape/rewrite-tags aliases))
-        record (shape/ingest-xml root mapping
+        record (shape/ingest-xml root (into mapping dcterms-mapping)
                                  {:record-id record-id
                                   :kind      (or kind :document)
                                   :source    (or source record-id)})]
@@ -171,6 +201,6 @@
   {:plugin/spec-version 1
    :id                  :palomar/dublin-core
    :input-format        :xml
-   :mapping             mapping
+   :mapping             (into mapping dcterms-mapping)
    :importer            importer
    :doc                 "Dublin Core (DCMES 1.1) XML importer — DC elements onto the canonical floor; unmodelled elements reported as import loss."})
