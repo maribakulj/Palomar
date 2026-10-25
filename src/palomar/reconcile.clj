@@ -12,8 +12,10 @@
    tier, not done here).
 
    The output is the agent *store* — distinct agents, each with the records that
-   mention it — not a rewrite of the records; merging records onto a shared agent
-   node is a downstream step.
+   mention it. `apply-agent-links` is the rewrite step: it attaches an accepted,
+   certifiable name→authority link to every record naming that creator, as the
+   same authority-identified agent entity, so the records share one agent node
+   and `reconcile-agents` sees them as one person (audit S29).
 
    The fuzzy tier (ADR 0018 decisions 3/4) is `propose-agent-links`: for agents
    that have only a *name* (no authority id), it proposes equivalences to an
@@ -23,6 +25,7 @@
    entry (the Victor Hugo *metro station*) can never be promoted."
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.text :as text]))
 
@@ -125,3 +128,32 @@
            :status          :proposed})
         (sort-by (comp - :score))
         vec)))
+
+(defn apply-agent-links
+  "Rewrite `records` onto shared agent nodes from `links` — accepted
+   `propose-agent-links` proposals (`{:name :authority-id :certifiable? …}`).
+   For each record whose creator is a link's `:name` and that has no identified
+   agent yet, add the `:crm/E21_Person` entity of the authority id (its id minted
+   from the id, as the INTERMARC spoke does, so every record names the same node).
+   A non-certifiable link (no determinate authority id) is never applied: it is
+   returned under `:refused`. Returns `{:records [..] :applied [{:record :name
+   :iri}] :refused [link…]}`."
+  [records links]
+  (let [{ok true refused false} (group-by #(boolean (and (:certifiable? %) (:authority-id %))) links)
+        by-name (group-by :name ok)
+        link-of (fn [record]
+                  (when-not (some #(= :crm/E21_Person (:kind %)) (:entities record))
+                    (some #(first (by-name %)) (agents/creators record))))
+        results (for [r records]
+                  (if-let [{:keys [name authority-id]} (link-of r)]
+                    (let [e (model/entity {:id         (model/mint-entity-id :crm/E21_Person authority-id)
+                                           :kind       :crm/E21_Person
+                                           :iri        authority-id
+                                           :provenance (model/provenance {:pass       :repair
+                                                                          :rule       :reconcile/apply-agent-link
+                                                                          :derivation [(:id r)]})})]
+                      [(update r :entities (fnil conj []) e) {:record (:id r) :name name :iri authority-id}])
+                    [r nil]))]
+    {:records (mapv first results)
+     :applied (vec (keep second results))
+     :refused (vec refused)}))
