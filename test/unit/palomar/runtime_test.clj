@@ -105,7 +105,21 @@
     (is (= 1 (count (:assertions out)))
         "second assertion with identical [subject predicate value status] is suppressed")
     (is (= :rule/a (get-in (first (:assertions out)) [:provenance :rule]))
-        "the first occurrence wins; provenance is preserved")))
+        "the first occurrence wins; provenance is preserved")
+    (is (= [{:rule :rule/b}] (get-in (first (:assertions out)) [:provenance :also]))
+        "the second derivation is kept as an alternative justification (audit S09)")))
+
+(deftest alternative-justifications-are-recorded-once
+  (let [a  (fn [rule] (model/assertion {:subject :r/d :predicate :canon/p :value 1
+                                        :provenance {:rule rule :pass :infer}}))
+        out (rt/merge-productions (book :r/d)
+                                  (for [r [:rule/a :rule/b :rule/a :rule/b :rule/c]]
+                                    {:kind :assertion :value (a r)}))
+        prov (:provenance (first (:assertions out)))]
+    (is (= 1 (count (:assertions out))))
+    (is (= :rule/a (:rule prov)))
+    (is (= [{:rule :rule/b :pass :infer} {:rule :rule/c :pass :infer}] (:also prov)))
+    (is (model/valid-record? out))))
 
 (deftest merge-distinguishes-assertions-by-status
   ;; Same fact at different statuses are distinct identities (ADR 0008).
