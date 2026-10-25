@@ -88,11 +88,6 @@
 ;; a read-only projection; the underlying record is never mutated.
 ;; ---------------------------------------------------------------------------
 
-(def ^:private out-of-force-statuses
-  "Assertion statuses that no longer hold, so the matcher must not see them.
-   `:proposed` stays visible on purpose: inference chains through proposed facts."
-  #{:rejected :superseded :retracted})
-
 (defn record-triples
   "Return a vector of [subject predicate value] triples representing the
    record, combining struct fields (via the structural vocabulary) and
@@ -127,7 +122,8 @@
               (:diagnostics record))
         assertion-triples
         (into []
-              (comp (remove #(contains? out-of-force-statuses (:status %)))
+              ;; `:proposed` stays visible on purpose: inference chains through it
+              (comp (remove model/out-of-force?)
                     (map (fn [a] [(:subject a) (:predicate a) (:value a)])))
               (:assertions record))]
     (-> struct-triples

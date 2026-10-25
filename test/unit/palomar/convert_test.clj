@@ -4,7 +4,8 @@
    edges — proving the parts compose into one `convert` call."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [palomar.convert :as cv]))
+            [palomar.convert :as cv]
+            [palomar.curate :as curate]))
 
 (def ^:private fixtures
   {:intermarc    "test/fixtures/documentary/intermarc/sru/intermarcXchange/bib-flaubert-madame-bovary-start1-max30.xml"
@@ -77,3 +78,26 @@
   (is (contains? (cv/target-formats) :linked-art))
   (is (thrown? Exception (cv/convert {:from :bogus :to :ntriples :source "x"})))
   (is (thrown? Exception (cv/convert {:from :dc :to :bogus :source "x" :opts {:record-id :r}}))))
+
+;; --- the export status policy (audit S08) -----------------------------------
+
+(defn- dc-wemi [] (:records (cv/to-wemi :dc {:record-id :dc/x} (src :dc))))
+
+(deftest a-rejected-claim-is-never-exported
+  (testing "after rejecting the inferred WEMI links, no target emits them"
+    (let [rejected (:records (curate/curate (dc-wemi) curate/reject-all))
+          accepted (:records (curate/curate (dc-wemi) curate/accept-all))]
+      (is (not (str/includes? (:output (cv/export-records :ntriples rejected)) "R4_embodies")))
+      (is (str/includes? (:output (cv/export-records :ntriples accepted)) "R4_embodies"))
+      (testing "the entities themselves (not claims) are still typed"
+        (is (str/includes? (:output (cv/export-records :ntriples rejected)) "lrmoo/F3_Manifestation"))))))
+
+(deftest in-force-only-keeps-uncurated-inference-out-of-the-output
+  (testing "by default the :proposed WEMI chain is exported; with :in-force-only? it is not, until accepted"
+    (let [uncurated (dc-wemi)
+          accepted  (:records (curate/curate (dc-wemi) curate/accept-all))]
+      (is (str/includes? (:output (cv/export-records :ntriples uncurated)) "R4_embodies"))
+      (is (not (str/includes? (:output (cv/export-records :ntriples uncurated {:in-force-only? true}))
+                              "R4_embodies")))
+      (is (str/includes? (:output (cv/export-records :ntriples accepted {:in-force-only? true}))
+                         "R4_embodies")))))

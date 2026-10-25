@@ -10,7 +10,7 @@
      palomar report        <input-file> --from <fmt> --to <fmt> [--record-id <id>]
      palomar inspect       <input-file> --from <fmt> [--record-id <id>]
      palomar reconcile     <input-file> --from <fmt> [--record-id <id>]
-     palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--record-id <id>]
+     palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--record-id <id>]
      palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]
      palomar formats
      palomar --help
@@ -21,6 +21,8 @@
    - `reconcile`     — cross-record agent reconciliation by authority id (ADR 0018).
    - `apply-repairs` — curate the `:proposed` claims a pipeline run emits (ADR 0005):
                        accept / reject / flag-for-review the inferred WEMI proposals.
+                       With `--to`, export the curated records (rejected claims are
+                       never emitted) to stdout; the curation outcome goes to stderr.
    - `conformance`   — check the WEMI projection against an institutional profile
                        (WP-6); exits non-zero under the acceptance-threshold policy.
 
@@ -51,7 +53,7 @@
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
     "  palomar inspect       <input-file> --from <fmt> [--record-id <id>]"
     "  palomar reconcile     <input-file> --from <fmt> [--record-id <id>]"
-    "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--record-id <id>]"
+    "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--record-id <id>]"
     "  palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]"
     "  palomar formats          list the supported source and target formats"
     "  palomar --help"
@@ -378,9 +380,11 @@
 (defn- do-apply-repairs
   "Curate the `:proposed` claims a pipeline run emits (ADR 0005): run the source to
    WEMI, then accept / reject / flag every pending proposal per `--policy` (default
-   `flag`). Writes the curation outcome to stdout. Honest when a record carries no
-   proposals (e.g. an authority-linked Work): reports nothing to curate."
-  [{:strs [from record-id policy]} input]
+   `flag`). Writes the curation outcome to stdout; with `--to`, writes the curated
+   records in that format to stdout instead (a rejected claim is never exported,
+   `convert/export-records`) and the outcome to stderr. Honest when a record
+   carries no proposals (e.g. an authority-linked Work): reports nothing to curate."
+  [{:strs [from record-id policy to]} input]
   (let [{:keys [err from source opts]} (read-source from input record-id "apply-repairs")
         policy-label (or policy "flag")
         decide       (repair-policies policy-label)]
@@ -388,10 +392,15 @@
       err          {:exit 2 :out "" :err err}
       (nil? decide) {:exit 2 :out ""
                      :err (str "unknown --policy " policy-label " (use flag|accept|reject)\n\n" usage)}
+      (and to (not (contains? (convert/target-formats) (keyword to))))
+      {:exit 2 :out "" :err (str "unknown --to " to "\n\n" usage)}
       :else
       (guard #(let [{:keys [records]} (convert/to-wemi from opts source)
-                    result            (curate/curate records decide)]
-                {:exit 0 :out (curate/format-curation result policy-label) :err ""})))))
+                    result            (curate/curate records decide)
+                    outcome           (curate/format-curation result policy-label)]
+                (if to
+                  {:exit 0 :out (:output (convert/export-records (keyword to) (:records result))) :err outcome}
+                  {:exit 0 :out outcome :err ""}))))))
 
 (defn- profile-names []
   (str/join " " (sort (map name (keys conformance/profiles)))))

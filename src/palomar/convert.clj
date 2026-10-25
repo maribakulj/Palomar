@@ -17,6 +17,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.loss-report :as lr]
+            [palomar.model :as model]
             [palomar.plugins :as plug]
             [palomar.plugins.dc.export :as dc-export]
             [palomar.plugins.iiif.export :as iiif-export]
@@ -120,6 +121,31 @@
     {:ingest  diagnostics
      :records (mapv #(to-pivot (:record (runtime/run-phase % compiled :normalize))) records)}))
 
+(defn- in-force-or-unstated? [a]
+  (or (nil? (:status a)) (model/in-force? a)))
+
+(defn export-records
+  "Render WEMI `records` (from `to-wemi`, possibly curated) to target `to`. Returns
+   `{:output String :loss [export-loss…]}`.
+
+   The status policy is applied here, once, for every target (audit S08): an
+   out-of-force assertion (`:rejected`, `:superseded`, `:retracted`) is never
+   emitted. By default pending claims (`:proposed`, `:needs-review`) are emitted
+   — the floor projection's whole WEMI chain is `:proposed` until curated. With
+   `:in-force-only? true` only `:asserted`/`:accepted` (or status-less) assertions
+   are, so an uncurated inference never reaches the output as a fact."
+  ([to records] (export-records to records {}))
+  ([to records {:keys [in-force-only?]}]
+   (when-not (contains? exporters to)
+     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
+   (let [{:keys [render losses]} (exporters to)
+         keep?   (if in-force-only? in-force-or-unstated? (complement model/out-of-force?))
+         records (mapv #(cond-> % (:assertions %) (update :assertions (partial filterv keep?))) records)]
+     {:output (->> records
+                   (into [] (comp (map render) (remove str/blank?)))
+                   (str/join "\n"))
+      :loss   (into [] (mapcat losses) records)})))
+
 (defn convert
   "Convert `source` from spoke `from` to serialisation `to`. Returns
    `{:output String :loss <conversion-report> :records N}`.
@@ -131,13 +157,9 @@
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
-  (let [{:keys [render losses]} (exporters to)
-        {:keys [records ingest]} (to-wemi from opts source)
+  (let [{:keys [records ingest]} (to-wemi from opts source)
         projection-loss (dx/collect-many records)
-        export-loss     (into [] (mapcat losses) records)
-        output          (->> records
-                             (into [] (comp (map render) (remove str/blank?)))
-                             (str/join "\n"))]
+        {output :output export-loss :loss} (export-records to records)]
     {:output  output
      :records (count records)
      :loss    (lr/conversion-report (concat ingest projection-loss export-loss)
@@ -181,14 +203,13 @@
     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
   (let [to-pivot (to-pivots from)
         compiled (compiled-mappings from)
-        {:keys [render losses]} (exporters to)
         result   (reduce
                   (fn [{:keys [n acc]} raw]
-                    (let [wemi (to-pivot (:record (runtime/run-phase raw compiled :normalize)))
-                          doc  (render wemi)]
+                    (let [wemi                     (to-pivot (:record (runtime/run-phase raw compiled :normalize)))
+                          {doc :output loss :loss} (export-records to [wemi])]
                       (when-not (str/blank? doc) (emit doc))
                       {:n   (inc n)
-                       :acc (lr/accumulate acc (concat (dx/collect wemi) (losses wemi)))}))
+                       :acc (lr/accumulate acc (concat (dx/collect wemi) loss))}))
                   {:n 0 :acc lr/empty-acc}
                   records)]
     {:records (:n result)

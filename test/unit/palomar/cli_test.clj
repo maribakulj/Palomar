@@ -211,6 +211,18 @@
       (is (str/includes? out "4 proposals curated"))
       (is (str/includes? out "4 rejected")))))
 
+(deftest apply-repairs-exports-the-curated-records
+  (testing "--to exports the curated records; the curation outcome moves to stderr"
+    (let [rej (cli/run ["apply-repairs" dc "--from" "dc" "--policy" "reject" "--to" "ntriples"])
+          acc (cli/run ["apply-repairs" dc "--from" "dc" "--policy" "accept" "--to" "ntriples"])]
+      (is (= 0 (:exit rej)))
+      (is (str/includes? (:err rej) "4 rejected"))
+      (is (str/includes? (:out rej) "lrmoo/F3_Manifestation"))
+      (is (not (str/includes? (:out rej) "R4_embodies")))     ; a rejected claim is not exported
+      (is (str/includes? (:out acc) "R4_embodies"))))
+  (testing "an unknown --to exits 2"
+    (is (= 2 (:exit (cli/run ["apply-repairs" dc "--from" "dc" "--to" "bogus"]))))))
+
 (deftest apply-repairs-guards-its-inputs
   (testing "an unknown --policy exits 2"
     (let [{:keys [exit err]} (cli/run ["apply-repairs" dc "--from" "dc" "--policy" "bogus"])]
