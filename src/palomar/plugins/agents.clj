@@ -6,19 +6,16 @@
    100) puts each agent on a fragment carrying a `:canon/role` coord; a spoke
    whose source does not leaves a plain literal with no role. Consumers read
    both shapes through this namespace, so the choice of *which* agent counts as
-   a creator lives in one place.")
+   a creator lives in one place."
+  (:require [palomar.plugins.qualified :as qualified]))
 
 (defn occurrences
   "Every `:canon/agent` literal of `record`, in document order, as
    `{:name string :role keyword-or-nil}`. `:role` is nil when the source did
    not state one."
   [record]
-  (let [roles (into {} (for [a (:assertions record)
-                             :when (= :canon/role (:predicate a))]
-                         [(:subject a) (:value a)]))]
-    (for [a (:assertions record)
-          :when (and (= :canon/agent (:predicate a)) (string? (:value a)))]
-      {:name (:value a) :role (roles (:subject a))})))
+  (for [{:keys [value coord]} (qualified/values record :canon/agent :canon/role)]
+    {:name value :role coord}))
 
 (defn creators
   "The names of `record`'s creators: agents with role `:creator`, or, when there

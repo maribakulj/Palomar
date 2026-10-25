@@ -34,7 +34,8 @@
             [palomar.diagnostics :as dx]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
-            [palomar.plugins.marc21 :as marc21]))
+            [palomar.plugins.marc21 :as marc21]
+            [palomar.plugins.qualified :as qualified]))
 
 (def canon->marc
   "Ordered canonical→MARC `[predicate tag subfield]`. Several MARC fields
@@ -46,7 +47,7 @@
    [:canon/date           "260" "c"]    ; 264 also -> date
    [:canon/identifier     "010" "a"]    ; 020/022/035 also -> identifier
    [:canon/digital-object "856" "u"]
-   [:canon/note           "500" "a"]])  ; 505/511/520 also -> note
+   [:canon/note           "500" "a"]])  ; per :canon/note-kind, see `note-fields`
 
 (defn- canon-literals
   "Record floor literal values for canonical `pred` (record- or fragment-level
@@ -67,6 +68,16 @@
      (for [{nm :name role :role} (distinct (agents/occurrences record))
            :when (not= nm main)]
        (if (= :publisher role) ["260" "b" nm] ["700" "a" nm])))))
+
+(def ^:private note-kind->tag
+  "MARC field for a note of a known `:canon/note-kind`; a general note is 500."
+  {:abstract "520" :contents "505" :credits "511"})
+
+(defn- note-fields
+  "`[tag code value]` for each of `record`'s notes, by `:canon/note-kind`."
+  [record]
+  (for [{:keys [value coord]} (qualified/values record :canon/note :canon/note-kind)]
+    [(get note-kind->tag coord "500") "a" value]))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -89,8 +100,9 @@
                 ctrl    (conj (str "  <controlfield tag=\"001\">"
                                    (xml-escape ctrl) "</controlfield>"))
                 :always (into (for [[p tag code] canon->marc
-                                    [tag code v] (if (= :canon/agent p)
-                                                   (agent-fields record)
+                                    [tag code v] (case p
+                                                   :canon/agent (agent-fields record)
+                                                   :canon/note  (note-fields record)
                                                    (for [v (canon-literals record p)] [tag code v]))]
                                 (datafield-line tag code v))))]
     (when (seq lines)
@@ -103,11 +115,13 @@
 (def collapsed-predicates
   "Canonical predicates several MARC fields collapsed onto at import (derived from
    the marc21 mapping's many-to-one structure) — their MARC tag/flavour is not
-   recoverable on export."
+   recoverable on export. `:canon/note` is not among them any more: each note
+   field's kind travels as `:canon/note-kind`, so 500/505/511/520 come back."
   (->> marc21/mapping
        (group-by :mapping/to)
        (keep (fn [[to rules]]
                (when (> (count (distinct (map :mapping/from rules))) 1) to)))
+       (remove #{:canon/note})
        set))
 
 (def ^:private mapped-natives
@@ -135,7 +149,7 @@
 (def ^:private written-canon
   "The canonical fields and coords the MARC21 export writes (`canon->marc`; the
    role picks 100/700/260 $b)."
-  (into #{:canon/role} (map first) canon->marc))
+  (into #{:canon/role :canon/note-kind} (map first) canon->marc))
 
 (defn- expressed?
   "What the MARC21 export accounts for itself: the canonical fields it writes,

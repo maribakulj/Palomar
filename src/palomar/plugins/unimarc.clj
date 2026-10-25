@@ -103,9 +103,11 @@
    {:mapping/id :map/unimarc-note-300 :mapping/from :unimarc/f300_a :mapping/to :canon/note
     :mapping/transform [:trim]}
    {:mapping/id :map/unimarc-contents-327 :mapping/from :unimarc/f327_a :mapping/to :canon/note
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contents :as :canon/note-kind}}
    {:mapping/id :map/unimarc-abstract-330 :mapping/from :unimarc/f330_a :mapping/to :canon/note
-    :mapping/transform [:trim]}])
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :abstract :as :canon/note-kind}}])
 
 (def plugin
   "The UNIMARC (BnF MARCXChange) importer plugin (ADR 0007)."

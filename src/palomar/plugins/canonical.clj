@@ -43,6 +43,12 @@
    MUST have an extent, so the IIIF exporter places an image only when both
    are known.
 
+   `:canon/note-kind` (added 2026-10-25) is a constant qualifier on a
+   `:canon/note` saying what kind of note the source field was: `:abstract`
+   (MODS abstract, MARC 520, UNIMARC 330), `:contents` (MARC 505, UNIMARC 327)
+   or `:credits` (MARC 511). A general note has none. It lets the MARC and MODS
+   exports write each note back to its own field (audit S21/S22).
+
    ## The core stays vocabulary-blind
 
    This is a plugin like any other (ADR 0003 §Consequences). The core —
@@ -92,11 +98,15 @@
 (def qualifier-coords
   "The canonical qualifier coords (ADR 0011): predicates that ride on a
    fragment to qualify a documentary value, never documentary themselves."
-  #{:canon/lang :canon/role :canon/width :canon/height})
+  #{:canon/lang :canon/role :canon/width :canon/height :canon/note-kind})
 
 (def agent-roles
   "The values a `:canon/role` coord takes on a `:canon/agent` fragment."
   #{:creator :contributor :publisher})
+
+(def note-kinds
+  "The values a `:canon/note-kind` coord takes on a `:canon/note` fragment."
+  #{:abstract :contents :credits})
 
 (defn documentary?
   "True if `predicate` is one of the canonical documentary

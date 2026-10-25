@@ -229,7 +229,8 @@
    {:mapping/id :map/mods-identifier :mapping/from :mods/identifier :mapping/to :canon/identifier
     :mapping/transform [:trim]}
    {:mapping/id :map/mods-abstract :mapping/from :mods/abstract :mapping/to :canon/note
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :abstract :as :canon/note-kind}}
    {:mapping/id :map/mods-note :mapping/from :mods/note :mapping/to :canon/note
     :mapping/transform [:trim]}
    {:mapping/id :map/mods-url :mapping/from :mods/url :mapping/to :canon/digital-object
