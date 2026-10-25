@@ -25,6 +25,8 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 | No RDF output holds an invalid IRI: the writers refuse one, keyword ids are percent-encoded. | `palomar.plugins.lrmoo.export-test/no-invalid-iri-is-ever-written` |
 | The LRMoo, CRM, pure-CRM and PROV-O outputs of every spoke fixture respect the domains and ranges of CIDOC CRM 7.1.3, LRMoo 1.0 and PROV-O. | `palomar.ontology-test/every-rdf-output-respects-its-vocabularies` |
 | Two rules deriving one fact keep both justifications. | `palomar.runtime-test/alternative-justifications-are-recorded-once` |
+| One fact is one assertion whatever status it was derived under, and a rule re-deriving a rejected claim does not bring it back. | `palomar.runtime-test/the-same-fact-is-one-assertion-whatever-its-status` |
+| An assertion has a content-derived id that survives curation; equal values hash alike whatever their construction. | `palomar.model-identity-test/an-assertion-keeps-its-id-through-curation`, `palomar.model-identity-test/equal-values-have-one-canonical-form` |
 | A IIIF manifest missing a Presentation 3.0 MUST is not emitted, and the reason is reported. | `palomar.plugins.iiif.export-test/an-invalid-manifest-is-refused-with-a-diagnostic` |
 | MARC field occurrences keep their subfields together, in order, with their indicators; the leader is kept. | `palomar.plugins.marc21-test/each-field-occurrence-keeps-its-subfields-together-and-in-order` |
 | Distinct source identifiers do not share a record id (barring a 40-bit digest collision when slugging changed the identifier). | `palomar.plugins.record-id-test/identifiers-that-slug-alike-stay-distinct` |

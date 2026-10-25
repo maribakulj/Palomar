@@ -109,6 +109,9 @@
         found (first (filter same? (:assertions record)))]
     (when-not found
       (throw (ex-info "supersede: no such in-force assertion" {:assertion old})))
+    (when (= (model/assertion-id old) (model/assertion-id new))
+      (throw (ex-info "supersede: the replacement is the same fact (same subject, predicate and value)"
+                      {:assertion old})))
     {:record      (-> record
                       (update :assertions (partial mapv #(if (same? %) (assoc % :status :superseded) %)))
                       (update :assertions conj

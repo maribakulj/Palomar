@@ -21,7 +21,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0005](./0005-status-model.md) | Dual status model: machine truth and human workflow | Accepted (extended by 0023) |
 | [0006](./0006-deps-resolution-and-sandbox.md) | Maven coordinates by default, git override alias for restricted networks | Accepted |
 | [0007](./0007-plugins-as-data.md) | Plugins as data, not protocols | Accepted |
-| [0008](./0008-idempotency-at-merge.md) | Idempotency at merge: productions deduplicate by structural identity | Accepted (amended by 0020, 0023) |
+| [0008](./0008-idempotency-at-merge.md) | Idempotency at merge: productions deduplicate by structural identity | Accepted (amended by 0020, 0023, 0027) |
 | [0009](./0009-mapping-schema.md) | Mapping schema: data-shaped sugar over rules | Accepted (partially superseded by 0011; extended by 0021) |
 | [0010](./0010-stdlib-extensibility.md) | Stdlib extensibility: predicates and transforms via plugins | Accepted |
 | [0011](./0011-fragments-for-qualified-values.md) | Fragments as the canonical home for qualified values | Accepted (entity-minting added by 0014; normalize-minted fragments by 0021) |
@@ -40,6 +40,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0024](./0024-observed-loss.md) | Observed loss: occurrence-level fidelity audit, exports name what they omit | Accepted |
 | [0025](./0025-history-target-and-iri-safety.md) | The provenance record keeps the history; no invalid IRI is ever written | Accepted |
 | [0026](./0026-ontology-conformance.md) | RDF output is checked against the vocabularies' own files | Accepted |
+| [0027](./0027-assertion-identity-and-annotations.md) | An assertion is identified by its content; statements about it are annotations | Accepted |
 
 ## Template
 

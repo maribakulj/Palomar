@@ -12,8 +12,9 @@
    match that fired the rule is kept as `palomar:bindings`.
 
    Reification keeps the output plain N-Triples (RDF-star is not in RDF 1.1).
-   A statement IRI is a digest of its subject, predicate, value and status, so
-   the same assertion always names the same statement."
+   A statement IRI is the assertion's `model/assertion-id` (ADR 0027), so the
+   same assertion always names the same statement, before and after a curator
+   changes its status."
   (:require [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
             [palomar.plugins.lrmoo.export :as export]))
@@ -23,7 +24,10 @@
 (def ^:private pal  "urn:palomar:vocab#")
 (def ^:private xsd  "http://www.w3.org/2001/XMLSchema#")
 
-(defn- digest [s] (model/sha256-hex s 16))
+(defn- digest
+  "16 hex digits over `x`'s canonical form (`model/content-digest`)."
+  [x]
+  (model/content-digest x 16))
 
 (defn- term-iri
   "IRI of a predicate keyword: LRMoo and CRM terms by their own namespaces,
@@ -45,7 +49,7 @@
     :else                      {:lit (pr-str v)}))
 
 (defn- activity-iri [rid {:keys [pass rule]}]
-  (str "urn:palomar:activity:" (digest (pr-str [rid pass rule]))))
+  (str "urn:palomar:activity:" (digest [rid pass rule])))
 
 (def ^:private engine
   "The software agent every activity is associated with: the Palomar engine."
@@ -64,7 +68,7 @@
              [engine (str rdf "type") {:iri (str prov "SoftwareAgent")}]]
       (:pass p) (conj [a (str pal "phase") {:lit (name (:pass p))}])
       (:rule p) (into (let [plan  (str "urn:palomar:rule:" (subs (str (:rule p)) 1))
-                            assoc (str "urn:palomar:association:" (digest (pr-str [rid (:pass p) (:rule p)])))]
+                            assoc (str "urn:palomar:association:" (digest [rid (:pass p) (:rule p)]))]
                         [[a (str prov "qualifiedAssociation") {:iri assoc}]
                          [assoc (str rdf "type") {:iri (str prov "Association")}]
                          [assoc (str prov "agent") {:iri engine}]
@@ -79,7 +83,7 @@
     (distinct
      (mapcat
       (fn [a]
-        (let [st    (str "urn:palomar:stmt:" (digest (pr-str [(:subject a) (:predicate a) (:value a) (:status a)])))
+        (let [st    (str "urn:palomar:stmt:" (name (model/assertion-id a)))
               p     (:provenance a)
               provs (cons (dissoc p :also) (:also p))]
           (concat

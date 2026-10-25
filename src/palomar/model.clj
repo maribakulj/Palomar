@@ -238,6 +238,45 @@
                        (.getBytes (str s) "UTF-8"))]
     (subs (apply str (map #(format "%02x" (bit-and (int %) 0xff)) bytes)) 0 n)))
 
+(defn canonical
+  "A print-stable form of a value, for hashing: equal values (`=`) give equal
+   forms whatever their construction. Maps become key-sorted entry vectors and
+   sets sorted vectors (a map's printed order follows its insertion or hash
+   order, so `pr-str` of two equal maps can differ); every leaf is tagged with
+   its type, so `\"1\"`, `1` and `:1` stay distinct. Vectors and lists keep
+   their order (an uncertain value's alternatives are ordered)."
+  [x]
+  (let [by-print #(binding [*print-namespace-maps* false] (pr-str %))]
+    (cond
+      (map? x)        [:map (vec (sort-by by-print (map (fn [[k v]] [(canonical k) (canonical v)]) x)))]
+      (set? x)        [:set (vec (sort-by by-print (map canonical x)))]
+      (sequential? x) [:seq (mapv canonical x)]
+      (keyword? x)    [:kw (str x)]
+      (string? x)     [:str x]
+      (int? x)        [:int (long x)]
+      (double? x)     [:dbl x]
+      (boolean? x)    [:bool x]
+      (uuid? x)       [:uuid (str x)]
+      (inst? x)       [:inst (inst-ms x)]
+      (nil? x)        [:nil]
+      :else           [:other (by-print x)])))
+
+(defn content-digest
+  "`n` hex digits of the SHA-256 of `x`'s `canonical` form."
+  [x n]
+  (sha256-hex (binding [*print-namespace-maps* false *print-length* nil *print-level* nil]
+                (pr-str (canonical x)))
+              n))
+
+(defn assertion-id
+  "The content-derived id of assertion `a`: `:asr/<16 hex>` over its canonical
+   subject, predicate and value (ADR 0027). Status, confidence and provenance are
+   not part of it, so an assertion keeps its id when a curator changes its
+   status, and the same fact derived twice has one id. It is never stored on the
+   assertion; recompute it."
+  [a]
+  (keyword "asr" (content-digest [(:subject a) (:predicate a) (:value a)] 16)))
+
 (defn mint-entity-id
   "Construct a content-based identifier for a synthesized entity. Returns a
    keyword in the `:ent` namespace whose name is the entity `kind` followed by a
@@ -391,6 +430,19 @@
 ;; Record (top-level IR envelope)
 ;; ---------------------------------------------------------------------------
 
+(def Annotation
+  "A statement *about an assertion* (ADR 0027): a curation decision, or a
+   relation an application records (an agent supports it, it derives from
+   another). `:about` is the target's `assertion-id`. Annotations live apart from
+   the assertions: the rule matcher, the exporters and the loss accounting never
+   see them, so a statement about a claim is never mistaken for a documentary
+   fact. The predicate vocabulary belongs to whoever writes them."
+  [:map
+   [:about :keyword]
+   [:predicate Predicate]
+   [:value Value]
+   [:provenance {:optional true} Provenance]])
+
 (def Record
   [:map
    [:id Id]
@@ -399,6 +451,7 @@
    [:fragments {:optional true} [:vector Fragment]]
    [:entities {:optional true} [:vector Entity]]
    [:assertions {:optional true} [:vector Assertion]]
+   [:annotations {:optional true} [:vector Annotation]]
    [:diagnostics {:optional true} [:vector Diagnostic]]
    [:provenance {:optional true} Provenance]])
 
@@ -414,6 +467,7 @@
 (defn valid-fragment?   [x] (m/validate Fragment x))
 (defn valid-entity?     [x] (m/validate Entity x))
 (defn valid-provenance? [x] (m/validate Provenance x))
+(defn valid-annotation? [x] (m/validate Annotation x))
 
 (defn explain-record     [x] (m/explain Record x))
 (defn explain-assertion  [x] (m/explain Assertion x))
@@ -504,16 +558,45 @@
     repairs    (assoc :repairs (vec repairs))
     provenance (assoc :provenance provenance)))
 
+(defn annotation
+  "Construct an Annotation about the assertion `about` (an assertion, or its
+   `assertion-id`). Required: :about, :predicate, :value."
+  [{:keys [about predicate value provenance]}]
+  (cond-> {:about     (if (map? about) (assertion-id about) about)
+           :predicate predicate
+           :value     value}
+    provenance (assoc :provenance provenance)))
+
 (defn record
   "Construct a Record. Required: :id, :kind. Collections default to empty."
-  [{:keys [id kind source fragments entities assertions diagnostics provenance]}]
+  [{:keys [id kind source fragments entities assertions annotations diagnostics provenance]}]
   (cond-> {:id id :kind kind}
     (some? source) (assoc :source source)
     fragments      (assoc :fragments (vec fragments))
     entities       (assoc :entities (vec entities))
     assertions     (assoc :assertions (vec assertions))
+    annotations    (assoc :annotations (vec annotations))
     diagnostics    (assoc :diagnostics (vec diagnostics))
     provenance     (assoc :provenance provenance)))
+
+(defn assertion-by-id
+  "The assertion of `record` whose `assertion-id` is `id`, or nil."
+  [record id]
+  (some #(when (= id (assertion-id %)) %) (:assertions record)))
+
+(defn annotations-of
+  "The annotations of `record` about `a` (an assertion or its id), in order."
+  [record a]
+  (let [id (if (map? a) (assertion-id a) a)]
+    (filterv #(= id (:about %)) (:annotations record))))
+
+(defn orphan-annotations
+  "The annotations of `record` whose target assertion is not on it. Not an
+   error: a decision outlives a claim an export or a rule dropped, and still
+   says what happened to it."
+  [record]
+  (let [ids (into #{} (map assertion-id) (:assertions record))]
+    (filterv #(not (contains? ids (:about %))) (:annotations record))))
 
 ;; ---------------------------------------------------------------------------
 ;; Status predicates

@@ -193,3 +193,10 @@
     (is (= :asserted (:from (first (:transitions res)))))                 ; taken from the record
     (is (str/includes? out "1 superseded"))
     (is (str/includes? out "(typo)"))))
+
+(deftest supersede-refuses-the-same-fact
+  (testing "replacing an assertion by one with the same subject, predicate and value is no supersession (ADR 0027)"
+    (let [a   (model/assertion {:subject :r/s :predicate :canon/title :value "T"})
+          rec (model/record {:id :r/s :kind :doc :assertions [a]})]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"same fact"
+                            (curate/supersede rec a (assoc a :confidence 0.5) "no-op"))))))

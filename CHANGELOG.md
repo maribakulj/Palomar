@@ -18,6 +18,14 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Assertion identity and annotations** (ADR 0027): `model/assertion-id`, a
+  content id over the canonical subject, predicate and value
+  (`model/canonical`, `model/content-digest`) that survives curation; a
+  record's `:annotations` hold statements *about* assertions (decisions, an
+  application's own relations), out of reach of the matcher and the exporters.
+  One fact is now one assertion: the merge keeps the stronger status, so a
+  re-derived rejected claim stays rejected. PROV statement IRIs are assertion
+  ids (they change once, then stay stable).
 - **Ontology conformance** (ADR 0026): `palomar.ontology` checks RDF output
   against the domains and ranges declared by the vocabularies' own files (the
   vendored CIDOC CRM 7.1.3 RDFS and LRMoo 1.0 OWL, plus the PROV-O terms

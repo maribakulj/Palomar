@@ -55,11 +55,25 @@
 ;; ---------------------------------------------------------------------------
 
 (defn assertion-identity
-  "Identity key for assertion deduplication: subject + predicate + value
-   + status. Provenance and confidence are intentionally excluded — they
-   describe who/how, not what (ADR 0008)."
+  "Identity key for assertion deduplication: subject + predicate + value, the
+   content `model/assertion-id` digests (ADR 0027, amending ADR 0008); compared
+   by `=` here, which is what the digest stands for, without hashing on every
+   merge. Status, provenance and confidence are excluded: they say who claims a
+   fact, how and how firmly, not which fact. The same fact derived twice is one
+   assertion, whatever status each derivation gave it (`merge-status` picks the
+   one it keeps)."
   [a]
-  [(:subject a) (:predicate a) (:value a) (:status a)])
+  [(:subject a) (:predicate a) (:value a)])
+
+(def ^:private status-rank
+  "Which status a merged fact keeps (ADR 0027): a decision — a curator's verdict,
+   or a supersession or retraction — outranks any machine status, so re-deriving
+   a rejected claim does not bring it back; among machine statuses `:asserted`
+   outranks `:proposed`. Higher wins; a tie keeps the existing one."
+  {:accepted 3 :rejected 3 :superseded 3 :retracted 3 :needs-review 2 :asserted 1 :proposed 0})
+
+(defn- merge-status [existing incoming]
+  (if (> (status-rank incoming -1) (status-rank existing -1)) incoming existing))
 
 (defn diagnostic-identity
   "Identity key for diagnostic deduplication: subject + code + severity
@@ -88,23 +102,29 @@
       (update record k (fnil conj []) item))))
 
 (defn- merge-assertion
-  "Append assertion `a`, unless the same fact (`assertion-identity`, ADR 0008) is
-   already there: then the first stays the fact, and `a`'s provenance, when it is
-   a justification not yet recorded, joins the first's `[:provenance :also]`. Two
-   rules deriving one fact give one assertion with both paths of proof (audit S09)."
+  "Append assertion `a`, unless the same fact (`assertion-identity`, ADR 0008/0027)
+   is already there: then the first stays the fact, with the status
+   `merge-status` picks, and `a`'s provenance, when it is a justification not yet
+   recorded, joins the first's `[:provenance :also]`. Two rules deriving one fact
+   give one assertion with both paths of proof (audit S09)."
   [record a]
   (let [as  (vec (:assertions record))
         k   (assertion-identity a)
         idx (first (keep-indexed (fn [i x] (when (= k (assertion-identity x)) i)) as))]
     (if (nil? idx)
       (assoc record :assertions (conj as a))
-      (let [prev  (:provenance (nth as idx))
-            also  (vec (:also prev))
-            p     (some-> (:provenance a) (dissoc :also))
-            known (into #{(dissoc prev :also)} also)]
-        (if (or (nil? p) (contains? known p))
-          record
-          (assoc record :assertions (assoc-in as [idx :provenance :also] (conj also p))))))))
+      (let [prev   (:provenance (nth as idx))
+            also   (vec (:also prev))
+            p      (some-> (:provenance a) (dissoc :also))
+            known  (into #{(dissoc prev :also)} also)
+            status (merge-status (:status (nth as idx)) (:status a))]
+        (assoc record :assertions
+               (cond-> as
+                 (not= status (:status (nth as idx)))
+                 (assoc-in [idx :status] status)
+
+                 (not (or (nil? p) (contains? known p)))
+                 (assoc-in [idx :provenance :also] (conj also p))))))))
 
 (defn- merge-entity
   "Append entity `e` unless its id is already there (a re-mint, ADR 0016). When

@@ -121,16 +121,22 @@
     (is (= [{:rule :rule/b :pass :infer} {:rule :rule/c :pass :infer}] (:also prov)))
     (is (model/valid-record? out))))
 
-(deftest merge-distinguishes-assertions-by-status
-  ;; Same fact at different statuses are distinct identities (ADR 0008).
-  (let [asserted (model/assertion {:subject :r/s :predicate :canon/p :value 1
-                                   :status :asserted})
-        proposed (model/assertion {:subject :r/s :predicate :canon/p :value 1
-                                   :status :proposed})
-        out (rt/merge-productions (book :r/s)
-                                  [{:kind :assertion :value asserted}
-                                   {:kind :assertion :value proposed}])]
-    (is (= 2 (count (:assertions out))))))
+(deftest the-same-fact-is-one-assertion-whatever-its-status
+  ;; ADR 0027 (amending ADR 0008): identity is [subject predicate value]; the
+  ;; merged fact keeps the stronger status.
+  (let [fact     {:subject :r/s :predicate :canon/p :value 1}
+        asserted (model/assertion (assoc fact :status :asserted))
+        proposed (model/assertion (assoc fact :status :proposed))
+        rejected (model/assertion (assoc fact :status :rejected))
+        merged   (fn [& as] (:assertions (rt/merge-productions (book :r/s) (for [a as] {:kind :assertion :value a}))))]
+    (testing "asserted outranks proposed, in either order"
+      (is (= [:asserted] (map :status (merged asserted proposed))))
+      (is (= [:asserted] (map :status (merged proposed asserted)))))
+    (testing "a curator's rejection is not undone by re-deriving the claim"
+      (is (= [:rejected] (map :status (merged rejected proposed))))
+      (is (= [:rejected] (map :status (merged rejected asserted)))))
+    (testing "one fact, one id, before and after its status changes"
+      (is (= (model/assertion-id proposed) (model/assertion-id rejected))))))
 
 (deftest merge-deduplicates-identical-diagnostics
   ;; ADR 0008: diagnostics are deduplicated by [subject code severity message].

@@ -1,7 +1,8 @@
 # 0008 — Idempotency at merge
 
-- Status: Accepted (amended by [ADR 0020](./0020-single-pass-and-retire-project-phase.md) and
-  [ADR 0023](./0023-justifications-and-status-at-export.md))
+- Status: Accepted (amended by [ADR 0020](./0020-single-pass-and-retire-project-phase.md),
+  [ADR 0023](./0023-justifications-and-status-at-export.md) and
+  [ADR 0027](./0027-assertion-identity-and-annotations.md): an assertion's identity no longer includes its status)
 - Date: 2026-04-25
 - Supersedes: ADR 0004 *partially* — the fixed-passes-without-dedup
   posture. The "no fixpoint detection in V1" position from ADR 0004
