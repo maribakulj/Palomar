@@ -55,7 +55,7 @@
           out1 (iex/->json c1)
           c2   (->canonical out1)
           out2 (iex/->json c2)]
-      (is (= :iiif/m-0001-mvm-image (:id c2)))           ; the manifest id round-trips the record id
+      (is (= :iiif/m-0001-mvm-image-h207087643c (:id c2)))           ; the manifest id round-trips the record id
       (is (= out1 out2))                                 ; stable after the first pass
       (testing "the surviving floor values are unchanged"
         (is (= #{"Single Image Example"} (floor-literals c2 :canon/title)))

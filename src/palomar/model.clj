@@ -86,13 +86,16 @@
 
 (def Provenance
   "Where an assertion came from. All fields optional; a bare `{}` is valid
-   (e.g. for hand-constructed test data)."
+   (e.g. for hand-constructed test data). `:also` lists the other provenances
+   that derived the same fact: the runtime keeps one assertion per fact
+   (ADR 0008) but every path of proof (audit S09)."
   [:map
    [:source {:optional true} :any]
    [:pass {:optional true} Phase]
    [:rule {:optional true} :keyword]
    [:derivation {:optional true} [:vector Id]]
-   [:timestamp {:optional true} inst?]])
+   [:timestamp {:optional true} inst?]
+   [:also {:optional true} [:vector :map]]])
 
 ;; ---------------------------------------------------------------------------
 ;; Fragment (pointer into raw source)

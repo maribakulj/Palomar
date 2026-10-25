@@ -22,7 +22,8 @@
      the floor's single Expression `:under-specified` (ADR 0013 graceful
      degradation); an `uncertain` title collapsed to one alternative is
      `:ambiguity-collapsed`. Minted claims default to `:proposed` (ADR 0005)."
-  (:require [palomar.diagnostics :as dx]
+  (:require [clojure.string :as str]
+            [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.rules :as rules]
@@ -80,6 +81,15 @@
     :value (model/assertion {:subject subject :predicate predicate :value value
                              :status status :provenance prov})}))
 
+(defn- distinct-langs
+  "Distinct `:canon/lang` values the record carries (one per parallel-language
+   title fragment)."
+  [record]
+  (->> (:assertions record)
+       (filter #(= :canon/lang (:predicate %)))
+       (map :value)
+       distinct))
+
 (defn- wemi-productions
   "WEMI productions from the canonical floor: Manifestation always; Expression
    when a title is present (the minimal connector); Work when a creator is too.
@@ -106,7 +116,12 @@
       ;; key on the uniform title when present.
       title      (conj (assert-prod manif :lrmoo/R33_has_string title prov :asserted))
       work-title (into (let [wkey (str (or agent "") "|" (text/norm work-title))
-                             expr (model/mint-entity-id :lrmoo/F2_Expression wkey)
+                             ;; a single stated language belongs to the Expression's
+                             ;; identity, not the Work's: an original and its
+                             ;; translation are one Work, two Expressions (audit S19)
+                             lang (let [ls (distinct-langs record)] (when (= 1 (count ls)) (first ls)))
+                             expr (model/mint-entity-id :lrmoo/F2_Expression
+                                                        (cond-> wkey lang (str "|" (str/lower-case lang))))
                              work (when agent (model/mint-entity-id :lrmoo/F1_Work wkey))]
                          ;; F1 and F2 minted from the same key are distinct ids: the
                          ;; kind is part of the content hash (`mint-entity-id`).
@@ -150,15 +165,6 @@
                       :source-field p
                       :message      (str (name p) " not represented in the LRMoo view")})}))
 
-(defn- distinct-langs
-  "Distinct `:canon/lang` values the record carries (one per parallel-language
-   title fragment)."
-  [record]
-  (->> (:assertions record)
-       (filter #(= :canon/lang (:predicate %)))
-       (map :value)
-       distinct))
-
 (defn- language-losses
   "Language-driven loss (ADR 0015). When a title produced an Expression and the
    canonical layer carries >=2 languages, the floor mints *one* Expression where
@@ -180,7 +186,7 @@
                                  :subject      (:id record)
                                  :edge         :import
                                  :source-field :canon/lang
-                                 :message      ":canon/lang not carried onto the Expression"})}]
+                                 :message      ":canon/lang keys the Expression but is not carried onto it as a value"})}]
       :else [])))
 
 (defn coverage

@@ -27,7 +27,8 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
-            [palomar.plugins.dc :as dc]))
+            [palomar.plugins.dc :as dc]
+            [palomar.plugins.export-coverage :as cov]))
 
 (def canon->dc
   "Ordered canonical→DC element map. Several DC elements collapsed onto one
@@ -88,25 +89,36 @@
            (str/join "\n" lines)
            "\n</metadata>"))))
 
+(defn- expressed?
+  "Predicates the DC export writes: its canonical fields and their coords, and
+   the DC spoke's own natives (rebuilt from the floor on a DC round trip)."
+  [p]
+  (or (contains? #{:canon/title :canon/agent :canon/role :canon/date :canon/identifier
+                   :canon/relation :canon/note :canon/lang :xml/lang} p)
+      (= "dc" (namespace p))))
+
 (defn export-losses
   "Export-edge loss (ADR 0015) for the canonical→DC projection: agents whose role
-   the floor does not know, and the relation/source collapse. One
-   `:under-specified` per affected predicate that the record carries."
+   the floor does not know, and the relation/source collapse (one
+   `:under-specified` per affected predicate), plus one `:dropped` per predicate
+   the DC export does not write at all (`export-coverage/unexpressed`: e.g. a
+   digital object, a uniform title, another spoke's native fields)."
   [record]
-  (cond-> []
-    (some #(nil? (:role %)) (occurrences record :canon/agent))
-    (conj (dx/loss {:category     :under-specified
-                    :subject      (:id record)
-                    :edge         :export
-                    :source-field :canon/agent
-                    :message      "agent role not stated in the source — emitted as dc:creator"}))
+  (into (cond-> []
+          (some #(nil? (:role %)) (occurrences record :canon/agent))
+          (conj (dx/loss {:category     :under-specified
+                          :subject      (:id record)
+                          :edge         :export
+                          :source-field :canon/agent
+                          :message      "agent role not stated in the source — emitted as dc:creator"}))
 
-    (seq (occurrences record :canon/relation))
-    (conj (dx/loss {:category     :under-specified
-                    :subject      (:id record)
-                    :edge         :export
-                    :source-field :canon/relation
-                    :message      "relation/source distinction not recoverable — emitted as dc:relation"}))))
+          (seq (occurrences record :canon/relation))
+          (conj (dx/loss {:category     :under-specified
+                          :subject      (:id record)
+                          :edge         :export
+                          :source-field :canon/relation
+                          :message      "relation/source distinction not recoverable — emitted as dc:relation"})))
+        (cov/unexpressed record expressed? "Dublin Core")))
 
 (defn exporter
   "ADR 0007 exporter: render the canonical view of `records` as Dublin Core XML

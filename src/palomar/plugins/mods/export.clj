@@ -30,6 +30,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.plugins.agents :as agents]
+            [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.mods :as mods]))
 
 (defn- xml-escape [s]
@@ -124,12 +125,26 @@
   [record]
   (boolean (some #(#{:creator :contributor} (:role %)) (agents/occurrences record))))
 
+(def ^:private written-canon
+  "The canonical fields and coords the MODS export writes (`canon->mods`; the role
+   picks name vs originInfo/publisher)."
+  (into #{:canon/role} (map first) canon->mods))
+
+(defn- expressed?
+  "What the MODS export accounts for itself: the canonical fields it writes, and
+   every `:mods/*` native (`pivot-dropped-fields` reports the unmapped ones)."
+  [p]
+  (or (contains? written-canon p) (= "mods" (namespace p))))
+
 (defn export-losses
   "Loss for the canonical→MODS round-trip (ADR 0015): the captured-but-unmapped
-   natives dropped through the floor (`:import :dropped`), and the many-to-one
-   collapses MODS can express but the floor cannot (`:export :under-specified`)."
+   natives dropped through the floor (`:import :dropped`), the many-to-one
+   collapses MODS can express but the floor cannot (`:export :under-specified`),
+   and one `:export :dropped` per other predicate it does not write
+   (`export-coverage/unexpressed`)."
   [record]
   (concat
+   (cov/unexpressed record expressed? "MODS")
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

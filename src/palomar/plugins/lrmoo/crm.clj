@@ -45,7 +45,8 @@
 
 (defn crm-triples
   "`export/triples` of `record`, each augmented additively with its CIDOC-CRM
-   super-type / super-property triple. Lossless: the LRMoo triples are retained."
+   super-type / super-property triple. Lossless only because the LRMoo triples are
+   retained alongside: the CRM part alone is not (see `crm-only-losses`)."
   [record]
   (mapcat
    (fn [[s p o :as triple]]

@@ -54,7 +54,8 @@
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
-            [palomar.model :as model]))
+            [palomar.model :as model]
+            [palomar.plugins.record-id :as record-id]))
 
 ;; ---------------------------------------------------------------------------
 ;; JSON-LD navigation
@@ -203,22 +204,23 @@
 ;; Record identity
 ;; ---------------------------------------------------------------------------
 
-(defn- sanitize [s]
-  (-> (str s) str/trim (str/replace #"[^A-Za-z0-9]+" "-") (str/replace #"^-+|-+$" "")))
-
-(defn- slug
-  "A short, stable id from a manifest URI: the last path segment, or the one
+(defn- label
+  "A short, readable label for a manifest URI: the last path segment, or the one
    before a trailing `manifest`/`manifest.json`."
   [uri]
   (let [segs (remove str/blank? (str/split (str uri) #"/"))
         segs (if (and (seq segs) (re-matches #"manifest(\.json)?" (last segs)))
                (butlast segs)
                segs)]
-    (sanitize (last segs))))
+    (str/replace (record-id/slug (last segs)) #"^-+|-+$" "")))
 
-(defn- record-id-of [opts m]
+(defn- record-id-of
+  "`:iiif/m-<label>-h<digest>`: the label alone drops the host and most of the
+   path, so two manifests ending in the same segment would collide; the digest
+   of the full URI keeps the id injective (audit S20)."
+  [opts m]
   (or (:record-id opts)
-      (when-let [id (get m "id")] (keyword "iiif" (str "m-" (slug id))))
+      (when-let [id (get m "id")] (record-id/from-uri "iiif" "m-" (label id) id))
       (throw (ex-info "IIIF manifest needs a :record-id or an id" {}))))
 
 ;; ---------------------------------------------------------------------------

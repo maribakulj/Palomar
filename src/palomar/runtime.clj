@@ -86,9 +86,28 @@
       record
       (update record k (fnil conj []) item))))
 
+(defn- merge-assertion
+  "Append assertion `a`, unless the same fact (`assertion-identity`, ADR 0008) is
+   already there: then the first stays the fact, and `a`'s provenance, when it is
+   a justification not yet recorded, joins the first's `[:provenance :also]`. Two
+   rules deriving one fact give one assertion with both paths of proof (audit S09)."
+  [record a]
+  (let [as  (vec (:assertions record))
+        k   (assertion-identity a)
+        idx (first (keep-indexed (fn [i x] (when (= k (assertion-identity x)) i)) as))]
+    (if (nil? idx)
+      (assoc record :assertions (conj as a))
+      (let [prev  (:provenance (nth as idx))
+            also  (vec (:also prev))
+            p     (some-> (:provenance a) (dissoc :also))
+            known (into #{(dissoc prev :also)} also)]
+        (if (or (nil? p) (contains? known p))
+          record
+          (assoc record :assertions (assoc-in as [idx :provenance :also] (conj also p))))))))
+
 (defn- merge-production [record production]
   (case (:kind production)
-    :assertion  (dedup-append record :assertions  (:value production) assertion-identity)
+    :assertion  (merge-assertion record (:value production))
     :diagnostic (dedup-append record :diagnostics (:value production) diagnostic-identity)
     :entity     (dedup-append record :entities    (:value production) entity-identity)
     :fragment   (dedup-append record :fragments   (:value production) fragment-identity)
@@ -97,7 +116,8 @@
 
 (defn merge-productions
   "Apply each production to `record` in order. Identical productions
-   collapse: the first occurrence is kept, subsequent ones are no-ops on
+   collapse: the first occurrence is kept (an identical assertion from another
+   rule adds its provenance to `[:provenance :also]`), subsequent ones are no-ops on
    the record. Returns the enriched record."
   [record productions]
   (reduce merge-production record productions))

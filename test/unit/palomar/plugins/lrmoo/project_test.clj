@@ -293,3 +293,30 @@
     (let [r      (project/project (with-agents :record/r "X" [["Hugo" :creator]]))
           fields (set (map #(get-in % [:detail :loss/source-field]) (dx/losses (:diagnostics r))))]
       (is (not (contains? fields :canon/role))))))
+
+;; --- language in the Expression key (audit S19) -------------------------------
+
+(defn- titled-in
+  "A canonical record whose title (on a fragment) is in `lang`, by `agent`, under
+   the uniform title `uniform`."
+  [id title lang agent uniform]
+  (let [fid (model/mint-fragment-id id [:src/title 0])]
+    (model/record
+     {:id id :kind :document
+      :fragments  [(model/fragment {:id fid :source [:test]})]
+      :assertions [(model/assertion {:subject id :predicate :canon/title :value (model/reference fid)})
+                   (model/assertion {:subject fid :predicate :canon/title :value title})
+                   (model/assertion {:subject fid :predicate :canon/lang :value lang})
+                   (model/assertion {:subject id :predicate :canon/agent :value agent})
+                   (model/assertion {:subject id :predicate :canon/uniform-title :value uniform})]})))
+
+(deftest an-original-and-its-translation-are-one-work-two-expressions
+  (let [fr (project/project (titled-in :record/fr "Les Misérables" "fr" "Hugo, Victor" "Les Misérables"))
+        en (project/project (titled-in :record/en "The Miserables" "en" "Hugo, Victor" "Les Misérables"))
+        fr2 (project/project (titled-in :record/fr2 "Les Misérables, t. 1" "FR" "Hugo, Victor" "Les Misérables"))]
+    (testing "same creator and uniform title: one Work"
+      (is (= (:id (first (view/works fr))) (:id (first (view/works en))))))
+    (testing "different languages: two Expressions, not one"
+      (is (not= (:id (first (view/expressions fr))) (:id (first (view/expressions en))))))
+    (testing "the same language (case-insensitive) is the same Expression"
+      (is (= (:id (first (view/expressions fr))) (:id (first (view/expressions fr2))))))))

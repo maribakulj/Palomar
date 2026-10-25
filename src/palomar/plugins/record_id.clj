@@ -1,0 +1,43 @@
+(ns palomar.plugins.record-id
+  "Record ids derived from a source identifier (a MARC 001, a MODS
+   recordIdentifier, a IIIF manifest URI), kept readable *and* injective
+   (audit S20).
+
+   A spoke wants a short keyword it can show in a report, but slugging an
+   identifier to `[A-Za-z0-9-]` is many-to-one: `ocm 123` and `ocm-123`, or
+   two manifests that end in `/book1/manifest` on different hosts, would become
+   the same record and silently merge. So the slug is kept only when it *is*
+   the identifier; whenever slugging changed or dropped anything, a short
+   SHA-256 digest of the full (trimmed) identifier is appended. Leading and
+   trailing whitespace is not significant."
+  (:require [clojure.string :as str]))
+
+(defn- digest
+  "The first 10 hex digits (40 bits) of the SHA-256 of `s`."
+  [s]
+  (let [bytes (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                       (.getBytes ^String s "UTF-8"))]
+    (subs (apply str (map #(format "%02x" (bit-and % 0xff)) bytes)) 0 10)))
+
+(defn slug
+  "`s` trimmed, every run of characters outside `[A-Za-z0-9]` collapsed to `-`."
+  [s]
+  (-> (str s) str/trim (str/replace #"[^A-Za-z0-9]+" "-")))
+
+(defn from-identifier
+  "`(keyword ns (str prefix (slug raw)))` when the slug is the trimmed identifier
+   itself, else the same with `-h<digest of raw>` appended, so distinct
+   identifiers never share an id."
+  [ns prefix raw]
+  (let [trimmed (str/trim (str raw))
+        s       (slug trimmed)]
+    (keyword ns (if (= s trimmed)
+                  (str prefix s)
+                  (str prefix s "-h" (digest trimmed))))))
+
+(defn from-uri
+  "A readable id for URI `uri` from a short `label` taken from it (e.g. its last
+   path segment), always with the URI's digest appended: a label drops the host
+   and the rest of the path, so it alone is never injective."
+  [ns prefix label uri]
+  (keyword ns (str prefix (slug label) "-h" (digest (str/trim (str uri))))))

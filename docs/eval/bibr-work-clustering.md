@@ -53,9 +53,11 @@ joined records.
 | transcribed title only | 362 / 560 | 385 | 0 | 112 | 1.000 | 0.775 | 0.873 |
 | **+ uniform-title bridging** | 362 / 560 | 409 | 0 | 88 | **1.000** | **0.823** | **0.903** |
 
-- **Precision = 1.000, before and after.** Palomar never false-merges two distinct
-  gold Works — the `agent + norm-title` key is conservative, and bridging on the
-  uniform title introduced **no** false merge (consistent with every prior eval).
+- **Precision = 1.000 on the 362 joined records, before and after.** On that
+  subset Palomar makes no false merge — the `agent + norm-title` key is
+  conservative, and bridging on the uniform title introduced **no** false merge.
+  This is conditional on the join (§3) and does not establish the precision on the
+  whole catalogue.
 - **Recall 0.775 → 0.823.** Uniform-title bridging recovers 24 more same-Work pairs
   (fn 112 → 88) at no precision cost: the named "D-series" recall step, measured. The
   residual 88 missed pairs are editions whose uniform title is itself inconsistent or
@@ -70,9 +72,15 @@ The MARC `001`s carry no link to the gold's title-slug URIs, so the join is
 **excluded**. The gold itself fragments some works (La Fontaine's *Fables* appears
 under several work URIs), which caps clean coverage at **362 / 560 ≈ 65 %**. The
 metric is therefore over the cleanly-joinable subset, and the coverage is asserted
-as a first-class number, not buried. This does not bias precision (Palomar makes no
-false merge on the joined set) and only narrows the recall measurement to titles the
-gold resolves unambiguously.
+as a first-class number, not buried.
+
+*Corrected 2026-10-25 (interoperability audit S38).* An earlier version said this
+exclusion "does not bias precision". It does: the excluded titles are exactly those
+the gold spreads across several works, i.e. the same-title cases where a
+title-keyed system is most likely to false-merge. Precision 1.000 is therefore
+measured on the easier, cleanly-joinable subset and is probably optimistic for the
+catalogue as a whole; the recall figure is likewise restricted to titles the gold
+resolves unambiguously.
 
 ## 4. Bilan
 
