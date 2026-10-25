@@ -18,7 +18,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0002](./0002-edn-as-dsl.md) | EDN as the rule DSL, no parser | Accepted |
 | [0003](./0003-core-vs-canonical-vocabulary.md) | Structural vocabulary at core, documentary vocabulary in a plugin | Accepted (extended by 0013, 0021) |
 | [0004](./0004-fixed-passes-over-fixpoint.md) | Fixed passes in V1, fixpoint deferred | Superseded by 0020 |
-| [0005](./0005-status-model.md) | Dual status model: machine truth and human workflow | Accepted (extended by 0023) |
+| [0005](./0005-status-model.md) | Dual status model: machine truth and human workflow | Accepted (extended by 0023, 0028) |
 | [0006](./0006-deps-resolution-and-sandbox.md) | Maven coordinates by default, git override alias for restricted networks | Accepted |
 | [0007](./0007-plugins-as-data.md) | Plugins as data, not protocols | Accepted |
 | [0008](./0008-idempotency-at-merge.md) | Idempotency at merge: productions deduplicate by structural identity | Accepted (amended by 0020, 0023, 0027) |
@@ -41,6 +41,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0025](./0025-history-target-and-iri-safety.md) | The provenance record keeps the history; no invalid IRI is ever written | Accepted |
 | [0026](./0026-ontology-conformance.md) | RDF output is checked against the vocabularies' own files | Accepted |
 | [0027](./0027-assertion-identity-and-annotations.md) | An assertion is identified by its content; statements about it are annotations | Accepted |
+| [0028](./0028-curation-decisions-as-annotations.md) | Curation decisions are kept on the record and written to PROV-O | Accepted |
 
 ## Template
 

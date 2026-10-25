@@ -4,6 +4,7 @@
    1.0 OWL) and the PROV-O Recommendation."
   (:require [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
+            [palomar.curate]
             [palomar.ontology :as onto]
             [palomar.plugins.lrmoo.ntriples :as nt]))
 
@@ -58,3 +59,14 @@
             vs  (onto/violations @sch ts)]
         (is (seq ts) (str from " -> " to " wrote triples"))
         (is (empty? vs) (str from " -> " to ": " (pr-str (take 3 vs))))))))
+
+(deftest the-curation-history-respects-prov-o
+  (testing "decisions exported to PROV (used, wasInvalidatedBy, wasRevisionOf, endedAtTime) have no violation"
+    (let [rec  (first (:records (convert/to-wemi :dc {:record-id :dc/x} (slurp (fixtures :dc)))))
+          old  (first (filter #(= :canon/date (:predicate %)) (:assertions rec)))
+          cur  (-> (palomar.curate/curate [rec] palomar.curate/reject-all {:by "curator-1" :at #inst "2026-10-25T12:00:00Z"})
+                   :records first
+                   (palomar.curate/supersede old (assoc old :value "2007") "date normalised" {:by "curator-1"})
+                   :record)
+          ts   (for [[s p o] (nt/parse (:output (convert/export-records :prov [cur])))] [(nt/term-key s) (:iri p) o])]
+      (is (empty? (onto/violations @sch ts)) (pr-str (take 3 (onto/violations @sch ts)))))))

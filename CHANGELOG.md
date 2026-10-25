@@ -18,6 +18,12 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Curation history** (ADR 0028): each decision of `curate`/`supersede` is
+  stamped on the record as an annotation (verdict, statuses, reason, the
+  replacement's id, and the caller-supplied curator and time);
+  `curate/history` reads it back; the PROV-O target writes it as activities
+  (`used`, `wasInvalidatedBy`, `wasRevisionOf`, `endedAtTime`).
+  `apply-repairs --by <curator>` names the curator.
 - **Assertion identity and annotations** (ADR 0027): `model/assertion-id`, a
   content id over the canonical subject, predicate and value
   (`model/canonical`, `model/content-digest`) that survives curation; a

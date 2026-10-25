@@ -10,7 +10,7 @@
      palomar report        <input-file> --from <fmt> --to <fmt> [--record-id <id>]
      palomar inspect       <input-file> --from <fmt> [--record-id <id>]
      palomar reconcile     <input-file> --from <fmt> [--record-id <id>]
-     palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--record-id <id>]
+     palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]
      palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]
      palomar formats
      palomar --help
@@ -53,7 +53,7 @@
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
     "  palomar inspect       <input-file> --from <fmt> [--record-id <id>]"
     "  palomar reconcile     <input-file> --from <fmt> [--record-id <id>]"
-    "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--record-id <id>]"
+    "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]"
     "  palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]"
     "  palomar formats          list the supported source and target formats"
     "  palomar --help"
@@ -395,8 +395,10 @@
    `flag`). Writes the curation outcome to stdout; with `--to`, writes the curated
    records in that format to stdout instead (a rejected claim is never exported,
    `convert/export-records`) and the outcome to stderr. Honest when a record
-   carries no proposals (e.g. an authority-linked Work): reports nothing to curate."
-  [{:strs [from record-id policy to]} input]
+   carries no proposals (e.g. an authority-linked Work): reports nothing to curate.
+   Each decision is stamped on the record with the time of the run and, with
+   `--by <curator>`, who made it (ADR 0028); `--to prov` writes that history."
+  [{:strs [from record-id policy to by]} input]
   (let [{:keys [err from source opts]} (read-source from input record-id "apply-repairs")
         policy-label (or policy "flag")
         decide       (repair-policies policy-label)]
@@ -408,7 +410,8 @@
       {:exit 2 :out "" :err (str "unknown --to " to "\n\n" usage)}
       :else
       (guard #(let [{:keys [records]} (convert/to-wemi from opts source)
-                    result            (curate/curate records decide)
+                    result            (curate/curate records decide
+                                                     (cond-> {:at (java.util.Date.)} by (assoc :by by)))
                     outcome           (curate/format-curation result policy-label)]
                 (if to
                   {:exit 0 :out (:output (convert/export-records (keyword to) (:records result))) :err outcome}

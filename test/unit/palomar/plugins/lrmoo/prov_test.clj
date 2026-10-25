@@ -44,3 +44,15 @@
                                            (:iri (first %)))
                                         (nt/parse (prov/->ntriples rec)))))]
       (is (= (stmts r) (stmts accepted))))))
+
+(deftest a-curation-decision-is-a-prov-activity
+  (testing "a rejection used and invalidated the statement, carried out by the curator, at its time (ADR 0028)"
+    (let [r     (first (:records (palomar.curate/curate [(wemi)] palomar.curate/reject-all
+                                                        {:by "curator-1" :at #inst "2026-10-25T12:00:00Z"})))
+          ts    (nt/parse (prov/->ntriples r))
+          by-p  (group-by #(:iri (second %)) ts)
+          pv    "http://www.w3.org/ns/prov#"]
+      (is (seq (by-p (str pv "wasInvalidatedBy"))))
+      (is (seq (by-p (str pv "used"))))
+      (is (some #(= "2026-10-25T12:00:00Z" (:lit (nth % 2))) (by-p (str pv "endedAtTime"))))
+      (is (some #(= "curator-1" (:lit (nth % 2))) (by-p "urn:palomar:vocab#label"))))))

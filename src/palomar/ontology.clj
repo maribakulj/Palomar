@@ -98,7 +98,12 @@
                 (str prov "wasAssociatedWith")    {:domain (str prov "Activity") :range (str prov "Agent")}
                 (str prov "qualifiedAssociation") {:domain (str prov "Activity") :range (str prov "Association")}
                 (str prov "agent")                {:domain (str prov "AgentInfluence") :range (str prov "Agent")}
-                (str prov "hadPlan")              {:domain (str prov "Association") :range (str prov "Plan")}}})
+                (str prov "hadPlan")              {:domain (str prov "Association") :range (str prov "Plan")}
+                (str prov "used")                 {:domain (str prov "Activity") :range (str prov "Entity")}
+                (str prov "wasInvalidatedBy")     {:domain (str prov "Entity") :range (str prov "Activity")}
+                (str prov "wasRevisionOf")        {:domain (str prov "Entity") :range (str prov "Entity")}
+                (str prov "endedAtTime")          {:domain (str prov "Activity")
+                                                   :range  "http://www.w3.org/2001/XMLSchema#dateTime"}}})
 
 (defn with
   "`sch` with the declarations of `more` (same shape as `schema`'s result) added."
