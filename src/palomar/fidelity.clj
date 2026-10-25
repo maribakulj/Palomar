@@ -140,7 +140,7 @@
    CIDOC-CRM super-property the pure-CRM export writes in its place."
   [p]
   (cond-> #{(export/term-iri p)}
-    (crm/property-superproperty p) (conj (str export/crm-base (crm/property-superproperty p)))))
+    (crm/replaced-properties p) (conj (str export/crm-base (crm/replaced-properties p)))))
 
 (defn- relations
   "The relations of `record` the RDF view expresses, as `{:subject :predicate

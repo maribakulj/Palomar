@@ -29,19 +29,46 @@
    :lrmoo/F3_Manifestation "E73_Information_Object"
    :lrmoo/F5_Item          "E24_Physical_Human-Made_Thing"})
 
+(def event-superclass
+  "The LRMoo event classes (ADR 0036) -> their CIDOC-CRM super-class (verified
+   vs LRMoo_v1.0.owl). Kept apart from `class-superclass`, which `crm-import`
+   reads back to recover WEMI classes."
+  {:lrmoo/F30_Manifestation_Creation "E12_Production"})
+
+(def ^:private also-typed
+  "The further CRM classes a class of `event-superclass` falls under, which a
+   pure-CRM type must also state for its properties' domains: F30 is an E65
+   Creation as well as an E12 Production (the domain of P94)."
+  {:lrmoo/F30_Manifestation_Creation ["E65_Creation"]})
+
+(def event-superproperty
+  "The LRMoo event properties (ADR 0036) -> their CIDOC-CRM super-property."
+  {:lrmoo/R24_created "P94_has_created"})
+
+(def replaced-classes
+  "Every LRMoo class the pure-CRM serialisation writes as its CRM super-class."
+  (merge class-superclass event-superclass))
+
 (def property-superproperty
   "LRMoo WEMI R-property -> its CIDOC-CRM super-property (verified vs the OWL)."
   {:lrmoo/R3_is_realised_in "P130_shows_features_of"
    :lrmoo/R4_embodies       "P165_incorporates"
    :lrmoo/R7_exemplifies    "P128_carries"})
 
+(def replaced-properties
+  "Every LRMoo property the pure-CRM serialisation writes as its CRM super-property."
+  (merge property-superproperty event-superproperty))
+
 ;; Indexes keyed by the *IRI strings* as they appear in `export/triples`. An
 ;; entity's string is already CRM (E41 Appellation, P190), so it has no twin.
 (def ^:private class-iri->crm
-  (into {} (for [[k e] class-superclass] [(lrmoo/iri k) (str crm-base e)])))
+  (into {} (for [[k e] replaced-classes] [(lrmoo/iri k) (str crm-base e)])))
+
+(def ^:private class-iri->also
+  (into {} (for [[k es] also-typed] [(lrmoo/iri k) (mapv #(str crm-base %) es)])))
 
 (def ^:private prop-iri->crm
-  (into {} (for [[k p] property-superproperty] [(lrmoo/iri k) (str crm-base p)])))
+  (into {} (for [[k p] replaced-properties] [(lrmoo/iri k) (str crm-base p)])))
 
 (defn crm-triples
   "`export/triples` of `record`, each augmented additively with its CIDOC-CRM
@@ -53,7 +80,8 @@
      (cond
        ;; an rdf:type triple onto an LRMoo F-class -> also assert the CRM super-type
        (and (= p export/rdf-type) (class-iri->crm (:iri o)))
-       [triple [s p {:iri (class-iri->crm (:iri o))}]]
+       (into [triple [s p {:iri (class-iri->crm (:iri o))}]]
+             (for [c (class-iri->also (:iri o))] [s p {:iri c}]))
 
        ;; a WEMI relation -> also assert its CRM super-property (same subject/object)
        (prop-iri->crm p)
@@ -106,16 +134,17 @@
    super-type/-property (the LRMoo triples dropped). Pure CRM — lossy; the loss is
    reported by `crm-only-losses`."
   [record]
-  (map
+  (mapcat
    (fn [[s p o :as triple]]
      (cond
        (and (= p export/rdf-type) (class-iri->crm (:iri o)))
-       [s p {:iri (class-iri->crm (:iri o))}]
+       (into [[s p {:iri (class-iri->crm (:iri o))}]]
+             (for [c (class-iri->also (:iri o))] [s p {:iri c}]))
 
        (prop-iri->crm p)
-       [s (prop-iri->crm p) o]
+       [[s (prop-iri->crm p) o]]
 
-       :else triple))
+       :else [triple]))
    (export/triples record)))
 
 (defn ->crm-only-ntriples
@@ -144,7 +173,7 @@
    recover it), and each WEMI relation's generalisation to a generic CRM property
    (`:coerced`)."
   [record]
-  (let [generic  (for [kind [:lrmoo/F1_Work :lrmoo/F5_Item]
+  (let [generic  (for [kind [:lrmoo/F1_Work :lrmoo/F5_Item :lrmoo/F30_Manifestation_Creation]
                        :when (has-kind? record kind)]
                    (dx/loss {:category     :under-specified
                              :subject      (:id record)
@@ -152,7 +181,7 @@
                              :source-field kind
                              :aspect       :class
                              :message      (str (name kind) " serialises as "
-                                                (class-superclass kind)
+                                                (replaced-classes kind)
                                                 ", which does not identify it as a "
                                                 (name kind) " in pure CRM")}))
         collapse (when (and (has-kind? record :lrmoo/F2_Expression)
@@ -166,14 +195,14 @@
                                                  "E73_Information_Object; the WEMI type distinction is "
                                                  "lost in pure CRM")})])
         coerced  (for [p (distinct (map :predicate (:assertions record)))
-                       :when (contains? property-superproperty p)]
+                       :when (contains? replaced-properties p)]
                    (dx/loss {:category     :coerced
                              :subject      (:id record)
                              :edge         :export
                              :source-field p
                              :aspect       :relation
                              :message      (str (name p) " serialised as the generic "
-                                                (property-superproperty p))}))]
+                                                (replaced-properties p))}))]
     (vec (concat generic collapse coerced))))
 
 (defn crm-only-exporter

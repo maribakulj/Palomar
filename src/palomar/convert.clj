@@ -16,6 +16,7 @@
    account is exactly `palomar.loss-report`'s artifact."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.plugins.events :as events]
             [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.model :as model]
@@ -46,13 +47,14 @@
    INTERMARC takes the *enriched* `derive-wemi` rung (the 145 $3 authority link) and
    then mints its authority-identified agent; INTERMARC-NG is already an entity-
    relation graph, so its importer builds the WEMI view and the projection is
-   `identity` (ADR 0019); the floor spokes take `project`. Every spoke normalises
-   to `:canon/*` first (in `to-wemi`)."
-  {:intermarc    (comp wemi/with-identified-agent wemi/derive-wemi)
+   `identity` (ADR 0019); the floor spokes take `project`. The MARC family then
+   adds its publication and production events (`events/add-events`, ADR 0036).
+   Every spoke normalises to `:canon/*` first (in `to-wemi`)."
+  {:intermarc    (comp events/add-events wemi/with-identified-agent wemi/derive-wemi)
    :intermarc-ng identity        ; the WEMI graph is read by the importer, not projected
-   :unimarc      project/project
+   :unimarc      (comp events/add-events project/project)
    :dc           project/project
-   :marc21       project/project
+   :marc21       (comp events/add-events project/project)
    :mods         project/project
    :iiif         project/project})
 

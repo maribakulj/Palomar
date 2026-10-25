@@ -102,6 +102,11 @@
    {:mapping/id :map/marc21-publisher-260 :mapping/from :marc21/f260_b :mapping/to :canon/agent
     :mapping/transform [:trim]
     :mapping/qualifier {:value :publisher :as :canon/role}}
+   {:mapping/id :map/marc21-publisher-264 :mapping/from :marc21/f264_b :mapping/to :canon/agent
+    :mapping/transform [:trim]
+    :mapping/where {:ind2 #{"1"}}
+    :mapping/qualifier {:value :publisher :as :canon/role}
+    :mapping/doc "264 with second indicator 1 is a publication statement: its $b is the publisher."}
    {:mapping/id :map/marc21-date-260 :mapping/from :marc21/f260_c :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-date-264 :mapping/from :marc21/f264_c :mapping/to :canon/date

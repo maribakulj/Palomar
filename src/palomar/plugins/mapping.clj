@@ -75,7 +75,12 @@
    *vector* of predicates to **combine** — their values on a subject are joined, in
    order, by the required `:mapping/combine` separator, into one canonical value
    (e.g. INTERMARC `100 $a` + `$m` → \"Surname, Forename\"; a title + its GMD `$h`).
-   This recombines subfields the parser split, without a bespoke pre-pass."
+   This recombines subfields the parser split, without a bespoke pre-pass.
+
+   `:mapping/where` (ADR 0036) restricts the rule to source values read in a
+   fragment whose locator has, at each key, one of the listed strings — e.g.
+   `{:ind2 #{\"1\"}}`, MARC 264 second indicator 1, a publication statement. A
+   value whose fragment is unknown does not satisfy it."
   [:and
    [:map {:closed true}
     [:mapping/id         :keyword]
@@ -89,6 +94,7 @@
      [:fn {:error/message ":mapping/default cannot be nil — it would emit a shape-invalid assertion"}
       some?]]
     [:mapping/confidence {:optional true} model/Confidence]
+    [:mapping/where      {:optional true} [:map-of :keyword [:set :string]]]
     [:mapping/doc        {:optional true} :string]]
    [:fn {:error/message
          ":mapping/on-empty :default ⇔ :mapping/default (both or neither)"}
@@ -292,6 +298,7 @@
         constant?  (contains? qualifier :value)
         q-value    (:value qualifier)
         anchor     (first from-preds)
+        where      (:mapping/where mapping-rule)
 
         assert-at  (fn assert-at
                      ([s p v] (assert-at s p v nil))
@@ -410,7 +417,17 @@
                                     (update m [(:subject a) (:predicate a) (:value a)] (fnil into []) ev)
                                     m))
                                 {} (:assertions record))
-                ev-of   #(get ev-idx (vec (take 3 %)))]
+                ev-of   #(get ev-idx (vec (take 3 %)))
+                ;; `:mapping/where` (ADR 0036): a source value counts only when
+                ;; the fragment it was read in has, at each named locator key, one
+                ;; of the listed values (a MARC field's indicators)
+                locs    (into {} (map (juxt :id :locator)) (:fragments record))
+                where?  (fn [t] (some (fn [e] (let [loc (locs (:fragment e))]
+                                                (every? (fn [[k vs]] (contains? vs (get loc k))) where)))
+                                      (ev-of t)))
+                triples (if where
+                          (filterv #(or (not (from-set (second %))) (where? %)) triples)
+                          triples)]
             (if multi?
               (let [subjects (distinct (keep (fn [[s p _]] (when (from-set p) s)) triples))
                     prods    (into [] (apply concat
