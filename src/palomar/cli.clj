@@ -38,6 +38,7 @@
             [palomar.curate :as curate]
             [palomar.diagnostics :as dx]
             [palomar.loss-report :as lr]
+            [palomar.manifest :as manifest]
             [palomar.reconcile :as reconcile]
             [palomar.validate :as validate]))
 
@@ -47,7 +48,7 @@
    ["palomar — documentary-metadata conversion through the LRMoo pivot"
     ""
     "Usage:"
-    "  palomar convert       <input-file> --from <fmt> --to <fmt> [--facts-only] [--record-id <id>] [--out <file>]"
+    "  palomar convert       <input-file> --from <fmt> --to <fmt> [--facts-only] [--manifest <file>] [--record-id <id>] [--out <file>]"
     "  palomar convert       <input-file> --from <marc-fmt> --to <fmt> --stream --out <file>"
     "  palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]"
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
@@ -67,6 +68,7 @@
     "  --out         write the output to a file instead of stdout (convert)"
     "  --stream      convert in bounded memory, streaming a large flat MARC dump to --out (WP-7)"
     "  --facts-only  convert: export only in-force claims (no uncurated inference stated as a fact)"
+    "  --manifest    convert: write the run manifest (versions, digests, options, loss) as EDN"
     "  --format      report output: text (default), edn or json (the raw loss-report map, ADR 0015)"
     ""
     "convert writes the document to stdout, the loss report to stderr;"
@@ -122,7 +124,20 @@
          " — is --from " from " correct for this file?")
     ""))
 
-(defn- do-convert [{:strs [from to record-id out facts-only]} input]
+(defn- write-manifest!
+  "Write the run manifest of a `convert` (ADR 0030) to `path`."
+  [path {:keys [from to input out result opts started-at]}]
+  (spit path (manifest/->edn
+              (manifest/manifest {:from        from
+                                  :to          to
+                                  :opts        opts
+                                  :inputs      [{:path input :content (io/file input)}]
+                                  :outputs     [{:path (or out "-") :content (:output result)}]
+                                  :loss        (:loss result)
+                                  :started-at  started-at
+                                  :finished-at (java.util.Date.)}))))
+
+(defn- do-convert [{:strs [from to record-id out facts-only] :as flags} input]
   (cond
     (not (and from to input))
     {:exit 2 :out "" :err (str "convert needs <input-file> --from <fmt> --to <fmt>\n\n" usage)}
@@ -132,14 +147,20 @@
 
     :else
     (try
-      (let [rid    (cond record-id      (->record-id record-id)
+      (let [started (java.util.Date.)
+            rid    (cond record-id      (->record-id record-id)
                          (= from "dc")   (keyword "doc" (file-stem input))
                          :else           nil)
+            opts   (cond-> {} rid (assoc :record-id rid))
             result (convert/convert {:from   (keyword from)
                                      :to     (keyword to)
                                      :source (slurp input)
                                      :in-force-only? (boolean facts-only)
-                                     :opts   (cond-> {} rid (assoc :record-id rid))})
+                                     :opts   opts})
+            _      (when-let [mpath (get flags "manifest")]
+                     (write-manifest! mpath {:from (keyword from) :to (keyword to) :input input :out out
+                                             :result result :started-at started
+                                             :opts (cond-> opts facts-only (assoc :in-force-only? true))}))
             report (str (lr/format-conversion-report (:loss result))
                         "\n(" (:records result) " record"
                         (when (not= 1 (:records result)) "s") " converted)"
