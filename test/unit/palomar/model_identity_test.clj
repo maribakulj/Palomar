@@ -1,6 +1,7 @@
 (ns palomar.model-identity-test
   "Assertion identity and annotations (ADR 0027)."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
             [palomar.model :as model]))
 
 (deftest equal-values-have-one-canonical-form
@@ -36,3 +37,10 @@
       (let [dropped (assoc rec :assertions [])]
         (is (model/valid-record? dropped))
         (is (= [n] (model/orphan-annotations dropped)))))))
+
+(deftest an-assertion-id-reads-back-as-edn
+  (testing "whatever its digest, the id is a keyword EDN reads back (ADR 0034)"
+    (doseq [i (range 64)]
+      (let [id (model/assertion-id {:subject :rec/one :predicate :x/y :value i})]
+        (is (= id (edn/read-string (str id))))
+        (is (re-matches #"h[0-9a-f]{16}" (name id)))))))

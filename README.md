@@ -247,11 +247,13 @@ Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as
   extensions, the LRMoo pivot + derived view, WEMI derivation (cross-record Work
   clustering by id-collision, plus uniform-title bridging), the loss-aware report,
   and the full CLI (`convert · validate · report · inspect · reconcile ·
-  apply-repairs · conformance · formats`).
+  apply-repairs · conformance · formats · ir-schema`), and `palomar.api`, the
+  stable library surface (ADR 0034).
 - **WP-4 spokes** — seven importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF)
-  reach the pivot and project to thirteen targets (RDF · CIDOC-CRM · Linked Art ·
+  reach the pivot and project to fourteen targets (RDF · CIDOC-CRM · Linked Art ·
   the floor formats · PROV-O · N-Quads/TriG datasets with facts, proposals, history
-  and provenance in named graphs); four floor round-trips; Linked Art validated against the
+  and provenance in named graphs · the pivot itself as EDN, readable back with
+  `--from edn`); four floor round-trips; Linked Art validated against the
   official draft-2020-12 schema.
 - **WP-6 conformance** — the mechanism + three profiles (Linked Art / IIIF / BnF
   INTERMARC); institutional *certification* on real samples is partnership-gated.

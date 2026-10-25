@@ -18,6 +18,13 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Library API and EDN IR** (ADR 0034): `palomar.api`, the stable entry
+  points (pivot, export, convert, curate, audit, manifest…), pinned by a
+  contract test; `--to edn` writes the pivot records whole, one versioned
+  envelope per line, deterministically, and `--from edn` reads them back,
+  validated — import once, curate, export many times. `palomar ir-schema`
+  prints the published record schema (`docs/ir/record-schema.edn`).
+
 - **Loss aspects and relation fidelity** (ADR 0033): a loss may name what it
   touched (`:value`, `:relation`, `:qualifier`, `:class`, `:granularity`,
   `:provenance`), counted `:by-aspect` in the report; the WEMI projections
@@ -322,6 +329,13 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
   rule binds a falsey value) and guarded against regression by a behavioural test.
 
 ### Changed
+
+- Assertion ids are spelled `:asr/h<16 hex>` (ADR 0034, amending ADR 0027):
+  a name starting with a digit does not read back as EDN. PROV statement IRIs
+  follow (`urn:palomar:stmt:h…`).
+- The INTERMARC-NG and CRM importers stamp `:pass :ingest` (they wrote
+  `:import`, which is no phase: their records failed the record schema).
+- `--record-id` and the file-derived DC record id start with a letter.
 
 - **Behaviour changes from the interoperability audit (2026-10-25):** a MARC
   record with only added entries (no 1XX) derives no Work; MARC21→DC emits 7XX
