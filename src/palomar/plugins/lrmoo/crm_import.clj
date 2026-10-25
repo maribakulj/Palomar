@@ -29,7 +29,8 @@
             [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
             [palomar.plugins.lrmoo.crm :as crm]
-            [palomar.plugins.lrmoo.export :as export]))
+            [palomar.plugins.lrmoo.export :as export]
+            [palomar.plugins.lrmoo.ntriples :as nt]))
 
 ;; --- inverse indices (forward maps live in lrmoo / lrmoo.crm) ---------------
 
@@ -49,20 +50,15 @@
 
 ;; --- N-Triples parse --------------------------------------------------------
 
-(def ^:private iri-triple-re #"^<([^>]+)> <([^>]+)> <([^>]+)> \.$")
-(def ^:private lit-triple-re #"^<([^>]+)> <([^>]+)> \"(.*)\" \.$")
-
 (defn parse-ntriples
-  "Parse an N-Triples string into `[s p o]` triples (`o` = `{:iri _}` | `{:lit _}`),
-   the same shape `lrmoo.export` renders. Skips blank lines."
+  "Parse an N-Triples string into `[s p o]` (`s` the subject IRI or `_:label`,
+   `p` the predicate IRI, `o` = `{:iri _}` | `{:bnode _}` | `{:lit _ :lang :datatype}`)
+   with the RDF 1.1 reader (`palomar.plugins.lrmoo.ntriples`): escapes, language
+   tags, datatypes, blank nodes and comments are handled, and a syntax error
+   throws with its line and column (audit S16)."
   [nt]
-  (for [line (str/split-lines nt)
-        :when (not (str/blank? line))]
-    (if-let [[_ s p o] (re-matches iri-triple-re line)]
-      [s p {:iri o}]
-      (if-let [[_ s p l] (re-matches lit-triple-re line)]
-        [s p {:lit l}]
-        (throw (ex-info "Unparseable N-Triple line" {:line line}))))))
+  (for [[subj pred obj] (nt/parse nt)]
+    [(nt/term-key subj) (:iri pred) obj]))
 
 ;; --- recovery ---------------------------------------------------------------
 
@@ -86,26 +82,59 @@
   [kinds]
   (keyword "crm" (crm/class-superclass (first kinds))))
 
+(def ^:private r33-iri (lrmoo/iri :lrmoo/R33_has_string))
+
+(def ^:private crm-super-property
+  "LRMoo R-property IRI → its CRM super-property IRI (the additive `:crm` view's twin)."
+  (into {} (for [[k p] crm/property-superproperty] [(lrmoo/iri k) (str crm/crm-base p)])))
+
 (defn recover
   "Recover the LRMoo view from CRM/LRMoo N-Triples `nt`. Returns:
 
      {:typed            {node-iri kind}     ; F-typed, unambiguously recovered WEMI entities
       :super-class-only {node-iri #{kind}}  ; a CRM super-class with one candidate — not downcast
       :ambiguous        {node-iri #{kinds}} ; a CRM super-class with several candidates
-      :relations        #{[from-iri R-pred to-iri]}}  ; WEMI links (from LRMoo R-properties)"
+      :relations        #{[from-iri R-pred to-iri]}  ; WEMI links (from LRMoo R-properties)
+      :strings          [[node-iri literal]]          ; R33 strings of typed nodes, in order
+      :unrecovered      [[s p o]]}                    ; every other triple (see `->record`)
+
+   A triple is recovered when it types a node, links two typed nodes by an
+   R-property, or gives a typed node its R33 string. The additive `:crm` view's
+   CRM twins of those (the E super-class of an F-typed node, the P super-property
+   of a recovered link or string) are subsumed, not lost. Everything else is
+   `:unrecovered` and reported by `->record` (audit S17)."
   [nt]
   (let [triples   (parse-ntriples nt)
-        by-subj   (group-by first (filter (fn [[_ p _]] (= p export/rdf-type)) triples))
-        resolved  (into {} (for [[s trs] by-subj]
+        types     (group-by first (filter (fn [[_ p o]] (and (= p export/rdf-type) (:iri o))) triples))
+        resolved  (into {} (for [[s trs] types]
                              [s (node-kind (set (map (comp :iri #(nth % 2)) trs)))]))
+        tag-of    (fn [tag] (into {} (for [[s [t k]] resolved :when (= t tag)] [s k])))
+        typed     (tag-of :typed)
+        node      (fn [o] (nt/term-key o))
         relations (set (for [[s p o] triples
                              :let  [pred (lrmoo-prop->pred p)]
-                             :when (and pred (:iri o))]
-                         [s pred (:iri o)]))]
-    {:typed            (into {} (for [[s [tag k]] resolved :when (= tag :typed)]            [s k]))
-     :super-class-only (into {} (for [[s [tag k]] resolved :when (= tag :super-class-only)] [s k]))
-     :ambiguous        (into {} (for [[s [tag k]] resolved :when (= tag :ambiguous)]        [s k]))
-     :relations        relations}))
+                             :when (and pred (not= p r33-iri) (node o) (typed s) (typed (node o)))]
+                         [s pred (node o)]))
+        strings   (vec (for [[s p o] triples
+                             :when (and (= p r33-iri) (:lit o) (typed s))]
+                         [s o]))
+        rel-twins (set (for [[s pred o] relations] [s (crm-super-property (lrmoo/iri pred)) o]))
+        str-twins (set (for [[s o] strings] [s (crm-super-property r33-iri) (:lit o)]))
+        known     (fn [s] (or (typed s) (contains? (tag-of :super-class-only) s)
+                              (contains? (tag-of :ambiguous) s)))
+        recovered? (fn [[s p o]]
+                     (cond
+                       (= p export/rdf-type) (known s)
+                       (= p r33-iri)         (and (:lit o) (typed s))
+                       (lrmoo-prop->pred p)  (contains? relations [s (lrmoo-prop->pred p) (node o)])
+                       (:lit o)              (contains? str-twins [s p (:lit o)])
+                       :else                 (contains? rel-twins [s p (node o)])))]
+    {:typed            typed
+     :super-class-only (tag-of :super-class-only)
+     :ambiguous        (tag-of :ambiguous)
+     :relations        relations
+     :strings          strings
+     :unrecovered      (vec (remove recovered? triples))}))
 
 (defn ->record
   "Mint an IR record from recovered CRM/LRMoo RDF: one `model/entity` per
@@ -116,13 +145,33 @@
    Expression/Manifestation collapse). No entity is minted for either.
    `(… -> {:record :diagnostics})`."
   [nt rid]
-  (let [{:keys [typed super-class-only ambiguous relations]} (recover nt)
+  (let [{:keys [typed super-class-only ambiguous relations strings unrecovered]} (recover nt)
         prov   (model/provenance {:pass :import})
         ents   (for [[iri kind] typed]
                  (model/entity {:id iri :kind kind :iri iri :provenance prov}))
-        rels   (for [[from pred to] relations]
-                 (model/assertion {:subject from :predicate pred
-                                   :value (model/reference to) :provenance prov}))
+        rels   (concat
+                (for [[from pred to] relations]
+                  (model/assertion {:subject from :predicate pred
+                                    :value (model/reference to) :provenance prov}))
+                (for [[s o] strings]
+                  (model/assertion {:subject s :predicate :lrmoo/R33_has_string
+                                    :value (:lit o) :provenance prov})))
+        coerced (when (some (fn [[_ o]] (or (:lang o)
+                                            (and (:datatype o)
+                                                 (not= "http://www.w3.org/2001/XMLSchema#string" (:datatype o)))))
+                            strings)
+                  [(dx/loss {:category     :coerced
+                             :subject      rid
+                             :edge         :import
+                             :source-field :lrmoo/R33_has_string
+                             :message      "an R33 string's language tag or datatype is not carried"})])
+        dropped (for [[p ts] (group-by second unrecovered)]
+                  (dx/loss {:category     :dropped
+                            :subject      rid
+                            :edge         :import
+                            :source-field (keyword "rdf" p)
+                            :message      (str (count ts) " triple(s) with predicate <" p
+                                               "> not recovered into the LRMoo view")}))
         loss   (fn [category iri cands]
                  (dx/loss {:category     category
                            :subject      iri
@@ -134,4 +183,4 @@
                        (for [[iri cands] ambiguous]        (loss :ambiguity-collapsed iri cands)))]
     {:record      (model/record {:id rid :kind :lrmoo/recovered
                                  :entities (vec ents) :assertions (vec rels)})
-     :diagnostics (vec losses)}))
+     :diagnostics (vec (concat losses coerced dropped))}))

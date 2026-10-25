@@ -11,7 +11,8 @@
      way down.
 
    No external data: the CRM is produced by our own exporter."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
@@ -107,8 +108,27 @@
   (testing ":crm-only → ->record mints no entity: E89 is under-specified, the E73 pair ambiguous"
     (let [{:keys [record diagnostics]} (crm-import/->record (crm/->crm-only-ntriples (wemi-record)) :rec/back)]
       (is (empty? (:entities record)))
-      (is (= 3 (count diagnostics)))                          ; the Work + the Expression + the Manifestation
-      (is (= {:under-specified 1 :ambiguity-collapsed 2}
+      (is (= 5 (count diagnostics)))  ; the Work + the Expression + the Manifestation, and their two links
+      (is (= {:under-specified 1 :ambiguity-collapsed 2 :dropped 2}
              (frequencies (map dx/loss-category diagnostics))))
-      (is (= #{:crm/E89_Propositional_Object :crm/E73_Information_Object}
-             (set (map dx/loss-source-field diagnostics)))))))
+      (is (= #{:crm/E89_Propositional_Object :crm/E73_Information_Object
+               (keyword "rdf" "http://www.cidoc-crm.org/cidoc-crm/P165_incorporates")
+               (keyword "rdf" "http://www.cidoc-crm.org/cidoc-crm/P130_shows_features_of")}
+             (set (map dx/loss-source-field diagnostics))))
+      (testing "the generic P links between unrecovered nodes are reported, not silently dropped (audit S17)"
+        (is (every? #(str/includes? (:message %) "not recovered")
+                    (filter #(= :dropped (dx/loss-category %)) diagnostics)))))))
+
+(deftest strings-are-recovered-and-everything-else-is-reported
+  (testing "an F-typed node gets its R33 string back; an unknown predicate is reported, not dropped silently"
+    (let [lrm "http://iflastandards.info/ns/lrm/lrmoo/"
+          rdf "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"
+          nt  (str "<urn:m> " rdf " <" lrm "F3_Manifestation> .\n"
+                   "<urn:m> <" lrm "R33_has_string> \"Les Mis\\u00E9rables\"@fr .\n"
+                   "<urn:m> <http://purl.org/dc/terms/extent> \"300 p.\" .\n")
+          {:keys [record diagnostics]} (crm-import/->record nt :rec/s)]
+      (is (= ["Les Misérables"] (keep #(when (= :lrmoo/R33_has_string (:predicate %)) (:value %))
+                                      (:assertions record))))
+      (is (some #(and (= :coerced (dx/loss-category %))
+                      (= :lrmoo/R33_has_string (dx/loss-source-field %))) diagnostics))  ; @fr not carried
+      (is (some #(= (keyword "rdf" "http://purl.org/dc/terms/extent") (dx/loss-source-field %)) diagnostics)))))
