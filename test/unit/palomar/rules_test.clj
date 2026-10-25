@@ -602,7 +602,7 @@
 ;; ---------------------------------------------------------------------------
 
 (deftest supported-actions-enumerates-the-stdlib
-  (is (= #{:assert :diagnostic :repair :entity} (rules/supported-actions))))
+  (is (= #{:assert :diagnostic :repair :entity :construct} (rules/supported-actions))))
 
 ;; ---------------------------------------------------------------------------
 ;; Validate-rule explanation surface
@@ -695,3 +695,72 @@
         prov  (get-in (first prods) [:value :provenance])]
     (is (= :rule/echo-title (:rule prov)))
     (is (= '{?r :r/b1 ?t "Les Misérables"} (:bindings prov)))))
+
+;; ---------------------------------------------------------------------------
+;; :construct, mint, optional, not, (ref ?x) — ADR 0035
+;; ---------------------------------------------------------------------------
+
+(def ^:private book
+  (model/record
+   {:id :rec/b :kind :test
+    :assertions [(model/assertion {:subject :rec/b :predicate :canon/title :value "Nadja"})
+                 (model/assertion {:subject :rec/b :predicate :canon/agent :value (model/reference :frag/a)})
+                 (model/assertion {:subject :frag/a :predicate :canon/agent :value "Breton, André"})
+                 (model/assertion {:subject :frag/a :predicate :canon/role :value :creator})]}))
+
+(defn- produce [rule record] (rules/apply-rule (rules/compile-rule rule) record))
+
+(deftest construct-writes-a-graph-and-declares-what-it-mints
+  (let [ps (produce {:id :r/crm :phase :infer
+                     :match '[[?r :canon/title ?t] [?r :canon/agent (ref ?f)] [?f :canon/agent ?n]]
+                     :produce {:construct '[[(mint :crm/E12_Production (str ?r)) :crm/P14_carried_out_by (mint :crm/E21_Person ?n)]
+                                            [(mint :crm/E21_Person ?n) :crm/P1_is_identified_by ?n {:status :asserted}]]}}
+                    book)
+        ents (filter #(= :entity (:kind %)) ps)
+        as   (map :value (filter #(= :assertion (:kind %)) ps))
+        prod (model/mint-entity-id :crm/E12_Production ":rec/b")
+        pers (model/mint-entity-id :crm/E21_Person "Breton, André")]
+    (is (= #{[prod :crm/E12_Production] [pers :crm/E21_Person]} (set (map (juxt (comp :id :value) (comp :kind :value)) ents))))
+    (is (= 2 (count ents)) "an entity minted twice is declared once")
+    (is (some #(= [prod :crm/P14_carried_out_by (model/reference pers) :proposed]
+                  ((juxt :subject :predicate :value :status) %)) as)
+        "a minted object is a reference; the phase sets the status")
+    (is (some #(= [pers "Breton, André" :asserted] ((juxt :subject :value :status) %)) as))
+    (is (every? #(= :r/crm (get-in % [:provenance :rule])) as))))
+
+(deftest an-optional-that-does-not-match-drops-its-triples-only
+  (let [rule {:id :r/opt :phase :infer
+              :match '[[?r :canon/title ?t] (optional [?r :canon/date ?d])]
+              :produce {:construct '[[(mint :x/Thing ?t) :x/title ?t]
+                                     [(mint :x/Thing ?t) :x/date ?d]]}}
+        preds (fn [rec] (set (keep #(get-in % [:value :predicate]) (produce rule rec))))]
+    (is (= #{:x/title} (preds book)))
+    (is (= #{:x/title :x/date}
+           (preds (update book :assertions conj (model/assertion {:subject :rec/b :predicate :canon/date :value "1928"})))))))
+
+(deftest not-keeps-a-row-only-when-nothing-matches
+  (let [rule {:id :r/not :phase :infer
+              :match '[[?r :canon/title ?t] (not [?r :canon/agent (ref ?g)] [?g :canon/role :creator])]
+              :produce {:construct '[[?r :x/anonymous ?t]]}}]
+    (is (empty? (produce rule book)))
+    (is (= 1 (count (produce rule (update book :assertions (partial remove #(= :canon/role (:predicate %))))))))))
+
+(deftest ref-in-a-pattern-matches-only-a-reference
+  (let [rule {:id :r/ref :phase :infer
+              :match '[[?r :canon/title (ref ?x)]]
+              :produce {:construct '[[?r :x/y ?x]]}}]
+    (is (empty? (produce rule book)) "a literal is not a reference")))
+
+(deftest construct-terms-are-checked
+  (is (thrown? clojure.lang.ExceptionInfo
+               (rules/compile-rule {:id :r/x :phase :infer :match '[[?r :a/b ?v]]
+                                    :produce {:construct '[[?r :a/c]]}}))
+      "a construct triple has three terms")
+  (is (thrown? clojure.lang.ExceptionInfo
+               (rules/compile-rule {:id :r/x :phase :infer :match '[[?r :a/b ?v] (optional [?r :a/c ?w])]
+                                    :produce {:assert '{:subject ?r :predicate :a/d :value ?w}}}))
+      "only a construct template may use a variable an optional binds")
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Unknown construct term"
+                        (produce {:id :r/x :phase :infer :match '[[?r :canon/title ?t]]
+                                  :produce {:construct '[[?r :a/c (upper ?t)]]}}
+                                 book))))
