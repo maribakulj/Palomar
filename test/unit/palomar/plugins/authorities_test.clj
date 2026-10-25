@@ -50,3 +50,14 @@
         (is (str/includes? out "\"Alan Kelsey\" → \"Kelsey, Alan\""))
         (is (str/includes? out "exact")))
       (finally (.delete f)))))
+
+(deftest an-eac-cpf-record-is-an-entry
+  (let [xml (slurp "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml")
+        {:keys [entries unread]} (authorities/read-pool :eac-cpf xml)]
+    (is (= [{:id nil :label "Fictional Testing Center" :variants ["Det påhittade testcentret"] :entity-type "corporateBody"}]
+           entries)
+        "a local recordId is no id: a match to it is never certifiable")
+    (is (= "Det påhittade testcentret" (:label (first (:entries (authorities/read-pool :eac-cpf xml {:lang "swe"}))))))
+    (is (= ["functions" "relations"] unread))
+    (is (= :eac-cpf (authorities/sniff-format "x.xml" xml)))
+    (is (false? (:certifiable? (first (reconcile/propose-agent-links ["Fictional Testing Center"] entries)))))))

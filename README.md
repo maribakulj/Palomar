@@ -249,7 +249,7 @@ Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as
   and the full CLI (`convert · validate · report · inspect · reconcile ·
   apply-repairs · conformance · formats · ir-schema`), and `palomar.api`, the
   stable library surface (ADR 0034).
-- **WP-4 spokes** — seven importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF)
+- **WP-4 spokes** — eight importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF + EAD), plus OAI-PMH responses
   reach the pivot and project to fourteen targets (RDF · CIDOC-CRM · Linked Art ·
   the floor formats · PROV-O · N-Quads/TriG datasets with facts, proposals, history
   and provenance in named graphs · the pivot itself as EDN, readable back with
@@ -443,7 +443,7 @@ INTERMARC · **INTERMARC-NG** · Dublin Core · MODS · IIIF · CIDOC-CRM / Link
 ↔ the **assertion IR (ground truth)** ↔ a **derived, typed LRMoo view** (a plugin,
 never the core). Every conversion emits a measurable loss report.
 
-As of 2026-06, **seven source spokes reach the LRMoo pivot and project to ten
+As of 2026-06, **eight source spokes reach the LRMoo pivot and project to ten
 targets**: the full MARC family (MARC21 / INTERMARC / UNIMARC) plus the
 INTERMARC-NG **entity-relation** spoke (graph→graph, no inference — ADR 0019) and
 DC / MODS / IIIF; targets span RDF (N-Triples · Turtle · JSON-LD), CIDOC-CRM,

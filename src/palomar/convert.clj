@@ -16,6 +16,7 @@
    account is exactly `palomar.loss-report`'s artifact."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.plugins.ead :as ead]
             [palomar.plugins.events :as events]
             [palomar.plugins.oai :as oai]
             [palomar.ir :as ir]
@@ -57,7 +58,8 @@
    :dc           project/project
    :marc21       (comp events/add-events project/project)
    :mods         project/project
-   :iiif         project/project})
+   :iiif         project/project
+   :ead          ead/project})       ; archival units: no edition, so no Work (ADR 0039)
 
 (defn- crm-only-losses [record]
   (concat (crm/crm-only-losses record) (export/export-losses record)))

@@ -16,7 +16,8 @@
    :dc        "test/fixtures/documentary/dublin-core/w3c_dc_example1.xml"
    :marc21    "test/fixtures/documentary/marc21/marcxml/loc_collection.xml"
    :mods      "test/fixtures/documentary/mods/loc_mods_book.xml"
-   :iiif      "test/fixtures/documentary/iiif/manifest_image_simple.json"})
+   :iiif      "test/fixtures/documentary/iiif/manifest_image_simple.json"
+   :ead       "test/fixtures/documentary/ead/ead2002/tnah_ead_devoir_genero.xml"})
 
 (def ^:private record-counts {:intermarc 30 :dc 1 :marc21 2 :mods 1 :iiif 1})
 

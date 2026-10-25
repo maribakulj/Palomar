@@ -52,6 +52,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0036](./0036-publication-events.md) | Publication and production events | Accepted |
 | [0037](./0037-oai-pmh-and-dcmi-terms.md) | OAI-PMH responses and DCMI Terms | Accepted |
 | [0038](./0038-authority-files.md) | Authority files as reconciliation pools | Accepted |
+| [0039](./0039-archival-description.md) | Archival description: EAD units and EAC-CPF authorities | Accepted |
 
 ## Template
 
