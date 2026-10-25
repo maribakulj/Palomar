@@ -71,7 +71,7 @@
         (is (= 2 (count (floor-literals c2 :canon/note))))))))
 
 (deftest loss-report-accounts-the-pivot-cost
-  (testing "subTitle is a dropped native; note is an export-edge collapse, agent no longer is"
+  (testing "subTitle is a dropped native; neither agent nor note is an export-edge collapse any more"
     (let [canon  (->canonical fixture :mods/r11761548)
           losses (mex/export-losses canon)]
       (is (contains? (set (mex/pivot-dropped-fields canon)) :mods/subtitle))
@@ -81,8 +81,19 @@
         (testing "but the publisher keeps its role, so the agent collapse is recovered on export"
           (is (not-any? #(and (= :under-specified (dx/loss-category %))
                               (= :canon/agent (dx/loss-source-field %))) losses)))
-        (is (some #(and (= :under-specified (dx/loss-category %))
-                        (= :canon/note (dx/loss-source-field %))) losses))))))
+        (testing "and a note's kind brings its element back, so the note collapse is not reported"
+          (is (not-any? #(and (= :under-specified (dx/loss-category %))
+                              (= :canon/note (dx/loss-source-field %))) losses)))))))
+
+(deftest an-abstract-comes-back-as-an-abstract
+  (testing "MODS abstract and note both import to :canon/note; the abstract's :canon/note-kind restores it"
+    (let [src (str "<mods xmlns=\"http://www.loc.gov/mods/v3\">"
+                   "<titleInfo><title>T</title></titleInfo>"
+                   "<abstract>What the book argues.</abstract><note>Includes index.</note>"
+                   "<recordInfo><recordIdentifier>a1</recordIdentifier></recordInfo></mods>")
+          out (mex/->mods-xml (->canonical src :mods/ra1))]
+      (is (str/includes? out "<abstract>What the book argues.</abstract>"))
+      (is (str/includes? out "<note>Includes index.</note>")))))
 
 (deftest a-canonless-record-renders-nothing
   (testing "a record with no canonical content and no :source renders nil"

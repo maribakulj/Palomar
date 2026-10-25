@@ -26,6 +26,7 @@
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.linked-art :as linked-art]
             [palomar.plugins.lrmoo.project :as project]
+            [palomar.plugins.lrmoo.prov :as prov]
             [palomar.plugins.mapping :as mapping]
             [palomar.plugins.marc21.export :as marc21-export]
             [palomar.plugins.mods.export :as mods-export]
@@ -69,7 +70,8 @@
    :dc         {:render dc-export/->dc-xml           :losses dc-export/export-losses}
    :marc21     {:render marc21-export/->marcxml      :losses marc21-export/export-losses}
    :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses}
-   :iiif       {:render iiif-export/->json           :losses iiif-export/export-losses}})
+   :iiif       {:render iiif-export/->json           :losses iiif-export/export-losses}
+   :prov       {:render prov/->ntriples              :losses prov/export-losses}})
 
 (defn source-formats [] (spokes/source-formats))
 (defn target-formats [] (set (keys exporters)))

@@ -52,3 +52,11 @@
    This is the streaming variant; see `parse-str` and the namespace doc."
   [readable]
   (apply data-xml/parse readable safe-opts))
+
+(defn event-seq
+  "The lazy StAX event seq of `readable`, like `clojure.data.xml/event-seq`, but
+   refusing DTDs. For streaming a document whose records are nested: a tree
+   would make the parser buffer an element's whole content as soon as its next
+   sibling is referenced, while events can be consumed one record at a time."
+  [readable]
+  (data-xml/event-seq readable (apply hash-map safe-opts)))

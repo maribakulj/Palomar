@@ -1,6 +1,6 @@
 # 0005 — Dual status model: machine truth and human workflow
 
-- Status: Accepted
+- Status: Accepted (enforcement extended by [ADR 0023](./0023-justifications-and-status-at-export.md))
 - Date: 2026-04-17
 
 ## Context

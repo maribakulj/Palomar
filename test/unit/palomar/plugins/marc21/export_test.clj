@@ -48,8 +48,10 @@
       (is (str/includes? out "tag=\"260\""))
       (is (str/includes? out "[1957?]"))
       (is (str/includes? out "tag=\"010\""))
-      (testing "the 3 notes (500/505/511) all come back as 500 (note type collapsed)"
-        (is (= 3 (count (re-seq #"tag=\"500\"" out)))))
+      (testing "the 3 notes come back to their own fields (500/505/511), by :canon/note-kind"
+        (is (= 1 (count (re-seq #"tag=\"500\"" out))))
+        (is (= 1 (count (re-seq #"tag=\"505\"" out))))
+        (is (= 1 (count (re-seq #"tag=\"511\"" out)))))
       (testing "& is XML-escaped"
         (is (str/includes? out "piano &amp; celeste"))))))
 
@@ -81,16 +83,16 @@
       (is (contains? (set (mex/pivot-dropped-fields canon)) :marc21/f300_a))))) ; physical
 
 (deftest the-round-trip-loss-report-quantifies-the-whole-gap
-  (testing "20 floor-coverage drops (import) + 4 collapses (export) = the trip's loss"
+  (testing "20 floor-coverage drops (import) + 3 collapses (export) = the trip's loss"
     (let [canon  (->canonical fixture :marc/r5637241)
           report (lr/conversion-report (mex/export-losses canon) {:records 1})]
       (is (= 20 (get-in report [:by-edge :import :total])))   ; the leader is now captured, hence reported
-      (is (= 4 (get-in report [:by-edge :export :total])))
+      (is (= 3 (get-in report [:by-edge :export :total])))
       (is (= 20 (get-in report [:by-category :dropped])))
       (is (contains? (set (mex/pivot-dropped-fields canon)) :marc21/leader))
-      (is (= 4 (get-in report [:by-category :under-specified])))
+      (is (= 3 (get-in report [:by-category :under-specified])))
       (testing "the collapses name the multi-source canonical predicates"
-        (is (= #{:canon/agent :canon/date :canon/identifier :canon/note}
+        (is (= #{:canon/agent :canon/date :canon/identifier}
                mex/collapsed-predicates)))
       (testing "renders for an institutional audit"
         (let [text (lr/format-conversion-report report)]

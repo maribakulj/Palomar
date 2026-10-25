@@ -1,6 +1,6 @@
 # 0015 — Loss model: what loss is, where it is measured, how it is reported
 
-- Status: Accepted
+- Status: Accepted (extended by [ADR 0024](./0024-observed-loss.md))
 - Date: 2026-05-31
 - Builds on: ADR 0001 (assertions + provenance), ADR 0003 / 0013 (two-rung
   vocabulary + coverage), ADR 0011 / 0012 (fragments trace loss back to source),

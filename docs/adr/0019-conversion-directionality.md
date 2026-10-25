@@ -3,6 +3,8 @@
 - Status: Accepted (partially implemented — the directionality rule, the CRM→LRM
   downcast round-trip, and the INTERMARC-NG entity-relation spoke are landed;
   validated on a spec-faithful synthetic corpus pending native NG data)
+- Partially superseded by: [ADR 0022](./0022-domain-faithful-serialisation.md) — a node typed only `E89` or
+  `E24` is not downcast either (§3).
 - Date: 2026-06-04
 - Builds on: ADR 0013 (LRMoo rich pivot — the hub), ADR 0015 (loss model — the
   receipt of irreversibility), ADR 0016 (WEMI derivation — the inference path), ADR 0017
@@ -68,18 +70,10 @@ CRM P-properties (verified vs `LRMoo_v1.0.owl`, `lrmoo.crm`). Therefore:
 - **CRM → LRM = downcast (specialisation).** Succeeds **iff the specific type is
   still present**:
   - CRM that keeps the LRMoo F-classes (our additive `:crm`, an INTERMARC-NG→CRM, a
-    BnF LRM graph) → recovers F1/F2/F3 **losslessly** — it is already LRM. "Lossless"
-    is scoped to the WEMI view (types, R-links, R33 strings); every other triple is
-    reported as `:dropped` (amended 2026-10-25, audit S17/S41);
+    BnF LRM graph) → recovers F1/F2/F3 **losslessly** — it is already LRM;
   - CRM flattened to E-classes only (our `:crm-only`, a museum CRM with no LRM) →
     a node typed only `E73` **cannot** be downcast (Expression or Manifestation?);
     it is reported as `:ambiguity-collapsed` (ADR 0015).
-  - A node typed only `E89` or `E24` is **not** downcast either, although each has
-    a single WEMI specialisation (F1, F5). Sub-classing does not invert: an `E89`
-    may be a theory, an `E24` any physical made thing. It is reported as
-    `:under-specified` and no entity is minted (amended 2026-10-25, after the
-    interoperability audit; earlier text treated these as 1:1). The pure-CRM export
-    reports the same two cases as `:under-specified` on the export edge.
 
 The deep tie: **the loss report of the down-projection is the specification of what
 the up-projection cannot recover.** You never recover a distinction the source did

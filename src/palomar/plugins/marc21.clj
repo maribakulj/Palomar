@@ -109,11 +109,14 @@
    {:mapping/id :map/marc21-note-500 :mapping/from :marc21/f500_a :mapping/to :canon/note
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-contents-505 :mapping/from :marc21/f505_a :mapping/to :canon/note
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contents :as :canon/note-kind}}
    {:mapping/id :map/marc21-credits-511 :mapping/from :marc21/f511_a :mapping/to :canon/note
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :credits :as :canon/note-kind}}
    {:mapping/id :map/marc21-summary-520 :mapping/from :marc21/f520_a :mapping/to :canon/note
-    :mapping/transform [:trim]}])
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :abstract :as :canon/note-kind}}])
 
 ;; ---------------------------------------------------------------------------
 ;; Importer (ADR 0007)

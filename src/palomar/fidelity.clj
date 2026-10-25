@@ -65,7 +65,8 @@
    :iiif       json-strings
    :dc         xml-strings
    :marc21     xml-strings
-   :mods       xml-strings})
+   :mods       xml-strings
+   :prov       nt-strings})
 
 (defn decodable-targets
   "The targets whose output this audit can decode."

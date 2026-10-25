@@ -21,7 +21,7 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 - **Interoperability audit follow-up (2026-10-25)** — new capabilities:
   `palomar.fidelity`, an occurrence-level audit that decodes a conversion's
   output (N-Triples, JSON, XML) and classifies every source value as present,
-  reported or unaccounted (all 63 spoke × decodable-target pairs are at zero
+  reported or unaccounted (all 70 spoke × decodable-target pairs are at zero
   unaccounted); `palomar.plugins.lrmoo.ntriples`, an RDF 1.1 N-Triples reader
   (escapes, language tags, datatypes, blank nodes, located errors);
   `palomar.plugins.agents` (role-aware agent reading); `palomar.plugins.record-id`

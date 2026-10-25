@@ -9,8 +9,10 @@
    reconstructs only that core, and the loss report accounts the gap (ADR 0015):
 
    - **export edge, `:under-specified`** — the many-to-one collapses the floor
-     imposes. MODS distinguishes an `abstract` from a `note`, but both collapse
-     onto one `:canon/note` at import; on export every note is emitted as `<note>`.
+     imposes. An `abstract` and a `note` both become `:canon/note`, but the
+     abstract keeps a `:canon/note-kind`, so each comes back as its own element
+     (as do a MARC 505 contents note, `<tableOfContents>`, and a 511 credits
+     note, `<note type=\"performers\">`).
      Agents keep their `:canon/role`: a publisher comes back as
      `originInfo/publisher`, every other agent as `<name>`. A `<name>` does not
      carry its creator/contributor role here, so that distinction (from another
@@ -31,7 +33,8 @@
             [palomar.diagnostics :as dx]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
-            [palomar.plugins.mods :as mods]))
+            [palomar.plugins.mods :as mods]
+            [palomar.plugins.qualified :as qualified]))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -50,7 +53,7 @@
    [:canon/agent          "<name><namePart>"          "</namePart></name>"]          ; publisher -> originInfo, see `agent-elements`
    [:canon/date           "<originInfo><dateIssued>"   "</dateIssued></originInfo>"]
    [:canon/identifier     "<identifier>"               "</identifier>"]
-   [:canon/note           "<note>"                     "</note>"]                     ; abstract also -> note
+   [:canon/note           "<note>"                     "</note>"]                     ; per :canon/note-kind, see `note-elements`
    [:canon/digital-object "<location><url>"            "</url></location>"]])
 
 (defn- canon-literals
@@ -63,6 +66,18 @@
 
 (defn- element-line [open close value]
   (str "  " open (xml-escape value) close))
+
+(def ^:private note-kind->element
+  "MODS element for a note of a known `:canon/note-kind`; a general note is `<note>`."
+  {:abstract ["<abstract>" "</abstract>"]
+   :contents ["<tableOfContents>" "</tableOfContents>"]
+   :credits  ["<note type=\"performers\">" "</note>"]})
+
+(defn- note-elements
+  "`[open close value]` for each of `record`'s notes, by `:canon/note-kind`."
+  [record open close]
+  (for [{:keys [value coord]} (qualified/values record :canon/note :canon/note-kind)]
+    (let [[o c] (get note-kind->element coord [open close])] [o c value])))
 
 (defn- agent-elements
   "`[open close value]` for each of `record`'s agents: a publisher is
@@ -80,8 +95,9 @@
   [record]
   (let [rid   (:source record)
         body  (for [[p open close] canon->mods
-                    [open close v] (if (= :canon/agent p)
-                                     (agent-elements record open close)
+                    [open close v] (case p
+                                     :canon/agent (agent-elements record open close)
+                                     :canon/note  (note-elements record open close)
                                      (for [v (canon-literals record p)] [open close v]))]
                 (element-line open close v))
         lines (cond-> (vec body)
@@ -128,7 +144,7 @@
 (def ^:private written-canon
   "The canonical fields and coords the MODS export writes (`canon->mods`; the role
    picks name vs originInfo/publisher)."
-  (into #{:canon/role} (map first) canon->mods))
+  (into #{:canon/role :canon/note-kind} (map first) canon->mods))
 
 (defn- expressed?
   "What the MODS export accounts for itself: the canonical fields it writes, and
@@ -153,7 +169,10 @@
                :message      (str (name f) " captured natively but not lifted to the floor — dropped on a pivot round-trip")}))
    (for [p (sort-by str collapsed-predicates)
          :when (and (seq (canon-literals record p))
-                    (or (not= :canon/agent p) (name-role-lost? record)))]
+                    (case p
+                      :canon/agent (name-role-lost? record)
+                      :canon/note  false              ; the kind brings the element back
+                      true))]
      (dx/loss {:category     :under-specified
                :subject      (:id record)
                :edge         :export

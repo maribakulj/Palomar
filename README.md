@@ -249,8 +249,8 @@ Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as
   and the full CLI (`convert · validate · report · inspect · reconcile ·
   apply-repairs · conformance · formats`).
 - **WP-4 spokes** — seven importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF)
-  reach the pivot and project to ten targets (RDF · CIDOC-CRM · Linked Art ·
-  the floor formats); four floor round-trips; Linked Art validated against the
+  reach the pivot and project to eleven targets (RDF · CIDOC-CRM · Linked Art ·
+  the floor formats · PROV-O); four floor round-trips; Linked Art validated against the
   official draft-2020-12 schema.
 - **WP-6 conformance** — the mechanism + three profiles (Linked Art / IIIF / BnF
   INTERMARC); institutional *certification* on real samples is partnership-gated.
@@ -267,6 +267,15 @@ WEMI-derivation fidelity is measured, not asserted — on real BnF data and an
 independent third-party benchmark; see [`docs/eval/`](./docs/eval/). The honest
 remaining gates are real institutional acceptance criteria and a real at-scale
 corpus ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md) §7).
+
+An **interoperability audit** (2026-10-25) found conversions that were
+structurally plausible but semantically wrong (a publisher keying a Work, an
+edition exported as a physical object, external CRM silently downcast, losses
+that were declared but not observed). Its P0/P1 items are fixed, and an
+occurrence-level fidelity audit (`palomar.fidelity`) now checks every conversion
+against its own output. What is guaranteed, and what is not, is listed in
+[`docs/guarantees.md`](./docs/guarantees.md), each guarantee with the test that
+pins it.
 
 ---
 

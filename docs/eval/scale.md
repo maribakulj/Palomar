@@ -81,11 +81,16 @@ reproducible with the snippet above on a generated dump.
 
 ## Honest scope — what is still bounded
 
-- **Direct-children only / SRU pages stay eager.** `stream-records` reads the root
-  collection's *direct* children (the bounded pattern — a deep tree-seq retains
-  ancestors). So it streams **flat** dump collections; SRU responses (records nested
-  under `srw:record/recordData`) are small pages and use the eager `ingest`, streamed
-  at **page granularity** if a corpus spans many pages.
+- **SRU pages stream too (2026-10-25, audit S30).** `stream-records` used to read
+  only the root's *direct* children, so an SRU page (records nested under
+  `srw:records/srw:record/srw:recordData`) streamed **zero** records. It now reads
+  the StAX **event** stream and builds a tree for one record at a time: in a
+  data.xml tree an element's next sibling is only reachable once its whole content
+  is parsed, so any tree descent buffers the container (measured: a 100 MB,
+  20 000-record SRU page ran out of a 128 MB heap). With events, the same page
+  streams in **14 MB** peak heap after GC under `-Xmx128m`, exactly like the flat
+  dump of the same 20 000 records (14 MB), and each streamed record equals the
+  batch-parsed one (`convert-stream-test`).
 - **Non-MARC spokes don't stream.** Dublin Core / MODS / IIIF are single- or
   few-record formats (no flat-collection dump shape); `--stream` rejects them with the
   streamable set, rather than pretend.
@@ -98,6 +103,6 @@ reproducible with the snippet above on a generated dump.
   MARC family: a 97 MB flat dump converts in ~33 MB via the CLI where the eager path
   OOMs. The id-collision design is what makes the whole pipeline stream — the converter
   emits, a store deduplicates by id.
-- **Bounded only where it should be.** What remains eager (SRU pages, non-MARC
-  single-record formats) is small by construction; the scale path — large MARC dumps —
-  is streamed end to end.
+- **Bounded only where it should be.** What remains eager (non-MARC single-record
+  formats) is small by construction; the scale path — large MARC dumps and SRU
+  pages — is streamed end to end.
