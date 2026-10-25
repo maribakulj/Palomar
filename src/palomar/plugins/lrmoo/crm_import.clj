@@ -100,7 +100,8 @@
       :unrecovered      [[s p o]]}                    ; every other triple (see `->record`)
 
    A triple is recovered when it types a node, links two typed nodes by an
-   R-property, or gives a typed node its R33 string. The additive `:crm` view's
+   R-property, or gives a typed node its R33 string — through the F12 Nomen it is
+   identified by (P1), as `lrmoo.export` writes it, or directly. The additive `:crm` view's
    CRM twins of those (the E super-class of an F-typed node, the P super-property
    of a recovered link or string) are subsumed, not lost. Everything else is
    `:unrecovered` and reported by `->record` (audit S17)."
@@ -116,17 +117,28 @@
                              :let  [pred (lrmoo-prop->pred p)]
                              :when (and pred (not= p r33-iri) (node o) (typed s) (typed (node o)))]
                          [s pred (node o)]))
-        strings   (vec (for [[s p o] triples
-                             :when (and (= p r33-iri) (:lit o) (typed s))]
-                         [s o]))
+        ;; an entity's string is written entity -P1-> Nomen -R33-> "s" (R33's domain
+        ;; is F12 Nomen); a direct entity -R33-> "s" (older exports) is read too
+        r33-of    (group-by first (filter (fn [[_ p o]] (and (= p r33-iri) (:lit o))) triples))
+        nomen-of  (for [[s p o] triples
+                        :when (and (= p export/identified-by) (typed s) (r33-of (node o)))]
+                    [s (node o)])
+        nomens    (set (map second nomen-of))
+        strings   (vec (concat
+                        (for [[s _ o] (mapcat r33-of (filter typed (keys r33-of)))] [s o])
+                        (for [[s n] nomen-of, [_ _ o] (r33-of n)] [s o])))
         rel-twins (set (for [[s pred o] relations] [s (crm-super-property (lrmoo/iri pred)) o]))
-        str-twins (set (for [[s o] strings] [s (crm-super-property r33-iri) (:lit o)]))
+        str-twins (set (for [[n ts] r33-of
+                             :when (or (typed n) (nomens n))
+                             [_ _ o] ts]
+                         [n (crm-super-property r33-iri) (:lit o)]))
         known     (fn [s] (or (typed s) (contains? (tag-of :super-class-only) s)
                               (contains? (tag-of :ambiguous) s)))
         recovered? (fn [[s p o]]
                      (cond
-                       (= p export/rdf-type) (known s)
-                       (= p r33-iri)         (and (:lit o) (typed s))
+                       (= p export/rdf-type) (or (known s) (contains? nomens s))
+                       (= p export/identified-by) (and (typed s) (contains? nomens (node o)))
+                       (= p r33-iri)         (and (:lit o) (or (typed s) (contains? nomens s)))
                        (lrmoo-prop->pred p)  (contains? relations [s (lrmoo-prop->pred p) (node o)])
                        (:lit o)              (contains? str-twins [s p (:lit o)])
                        :else                 (contains? rel-twins [s p (node o)])))]

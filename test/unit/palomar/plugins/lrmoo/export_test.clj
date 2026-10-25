@@ -50,8 +50,12 @@
       (is (contains? ts ["urn:palomar:ent:work" RDF-TYPE {:iri F1}])))
     (testing "a reference value becomes an object-property triple"
       (is (contains? ts ["urn:palomar:ent:work" R3 {:iri "urn:palomar:ent:expr"}])))
-    (testing "a literal value becomes a literal triple"
-      (is (contains? ts ["urn:palomar:ent:expr" R33 {:lit "Madame Bovary"}])))))
+    (testing "an entity's string goes through the F12 Nomen it is identified by (R33's domain)"
+      (let [n (export/nomen-iri "urn:palomar:ent:expr" "Madame Bovary")]
+        (is (contains? ts ["urn:palomar:ent:expr" export/identified-by {:iri n}]))
+        (is (contains? ts [n RDF-TYPE {:iri export/nomen-class}]))
+        (is (contains? ts [n R33 {:lit "Madame Bovary"}]))
+        (is (not (contains? ts ["urn:palomar:ent:expr" R33 {:lit "Madame Bovary"}])))))))
 
 (deftest ntriples-rendering
   (let [nt (export/->ntriples rec)]
@@ -158,17 +162,19 @@
 
 (deftest jsonld-rendering
   (let [parsed (json/read-str (export/->jsonld rec))]
-    (testing "an @context of the namespace prefixes and one node per subject"
+    (testing "an @context of the namespace prefixes and one node per subject (Work, Expression, its Nomen)"
       (is (= "http://iflastandards.info/ns/lrm/lrmoo/" (get-in parsed ["@context" "lrmoo"])))
-      (is (= 2 (count (get parsed "@graph")))))
+      (is (= 3 (count (get parsed "@graph")))))
     (let [by-id (into {} (map (juxt #(get % "@id") identity)) (get parsed "@graph"))
           work  (get by-id "urn:palomar:ent:work")
-          expr  (get by-id "urn:palomar:ent:expr")]
+          expr  (get by-id "urn:palomar:ent:expr")
+          nomen (get by-id (export/nomen-iri "urn:palomar:ent:expr" "Madame Bovary"))]
       (testing "rdf:type -> @type (compacted); a reference -> {@id …}; a literal -> a string"
         (is (= "lrmoo:F1_Work" (get work "@type")))
         (is (= {"@id" "urn:palomar:ent:expr"} (get work "lrmoo:R3_is_realised_in")))
         (is (= "lrmoo:F2_Expression" (get expr "@type")))
-        (is (= "Madame Bovary" (get expr "lrmoo:R33_has_string")))))
+        (is (= "lrmoo:F12_Nomen" (get nomen "@type")))
+        (is (= "Madame Bovary" (get nomen "lrmoo:R33_has_string")))))
     (testing "a record with no LRMoo content yields the empty string"
       (is (= "" (export/->jsonld (model/record {:id :record/x :kind :book})))))))
 
