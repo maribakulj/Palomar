@@ -17,6 +17,13 @@
      imposed (5 agent fields → one `:canon/agent`; 010/020/022/035 → one
      `:canon/identifier`; …): the original MARC tag is not recoverable.
 
+   Agents follow their `:canon/role`: the first creator is the 100 main entry,
+   other creators and contributors are 700 added entries, a publisher is 260 $b.
+   A role-less agent counts as a creator, as in the Work key, so a record that
+   keyed a Work still keys it after a MARC round-trip. Personal vs corporate vs
+   meeting names (100/110/111, 700/710) are not on the floor, so all come back
+   as personal-name fields — part of the agent collapse loss.
+
    Output is a `<record>` string in the MARC21slim namespace (correct XML
    escaping), re-importable through `palomar.plugins.marc21`; `001` is emitted
    from the record's `:source` (its original control number) so the trip is
@@ -25,6 +32,7 @@
    a require cycle — wiring is a later assembly step."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.plugins.agents :as agents]
             [palomar.plugins.marc21 :as marc21]))
 
 (def canon->marc
@@ -33,7 +41,7 @@
    one tag back (the most generic) and reports the collapse (see ns doc)."
   [[:canon/title          "245" "a"]
    [:canon/uniform-title  "240" "a"]
-   [:canon/agent          "700" "a"]    ; 100/110/111/710 also -> agent (role lost)
+   [:canon/agent          "700" "a"]    ; per :canon/role, see `agent-fields`
    [:canon/date           "260" "c"]    ; 264 also -> date
    [:canon/identifier     "010" "a"]    ; 020/022/035 also -> identifier
    [:canon/digital-object "856" "u"]
@@ -46,6 +54,18 @@
   (->> (:assertions record)
        (filter #(and (= pred (:predicate %)) (string? (:value %))))
        (map :value)))
+
+(defn- agent-fields
+  "`[tag code value]` for each of `record`'s agents, by role: the first creator
+   (stated, else role-less, see `agents/creators`) is the 100 main entry; every
+   other agent is a 700 added entry, except a publisher, which is 260 $b."
+  [record]
+  (let [main (first (agents/creators record))]
+    (concat
+     (when main [["100" "a" main]])
+     (for [{nm :name role :role} (distinct (agents/occurrences record))
+           :when (not= nm main)]
+       (if (= :publisher role) ["260" "b" nm] ["700" "a" nm])))))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -68,7 +88,9 @@
                 ctrl    (conj (str "  <controlfield tag=\"001\">"
                                    (xml-escape ctrl) "</controlfield>"))
                 :always (into (for [[p tag code] canon->marc
-                                    v            (canon-literals record p)]
+                                    [tag code v] (if (= :canon/agent p)
+                                                   (agent-fields record)
+                                                   (for [v (canon-literals record p)] [tag code v]))]
                                 (datafield-line tag code v))))]
     (when (seq lines)
       (str "<record xmlns=\"http://www.loc.gov/MARC21/slim\">\n"

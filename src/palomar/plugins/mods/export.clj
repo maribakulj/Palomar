@@ -9,10 +9,12 @@
    reconstructs only that core, and the loss report accounts the gap (ADR 0015):
 
    - **export edge, `:under-specified`** — the many-to-one collapses the floor
-     imposes. MODS distinguishes a `name` from an `originInfo/publisher` and an
-     `abstract` from a `note`, but both pairs collapse onto one `:canon/agent` /
-     one `:canon/note` at import; on export every agent is emitted as `<name>` and
-     every note as `<note>`, and the distinction is unrecoverable.
+     imposes. MODS distinguishes an `abstract` from a `note`, but both collapse
+     onto one `:canon/note` at import; on export every note is emitted as `<note>`.
+     Agents keep their `:canon/role`: a publisher comes back as
+     `originInfo/publisher`, every other agent as `<name>`. A `<name>` does not
+     carry its creator/contributor role here, so that distinction (from another
+     spoke) is reported as `:under-specified` when present.
    - **import edge, `:dropped`** — `titleInfo/subTitle` is captured natively
      (`:mods/subtitle`) but the floor has no home for it, so it never reaches
      `:canon/*` and does not survive the trip. (The unmodelled top-level elements —
@@ -27,6 +29,7 @@
    require cycle — wiring is the `palomar.convert` assembly step."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.plugins.agents :as agents]
             [palomar.plugins.mods :as mods]))
 
 (defn- xml-escape [s]
@@ -37,13 +40,13 @@
 
 (def canon->mods
   "Ordered canonical→MODS `[predicate open-tags close-tags]`. MODS is nested, so
-   each value is wrapped in a small element tree rather than a flat tag. `name` and
-   `originInfo/publisher` both collapsed onto `:canon/agent` at import, and
-   `abstract`/`note` onto `:canon/note`; export emits the generic element and
-   reports the collapse (see ns doc). Ordered for a deterministic serialisation."
+   each value is wrapped in a small element tree rather than a flat tag.
+   `abstract`/`note` collapsed onto `:canon/note` at import; export emits the
+   generic element and reports the collapse (see ns doc). Agents are placed by
+   role (`agent-elements`). Ordered for a deterministic serialisation."
   [[:canon/title          "<titleInfo><title>"        "</title></titleInfo>"]
    [:canon/uniform-title  "<titleInfo type=\"uniform\"><title>" "</title></titleInfo>"]
-   [:canon/agent          "<name><namePart>"          "</namePart></name>"]          ; publisher also -> agent
+   [:canon/agent          "<name><namePart>"          "</namePart></name>"]          ; publisher -> originInfo, see `agent-elements`
    [:canon/date           "<originInfo><dateIssued>"   "</dateIssued></originInfo>"]
    [:canon/identifier     "<identifier>"               "</identifier>"]
    [:canon/note           "<note>"                     "</note>"]                     ; abstract also -> note
@@ -60,6 +63,15 @@
 (defn- element-line [open close value]
   (str "  " open (xml-escape value) close))
 
+(defn- agent-elements
+  "`[open close value]` for each of `record`'s agents: a publisher is
+   `originInfo/publisher`, every other agent a `name` (`open`/`close`)."
+  [record open close]
+  (for [{nm :name role :role} (distinct (agents/occurrences record))]
+    (if (= :publisher role)
+      ["<originInfo><publisher>" "</publisher></originInfo>" nm]
+      [open close nm])))
+
 (defn ->mods-xml
   "Render `record`'s canonical content as a MODS v3 `<mods>` document, or `nil` if
    it carries nothing exportable. `recordInfo/recordIdentifier` comes from `:source`
@@ -67,7 +79,9 @@
   [record]
   (let [rid   (:source record)
         body  (for [[p open close] canon->mods
-                    v              (canon-literals record p)]
+                    [open close v] (if (= :canon/agent p)
+                                     (agent-elements record open close)
+                                     (for [v (canon-literals record p)] [open close v]))]
                 (element-line open close v))
         lines (cond-> (vec body)
                 rid (conj (element-line "<recordInfo><recordIdentifier>"
@@ -104,6 +118,12 @@
        distinct
        (sort-by str)))
 
+(defn- name-role-lost?
+  "True when an agent exported as a bare `<name>` had a stated creator or
+   contributor role — the one agent distinction this export does not carry."
+  [record]
+  (boolean (some #(#{:creator :contributor} (:role %)) (agents/occurrences record))))
+
 (defn export-losses
   "Loss for the canonical→MODS round-trip (ADR 0015): the captured-but-unmapped
    natives dropped through the floor (`:import :dropped`), and the many-to-one
@@ -117,12 +137,15 @@
                :source-field f
                :message      (str (name f) " captured natively but not lifted to the floor — dropped on a pivot round-trip")}))
    (for [p (sort-by str collapsed-predicates)
-         :when (seq (canon-literals record p))]
+         :when (and (seq (canon-literals record p))
+                    (or (not= :canon/agent p) (name-role-lost? record)))]
      (dx/loss {:category     :under-specified
                :subject      (:id record)
                :edge         :export
                :source-field p
-               :message      (str (name p) " collapsed several MODS elements at import; the original element is not recoverable")}))))
+               :message      (if (= :canon/agent p)
+                               "creator/contributor role not carried by MODS <name> on export"
+                               (str (name p) " collapsed several MODS elements at import; the original element is not recoverable"))}))))
 
 (defn exporter
   "ADR 0007 exporter: render the canonical view of `records` as MODS v3 XML and
