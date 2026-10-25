@@ -22,9 +22,12 @@
    namespace — URI-encoded or aliased — is irrelevant. Predicate *names* are
    prefixed `f` (`:marc21/f245_a`): a keyword name may not start with a digit and
    an un-prefixed `:marc21/245_a` would not round-trip through EDN (ADR 0001)."
-  (:require [clojure.string :as str]
+  (:require [clojure.data.xml :as xml]
+            [clojure.data.xml.tree :as xml-tree]
+            [clojure.string :as str]
             [palomar.model :as model]
-            [palomar.xml :as rx]))
+            [palomar.xml :as rx])
+  (:import [clojure.data.xml.event EmptyElementEvent EndElementEvent StartElementEvent]))
 
 (defn local-name
   "Local name (namespace stripped) of an XML element, or nil for a non-element."
@@ -158,19 +161,51 @@
 
 (defn stream-records
   "Lazily parse a MARCXML `readable` (a `Reader`/`InputStream`) into a **lazy** seq
-   of IR Records — the root collection's **direct children** matching `:record?` —
-   in memory bounded by one record at a time (pull-parsed: each record is realised,
-   built and released as the seq is consumed). Same policies as `parse-records`.
+   of IR Records — every element matching `:record?`, at any depth, in document
+   order — in memory bounded by one record at a time (pull-parsed: each record is
+   realised, built and released as the seq is consumed). Same policies as
+   `parse-records`.
+
+   A record is not searched inside (a record never nests a record), and the
+   descent into other elements is itself lazy, so an SRU page
+   (`searchRetrieveResponse/records/record/recordData/record`) streams like a flat
+   dump; before, only the root's direct children were read, and an SRU page
+   streamed zero records (audit S30).
 
    The caller MUST keep `readable` open for the whole consumption (e.g. via
-   `with-open`) and must not retain the seq head (a `reduce`/`run!` is fine). For
-   the flat-collection *dump* shape, where records are direct children of the root;
-   SRU-nested pages are small and use `parse-records`. Measured bounded
-   (`docs/eval/scale.md`)."
+   `with-open`) and must not retain the seq head (a `reduce`/`run!` is fine).
+   Measured bounded on a flat dump and on an SRU page (`docs/eval/scale.md`)."
   [readable {:keys [record?] :as policies}]
-  (->> (:content (rx/parse readable))
-       (filter record?)
-       (map #(build-record policies %))))
+  ;; Read events, not a tree: in a data.xml tree an element's following sibling
+  ;; is only reachable once its whole content has been parsed, so any descent
+  ;; that holds the sibling buffers the container — an SRU page's every record
+  ;; (measured: an OOM in 128 MB on a 100 MB page). Events are taken one record
+  ;; at a time and only that record is built as a tree.
+  (letfn [(start? [e] (instance? StartElementEvent e))
+          (record-start? [e]
+            (and (or (start? e) (instance? EmptyElementEvent e))
+                 (record? (xml/element (:tag e) (:attrs e)))))
+          (take-element [evs]
+            (if (instance? EmptyElementEvent (first evs))
+              [[(first evs)] (rest evs)]
+              (loop [acc [(first evs)] depth 1 evs (rest evs)]
+                (if-let [s (seq evs)]
+                  (let [e (first s)]
+                    (cond
+                      (start? e)                          (recur (conj acc e) (inc depth) (rest s))
+                      (instance? EndElementEvent e)       (if (= 1 depth)
+                                                            [(conj acc e) (rest s)]
+                                                            (recur (conj acc e) (dec depth) (rest s)))
+                      :else                               (recur (conj acc e) depth (rest s))))
+                  (throw (ex-info "XML ends inside a record" {}))))))
+          (records [evs]
+            (lazy-seq
+             (when-let [s (seq evs)]
+               (if (record-start? (first s))
+                 (let [[own more] (take-element s)]
+                   (cons (xml-tree/event-tree own) (records more)))
+                 (records (rest s))))))]
+    (map #(build-record policies %) (records (rx/event-seq readable)))))
 
 ;; ---------------------------------------------------------------------------
 ;; MARCXChange (BnF) family policies — shared by INTERMARC and UNIMARC, which

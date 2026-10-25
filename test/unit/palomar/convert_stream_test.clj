@@ -120,3 +120,19 @@
                                             (fn [_] (swap! n inc)))]
             (is (= 5600 (:records res) @n))))
         (finally (.delete (java.io.File. path)))))))
+
+(deftest an-sru-page-streams-like-a-flat-dump
+  (testing "nested SRU records stream (audit S30): the same records as the batch parse"
+    (doseq [[from path] [[:unimarc "test/fixtures/documentary/unimarc/sru/bnf-sru-verne-unimarc.xml"]
+                         [:intermarc "test/fixtures/documentary/intermarc/sru/intermarcXchange/bib-flaubert-madame-bovary-start1-max30.xml"]]]
+      (let [batch    (:records (convert/to-wemi from {} (slurp path)))
+            streamed (with-open [r (io/reader path)]
+                       (doall (map :id (convert/stream-source from {} r))))]
+        (is (pos? (count streamed)) (str from " streamed records"))
+        (is (= (map :id batch) streamed) (str from " streamed = batch")))))
+  (testing "a streamed record is identical to the batch-parsed one, fragments included"
+    (let [path  "test/fixtures/documentary/unimarc/sru/bnf-sru-verne-unimarc.xml"
+          plug  (spokes/plugin :unimarc)
+          batch (:records ((:importer plug) {} (slurp path)))
+          strm  (with-open [r (io/reader path)] (doall (convert/stream-source :unimarc {} r)))]
+      (is (= batch strm)))))
