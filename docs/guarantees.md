@@ -12,7 +12,7 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 
 | Guarantee | Pinned by |
 |-----------|-----------|
-| For the seven source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O), every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
+| For the seven source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O, N-Quads), every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
 | An exporter that omits a value without reporting it is caught. | `palomar.fidelity-test/a-silent-omission-is-caught` |
 | A publisher or contributor never keys a Work; only a creator (or an agent of unstated role) does. | `palomar.plugins.lrmoo.project-test/a-publisher-alone-does-not-key-a-work` |
 | An original and its translation are one Work and two Expressions. | `palomar.plugins.lrmoo.project-test/an-original-and-its-translation-are-one-work-two-expressions` |
@@ -28,6 +28,8 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 | One fact is one assertion whatever status it was derived under, and a rule re-deriving a rejected claim does not bring it back. | `palomar.runtime-test/the-same-fact-is-one-assertion-whatever-its-status` |
 | An assertion has a content-derived id that survives curation; equal values hash alike whatever their construction. | `palomar.model-identity-test/an-assertion-keeps-its-id-through-curation`, `palomar.model-identity-test/equal-values-have-one-canonical-form` |
 | Every curation decision is kept on the record (verdict, statuses, reason, curator, time) and written to PROV-O as an activity that used, and may invalidate, the statement. | `palomar.curate-test/decisions-travel-with-the-record`, `palomar.plugins.lrmoo.prov-test/a-curation-decision-is-a-prov-activity` |
+| The N-Quads and TriG datasets keep facts, proposals, history and provenance in separate named graphs: an uncurated inference is never in the facts graph, a rejected claim only in the history graph. | `palomar.plugins.lrmoo.dataset-test/an-uncurated-inference-is-a-proposal-not-a-fact`, `palomar.plugins.lrmoo.dataset-test/a-rejected-claim-moves-to-the-history-graph` |
+| `convert --facts-only` states no uncurated inference in a flat RDF target. | `palomar.cli-test/convert-facts-only-states-no-uncurated-inference` |
 | A IIIF manifest missing a Presentation 3.0 MUST is not emitted, and the reason is reported. | `palomar.plugins.iiif.export-test/an-invalid-manifest-is-refused-with-a-diagnostic` |
 | MARC field occurrences keep their subfields together, in order, with their indicators; the leader is kept. | `palomar.plugins.marc21-test/each-field-occurrence-keeps-its-subfields-together-and-in-order` |
 | Distinct source identifiers do not share a record id (barring a 40-bit digest collision when slugging changed the identifier). | `palomar.plugins.record-id-test/identifiers-that-slug-alike-stay-distinct` |

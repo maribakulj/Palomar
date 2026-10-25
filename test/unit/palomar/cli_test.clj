@@ -383,3 +383,11 @@
       (is (zero? exit))
       (is (str/includes? out "wasInvalidatedBy"))
       (is (str/includes? out "\"curator-1\"")))))
+
+(deftest convert-facts-only-states-no-uncurated-inference
+  (testing "--facts-only leaves the :proposed WEMI links out of a flat RDF target"
+    (let [plain (cli/run ["convert" dc "--from" "dc" "--to" "ntriples"])
+          facts (cli/run ["convert" dc "--from" "dc" "--to" "ntriples" "--facts-only"])]
+      (is (str/includes? (:out plain) "R4_embodies"))
+      (is (zero? (:exit facts)))
+      (is (not (str/includes? (:out facts) "R4_embodies"))))))

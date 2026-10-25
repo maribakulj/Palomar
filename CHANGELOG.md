@@ -18,6 +18,10 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Named-graph datasets** (ADR 0029): `:nquads` and `:trig` targets write
+  facts, proposals, history and provenance as separate named graphs, typed in
+  the default graph; `ntriples/parse-quads` reads N-Quads; `convert
+  --facts-only` exports only in-force claims to a flat target.
 - **Curation history** (ADR 0028): each decision of `curate`/`supersede` is
   stamped on the record as an annotation (verdict, statuses, reason, the
   replacement's id, and the caller-supplied curator and time);

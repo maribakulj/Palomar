@@ -274,30 +274,67 @@
 (defn- ttl-iri [iri] (or (compact-iri iri) (str "<" iri ">")))
 (defn- ttl-term [o] (if (:iri o) (ttl-iri (:iri o)) (str "\"" (nt-escape (:lit o)) "\"" (literal-suffix o))))
 
+(defn- turtle-prefixes
+  "The `@prefix` lines for the namespaces `triples` use."
+  [triples]
+  (let [used (into (sorted-set)
+                   (comp (mapcat (fn [[_ p o]]
+                                   [(when (not= p rdf-type) (compact-prefix p))
+                                    (when (:iri o) (compact-prefix (:iri o)))]))
+                         (remove nil?))
+                   triples)]
+    (for [pfx used] (str "@prefix " pfx ": <" (rdf-prefixes pfx) "> ."))))
+
+(defn- turtle-statements
+  "`triples` as Turtle statements grouped by subject, each line indented by
+   `indent`: `a` for `rdf:type`, `;` between predicates, `,` between objects."
+  [triples indent]
+  (let [by-subj (group-by first triples)]
+    (for [s (distinct (map first triples))]
+      (let [preds (distinct (map second (by-subj s)))
+            lines (for [p preds]
+                    (let [os (->> (by-subj s) (filter #(= p (second %))) (map #(nth % 2)))]
+                      (str indent "    " (if (= p rdf-type) "a" (ttl-iri p)) " "
+                           (str/join " , " (map ttl-term os)))))]
+        (str indent (ttl-iri s) "\n" (str/join " ;\n" lines) " .")))))
+
 (defn render-turtle
   "Render a `[s p o]` triple seq as Turtle: `@prefix` headers for the namespaces
    actually used, then statements grouped by subject — `a` for `rdf:type`, `;`
    between predicates and `,` between repeated objects. nil for an empty seq."
   [triples]
   (when (seq (checked triples))
-    (let [used     (into (sorted-set)
-                         (comp (mapcat (fn [[_ p o]]
-                                         [(when (not= p rdf-type) (compact-prefix p))
-                                          (when (:iri o) (compact-prefix (:iri o)))]))
-                               (remove nil?))
-                         triples)
-          header   (str/join "\n" (for [pfx used]
-                                    (str "@prefix " pfx ": <" (rdf-prefixes pfx) "> .")))
-          subjects (distinct (map first triples))
-          by-subj  (group-by first triples)
-          stmt     (fn [s]
-                     (let [preds (distinct (map second (by-subj s)))
-                           lines (for [p preds]
-                                   (let [os (->> (by-subj s) (filter #(= p (second %))) (map #(nth % 2)))]
-                                     (str "    " (if (= p rdf-type) "a" (ttl-iri p)) " "
-                                          (str/join " , " (map ttl-term os)))))]
-                       (str (ttl-iri s) "\n" (str/join " ;\n" lines) " .")))]
-      (str header (when (seq used) "\n\n") (str/join "\n" (map stmt subjects))))))
+    (let [header (turtle-prefixes triples)]
+      (str (str/join "\n" header) (when (seq header) "\n\n")
+           (str/join "\n" (turtle-statements triples ""))))))
+
+(defn render-nquads
+  "Render `graphs` — `[[graph-iri triples] …]`, `graph-iri` nil for the default
+   graph — as N-Quads (https://www.w3.org/TR/n-quads/), one `<s> <p> o <g> .` per
+   line. Every IRI is checked, graph names included."
+  [graphs]
+  (str/join "\n"
+            (for [[g ts] graphs
+                  :when  (seq ts)
+                  [s p o] (checked ts)]
+              (do (when g (check-iri! g))
+                  (str "<" s "> <" p "> " (nt-object o) (when g (str " <" g ">")) " .")))))
+
+(defn render-trig
+  "Render `graphs` (as `render-nquads`) as TriG (https://www.w3.org/TR/trig/): the
+   prefixes of every graph, then each non-empty graph as a `<g> { … }` block of
+   Turtle statements (the default graph's statements unwrapped). nil when empty."
+  [graphs]
+  (let [graphs (filter (comp seq second) graphs)]
+    (when (seq graphs)
+      (doseq [[g ts] graphs] (when g (check-iri! g)) (checked ts))
+      (let [header (turtle-prefixes (mapcat second graphs))]
+        (str (str/join "\n" header) (when (seq header) "\n\n")
+             (str/join "\n\n"
+                       (for [[g ts] graphs]
+                         (if g
+                           (str "<" g "> {\n" (str/join "\n" (turtle-statements ts "    ")) "\n}")
+                           (str/join "\n" (turtle-statements ts ""))))))))))
 
 (defn render-jsonld
   "Render a `[s p o]` triple seq as compacted JSON-LD: an `@context` of the

@@ -32,6 +32,9 @@
 (defn- nt-strings [doc]
   (into #{} (mapcat (fn [[s _ o]] (keep #(or (:lit %) (:iri %)) [s o]))) (nt/parse doc)))
 
+(defn- nq-strings [doc]
+  (into #{} (mapcat (fn [[s _ o]] (keep #(or (:lit %) (:iri %)) [s o]))) (nt/parse-quads doc)))
+
 (defn- json-values [x]
   (cond
     (string? x)     [x]
@@ -67,7 +70,8 @@
    :dc         xml-strings
    :marc21     xml-strings
    :mods       xml-strings
-   :prov       nt-strings})
+   :prov       nt-strings
+   :nquads     nq-strings})
 
 (defn decodable-targets
   "The targets whose output this audit can decode."
