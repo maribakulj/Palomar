@@ -18,6 +18,14 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Publication and production events** (ADR 0036): `palomar.plugins.events`
+  turns MARC21 260/264, UNIMARC 210/214 and INTERMARC 260 into an LRMoo
+  `F30_Manifestation_Creation` that `R24_created` the Manifestation, with its
+  E52 time-span, E53 place and E39 actor; written in RDF, pure CRM (E12 + E65,
+  P94) and Linked Art (a Publishing activity with place and time-span). A
+  mapping may filter on its field's locator (`:mapping/where`, e.g. MARC 264
+  second indicator): 264 _1 $b is now a publisher.
+
 - **Graph templates in the rule language** (ADR 0035): a `:construct`
   production (a vector of `[s p o]` triples and `(mint kind part…)`
   declarations), the terms `mint` / `ref` / `norm` / `str` / `or`, and the

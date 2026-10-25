@@ -22,7 +22,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0006](./0006-deps-resolution-and-sandbox.md) | Maven coordinates by default, git override alias for restricted networks | Accepted |
 | [0007](./0007-plugins-as-data.md) | Plugins as data, not protocols | Accepted |
 | [0008](./0008-idempotency-at-merge.md) | Idempotency at merge: productions deduplicate by structural identity | Accepted (amended by 0020, 0023, 0027) |
-| [0009](./0009-mapping-schema.md) | Mapping schema: data-shaped sugar over rules | Accepted (partially superseded by 0011; extended by 0021) |
+| [0009](./0009-mapping-schema.md) | Mapping schema: data-shaped sugar over rules | Accepted (partially superseded by 0011; extended by 0021 and 0036) |
 | [0010](./0010-stdlib-extensibility.md) | Stdlib extensibility: predicates and transforms via plugins | Accepted |
 | [0011](./0011-fragments-for-qualified-values.md) | Fragments as the canonical home for qualified values | Accepted (entity-minting added by 0014; normalize-minted fragments by 0021) |
 | [0012](./0012-fragment-identity-scheme.md) | Fragment identity scheme | Accepted (extended by 0016) |
@@ -49,6 +49,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0033](./0033-loss-taxonomy-and-relation-fidelity.md) | Loss aspects, a projection edge, and relation fidelity | Accepted |
 | [0034](./0034-library-api-and-edn-ir.md) | A stable library API and the pivot as an EDN file | Accepted |
 | [0035](./0035-construct-templates.md) | Graph templates in the rule language: construct, mint, optional, not | Accepted |
+| [0036](./0036-publication-events.md) | Publication and production events | Accepted |
 
 ## Template
 

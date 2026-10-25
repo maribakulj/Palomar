@@ -28,6 +28,9 @@
    - publisher (`:canon/agent`, role `:publisher`) -> `used_for` Activity classified
      aat:300054686 (Publishing), carried_out_by Group.
    - a contributor is neither, and is reported as export loss.
+   - a publication event (ADR 0036) -> a Publishing `used_for` Activity with its
+     actors, `took_place_at` Place and `timespan` (named by the date as
+     transcribed); with events, they replace the publishers' bare activity.
    - note (`:canon/note`)      -> `referred_to_by` LinguisticObject (Description / Brief Text)
    - digital (`:canon/digital-object`) -> `representation` VisualItem digitally_shown_by DigitalObject
 
@@ -41,6 +44,7 @@
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.view :as view]))
@@ -95,6 +99,18 @@
    "classified_as"  [(type-obj aat-publishing "Publishing")]
    "carried_out_by" (mapv (fn [n] {"type" "Group" "_label" n}) names)})
 
+(defn- event-activity
+  "A publication event (ADR 0036) as a Linked Art Publishing `Activity`: who
+   carried it out, where, and its time-span named by the date as transcribed
+   (the source gives no ISO date to bound it)."
+  [{:keys [agents places dates]}]
+  (cond-> {"type"          "Activity"
+           "classified_as" [(type-obj aat-publishing "Publishing")]}
+    (seq agents) (assoc "carried_out_by" (mapv (fn [[id n]] {"id" (export/entity-iri id) "type" "Group" "_label" n}) agents))
+    (seq places) (assoc "took_place_at" (mapv (fn [[id n]] {"id" (export/entity-iri id) "type" "Place" "_label" n}) places))
+    (seq dates)  (assoc "timespan" {"type" "TimeSpan"
+                                    "identified_by" (mapv (fn [d] {"type" "Name" "content" d}) dates)})))
+
 (defn- digital-obj [url] {"type" "VisualItem"
                           "digitally_shown_by" [{"type" "DigitalObject"
                                                  "classified_as" [(type-obj aat-digital-image "Digital Image")]
@@ -125,6 +141,38 @@
        (filter #(and (= pred (:predicate %)) (string? (:value %))))
        (map :value) distinct vec))
 
+(def ^:private event-predicates
+  "The predicates of a publication event (ADR 0036), which `event-activity` writes."
+  #{:lrmoo/R24_created :crm/P4_has_time-span :crm/P82_at_some_time_within
+    :crm/P7_took_place_at :crm/P14_carried_out_by})
+
+(defn- objects [record s p]
+  (keep #(when (and (= s (:subject %)) (= p (:predicate %))) (:value %)) (:assertions record)))
+
+(defn- targets [record s p] (keep #(when (model/reference-value? %) (:value/target %)) (objects record s p)))
+
+(defn- events-of
+  "The publication events whose R24 created Manifestation `manif-id`, each as
+   `{:id :agents :places :dates :nodes}`: the actors and places as `[id name]`
+   (a minted node has an IRI, so Linked Art can reference it), and `:nodes`,
+   the time-span, place and actor nodes it reaches."
+  [record manif-id]
+  (for [a (:assertions record)
+        :when (and (= :lrmoo/R24_created (:predicate a)) (= manif-id (get-in a [:value :value/target])))
+        :let [ev  (:subject a)
+              ts  (targets record ev :crm/P4_has_time-span)
+              pl  (targets record ev :crm/P7_took_place_at)
+              ac  (targets record ev :crm/P14_carried_out_by)
+              nm  (fn [ids] (vec (for [id (distinct ids)
+                                       :let [n (first (filter string? (objects record id :crm/P190_has_symbolic_content)))]
+                                       :when n]
+                                   [id n])))]]
+    {:id     ev
+     :agents (nm ac)
+     :places (nm pl)
+     :dates  (vec (distinct (mapcat #(filter string? (objects record % :crm/P82_at_some_time_within)) ts)))
+     :nodes  (set (concat [ev] ts pl ac))}))
+
 (defn- text-iri [m] (or (:iri m) (export/entity-iri (:id m))))
 
 (defn- texts
@@ -151,6 +199,7 @@
         others     (map #(dissoc (name-obj %) "classified_as") (rest names))
         creators   (when record-fields? (agents/creators record))
         publishers (when record-fields? (agents/with-role record :publisher))
+        events     (events-of record (:id manif))
         notes      (when record-fields? (canon-vals record :canon/note))
         digis      (when record-fields? (canon-vals record :canon/digital-object))
         idents     (cond-> []
@@ -165,7 +214,10 @@
                                                          (into idents)))
       (seq creators)          (assoc "created_by" {"type" "Creation"
                                                    "carried_out_by" (persons record creators)})
-      (seq publishers)        (assoc "used_for" [(publishing publishers)])
+      ;; the publication events say who published, where and when; without
+      ;; them the record's publishers make one Publishing activity
+      (seq events)            (assoc "used_for" (mapv event-activity events))
+      (and (empty? events) (seq publishers)) (assoc "used_for" [(publishing publishers)])
       work                    (assoc "part_of" [(cond-> {"id" (text-iri (or (view/entity-by-id record work) {:id work}))
                                                          "type" "PropositionalObject"}
                                                   work-title (assoc "_label" work-title))])
@@ -259,6 +311,10 @@
   [record]
   (-> (->> (:assertions record)
            (remove #(contains? expressed (:predicate %)))
+           (remove (let [written (into #{} (comp (mapcat #(events-of record (:id (:manif %)))) (mapcat :nodes))
+                                       (texts record))]
+                     #(and (written (:subject %))
+                           (or (event-predicates (:predicate %)) (= :crm/P190_has_symbolic_content (:predicate %))))))
            (remove #(= :canon/loss-marker (:predicate %)))
            (map (juxt :subject :predicate))
            distinct

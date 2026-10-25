@@ -101,7 +101,7 @@
    CIDOC-CRM class (so agents `E21_Person`, subjects `E55_Type`/`E53_Place`, … are
    typed, not just F1–F5)."
   [k]
-  (or (lrmoo/entity-kind? k) (crm-term? k)))
+  (or (lrmoo/entity-kind? k) (= :lrmoo/F30_Manifestation_Creation k) (crm-term? k)))
 
 (def appellation-class
   "IRI of `E41_Appellation` (CIDOC CRM), the class of the node an entity's

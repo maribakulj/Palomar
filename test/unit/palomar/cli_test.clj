@@ -207,11 +207,12 @@
       (is (= 0 exit))
       (is (str/includes? out "(flag)"))
       (is (str/includes? out "4 needs-review"))))
-  (testing "MARC21 (two records, added entries only — no Work): four proposals curated"
+  (testing "MARC21 (two records, added entries only — no Work): four WEMI proposals and
+            seven per publication event (R24, P4, P82, P7, P14 and the two names, ADR 0036)"
     (let [{:keys [exit out]} (cli/run ["apply-repairs" marc21 "--from" "marc21" "--policy" "reject"])]
       (is (= 0 exit))
-      (is (str/includes? out "4 proposals curated"))
-      (is (str/includes? out "4 rejected")))))
+      (is (str/includes? out "18 proposals curated"))
+      (is (str/includes? out "18 rejected")))))
 
 (deftest apply-repairs-exports-the-curated-records
   (testing "--to exports the curated records; the curation outcome moves to stderr"
