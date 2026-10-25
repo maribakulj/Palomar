@@ -37,6 +37,12 @@
    `created_by`) take creators first and fall back to role-less agents, never to
    a contributor or publisher.
 
+   `:canon/width` and `:canon/height` (added 2026-10-25) qualify a
+   `:canon/digital-object` with the extent of the IIIF Canvas it is painted on
+   (positive integers). The IIIF importer reads them from the source; a Canvas
+   MUST have an extent, so the IIIF exporter places an image only when both
+   are known.
+
    ## The core stays vocabulary-blind
 
    This is a plugin like any other (ADR 0003 §Consequences). The core —
@@ -86,7 +92,7 @@
 (def qualifier-coords
   "The canonical qualifier coords (ADR 0011): predicates that ride on a
    fragment to qualify a documentary value, never documentary themselves."
-  #{:canon/lang :canon/role})
+  #{:canon/lang :canon/role :canon/width :canon/height})
 
 (def agent-roles
   "The values a `:canon/role` coord takes on a `:canon/agent` fragment."

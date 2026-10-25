@@ -12,10 +12,20 @@
 
    | IIIF                                   | canonical               |
    |----------------------------------------|-------------------------|
-   | `label` (first language string)        | `:canon/title`          |
+   | `label`, every string, per language    | `:canon/title` + `:canon/lang` |
    | `id` (the manifest URI)                | `:canon/identifier`     |
-   | each Image `body.id` under `items`     | `:canon/digital-object` |
-   | `summary`, `metadata` (label: value)   | `:canon/note`           |
+   | each painted Image body (see below)    | `:canon/digital-object` + `:canon/width`/`:canon/height` |
+   | `summary`, every string, per language  | `:canon/note` + `:canon/lang` |
+   | `metadata` (label: value)              | `:canon/note`           |
+
+   Language maps are kept, not flattened: each string becomes a fragment
+   carrying its `:canon/lang` (the IIIF `none` key means no language), the same
+   shape a DC `xml:lang` title takes (ADR 0011). An image is read only where the
+   spec paints it — Canvas → AnnotationPage → Annotation with motivation
+   `painting` → body (a `Choice`'s items included) — and keeps its Canvas's
+   `width`/`height`, the extent a Canvas MUST have, so the exporter can rebuild
+   a valid Canvas. Thumbnails and other Images elsewhere in the tree are not
+   images of the object.
 
    A IIIF manifest rarely carries a bibliographic creator (the cookbook fixtures
    carry none), so a creator-less manifest projects to a Manifestation + Expression
@@ -29,8 +39,12 @@
    Unmodelled top-level manifest keys (`behavior`, `rights`, `provider`, `navDate`,
    `seeAlso`, `structures`, …) are reported as import-edge `:loss/dropped`
    (ADR 0015); JSON-LD machinery (`@context`, `type`) is not content and is
-   ignored. Canvas-level detail (per-canvas labels, image dimensions, services) is
-   a documented V1 limitation.
+   ignored. Inside `items`, every unmodelled Canvas key (`label`, `thumbnail`,
+   `annotations`, `duration`, …), every non-painting Annotation and every painted
+   body that is not an Image (Text, Sound, Video) is reported too, one loss per
+   distinct kind, so the flattening of the Canvas tree is never silent.
+   `metadata` keeps its first string per label and value; a pair with several
+   languages is reported as `:coerced`.
 
    ## Scope (V1)
 
@@ -46,29 +60,54 @@
 ;; JSON-LD navigation
 ;; ---------------------------------------------------------------------------
 
-(defn- lang-strings
-  "All strings inside a IIIF value: a plain string, an array, or a language map
-   `{\"en\" [\"…\"]}` (3.0). Flattens language maps to their strings."
+(defn- lang-entries
+  "`[[lang string] …]` for a IIIF value, in document order. A 3.0 language map
+   `{\"en\" [\"…\"]}` gives each string with its language (the `none` key, no
+   language, gives nil); a plain string or array (2.x style) has no language."
   [v]
   (cond
-    (string? v)     [v]
-    (sequential? v) (filter string? v)
-    (map? v)        (mapcat lang-strings (vals v))
+    (string? v)     [[nil v]]
+    (sequential? v) (for [s v :when (string? s)] [nil s])
+    (map? v)        (for [[lang ss] v
+                          s        (if (sequential? ss) ss [ss])
+                          :when    (string? s)]
+                      [(when (not= "none" lang) lang) s])
     :else           []))
 
-(defn- first-lang [v] (first (lang-strings v)))
+(defn- first-lang [v] (second (first (lang-entries v))))
 
-(defn- image-ids
-  "Every Image resource id reachable under `node` (depth-first) — the digitised
-   surrogates painted onto the manifest's canvases."
-  [node]
-  (cond
-    (map? node)        (concat (when (and (= "Image" (get node "type"))
-                                          (string? (get node "id")))
-                                 [(get node "id")])
-                               (mapcat image-ids (vals node)))
-    (sequential? node) (mapcat image-ids node)
-    :else              nil))
+(defn- many-langs? [v] (< 1 (count (distinct (map first (lang-entries v))))))
+
+(defn- as-seq [v] (cond (sequential? v) v (some? v) [v] :else []))
+
+(defn- painting? [anno]
+  (some #{"painting"} (as-seq (get anno "motivation"))))
+
+(defn- bodies
+  "The body resources of an Annotation, a `Choice`'s alternatives included."
+  [anno]
+  (mapcat #(if (= "Choice" (get % "type")) (filter map? (get % "items")) [%])
+          (filter map? (as-seq (get anno "body")))))
+
+(defn- canvases [m] (filter #(and (map? %) (= "Canvas" (get % "type"))) (get m "items")))
+
+(defn- annotations [canvas]
+  (for [page (filter map? (get canvas "items"))
+        anno (filter map? (get page "items"))]
+    anno))
+
+(defn- painted-images
+  "`{:id :width :height}` for every Image painted on the manifest's canvases, in
+   canvas order, first occurrence of an id kept. `:width`/`:height` are the
+   Canvas's extent."
+  [m]
+  (->> (for [canvas (canvases m)
+             anno   (annotations canvas)
+             :when  (painting? anno)
+             body   (bodies anno)
+             :when  (and (= "Image" (get body "type")) (string? (get body "id")))]
+         {:id (get body "id") :width (get canvas "width") :height (get canvas "height")})
+       (reduce (fn [acc img] (if (some #(= (:id img) (:id %)) acc) acc (conj acc img))) [])))
 
 ;; ---------------------------------------------------------------------------
 ;; Extraction to native :iiif/* assertions
@@ -82,36 +121,83 @@
   "Top-level manifest keys this V1 parser reads."
   #{"id" "label" "items" "summary" "metadata"})
 
+(def ^:private handled-canvas-keys
+  "Canvas keys this V1 parser reads (the extent and the painted content)."
+  #{"id" "items" "width" "height"})
+
 (defn- assertion [rid pred v]
   (model/assertion {:subject    rid
                     :predicate  (keyword "iiif" pred)
                     :value      v
                     :provenance (model/provenance {:pass :ingest})}))
 
-(defn- manifest-assertions [rid m]
-  (concat
-   (when-let [t (first-lang (get m "label"))] [(assertion rid "label" t)])
-   (when-let [id (get m "id")] [(assertion rid "id" id)])
-   (when-let [s (first-lang (get m "summary"))] [(assertion rid "summary" s)])
-   (for [img (distinct (image-ids (get m "items")))]
-     (assertion rid "image" img))
-   (for [pair (get m "metadata")
-         :let  [l (first-lang (get pair "label"))
-                v (first-lang (get pair "value"))]
-         :when (and l v)]
-     (assertion rid "metadata" (str l ": " v)))))
+(defn- qualified
+  "One occurrence of `pred` as a fragment (ADR 0011/0012): the record-level
+   reference, the value on the fragment, and one coord per `coords` entry
+   (`{\"lang\" \"en\"}` → `:iiif/lang`). Returns `{:fragment :assertions}`."
+  [rid pred idx v coords]
+  (let [fid (model/mint-fragment-id rid [(keyword "iiif" pred) idx])]
+    {:fragment   (model/fragment {:id fid :source [:json (keyword "iiif" pred) idx]})
+     :assertions (into [(assertion rid pred (model/reference fid))
+                        (assertion fid pred v)]
+                       (for [[k cv] coords :when (some? cv)] (assertion fid k cv)))}))
+
+(defn- manifest-content
+  "`{:fragments :assertions}` — the native `:iiif/*` content of manifest `m`."
+  [rid m]
+  (let [langs  (fn [pred v] (map-indexed (fn [i [lang s]] (qualified rid pred i s {"lang" lang}))
+                                         (lang-entries v)))
+        images (map-indexed (fn [i {:keys [id width height]}]
+                              (qualified rid "image" i id
+                                         {"width"  (when (pos-int? width) width)
+                                          "height" (when (pos-int? height) height)}))
+                            (painted-images m))
+        quals  (concat (langs "label" (get m "label")) (langs "summary" (get m "summary")) images)
+        flat   (concat
+                (when-let [id (get m "id")] [(assertion rid "id" id)])
+                (for [pair (get m "metadata")
+                      :let  [l (first-lang (get pair "label"))
+                             v (first-lang (get pair "value"))]
+                      :when (and l v)]
+                  (assertion rid "metadata" (str l ": " v))))]
+    {:fragments  (mapv :fragment quals)
+     :assertions (vec (concat (mapcat :assertions quals) flat))}))
+
+(defn- loss [rid field message]
+  (dx/loss {:category :dropped :subject rid :edge :import :source-field field :message message}))
+
+(defn- canvas-losses
+  "Import-edge losses inside `items`: one per distinct unmodelled Canvas key, per
+   distinct kind of non-painting Annotation, and per distinct type of painted
+   body that is not an Image."
+  [rid m]
+  (let [cs (canvases m)]
+    (concat
+     (for [k     (distinct (mapcat keys cs))
+           :when (not (or (contains? machinery-keys k) (contains? handled-canvas-keys k)))]
+       (loss rid (keyword "iiif" (str "canvas-" k)) (str "Canvas " k " not modelled by the IIIF floor mapping")))
+     (for [mv (distinct (for [c cs, a (annotations c) :when (not (painting? a))]
+                          (str/join "," (as-seq (get a "motivation")))))]
+       (loss rid :iiif/annotation (str "a non-painting annotation (motivation " (pr-str mv) ") is not carried")))
+     (for [t (distinct (for [c cs, a (annotations c) :when (painting? a)
+                             b (bodies a) :when (not= "Image" (get b "type"))]
+                         (str (get b "type"))))]
+       (loss rid :iiif/painting-body (str "a painted " t " body is not a digital image; not carried"))))))
 
 (defn- ingest-losses
-  "One import-edge `:loss/dropped` per unmodelled top-level content key."
+  "Import-edge losses (ADR 0015): one `:dropped` per unmodelled top-level content
+   key, the losses inside `items` (`canvas-losses`), and one `:coerced` per
+   `metadata` pair whose label or value has several languages."
   [rid m]
-  (for [k (keys m)
-        :when (and (not (contains? machinery-keys k))
-                   (not (contains? handled-keys k)))]
-    (dx/loss {:category     :dropped
-              :subject      rid
-              :edge         :import
-              :source-field (keyword "iiif" k)
-              :message      (str k " not modelled by the IIIF floor mapping (ADR 0003)")})))
+  (concat
+   (for [k (keys m)
+         :when (and (not (contains? machinery-keys k))
+                    (not (contains? handled-keys k)))]
+     (loss rid (keyword "iiif" k) (str k " not modelled by the IIIF floor mapping (ADR 0003)")))
+   (canvas-losses rid m)
+   (when (some #(or (many-langs? (get % "label")) (many-langs? (get % "value"))) (get m "metadata"))
+     [(dx/loss {:category :coerced :subject rid :edge :import :source-field :iiif/metadata
+                :message "metadata kept one language per label and value; the others are not carried"})])))
 
 ;; ---------------------------------------------------------------------------
 ;; Record identity
@@ -157,11 +243,13 @@
     m))
 
 (defn- record-of [opts m]
-  (let [rid (record-id-of opts m)]
+  (let [rid                          (record-id-of opts m)
+        {:keys [fragments assertions]} (manifest-content rid m)]
     (model/record {:id         rid
                    :kind       (or (:kind opts) :iiif/manifest)
                    :source     (get m "id")
-                   :assertions (vec (manifest-assertions rid m))})))
+                   :fragments  fragments
+                   :assertions assertions})))
 
 (defn ingest
   "Parse a IIIF Presentation 3.0 manifest `json-string` into a one-Record vector
@@ -178,15 +266,19 @@
      :diagnostics (vec (ingest-losses (record-id-of opts m) m))}))
 
 (def mapping
-  "Declarative IIIF→canonical mapping for the manifest core."
+  "Declarative IIIF→canonical mapping for the manifest core. An image has two
+   coords (width, height) and a rule carries one qualifier, so it takes two rules;
+   their identical value renames collapse at merge (ADR 0008)."
   [{:mapping/id :map/iiif-label :mapping/from :iiif/label :mapping/to :canon/title
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/lang :as :canon/lang}}
    {:mapping/id :map/iiif-id :mapping/from :iiif/id :mapping/to :canon/identifier
     :mapping/transform [:trim]}
    {:mapping/id :map/iiif-image :mapping/from :iiif/image :mapping/to :canon/digital-object
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/width :as :canon/width}}
+   {:mapping/id :map/iiif-image-height :mapping/from :iiif/image :mapping/to :canon/digital-object
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/height :as :canon/height}}
    {:mapping/id :map/iiif-summary :mapping/from :iiif/summary :mapping/to :canon/note
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/lang :as :canon/lang}}
    {:mapping/id :map/iiif-metadata :mapping/from :iiif/metadata :mapping/to :canon/note
     :mapping/transform [:trim]}])
 

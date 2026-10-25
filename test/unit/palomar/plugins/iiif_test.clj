@@ -3,9 +3,11 @@
    fixtures: nested JSON extraction of label/id/images onto the canonical floor,
    the creator-less WEMI shape (Manifestation + Expression, no Work), the
    report-at-ingest loss, and composition with the other spokes."
-  (:require [clojure.string :as str]
+  (:require [clojure.data.json :as json]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.diagnostics :as dx]
+            [palomar.model :as model]
             [palomar.plugins :as plug]
             [palomar.plugins.dc :as dc]
             [palomar.plugins.iiif :as iiif]
@@ -50,9 +52,38 @@
     (let [{:keys [canon ingest]} (ingest+normalize "manifest_book_simple")]
       (is (= #{"Simple Manifest - Book"} (literals canon :canon/title)))
       (is (= 5 (count (literals canon :canon/digital-object))))         ; five canvases
-      (testing "the unmodelled top-level key is reported, not silently dropped"
-        (is (= #{:iiif/behavior}
+      (testing "the unmodelled top-level key and the per-canvas labels are reported, not silently dropped"
+        (is (= #{:iiif/behavior :iiif/canvas-label}
                (set (map #(get-in % [:detail :loss/source-field]) (dx/losses ingest)))))))))
+
+(deftest only-painted-images-are-digital-objects-and-the-rest-is-reported
+  (testing "a thumbnail, a commenting annotation and a painted Text body are not images of the object (audit S14/S15)"
+    (let [m  {"@context" "http://iiif.io/api/presentation/3/context.json"
+              "id" "https://ex/t/manifest.json" "type" "Manifest" "label" {"en" ["T"]}
+              "items" [{"id" "https://ex/t/c1" "type" "Canvas" "height" 20 "width" 10
+                        "thumbnail" [{"id" "https://ex/t/thumb.jpg" "type" "Image"}]
+                        "items" [{"id" "https://ex/t/p1" "type" "AnnotationPage"
+                                  "items" [{"id" "https://ex/t/a1" "type" "Annotation" "motivation" "painting"
+                                            "body" {"type" "Choice"
+                                                    "items" [{"id" "https://ex/t/colour.jpg" "type" "Image"}
+                                                             {"id" "https://ex/t/grey.jpg" "type" "Image"}]}}
+                                           {"id" "https://ex/t/a2" "type" "Annotation" "motivation" "commenting"
+                                            "body" {"id" "https://ex/t/note.jpg" "type" "Image"}}
+                                           {"id" "https://ex/t/a3" "type" "Annotation" "motivation" "painting"
+                                            "body" {"type" "TextualBody" "value" "OCR"}}]}]}]}
+          {:keys [records diagnostics]} (iiif/importer {} (json/write-str m))
+          rec    (first records)
+          images (set (keep #(when (= :iiif/image (:predicate %)) (when (string? (:value %)) (:value %)))
+                            (:assertions rec)))
+          fields (set (map #(get-in % [:detail :loss/source-field]) (dx/losses diagnostics)))]
+      (is (model/record-consistent? rec))
+      (is (= #{"https://ex/t/colour.jpg" "https://ex/t/grey.jpg"} images))   ; both Choice alternatives
+      (is (contains? fields :iiif/canvas-thumbnail))
+      (is (contains? fields :iiif/annotation))
+      (is (contains? fields :iiif/painting-body))
+      (testing "each image keeps its canvas extent"
+        (is (= #{10} (set (keep #(when (= :iiif/width (:predicate %)) (:value %)) (:assertions rec)))))
+        (is (= #{20} (set (keep #(when (= :iiif/height (:predicate %)) (:value %)) (:assertions rec)))))))))
 
 (deftest a-creatorless-manifest-projects-to-manifestation-and-expression-no-work
   (testing "IIIF carries a title but no creator -> Manifestation + Expression, no Work (the honest floor result)"
@@ -74,7 +105,7 @@
   (testing "IIIF is a well-formed plugin; its mapping ids don't collide with the XML spokes"
     (is (= :palomar/iiif (:id iiif/plugin)))
     (is (= :json (:input-format iiif/plugin)))
-    (is (= 5 (count (:mapping iiif/plugin))))
+    (is (= 6 (count (:mapping iiif/plugin))))
     (let [reg (reduce plug/register plug/empty-registry
                       [iiif/plugin dc/plugin marc21/plugin mods/plugin])]
       (is (some? (mapping/compile-mappings (plug/all-mappings reg)

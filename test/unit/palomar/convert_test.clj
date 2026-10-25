@@ -39,11 +39,14 @@
                            [:linked-art "HumanMadeObject"]
                            [:dc         "<dc:title"]
                            [:marc21     "<controlfield tag=\"001\""]
-                           [:mods       "<mods xmlns="]
-                           [:iiif       "\"type\":\"Manifest\""]]]
+                           [:mods       "<mods xmlns="]]]
         (let [{:keys [output loss]} (cv/convert {:from :marc21 :to to :source s})]
           (is (str/includes? output needle) (str "target " to))
-          (is (pos? (:total loss)) (str "target " to " reported loss")))))))
+          (is (pos? (:total loss)) (str "target " to " reported loss"))))
+      (testing "target :iiif — a MARC record is not a valid manifest (no URI id, no canvas extent): refused, and said so"
+        (let [{:keys [output loss]} (cv/convert {:from :marc21 :to :iiif :source s})]
+          (is (= "" output))
+          (is (contains? (set (:source-fields loss)) :iiif/manifest)))))))
 
 (deftest the-marc21-to-linked-art-path-is-faithful
   (testing "MARC21 -> pivot -> Linked Art carries the title onto a HumanMadeObject"
