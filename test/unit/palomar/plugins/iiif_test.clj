@@ -39,7 +39,7 @@
 (deftest image-manifest-maps-label-id-and-image-onto-the-floor
   (testing "a single-image manifest: label->title, id->identifier, body->digital-object"
     (let [{:keys [record canon]} (ingest+normalize "manifest_image_simple")]
-      (is (= :iiif/m-0001-mvm-image (:id record)))                     ; slug of the manifest URI
+      (is (= :iiif/m-0001-mvm-image-h207087643c (:id record)))                     ; slug of the manifest URI
       (is (= "https://iiif.io/api/cookbook/recipe/0001-mvm-image/manifest.json" (:source record)))
       (is (= #{"Single Image Example"} (literals canon :canon/title)))
       (is (= #{"https://iiif.io/api/cookbook/recipe/0001-mvm-image/manifest.json"}

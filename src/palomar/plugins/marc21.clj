@@ -40,21 +40,21 @@
    - One Record per `<record>`; id `:marc/r<001>` from the control number.
    - Import only; a canonical→MARC21 exporter is a later slice.
    - Leader/008 fixed-field decoding and indicator semantics are out of scope."
-  (:require [clojure.string :as str]
-            [palomar.plugins.marcxml :as marcxml]))
+  (:require [palomar.plugins.marcxml :as marcxml]
+            [palomar.plugins.record-id :as record-id]))
 
 ;; ---------------------------------------------------------------------------
 ;; Record identity
 ;; ---------------------------------------------------------------------------
 
 (defn- record-id-from-control
-  "`:marc/r<sanitised-001>` from the control number. The `r` prefix guards
-   against a digit-leading keyword name (an EDN round-trip hazard, ADR 0001);
-   non-alphanumerics in the control number (e.g. a space in \"CF 91000008\")
-   collapse to `-`."
+  "`:marc/r<001>` from the control number. The `r` prefix guards against a
+   digit-leading keyword name (an EDN round-trip hazard, ADR 0001). A control
+   number with characters outside `[A-Za-z0-9]` (e.g. a space in
+   \"CF 91000008\") is slugged and gets a digest suffix, so two distinct control
+   numbers never share an id (`palomar.plugins.record-id`, audit S20)."
   [control-number]
-  (let [clean (-> (str control-number) str/trim (str/replace #"[^A-Za-z0-9]+" "-"))]
-    (keyword "marc" (str "r" clean))))
+  (record-id/from-identifier "marc" "r" control-number))
 
 (defn- record-id [elem]
   (if-let [cn (marcxml/control-value elem "001")]

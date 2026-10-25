@@ -51,6 +51,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
+            [palomar.plugins.record-id :as record-id]
             [palomar.xml :as rx]))
 
 ;; ---------------------------------------------------------------------------
@@ -161,17 +162,15 @@
 ;; Record identity
 ;; ---------------------------------------------------------------------------
 
-(defn- sanitize [s]
-  (-> (str s) str/trim (str/replace #"[^A-Za-z0-9]+" "-")))
-
 (defn- record-identifier [mods]
   (some-> (child-named mods "recordInfo") (child-named "recordIdentifier") text-of))
 
 (defn- record-id-of [opts mods]
   (or (:record-id opts)
-      (when-let [ri (record-identifier mods)] (keyword "mods" (str "r" (sanitize ri))))
+      ;; injective: a slugged identifier gets a digest suffix (audit S20)
+      (when-let [ri (record-identifier mods)] (record-id/from-identifier "mods" "r" ri))
       (when-let [id (some-> (child-named mods "identifier") text-of)]
-        (keyword "mods" (str "r" (sanitize id))))
+        (record-id/from-identifier "mods" "r" id))
       (throw (ex-info "MODS record needs :record-id, a recordIdentifier, or an identifier"
                       {:title (some-> (child-named mods "titleInfo") (child-named "title") text-of)}))))
 
