@@ -233,7 +233,8 @@
         reached (into (set (mapcat (fn [{:keys [manif expr work]}] [(:id manif) expr work]) ts))
                       (map :id (view/items record)))
         loss    (fn [cat subject field msg]
-                  (dx/loss {:category cat :subject subject :edge :export :source-field field :message msg}))]
+                  (dx/loss {:category cat :subject subject :edge :export :source-field field :message msg
+                            :aspect (if (and (= :under-specified cat) (= :lrmoo/F2_Expression field)) :class :value)}))]
     (concat
      (for [{:keys [manif expr]} ts :when expr]
        (loss :under-specified (:id manif) :lrmoo/F2_Expression

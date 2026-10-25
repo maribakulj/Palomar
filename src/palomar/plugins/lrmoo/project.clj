@@ -17,7 +17,7 @@
    - WEMI needs an Expression to connect Work and Manifestation (LRMoo has no
      direct Work–Manifestation link); canonical gives nothing to characterise it
      (language/form), so a minimal Expression is minted to carry the chain.
-   - Loss (ADR 0015, import edge): unrepresented `:canon/*` fields are `:dropped`;
+   - Loss (ADR 0015, projection edge — ADR 0033): unrepresented `:canon/*` fields are `:dropped`;
      >=2 distinct languages (parallel-language titles = multiple Expressions) make
      the floor's single Expression `:under-specified` (ADR 0013 graceful
      degradation); an `uncertain` title collapsed to one alternative is
@@ -173,7 +173,7 @@
   (boolean (and (work-title-of record) (seq (distinct-langs record)))))
 
 (defn- dropped-losses
-  "A `:dropped` / `:import` loss for each canonical field the projection does not
+  "A `:dropped` / `:projection` loss for each canonical field the projection does not
    represent. A `:canon/lang` that keys an Expression is handled by
    `language-losses`, since with several languages it is an
    *under-specification*, not a plain drop; any other (a note's) is dropped."
@@ -184,7 +184,7 @@
     {:kind  :diagnostic
      :value (dx/loss {:category     :dropped
                       :subject      (:id record)
-                      :edge         :import
+                      :edge         :projection
                       :source-field p
                       :message      (str (name p) " not represented in the LRMoo view")})}))
 
@@ -200,14 +200,15 @@
       (>= n 2) [{:kind  :diagnostic
                  :value (dx/loss {:category     :under-specified
                                   :subject      (:id record)
-                                  :edge         :import
+                                  :edge         :projection
                                   :source-field :canon/lang
+                                  :aspect       :granularity
                                   :message      (str n " language expressions collapsed to one"
                                                      " — Expression level under-specified")})}]
       (= n 1) [{:kind  :diagnostic
                 :value (dx/loss {:category     :dropped
                                  :subject      (:id record)
-                                 :edge         :import
+                                 :edge         :projection
                                  :source-field :canon/lang
                                  :message      ":canon/lang keys the Expression but is not carried onto it as a value"})}]
       :else [])))
@@ -235,7 +236,7 @@
     [{:kind  :diagnostic
       :value (dx/loss {:category     :ambiguity-collapsed
                        :subject      (:id record)
-                       :edge         :import
+                       :edge         :projection
                        :source-field :canon/title
                        :message      "uncertain :canon/title collapsed to one alternative"})}]
     []))

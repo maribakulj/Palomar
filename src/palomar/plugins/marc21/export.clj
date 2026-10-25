@@ -185,6 +185,7 @@
                 :subject      (:id record)
                 :edge         :export
                 :source-field :marc21/indicators
+                :aspect       :qualifier
                 :message      "field indicators are not carried by the floor; every datafield is written with blank indicators"})])
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
@@ -198,6 +199,7 @@
                :subject      (:id record)
                :edge         :export
                :source-field p
+               :aspect       :granularity
                :message      (str (name p) " collapsed several MARC fields at import; the original MARC tag is not recoverable")}))))
 
 (defn exporter

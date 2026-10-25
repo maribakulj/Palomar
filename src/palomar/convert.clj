@@ -151,6 +151,21 @@
 (defn- in-force-or-unstated? [a]
   (or (nil? (:status a)) (model/in-force? a)))
 
+(defn- provenance-losses
+  "The provenance a stating target does not carry (ADR 0033): where a record's
+   values are anchored in its source (ADR 0031), only a history target writes
+   that evidence; any other states the values without it — one `:dropped` loss
+   of aspect `:provenance` per such record."
+  [to record]
+  (when (and (not (keeps-history? to)) (some #(seq (model/evidence-of %)) (:assertions record)))
+    [(dx/loss {:category     :dropped
+               :subject      (:id record)
+               :edge         :export
+               :aspect       :provenance
+               :source-field :palomar/evidence
+               :message      (str "where each value was read in the source is not written by the "
+                                  (name to) " export (see --to prov, nquads or trig)")})]))
+
 (defn export-records
   "Render WEMI `records` (from `to-wemi`, possibly curated) to target `to`. Returns
    `{:output String :loss [export-loss…]}`.
@@ -180,7 +195,7 @@
      {:output (->> records
                    (into [] (comp (map render) (remove str/blank?)))
                    (str/join "\n"))
-      :loss   (into [] (mapcat losses) records)})))
+      :loss   (into [] (mapcat #(concat (losses %) (provenance-losses to %))) records)})))
 
 (defn convert
   "Convert `source` from spoke `from` to serialisation `to`. Returns

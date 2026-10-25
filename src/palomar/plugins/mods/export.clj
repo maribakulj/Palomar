@@ -175,6 +175,7 @@
                :subject      (:id record)
                :edge         :export
                :source-field p
+               :aspect       (if (= :canon/agent p) :qualifier :granularity)
                :message      (if (= :canon/agent p)
                                "creator/contributor role not carried by MODS <name> on export"
                                (str (name p) " collapsed several MODS elements at import; the original element is not recoverable"))}))))

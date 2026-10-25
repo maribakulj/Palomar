@@ -52,4 +52,15 @@
 (deftest loss-categories-and-edges-are-closed
   (is (= #{:dropped :coerced :under-specified :ambiguity-collapsed}
          dx/loss-categories))
-  (is (= #{:import :export} dx/loss-edges)))
+  (is (= #{:import :projection :export} dx/loss-edges)))
+
+(deftest a-loss-names-the-aspect-it-touched
+  (let [d (dx/loss {:category :under-specified :subject :record/r1 :edge :projection
+                    :aspect :granularity :source-field :canon/lang})]
+    (is (= :granularity (dx/loss-aspect d)))
+    (is (= :projection (dx/loss-edge d))))
+  (is (= :value (dx/loss-aspect (dx/loss {:category :dropped :subject :record/r1 :edge :export})))
+      "a loss that names no aspect touched a value")
+  (is (nil? (dx/loss-aspect (model/diagnostic {:severity :info :code :x/y :subject :record/r1}))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (dx/loss {:category :dropped :subject :record/r1 :edge :export :aspect :colour}))))

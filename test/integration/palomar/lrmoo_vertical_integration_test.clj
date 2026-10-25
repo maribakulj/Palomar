@@ -46,11 +46,11 @@
             m (:id (first (view/manifestations r)))]
         (is (= [e] (view/expressions-of r w)))
         (is (= [e] (view/expression-of r m)))))
-    (testing "the vertical stays consistent and reports import-edge loss"
+    (testing "the vertical stays consistent and reports projection-edge loss"
       (is (model/record-consistent? r))
       (let [imp (dx/losses (:diagnostics r))]
         (is (seq imp))
-        (is (every? #(= :import (get-in % [:detail :loss/edge])) imp))))))
+        (is (every? #(= :projection (get-in % [:detail :loss/edge])) imp))))))
 
 (deftest export-emits-real-iris-and-reports-export-loss
   (let [{:keys [output diagnostics]} (export/exporter {} derived)]
@@ -92,7 +92,7 @@
       (is (pos? (:total report)))
       (is (= 30 (:records report)))
       (testing "both edges are accounted, with the native field that was dropped"
-        (is (pos? (get-in report [:by-edge :import :total])))
+        (is (pos? (get-in report [:by-edge :projection :total])))
         (is (pos? (get-in report [:by-edge :export :total])))
         (is (contains? (set (:source-fields report)) :intermarc/f100_a)))
       (testing "distinct losses collapse the cross-edge double-count (audit R3)"
@@ -101,5 +101,5 @@
         (is (< (:distinct-losses report) (:total report)))
         (is (str/includes? text (str (:distinct-losses report) " distinct losses"))))
       (testing "the rendering names both edges"
-        (is (str/includes? text "import edge"))
+        (is (str/includes? text "projection edge"))
         (is (str/includes? text "export edge"))))))

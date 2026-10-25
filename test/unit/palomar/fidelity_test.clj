@@ -52,3 +52,31 @@
           plain    (fidelity/audit-record :ntriples rejected)]
       (is (empty? (:unaccounted strict)))
       (is (> (:checked strict) (:checked plain))))))
+
+(deftest every-relation-survives-in-the-rdf-outputs
+  (testing "for each spoke and each N-Triples-family target, every WEMI link is written or reported (ADR 0033)"
+    (doseq [from (keys fixtures)
+            to   (sort (fidelity/relation-targets))]
+      (let [{:keys [checked unaccounted]} (:relations (audit from to))]
+        (is (pos? checked) (str from " -> " to " checked some relation"))
+        (is (empty? unaccounted)
+            (str from " -> " to ": silent relation loss " (pr-str (take 3 unaccounted))))))))
+
+(deftest a-dropped-relation-is-caught
+  (testing "an export that keeps every title but drops the Work→Expression link fails the relation audit"
+    (let [real   @#'convert/exporters
+          broken (update real :ntriples assoc :render
+                         (fn [r] (->> (str/split-lines ((get-in real [:ntriples :render]) r))
+                                      (remove #(str/includes? % "R3_is_realised_in"))
+                                      (str/join "\n"))))
+          {:keys [relations unaccounted]} (with-redefs-fn {#'convert/exporters broken}
+                                            #(audit :intermarc :ntriples))]
+      (is (empty? unaccounted) "no string value is lost: the string check alone sees nothing")
+      (is (seq (:unaccounted relations)))
+      (is (every? #(= :lrmoo/R3_is_realised_in (:predicate %)) (:unaccounted relations))))))
+
+(deftest the-pure-crm-export-carries-relations-by-their-super-property
+  (let [{:keys [checked present unaccounted]} (:relations (audit :intermarc :crm-only))]
+    (is (pos? checked))
+    (is (= checked present) "R3/R4/R7 are written as P130/P165/P128, which counts as present")
+    (is (empty? unaccounted))))

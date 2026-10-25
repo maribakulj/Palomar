@@ -80,7 +80,7 @@
 
 (def skos-base "http://www.w3.org/2004/02/skos/core#")
 
-(defn- viewable-predicate?
+(defn viewable-predicate?
   "Predicates the RDF view expresses: the LRMoo WEMI vocabulary, the CIDOC-CRM
    predicates the rich graph carries (e.g. `:crm/P129_is_about` for a subject),
    and the SKOS mapping properties of an alignment (`:skos/exactMatch`, ADR
@@ -89,7 +89,7 @@
   [p]
   (and (keyword? p) (contains? #{"lrmoo" "crm" "skos"} (namespace p))))
 
-(defn- term-iri
+(defn term-iri
   "IRI of an `:lrmoo/*`, `:crm/*` or `:skos/*` term (class or property)."
   [k]
   (cond (crm-term? k)               (str crm-base (name k))

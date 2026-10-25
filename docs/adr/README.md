@@ -28,7 +28,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0012](./0012-fragment-identity-scheme.md) | Fragment identity scheme | Accepted (extended by 0016) |
 | [0013](./0013-lrmoo-rich-pivot.md) | LRMoo as the rich pivot vocabulary, via a derived typed view | Accepted (partially implemented — see ADR) |
 | [0014](./0014-runtime-entity-minting.md) | Runtime entity minting (amends 0011) | Accepted |
-| [0015](./0015-loss-model.md) | Loss model: unit, edges, categories, metric | Accepted (partially implemented — see ADR; extended by 0024) |
+| [0015](./0015-loss-model.md) | Loss model: unit, edges, categories, metric | Accepted (partially implemented — see ADR; extended by 0024 and 0033) |
 | [0016](./0016-wemi-derivation.md) | WEMI derivation under LRMoo: synthesizing entities, identity, and reconciliation | Accepted (partially implemented; scale layer in 0018) |
 | [0017](./0017-entity-representation.md) | Synthesized entity representation (entities on records) | Accepted |
 | [0018](./0018-entity-resolution-at-scale.md) | Entity resolution at scale: reconcile-to-authority, equivalence as assertion, revisability | Accepted (partially implemented — see ADR; §2 amended by 0032) |
@@ -46,6 +46,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0030](./0030-run-manifest.md) | A conversion can write a manifest of everything its output depends on | Accepted |
 | [0031](./0031-source-evidence.md) | Every value keeps where it was read in its source | Accepted |
 | [0032](./0032-graded-alignments.md) | Alignments are graded SKOS mapping claims, never owl:sameAs | Accepted |
+| [0033](./0033-loss-taxonomy-and-relation-fidelity.md) | Loss aspects, a projection edge, and relation fidelity | Accepted |
 
 ## Template
 

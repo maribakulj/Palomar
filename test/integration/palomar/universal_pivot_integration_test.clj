@@ -94,12 +94,12 @@
                 (:id (first (view/manifestations wb))))))))
 
 (deftest the-projection-reports-dropped-canonical-loss
-  (testing ":canon/date is on the canonical floor but not in WEMI -> :import loss (ADR 0015)"
+  (testing ":canon/date is on the canonical floor but not in WEMI -> :projection loss (ADR 0015)"
     (let [ls     (dx/losses (:diagnostics wa))
           fields (set (map #(get-in % [:detail :loss/source-field]) ls))]
       (is (seq ls))
       (is (contains? fields :canon/date))
-      (is (every? #(= :import (get-in % [:detail :loss/edge])) ls)))))
+      (is (every? #(= :projection (get-in % [:detail :loss/edge])) ls)))))
 
 (deftest projected-wemi-exports-to-rdf
   (testing "the canonical-derived WEMI graph serialises as N-Triples"

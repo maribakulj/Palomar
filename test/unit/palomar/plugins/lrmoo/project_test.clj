@@ -163,7 +163,7 @@
         ls (dx/losses (:diagnostics r))]
     (is (seq ls))
     (is (every? #(= :loss/dropped (:code %)) ls))
-    (is (every? #(= :import (get-in % [:detail :loss/edge])) ls))
+    (is (every? #(= :projection (get-in % [:detail :loss/edge])) ls))
     (let [fields (set (map #(get-in % [:detail :loss/source-field]) ls))]
       (is (contains? fields :canon/date))
       (is (contains? fields :canon/note))
@@ -197,7 +197,7 @@
       (is (= 1 (count (view/expressions p))))       ; the floor collapses to one
       (is (= 1 (count us)))
       (is (= :canon/lang (get-in (first us) [:detail :loss/source-field])))
-      (is (= :import     (get-in (first us) [:detail :loss/edge]))))))
+      (is (= :projection (get-in (first us) [:detail :loss/edge]))))))
 
 (deftest a-single-language-is-a-plain-drop-not-under-specified
   (testing "one language is not carried onto the Expression -> :dropped, not :under-specified"
@@ -223,7 +223,7 @@
         (is (= 1 (count (view/expressions p)))))
       (is (= 1 (count ac)))
       (is (= :canon/title (get-in (first ac) [:detail :loss/source-field])))
-      (is (= :import (get-in (first ac) [:detail :loss/edge])))
+      (is (= :projection (get-in (first ac) [:detail :loss/edge])))
       (testing "the chosen alternative lands on the Expression as R33"
         (is (some #(and (= :lrmoo/R33_has_string (:predicate %))
                         (= "Les Misérables" (:value %)))

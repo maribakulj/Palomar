@@ -14,6 +14,8 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 |-----------|-----------|
 | For the seven source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O, N-Quads), every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
 | An exporter that omits a value without reporting it is caught. | `palomar.fidelity-test/a-silent-omission-is-caught` |
+| For the seven source spokes and the N-Triples, CRM, CRM-only and N-Quads targets, every relation the RDF view expresses (a WEMI link, a CRM or SKOS reference) is written — by its predicate or, in pure CRM, its super-property — or named by a loss. | `palomar.fidelity-test/every-relation-survives-in-the-rdf-outputs` |
+| An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
 | A publisher or contributor never keys a Work; only a creator (or an agent of unstated role) does. | `palomar.plugins.lrmoo.project-test/a-publisher-alone-does-not-key-a-work` |
 | An original and its translation are one Work and two Expressions. | `palomar.plugins.lrmoo.project-test/an-original-and-its-translation-are-one-work-two-expressions` |
 | A Manifestation is exported to Linked Art as a text (`LinguisticObject`), only an F5 Item as a physical object; one document per Manifestation and per Item. | `palomar.plugins.lrmoo.linked-art-test/every-manifestation-and-item-gets-its-own-document` |
@@ -43,7 +45,8 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 
 - **Fidelity is checked by value, on the fixture corpus.** A value that also
   occurs elsewhere in an output counts as present; the audit can miss a loss,
-  never invent one. Turtle output is not decoded. A loss on another predicate of
+  never invent one. Turtle output is not decoded; relations are checked only
+  for the N-Triples family. A loss on another predicate of
   the same subject can stand for a value it does not concern.
 - **Semantic correctness beyond the tests.** The mappings are checked against
   the published standards they cite (LRMoo 1.0/1.1.1, Linked Art, IIIF 3.0, the

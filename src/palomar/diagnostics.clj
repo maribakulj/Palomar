@@ -183,22 +183,34 @@
   #{:dropped :coerced :under-specified :ambiguity-collapsed})
 
 (def loss-edges
-  "Where loss is measured: :import (source→pivot) or :export (pivot→target)."
-  #{:import :export})
+  "Where loss is measured: :import (source→floor), :projection (floor→WEMI view,
+   ADR 0033) or :export (pivot→target)."
+  #{:import :projection :export})
+
+(def loss-aspects
+  "What a loss touched (ADR 0033), orthogonal to its category: a `:value`, a
+   `:relation` between entities, a `:qualifier` of a value (language, role,
+   kind), a `:class` (a type generalised or folded), the `:granularity` (several
+   source fields or levels collapsed) or the `:provenance` (where a value was
+   read). Optional on a loss; one that names none touched a value."
+  #{:value :relation :qualifier :class :granularity :provenance})
 
 (defn loss
   "Construct a loss Diagnostic (ADR 0015). `category` ∈ `loss-categories`;
    `edge` ∈ `loss-edges`; `source-field` names the lost native field (opaque
-   to the core). The code is `:loss/<category>`. Severity defaults to :info —
+   to the core); `aspect` (optional) ∈ `loss-aspects` says what it touched.
+   The code is `:loss/<category>`. Severity defaults to :info —
    loss is reported, not a failure — raise it per call when a loss is serious.
-   Returns a model Diagnostic; throws on an unknown category or edge."
-  [{:keys [category subject edge source-field message severity provenance]
+   Returns a model Diagnostic; throws on an unknown category, edge or aspect."
+  [{:keys [category subject edge source-field message severity provenance aspect]
     :or   {severity :info}}]
   (when-not (contains? loss-categories category)
     (throw (ex-info "Unknown loss category"
                     {:category category :supported loss-categories})))
   (when-not (contains? loss-edges edge)
     (throw (ex-info "Unknown loss edge" {:edge edge :supported loss-edges})))
+  (when (and aspect (not (contains? loss-aspects aspect)))
+    (throw (ex-info "Unknown loss aspect" {:aspect aspect :supported loss-aspects})))
   (model/diagnostic
    {:severity   severity
     :code       (keyword "loss" (name category))
@@ -206,7 +218,8 @@
     :message    message
     :provenance provenance
     :detail     (cond-> {:loss/edge edge}
-                  source-field (assoc :loss/source-field source-field))}))
+                  source-field (assoc :loss/source-field source-field)
+                  aspect       (assoc :loss/aspect aspect))}))
 
 (defn loss?
   "True if `d` is a loss diagnostic (its code lives in the `loss` namespace)."
@@ -228,6 +241,12 @@
   "The conversion edge of a loss diagnostic (:import | :export), or nil."
   [d]
   (get-in d [:detail :loss/edge]))
+
+(defn loss-aspect
+  "What a loss diagnostic touched (`loss-aspects`): its `:loss/aspect`, else
+   `:value`; nil if `d` is no loss."
+  [d]
+  (when (loss? d) (get-in d [:detail :loss/aspect] :value)))
 
 (defn loss-source-field
   "The native source field a loss diagnostic names (opaque keyword), or nil."

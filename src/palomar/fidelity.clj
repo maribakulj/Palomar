@@ -17,13 +17,23 @@
    `:unaccounted`. Values are compared whitespace-insensitively (XML text is
    trimmed by the mappings). The check is by value: a value that happens to occur elsewhere
    in the output counts as present, so this can miss a loss (false negative) but
-   never invents one. Turtle has no decoder here and is reported as unchecked."
+   never invents one. Turtle has no decoder here and is reported as unchecked.
+
+   Strings are not all a graph says. For the N-Triples family (`relation-targets`)
+   the audit also checks every relation (ADR 0033): each reference assertion the
+   RDF view expresses must survive as the triple `iri(subject) —p→ iri(object)`,
+   `p` its predicate or the CIDOC-CRM super-property a pure-CRM export writes in
+   its place. A Work the export leaves unlinked from its Expression keeps every
+   title, so no string check sees it; this one does. The relations are reported
+   apart, under `:relations`, with the same three classes."
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [palomar.convert :as convert]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.export-coverage :as cov]
+            [palomar.plugins.lrmoo.crm :as crm]
+            [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.xml :as rx]))
 
@@ -106,13 +116,71 @@
         (and (contains? cov/combined-natives predicate)
              (some #(str/includes? % v) seen)))))
 
+;; --- relations ----------------------------------------------------------------
+
+(def ^:private relation-parsers
+  "The targets whose relations this audit checks, with the parser of their
+   output into `[s p o …]` terms."
+  {:ntriples nt/parse :crm nt/parse :crm-only nt/parse :nquads nt/parse-quads})
+
+(defn relation-targets
+  "The targets whose relations (reference assertions) this audit checks."
+  []
+  (set (keys relation-parsers)))
+
+(defn- relation-triples
+  "The `[s p o]` IRI triples of an RDF `doc` of target `to` (literal objects
+   left out)."
+  [to doc]
+  (into #{} (keep (fn [[s p o]] (when (and (:iri s) (:iri o)) [(:iri s) (:iri p) (:iri o)])))
+        ((relation-parsers to) doc)))
+
+(defn- predicate-iris
+  "The IRIs that may carry predicate `p` in the output: its own, and the
+   CIDOC-CRM super-property the pure-CRM export writes in its place."
+  [p]
+  (cond-> #{(export/term-iri p)}
+    (crm/property-superproperty p) (conj (str export/crm-base (crm/property-superproperty p)))))
+
+(defn- relations
+  "The relations of `record` the RDF view expresses, as `{:subject :predicate
+   :target}`: its reference assertions on an LRMoo, CRM or SKOS predicate, under
+   the export's status policy. Unlike string values, derived ones are checked:
+   a WEMI link an inference pass made is exactly what the export must carry."
+  [to record]
+  (distinct
+   (for [a (:assertions record)
+         :when (and (model/reference-value? (:value a))
+                    (export/viewable-predicate? (:predicate a))
+                    (or (convert/keeps-history? to) (not (model/out-of-force? a))))]
+     {:subject (:subject a) :predicate (:predicate a) :target (:value/target (:value a))})))
+
+(defn- relation-audit
+  "Classify the relations of `record` against the decoded `doc` (see the ns doc)."
+  [to record doc losses]
+  (let [idx     (into {} (keep (fn [e] (when-let [i (:iri e)] [(:id e) i]))) (:entities record))
+        iri     #(or (get idx %) (export/entity-iri %))
+        seen    (if (str/blank? doc) #{} (relation-triples to doc))
+        rels    (relations to record)
+        present (fn [{:keys [subject predicate target]}]
+                  (some #(contains? seen [(iri subject) % (iri target)]) (predicate-iris predicate)))
+        klass   (group-by #(cond (present %)                    :present
+                                 (reported? losses (:id record) %) :reported
+                                 :else                          :unaccounted)
+                          rels)]
+    {:checked     (count rels)
+     :present     (count (:present klass))
+     :reported    (count (:reported klass))
+     :unaccounted (vec (:unaccounted klass))}))
+
 (defn audit-record
   "Audit one WEMI `record` exported to `to`, against the loss diagnostics it
    carries, the export's own losses and the extra `losses` (e.g. the import edge).
    Returns `{:target :checked :present :reported :unaccounted [{:subject
    :predicate :value} …]}` over the distinct `{:subject :predicate :value}`
    facts (so present + reported + unaccounted = checked), or `{:target
-   :unchecked true}` when `to` has no decoder.
+   :unchecked true}` when `to` has no decoder. For a `relation-targets` target
+   it also carries `:relations`, the same account of the record's relations.
 
    Only the export's losses and the extra `losses` can account for an absent
    value: a projection diagnostic on the record (a Work key built from a
@@ -138,11 +206,12 @@
                                     (reported? all (:id record) %)           :reported
                                     :else                                    :unaccounted)
                              checked)]
-       {:target      to
-        :checked     (count checked)
-        :present     (count (:present klass))
-        :reported    (count (:reported klass))
-        :unaccounted (vec (:unaccounted klass))})
+       (cond-> {:target      to
+                :checked     (count checked)
+                :present     (count (:present klass))
+                :reported    (count (:reported klass))
+                :unaccounted (vec (:unaccounted klass))}
+         (relation-parsers to) (assoc :relations (relation-audit to record output all))))
      {:target to :unchecked true})))
 
 (defn audit
@@ -154,9 +223,14 @@
     {:target to :unchecked true}
     (let [{:keys [records ingest]} (convert/to-wemi from opts source)
           per (map #(audit-record to % ingest) records)]
-      {:target      to
-       :records     (count records)
-       :checked     (reduce + (map :checked per))
-       :present     (reduce + (map :present per))
-       :reported    (reduce + (map :reported per))
-       :unaccounted (vec (mapcat :unaccounted per))})))
+      (cond-> {:target      to
+               :records     (count records)
+               :checked     (reduce + (map :checked per))
+               :present     (reduce + (map :present per))
+               :reported    (reduce + (map :reported per))
+               :unaccounted (vec (mapcat :unaccounted per))}
+        (relation-parsers to)
+        (assoc :relations {:checked     (reduce + (map (comp :checked :relations) per))
+                           :present     (reduce + (map (comp :present :relations) per))
+                           :reported    (reduce + (map (comp :reported :relations) per))
+                           :unaccounted (vec (mapcat (comp :unaccounted :relations) per))})))))

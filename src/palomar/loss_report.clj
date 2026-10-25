@@ -30,7 +30,8 @@
       :distinct-losses N   ; distinct [subject source-field], deduped across edges
       :by-category     {category -> count}         ; events, all edges
       :by-edge         {:import {:total :by-category :by-source-field}
-                        :export {…}}
+                        :projection {…} :export {…}}
+      :by-aspect       {aspect -> count}  ; value, relation, qualifier, class, … (ADR 0033)
       :source-fields   [… distinct native fields lost, sorted …]}
 
    `:total` and `:distinct-losses` differ on purpose (audit R3): the same native
@@ -54,6 +55,7 @@
               :by-category     (dx/count-by-loss-category ls)
               :by-edge         (into {} (map (fn [[e es]] [e (edge-report es)]))
                                      (group-by dx/loss-edge ls))
+              :by-aspect       (frequencies (map dx/loss-aspect ls))
               :source-fields   (vec (sort-by str (distinct (keep dx/loss-source-field ls))))}
        records (assoc :records records)))))
 
@@ -71,7 +73,7 @@
 
 (def empty-acc
   "The identity loss accumulator for a streaming fold."
-  {:total 0 :by-category {} :by-edge {} :source-fields #{}})
+  {:total 0 :by-category {} :by-edge {} :by-aspect {} :source-fields #{}})
 
 (defn accumulate
   "Fold one record's `loss-diagnostics` into the bounded accumulator `acc`."
@@ -83,6 +85,7 @@
               (cond-> (-> a
                           (update :total inc)
                           (update-in [:by-category cat] (fnil inc 0))
+                          (update-in [:by-aspect (dx/loss-aspect l)] (fnil inc 0))
                           (update-in [:by-edge edge :total] (fnil inc 0))
                           (update-in [:by-edge edge :by-category cat] (fnil inc 0)))
                 f (-> (update-in [:by-edge edge :by-source-field f] (fnil inc 0))
@@ -103,6 +106,7 @@
               :by-category   (pad (:by-category acc))
               :by-edge       (into {} (map (fn [[e er]] [e (update er :by-category pad)]))
                                    (:by-edge acc))
+              :by-aspect     (:by-aspect acc {})
               :source-fields (vec (sort-by str (:source-fields acc)))}
        records (assoc :records records)))))
 
@@ -128,7 +132,7 @@
    event total, then the clean per-edge breakdown (audit R3 — no merged,
    double-counting field line). Never prints; returns the empty-loss line
    when clean."
-  [{:keys [total distinct-losses by-category by-edge records source-fields] :as _report}]
+  [{:keys [total distinct-losses by-category by-edge by-aspect records source-fields] :as _report}]
   (if (zero? total)
     (str "Loss report: lossless"
          (when records (str " (" records " records)")))
@@ -142,10 +146,11 @@
                     " (" total (if (= 1 total) " field×edge event" " field×edge events")
                     (when records (str ", " records (if (= 1 records) " record" " records")))
                     ")"
-                    "\n  by category: " (category-line by-category))
+                    "\n  by category: " (category-line by-category)
+                    (when (seq by-aspect) (str "\n  by aspect: " (category-line by-aspect))))
           edge-block (fn [edge]
                        (when-let [er (get by-edge edge)]
                          (str "\n  " (name edge) " edge — " (:total er)
                               " (" (category-line (:by-category er)) ")"
                               "\n    fields: " (top-fields (:by-source-field er) 8))))]
-      (str head (edge-block :import) (edge-block :export)))))
+      (str head (edge-block :import) (edge-block :projection) (edge-block :export)))))
