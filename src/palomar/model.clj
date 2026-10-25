@@ -245,7 +245,17 @@
      (mint-entity-id :lrmoo/work \"flaubert|madame bovary\")
      ;; => :ent/work.<16 hex chars>
 
-   `kind` must be a keyword; `key` must be a non-empty string."
+   `kind` must be a keyword; `key` must be a non-empty string.
+
+   Collision policy (audit S36). The hash is the first 64 bits of SHA-256, and
+   the kind is part of both the hashed input and the id, so ids collide only
+   between two keys of one kind. For n entities of a kind the chance of any
+   collision is about n²/2⁶⁵: ~3·10⁻⁶ for 10⁷, ~3·10⁻² for 10⁹. The key is not
+   stored on the entity, so a collision cannot be detected afterwards from the
+   id alone; the runtime does flag the detectable case, one id with two
+   different `:iri`s (`:entity-id-collision`). A corpus approaching 10⁹
+   entities of one kind should widen the digest, which changes every id (a
+   migration, not a silent switch)."
   [kind key]
   (when-not (keyword? kind)
     (throw (ex-info "mint-entity-id requires a keyword kind" {:kind kind})))

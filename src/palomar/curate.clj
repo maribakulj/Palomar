@@ -25,11 +25,13 @@
    the decision in `:status`), so curation *reports* transitions rather than
    stamping them.
 
-   Out of scope here (documented, not done): supersession of an in-force assertion
-   that an accepted proposal replaces (ADR 0005's conditional \"may cause the
-   original to become :superseded\"). It needs replacement semantics the proposal
-   does not yet carry — the core models no predicate cardinality, so the engine
-   cannot tell a correction from an addition. Left to a later, explicit step."
+   Supersession of an in-force assertion (ADR 0005's conditional \"may cause the
+   original to become :superseded\") is not inferred: the core models no
+   predicate cardinality, so the engine cannot tell a correction from an
+   addition. It is an explicit step instead, `supersede`, which marks the old
+   assertion `:superseded`, adds its replacement and logs both with a reason.
+   A decision function may likewise return `[verdict reason]` so the log keeps
+   why each claim was accepted, rejected or flagged (audit S28)."
   (:require [clojure.string :as str]
             [palomar.model :as model]))
 
@@ -49,20 +51,23 @@
 
 (defn- curate-assertion
   "Resolve one assertion. If `a` is pending, apply `decide` and transition its
-   status; otherwise leave it untouched. Returns `[a' transition-or-nil]`."
+   status; otherwise leave it untouched. `decide` returns a verdict, or
+   `[verdict reason]` to record why (audit S28). Returns `[a' transition-or-nil]`."
   [decide a]
   (if (model/pending? a)
-    (let [verdict (decide a)
-          status  (verdict->status verdict)]
+    (let [decision         (decide a)
+          [verdict reason] (if (vector? decision) decision [decision nil])
+          status           (verdict->status verdict)]
       (when-not status
         (throw (ex-info "Curation decision must be :accept, :reject or :review"
                         {:verdict verdict :assertion a})))
       [(assoc a :status status)
-       {:subject   (:subject a)
-        :predicate (:predicate a)
-        :from      (:status a)
-        :to        status
-        :verdict   verdict}])
+       (cond-> {:subject   (:subject a)
+                :predicate (:predicate a)
+                :from      (:status a)
+                :to        status
+                :verdict   verdict}
+         reason (assoc :reason reason))])
     [a nil]))
 
 (defn curate-record
@@ -87,6 +92,34 @@
      :rejected     (get by-to :rejected 0)
      :needs-review (get by-to :needs-review 0)
      :total        (count transitions)}))
+
+(defn supersede
+  "Replace, in `record`, the in-force assertion `old` by `new` (ADR 0005's
+   supersession, an explicit step since the core models no cardinality and so
+   cannot tell a correction from an addition). `old` becomes `:superseded`; `new`
+   is added `:accepted`, its provenance deriving from `old`'s subject. Returns
+   `{:record record' :transitions [..]}`, the log naming the replacement and the
+   `reason` (audit S28). Throws when `old` is not an in-force assertion of
+   `record`."
+  [record old new reason]
+  (let [same? #(and (= (:subject %) (:subject old)) (= (:predicate %) (:predicate old))
+                    (= (:value %) (:value old)) (model/in-force? %))]
+    (when-not (some same? (:assertions record))
+      (throw (ex-info "supersede: no such in-force assertion" {:assertion old})))
+    {:record      (-> record
+                      (update :assertions (partial mapv #(if (same? %) (assoc % :status :superseded) %)))
+                      (update :assertions conj
+                              (-> new
+                                  (assoc :status :accepted)
+                                  (update :provenance #(update (or % {}) :derivation
+                                                               (fnil conj []) (:subject old))))))
+     :transitions [{:subject     (:subject old)
+                    :predicate   (:predicate old)
+                    :from        (:status old)
+                    :to          :superseded
+                    :verdict     :supersede
+                    :replaced-by (select-keys new [:subject :predicate :value])
+                    :reason      reason}]}))
 
 (defn curate
   "Curate a batch of `records` with one decision function `decide`. Returns
