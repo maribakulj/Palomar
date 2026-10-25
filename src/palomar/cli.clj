@@ -203,6 +203,28 @@
        (catch Exception e
          {:exit 2 :out "" :err (str "error: " (.getMessage e))})))
 
+(defn- replace-file!
+  "Move `src` over `dst`, returning true on success. The existing `dst` is never
+   deleted first: when the move fails it is left exactly as it was. An atomic
+   rename is preferred; the plain replacing move is the fallback for file systems
+   that refuse atomic moves."
+  [^java.io.File src ^java.io.File dst]
+  (let [from (.toPath src)
+        to   (.toPath dst)]
+    (try
+      (java.nio.file.Files/move from to
+                                (into-array java.nio.file.CopyOption
+                                            [java.nio.file.StandardCopyOption/ATOMIC_MOVE]))
+      true
+      (catch java.nio.file.AtomicMoveNotSupportedException _
+        (try
+          (java.nio.file.Files/move from to
+                                    (into-array java.nio.file.CopyOption
+                                                [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
+          true
+          (catch java.io.IOException _ false)))
+      (catch java.io.IOException _ false))))
+
 (defn- do-convert-stream
   "Streaming convert (WP-7): lazily parse the input and write each rendered document
    to `--out` incrementally, in bounded memory (the whole corpus is never
@@ -243,8 +265,7 @@
                      {:from fromk :to (keyword to)
                       :records (convert/stream-source fromk opts r)}
                      (fn [doc] (.write w doc) (.write w "\n"))))]
-          (.delete outf)                                ; renameTo won't overwrite on every platform
-          (if (.renameTo @tmp outf)
+          (if (replace-file! @tmp outf)
             {:exit 0 :out ""
              :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")
                         " streamed (bounded memory)\n"

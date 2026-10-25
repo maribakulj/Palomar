@@ -88,10 +88,16 @@
 ;; a read-only projection; the underlying record is never mutated.
 ;; ---------------------------------------------------------------------------
 
+(def ^:private out-of-force-statuses
+  "Assertion statuses that no longer hold, so the matcher must not see them.
+   `:proposed` stays visible on purpose: inference chains through proposed facts."
+  #{:rejected :superseded :retracted})
+
 (defn record-triples
   "Return a vector of [subject predicate value] triples representing the
    record, combining struct fields (via the structural vocabulary) and
-   explicit assertions.
+   explicit assertions. Assertions whose status is out of force (rejected,
+   superseded, retracted) are left out.
 
    Struct triples cover the full structural vocabulary (`:meta/id`,
    `:meta/kind`, `:meta/source`, `:meta/fragment`, `:meta/diagnostic`,
@@ -120,7 +126,9 @@
         (mapv (fn [d] [id model/meta-diagnostic (:code d)])
               (:diagnostics record))
         assertion-triples
-        (mapv (fn [a] [(:subject a) (:predicate a) (:value a)])
+        (into []
+              (comp (remove #(contains? out-of-force-statuses (:status %)))
+                    (map (fn [a] [(:subject a) (:predicate a) (:value a)])))
               (:assertions record))]
     (-> struct-triples
         (into fragment-triples)

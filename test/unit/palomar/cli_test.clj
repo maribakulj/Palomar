@@ -296,6 +296,29 @@
       (is (= 2 exit))
       (is (str/includes? err "not supported")))))
 
+(deftest convert-stream-replaces-existing-out-only-on-success
+  (testing "an existing --out is replaced by the streamed document"
+    (let [out (str (System/getProperty "java.io.tmpdir") "/palomar-replace-" (System/nanoTime) ".nt")]
+      (try
+        (spit out "PREVIOUS OUTPUT")
+        (let [{:keys [exit]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "ntriples"
+                                       "--stream" "--out" out])]
+          (is (= 0 exit))
+          (is (str/includes? (slurp out) "lrmoo/F3_Manifestation")))
+        (finally (.delete (java.io.File. out))))))
+  (testing "when the final move fails, the previous --out is left intact (not deleted first)"
+    (let [out (str (System/getProperty "java.io.tmpdir") "/palomar-keep-" (System/nanoTime) ".nt")]
+      (try
+        (spit out "PREVIOUS OUTPUT")
+        (with-redefs-fn {#'palomar.cli/replace-file! (fn [_ _] false)}
+          (fn []
+            (let [{:keys [exit err]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "ntriples"
+                                               "--stream" "--out" out])]
+              (is (= 2 exit))
+              (is (str/includes? err "could not move")))))
+        (is (= "PREVIOUS OUTPUT" (slurp out)))
+        (finally (.delete (java.io.File. out)))))))
+
 (deftest convert-stream-fails-atomically-leaving-no-partial-out
   (testing "a malformed input mid-stream: exit 2 and NO --out file is left (all-or-nothing, like batch)"
     (let [bad (str (System/getProperty "java.io.tmpdir") "/palomar-bad-" (System/nanoTime) ".xml")
