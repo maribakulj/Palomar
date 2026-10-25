@@ -23,9 +23,7 @@
 (def ^:private pal  "urn:palomar:vocab#")
 (def ^:private xsd  "http://www.w3.org/2001/XMLSchema#")
 
-(defn- digest [s]
-  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes (str s) "UTF-8"))]
-    (apply str (map #(format "%02x" (bit-and % 0xff)) (take 8 d)))))
+(defn- digest [s] (model/sha256-hex s 16))
 
 (defn- term-iri
   "IRI of a predicate keyword: LRMoo and CRM terms by their own namespaces,
@@ -49,12 +47,29 @@
 (defn- activity-iri [rid {:keys [pass rule]}]
   (str "urn:palomar:activity:" (digest (pr-str [rid pass rule]))))
 
-(defn- activity-triples [rid p]
+(def ^:private engine
+  "The software agent every activity is associated with: the Palomar engine."
+  "urn:palomar:agent:engine")
+
+(defn- activity-triples
+  "The activity of (record `rid`, phase, rule) `p`. A rule is not an agent (the
+   range of `prov:wasAssociatedWith`) but the plan the engine followed, so it
+   rides on a qualified association: activity —qualifiedAssociation→
+   Association —agent→ engine (`prov:SoftwareAgent`), —hadPlan→ rule
+   (`prov:Plan`)."
+  [rid p]
   (let [a (activity-iri rid p)]
-    (cond-> [[a (str rdf "type") {:iri (str prov "Activity")}]]
+    (cond-> [[a (str rdf "type") {:iri (str prov "Activity")}]
+             [a (str prov "wasAssociatedWith") {:iri engine}]
+             [engine (str rdf "type") {:iri (str prov "SoftwareAgent")}]]
       (:pass p) (conj [a (str pal "phase") {:lit (name (:pass p))}])
-      (:rule p) (into [[a (str prov "wasAssociatedWith") {:iri (str "urn:palomar:rule:" (subs (str (:rule p)) 1))}]
-                       [(str "urn:palomar:rule:" (subs (str (:rule p)) 1)) (str rdf "type") {:iri (str prov "Plan")}]]))))
+      (:rule p) (into (let [plan  (str "urn:palomar:rule:" (subs (str (:rule p)) 1))
+                            assoc (str "urn:palomar:association:" (digest (pr-str [rid (:pass p) (:rule p)])))]
+                        [[a (str prov "qualifiedAssociation") {:iri assoc}]
+                         [assoc (str rdf "type") {:iri (str prov "Association")}]
+                         [assoc (str prov "agent") {:iri engine}]
+                         [assoc (str prov "hadPlan") {:iri plan}]
+                         [plan (str rdf "type") {:iri (str prov "Plan")}]])))))
 
 (defn triples
   "The PROV-O graph of `record` as `[s p o]` triples (see the namespace doc)."
@@ -94,7 +109,8 @@
   [])
 
 (defn statement-count
-  "How many statements `->ntriples` writes for `record` (one per assertion)."
+  "How many statements `->ntriples` writes for `record`: one per distinct
+   (subject, predicate, value, status), the statement's identity."
   [record]
   (count (filter #(and (= (str rdf "type") (second %)) (= {:iri (str rdf "Statement")} (nth % 2)))
                  (triples record))))

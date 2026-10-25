@@ -10,8 +10,9 @@
    Agents keep their DC element: the importer qualifies each `:canon/agent` with
    its `:canon/role` (creator / contributor / publisher), and export emits the
    matching element back. Two losses remain, surfaced at the export edge (ADR 0015):
-   - an agent with no role (from a spoke whose source did not state one) is
-     emitted as `dc:creator`, a guess reported as `:under-specified`;
+   - an agent with no role (from a spoke whose source did not state one), or
+     with a role DC has no element for, is emitted as `dc:creator`, a guess
+     reported as `:under-specified`;
    - `dc:relation` and `dc:source` both import to `:canon/relation`, so export
      cannot tell them apart and emits `dc:relation`.
    The six DCMES elements with no canonical home (subject, type, …) were already
@@ -26,9 +27,9 @@
    `:exporter` slot to avoid a require cycle — wiring is a later assembly step."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
-            [palomar.model :as model]
             [palomar.plugins.dc :as dc]
-            [palomar.plugins.export-coverage :as cov]))
+            [palomar.plugins.export-coverage :as cov]
+            [palomar.plugins.qualified :as qualified]))
 
 (def canon->dc
   "Ordered canonical→DC element map. Several DC elements collapsed onto one
@@ -46,21 +47,9 @@
   {:creator "creator" :contributor "contributor" :publisher "publisher"})
 
 (defn- occurrences
-  "Record-level `{:value :lang :role}` occurrences of canonical predicate `p`,
-   resolving a fragment reference (qualified value) to its literal plus its
-   `:canon/lang` and `:canon/role` coords. Flat literals come back with nil coords."
+  "`{:value :canon/lang :canon/role}` for each `p` literal of `record`."
   [record p]
-  (let [rid (:id record)]
-    (for [a (:assertions record)
-          :when (and (= p (:predicate a)) (= rid (:subject a)))]
-      (let [v (:value a)]
-        (if (model/reference-value? v)
-          (let [fid (:value/target v)
-                fas (filter #(= fid (:subject %)) (:assertions record))]
-            {:value (some #(when (and (= p (:predicate %)) (string? (:value %))) (:value %)) fas)
-             :lang  (some #(when (= :canon/lang (:predicate %)) (:value %)) fas)
-             :role  (some #(when (= :canon/role (:predicate %)) (:value %)) fas)})
-          {:value v :lang nil :role nil})))))
+  (qualified/occurrences record p [:canon/lang :canon/role]))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -71,7 +60,7 @@
 (defn- attr-escape [s]
   (str/replace (xml-escape s) "\"" "&quot;"))
 
-(defn- dc-line [local {:keys [value lang]}]
+(defn- dc-line [local {value :value lang :canon/lang}]
   (str "  <dc:" local
        (when lang (str " xml:lang=\"" (attr-escape lang) "\""))
        ">" (xml-escape value) "</dc:" local ">"))
@@ -83,7 +72,7 @@
   (let [lines (for [[p local] canon->dc
                     occ        (occurrences record p)
                     :when      (some? (:value occ))]
-                (dc-line (get role->dc (:role occ) local) occ))]
+                (dc-line (get role->dc (:canon/role occ) local) occ))]
     (when (seq lines)
       (str "<metadata xmlns:dc=\"" dc/dc-uri "\">\n"
            (str/join "\n" lines)
@@ -101,12 +90,12 @@
    digital object, a uniform title, another spoke's native fields)."
   [record]
   (into (cond-> []
-          (some #(nil? (:role %)) (occurrences record :canon/agent))
+          (some #(not (contains? role->dc (:canon/role %))) (occurrences record :canon/agent))
           (conj (dx/loss {:category     :under-specified
                           :subject      (:id record)
                           :edge         :export
                           :source-field :canon/agent
-                          :message      "agent role not stated in the source — emitted as dc:creator"}))
+                          :message      "agent role not stated, or with no DC element — emitted as dc:creator"}))
 
           (seq (occurrences record :canon/relation))
           (conj (dx/loss {:category     :under-specified

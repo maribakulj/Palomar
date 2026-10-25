@@ -67,7 +67,16 @@
                                                            :value "Anonyme"})]})
           ls (dce/export-losses r)]
       (is (str/includes? (dce/->dc-xml r) "<dc:creator>Anonyme</dc:creator>"))
-      (is (= [:canon/agent] (map #(get-in % [:detail :loss/source-field]) ls))))))
+      (is (= [:canon/agent] (map #(get-in % [:detail :loss/source-field]) ls)))))
+  (testing "so is an agent whose role has no DC element (audit S11)"
+    (let [r  (model/record {:id :dc/y :kind :document
+                            :fragments  [(model/fragment {:id :frag/y.0 :source [:test]})]
+                            :assertions [(model/assertion {:subject :dc/y :predicate :canon/agent
+                                                           :value (model/reference :frag/y.0)})
+                                         (model/assertion {:subject :frag/y.0 :predicate :canon/agent :value "Doré"})
+                                         (model/assertion {:subject :frag/y.0 :predicate :canon/role :value :illustrator})]})]
+      (is (str/includes? (dce/->dc-xml r) "<dc:creator>Doré</dc:creator>"))
+      (is (some #(= :canon/agent (get-in % [:detail :loss/source-field])) (dce/export-losses r))))))
 
 (deftest the-round-trip-is-stable-after-the-first-pass
   (testing "DC -> canon -> DC -> canon -> DC: the loss happens once, then fixes"

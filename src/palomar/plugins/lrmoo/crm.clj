@@ -33,18 +33,12 @@
   "LRMoo WEMI R-property -> its CIDOC-CRM super-property (verified vs the OWL)."
   {:lrmoo/R3_is_realised_in "P130_shows_features_of"
    :lrmoo/R4_embodies       "P165_incorporates"
-   :lrmoo/R7_exemplifies    "P128_carries"
-   :lrmoo/R33_has_string    "P3_has_note"})
+   :lrmoo/R7_exemplifies    "P128_carries"})
 
-;; Indexes keyed by the *IRI strings* as they appear in `export/triples`.
-(def nomen-superclass
-  "`F12_Nomen`'s CIDOC-CRM super-class (LRMoo 1.0 / 1.1.1). Kept apart from
-   `class-superclass`, which lists the WEMI classes only."
-  "E41_Appellation")
-
+;; Indexes keyed by the *IRI strings* as they appear in `export/triples`. An
+;; entity's string is already CRM (E41 Appellation, P190), so it has no twin.
 (def ^:private class-iri->crm
-  (into {(lrmoo/iri :lrmoo/F12_Nomen) (str crm-base nomen-superclass)}
-        (for [[k e] class-superclass] [(lrmoo/iri k) (str crm-base e)])))
+  (into {} (for [[k e] class-superclass] [(lrmoo/iri k) (str crm-base e)])))
 
 (def ^:private prop-iri->crm
   (into {} (for [[k p] property-superproperty] [(lrmoo/iri k) (str crm-base p)])))

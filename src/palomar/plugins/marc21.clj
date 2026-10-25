@@ -55,7 +55,8 @@
    digit-leading keyword name (an EDN round-trip hazard, ADR 0001). A control
    number with characters outside `[A-Za-z0-9]` (e.g. a space in
    \"CF 91000008\") is slugged and gets a digest suffix, so two distinct control
-   numbers never share an id (`palomar.plugins.record-id`, audit S20)."
+   numbers share an id only on a 40-bit digest collision
+   (`palomar.plugins.record-id`, audit S20)."
   [control-number]
   (record-id/from-identifier "marc" "r" control-number))
 

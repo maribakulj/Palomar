@@ -229,6 +229,15 @@
         segments      (mapv encode-locator-segment locator)]
     (keyword "frag" (str/join "." (cons record-prefix segments)))))
 
+(defn sha256-hex
+  "The first `n` hex digits of the SHA-256 of `s`'s UTF-8 bytes — the one digest
+   behind every content-derived id and IRI (entity ids, record-id suffixes,
+   appellation and activity IRIs)."
+  [s n]
+  (let [bytes (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                       (.getBytes (str s) "UTF-8"))]
+    (subs (apply str (map #(format "%02x" (bit-and (int %) 0xff)) bytes)) 0 n)))
+
 (defn mint-entity-id
   "Construct a content-based identifier for a synthesized entity. Returns a
    keyword in the `:ent` namespace whose name is the entity `kind` followed by a
@@ -261,12 +270,7 @@
     (throw (ex-info "mint-entity-id requires a keyword kind" {:kind kind})))
   (when-not (and (string? key) (seq key))
     (throw (ex-info "mint-entity-id requires a non-empty string key" {:key key})))
-  (let [canonical (pr-str [kind key])
-        digest    (.digest (java.security.MessageDigest/getInstance "SHA-256")
-                           (.getBytes canonical "UTF-8"))
-        hex       (apply str (map #(format "%02x" (bit-and (int %) 0xff))
-                                  (take 8 digest)))]
-    (keyword "ent" (str (name kind) "." hex))))
+  (keyword "ent" (str (name kind) "." (sha256-hex (pr-str [kind key]) 16))))
 
 ;; ---------------------------------------------------------------------------
 ;; Value

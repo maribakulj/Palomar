@@ -45,6 +45,23 @@
         (is (some? e))
         (is (= {:line 2 :column col} (ex-data e)))))))
 
+(deftest the-grammar-edges-are-held
+  (testing "an escape that is no Unicode scalar value is a located error, not a JVM exception (audit L7)"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not a Unicode scalar value"
+                          (nt/parse "<http://ex/s> <http://ex/p> \"\\U00110000\" .")))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not a Unicode scalar value"
+                          (nt/parse "<http://ex/s> <http://ex/p> \"\\uD800\" ."))))
+  (testing "an IRI must be absolute, and an escape cannot smuggle in a forbidden character"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not an absolute IRI"
+                          (nt/parse "<s> <http://ex/p> <http://ex/o> .")))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not allowed in an IRI"
+                          (nt/parse "<http://ex/a\\u0020b> <http://ex/p> <http://ex/o> ."))))
+  (testing "a blank node label may hold ':', a combining mark and a character beyond the BMP"
+    (is (= [{:bnode "a:b\u0301\uD835\uDC00"} {:iri "http://ex/p"} {:bnode "c"}]
+           (first (nt/parse "_:a:b\u0301\uD835\uDC00 <http://ex/p> _:c .")))))
+  (testing "a lone CR ends a line"
+    (is (= 2 (count (nt/parse "<http://ex/s> <http://ex/p> \"1\" .\r<http://ex/s> <http://ex/p> \"2\" .\r\n"))))))
+
 (deftest term-key-names-a-node
   (is (= "http://ex/s" (nt/term-key {:iri "http://ex/s"})))
   (is (= "_:b0" (nt/term-key {:bnode "b0"})))

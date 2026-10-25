@@ -107,12 +107,18 @@
   #{:lrmoo/R33_has_string :lrmoo/R3_is_realised_in :lrmoo/R4_embodies :lrmoo/R7_exemplifies
     :canon/agent :canon/role :canon/note :canon/digital-object :canon/identifier})
 
-(defn- title-of [record subject]
+(defn- titles-of
+  "The distinct R33 strings of `subject`, in assertion order."
+  [record subject]
   (->> (:assertions record)
        (filter #(and (= subject (:subject %))
                      (= :lrmoo/R33_has_string (:predicate %))
                      (string? (:value %))))
-       first :value))
+       (map :value)
+       distinct
+       vec))
+
+(defn- title-of [record subject] (first (titles-of record subject)))
 
 (defn- canon-vals [record pred]
   (->> (:assertions record)
@@ -137,12 +143,12 @@
    `record-fields?`, the record-level canonical fields (creators, publishers,
    notes, images, identifiers) attach to it."
   [record {:keys [manif expr work]} record-fields?]
-  (let [expr-title (when expr (title-of record expr))
-        work-title (when work (title-of record work))
-        title      (or (title-of record (:id manif)) expr-title work-title)
-        ;; the Expression folds into this text, so its own title, when it differs,
-        ;; is a further Name of it rather than a silent loss
-        other-name (when (and expr-title (not= expr-title title)) (name-obj expr-title))
+  (let [work-title (when work (title-of record work))
+        ;; every string of the Manifestation, then of the Expression that folds
+        ;; into it, is a Name of this text; the first is its primary name
+        names      (distinct (concat (titles-of record (:id manif)) (when expr (titles-of record expr))))
+        title      (or (first names) work-title)
+        others     (map #(dissoc (name-obj %) "classified_as") (rest names))
         creators   (when record-fields? (agents/creators record))
         publishers (when record-fields? (agents/with-role record :publisher))
         notes      (when record-fields? (canon-vals record :canon/note))
@@ -155,14 +161,14 @@
              "type"     "LinguisticObject"
              "_label"   (or title (text-iri manif))}
       (or title (seq idents)) (assoc "identified_by" (-> (if title [(name-obj title)] [])
-                                                         (cond-> other-name (conj (dissoc other-name "classified_as")))
+                                                         (into others)
                                                          (into idents)))
       (seq creators)          (assoc "created_by" {"type" "Creation"
                                                    "carried_out_by" (persons record creators)})
       (seq publishers)        (assoc "used_for" [(publishing publishers)])
-      work                    (assoc "part_of" [(cond-> {"id" (export/entity-iri work)
+      work                    (assoc "part_of" [(cond-> {"id" (text-iri (or (view/entity-by-id record work) {:id work}))
                                                          "type" "PropositionalObject"}
-                                                  (or work-title title) (assoc "_label" (or work-title title)))])
+                                                  work-title (assoc "_label" work-title))])
       (seq notes)             (assoc "referred_to_by" (mapv note-obj notes))
       (seq digis)             (assoc "representation" (mapv digital-obj digis)))))
 
@@ -186,8 +192,8 @@
    `LinguisticObject` per Manifestation (a Manifestation is an edition, not a
    physical object), then one `HumanMadeObject` per F5 Item. The record-level
    canonical fields attach to the text when the record has exactly one
-   Manifestation; with several they cannot be attributed and are reported as loss
-   (`export-losses`). Empty for a record with neither."
+   Manifestation; with none or several they cannot be attributed and are
+   reported as loss (`export-losses`). Empty for a record with neither."
   [record]
   (let [ts (texts record)]
     (into (mapv #(text-doc record % (= 1 (count ts))) ts)
@@ -206,7 +212,8 @@
   [record]
   (let [expressed (into (set (agents/creators record)) (agents/with-role record :publisher))]
     (for [{nm :name role :role} (distinct (agents/occurrences record))
-          :when (not (contains? expressed nm))]
+          :when (and (= 1 (count (texts record)))       ; else no agent is attributed (`structure-losses`)
+                     (not (contains? expressed nm)))]
       (dx/loss {:category     :dropped
                 :subject      (:id record)
                 :edge         :export
@@ -218,8 +225,9 @@
   "Losses of the WEMI → Linked Art structure: each Expression folded into its
    Manifestation's LinguisticObject (`:under-specified` — Linked Art has no
    edition level), each WEMI entity no document reaches (`:dropped`), and, when
-   the record has several Manifestations, its record-level canonical fields,
-   which cannot be attributed to one of them (`:under-specified`)."
+   the record has no Manifestation or several, its record-level canonical
+   fields, which no text carries (`:dropped`, none) or which cannot be
+   attributed to one of them (`:under-specified`, several)."
   [record]
   (let [ts      (texts record)
         reached (into (set (mapcat (fn [{:keys [manif expr work]}] [(:id manif) expr work]) ts))
@@ -235,10 +243,10 @@
                       (not (contains? reached (:id e))))]
        (loss :dropped (:id e) (:kind e)
              (str (name (:kind e)) " is reached by no Manifestation or Item; not exported")))
-     (when (< 1 (count ts))
-       (for [p [:canon/agent :canon/note :canon/digital-object :canon/identifier]
-             :when (seq (canon-vals record p))]
-         (loss :under-specified (:id record) p
+     (when (not= 1 (count ts))
+       (for [p [:canon/agent :canon/role :canon/note :canon/digital-object :canon/identifier]
+             :when (some #(= p (:predicate %)) (:assertions record))]
+         (loss (if (empty? ts) :dropped :under-specified) (:id record) p
                (str (name p) " is record-level but the record has " (count ts)
                     " Manifestations; not attributed to any of them")))))))
 

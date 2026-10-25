@@ -10,14 +10,13 @@
    the identifier; whenever slugging changed or dropped anything, a short
    SHA-256 digest of the full (trimmed) identifier is appended. Leading and
    trailing whitespace is not significant."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [palomar.model :as model]))
 
 (defn- digest
   "The first 10 hex digits (40 bits) of the SHA-256 of `s`."
   [s]
-  (let [bytes (.digest (java.security.MessageDigest/getInstance "SHA-256")
-                       (.getBytes ^String s "UTF-8"))]
-    (subs (apply str (map #(format "%02x" (bit-and % 0xff)) bytes)) 0 10)))
+  (model/sha256-hex s 10))
 
 (defn slug
   "`s` trimmed, every run of characters outside `[A-Za-z0-9]` collapsed to `-`."
@@ -26,8 +25,9 @@
 
 (defn from-identifier
   "`(keyword ns (str prefix (slug raw)))` when the slug is the trimmed identifier
-   itself, else the same with `-h<digest of raw>` appended, so distinct
-   identifiers never share an id."
+   itself, else the same with `-h<digest of raw>` appended, so two distinct
+   identifiers share an id only on a 40-bit digest collision (or when one is
+   literally spelled as the other's digested form)."
   [ns prefix raw]
   (let [trimmed (str/trim (str raw))
         s       (slug trimmed)]

@@ -8,16 +8,25 @@
    source order within a rule), and skips out-of-force assertions (ADR 0023)."
   (:require [palomar.model :as model]))
 
-(defn values
-  "Every in-force `pred` literal of `record`, in assertion order, as
-   `{:value v :coord c}` where `c` is the value of `coord` on the literal's
-   subject (nil when there is none: a flat literal, or a fragment without that
-   coord)."
-  [record pred coord]
-  (let [live   (remove model/out-of-force? (:assertions record))
-        coords (into {} (for [a live
-                              :when (= coord (:predicate a))]
-                          [(:subject a) (:value a)]))]
+(defn occurrences
+  "Every in-force `pred` literal of `record`, in assertion order, as a map with
+   the literal under `:value` and, for each coord in `coords`, its value on the
+   literal's subject under the coord's own key (absent when there is none: a
+   flat literal, or a fragment without that coord)."
+  [record pred coords]
+  (let [live  (remove model/out-of-force? (:assertions record))
+        want  (set coords)
+        by-s  (reduce (fn [m a]
+                        (if (and (want (:predicate a)) (not (contains? (get m (:subject a)) (:predicate a))))
+                          (assoc-in m [(:subject a) (:predicate a)] (:value a))
+                          m))
+                      {} live)]
     (for [a live
           :when (and (= pred (:predicate a)) (string? (:value a)))]
-      {:value (:value a) :coord (coords (:subject a))})))
+      (assoc (get by-s (:subject a)) :value (:value a)))))
+
+(defn values
+  "`occurrences` of `pred` with the one `coord`, as `{:value v :coord c}`."
+  [record pred coord]
+  (for [o (occurrences record pred [coord])]
+    {:value (:value o) :coord (get o coord)}))

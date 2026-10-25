@@ -26,6 +26,7 @@
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
+            [palomar.plugins.qualified :as qualified]
             [palomar.rules :as rules]
             [palomar.runtime :as runtime]
             [palomar.text :as text]))
@@ -82,12 +83,16 @@
                              :status status :provenance prov})}))
 
 (defn- distinct-langs
-  "Distinct `:canon/lang` values the record carries (one per parallel-language
-   title fragment)."
+  "Distinct languages of the record's titles: the `:canon/lang` of its
+   `:canon/title` and `:canon/uniform-title` fragments, lower-cased (one per
+   parallel-language title). A note's language says nothing about the
+   Expression's, so it is not read."
   [record]
-  (->> (:assertions record)
-       (filter #(= :canon/lang (:predicate %)))
-       (map :value)
+  (->> [:canon/title :canon/uniform-title]
+       (mapcat #(qualified/values record % :canon/lang))
+       (keep :coord)
+       (filter string?)
+       (map str/lower-case)
        distinct))
 
 (defn- wemi-productions
@@ -121,7 +126,7 @@
                              ;; translation are one Work, two Expressions (audit S19)
                              lang (let [ls (distinct-langs record)] (when (= 1 (count ls)) (first ls)))
                              expr (model/mint-entity-id :lrmoo/F2_Expression
-                                                        (cond-> wkey lang (str "|" (str/lower-case lang))))
+                                                        (cond-> wkey lang (str "|" lang)))
                              work (when agent (model/mint-entity-id :lrmoo/F1_Work wkey))]
                          ;; F1 and F2 minted from the same key are distinct ids: the
                          ;; kind is part of the content hash (`mint-entity-id`).
@@ -137,8 +142,8 @@
    assertion a record carries is reported as loss (ADR 0015)."
   #{:canon/title          ; -> R33 strings (Manifestation / Expression / Work)
     :canon/uniform-title  ; -> Work/Expression key + R33 (uniform-title bridging)
-    :canon/agent          ; -> F1_Work key (creator)
-    :canon/role})         ; -> selects which agent keys the Work
+    :canon/agent})        ; -> F1_Work key (creator); its :canon/role only selects
+                          ;    which agent, and is not itself represented
 
 (defn- source-fields
   "Distinct `:canon/*` predicates the record carries, excluding the in-graph
@@ -150,14 +155,21 @@
        (remove #{:canon/loss-marker})
        distinct))
 
+(defn- language-keyed?
+  "True when the record's title languages key an Expression, which
+   `language-losses` then accounts for."
+  [record]
+  (boolean (and (work-title-of record) (seq (distinct-langs record)))))
+
 (defn- dropped-losses
   "A `:dropped` / `:import` loss for each canonical field the projection does not
-   represent. `:canon/lang` is handled separately (`language-losses`), since with
-   multiple languages it is an *under-specification*, not a plain drop."
+   represent. A `:canon/lang` that keys an Expression is handled by
+   `language-losses`, since with several languages it is an
+   *under-specification*, not a plain drop; any other (a note's) is dropped."
   [record]
   (for [p (source-fields record)
         :when (and (not (contains? mapped-source-fields p))
-                   (not= :canon/lang p))]
+                   (not (and (= :canon/lang p) (language-keyed? record))))]
     {:kind  :diagnostic
      :value (dx/loss {:category     :dropped
                       :subject      (:id record)

@@ -32,9 +32,10 @@
 
    R33_has_string has the domain F12 Nomen, not a WEMI class. The IR writes an
    entity's title as `[entity :lrmoo/R33_has_string \"…\"]` for convenience; the
-   RDF export expands it to entity —P1_is_identified_by→ F12 Nomen
-   —R33_has_string→ \"…\" (`lrmoo.export/string-triples`), and `crm-import`
-   reads that path back.")
+   RDF export expands it to entity —P1_is_identified_by→ E41 Appellation
+   —P190_has_symbolic_content→ \"…\" (`lrmoo.export/string-triples`, ADR 0022),
+   and `crm-import` reads that path back. P1's range is E41, which F12 is not a
+   subclass of, so the node is an appellation, not a Nomen.")
 
 (def lrmoo-iri
   "Namespace IRI of LRMoo (v1.0 spec header; unchanged in 1.1.1)."

@@ -20,7 +20,7 @@ classes**:
 | `R3_is_realised_in`| `P130_shows_features_of`   | generic ("shows features of") |
 | `R4_embodies`      | `P165_incorporates`        | generic |
 | `R7_exemplifies`   | `P128_carries`             | generic |
-| `R33_has_string`   | `P3_has_note`              | generic; in LRMoo R33's domain is F12_Nomen |
+| `R33_has_string`   | — (not written)            | R33's domain is F12_Nomen; an entity's string is written `P1` → `E41_Appellation` → `P190` (ADR 0022), already CRM |
 
 Two real losses if we *replace* LRMoo with plain CRM:
 
