@@ -2,7 +2,7 @@
   "Round-trip tests (WP-4): MARC21 → canonical floor → MARC21. The real LoC Ray
    Charles record imports, normalises to the floor, and exports back to MARCXML;
    the test pins down what the *pivot* preserves (the bibliographic subset) and
-   what it costs (19 native fields the floor never carried + 4 many-to-one
+   what it costs (20 native fields the floor never carried + 4 many-to-one
    collapses, ADR 0015) — then proves the trip is id-stable and idempotent."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
@@ -81,12 +81,13 @@
       (is (contains? (set (mex/pivot-dropped-fields canon)) :marc21/f300_a))))) ; physical
 
 (deftest the-round-trip-loss-report-quantifies-the-whole-gap
-  (testing "19 floor-coverage drops (import) + 4 collapses (export) = the trip's loss"
+  (testing "20 floor-coverage drops (import) + 4 collapses (export) = the trip's loss"
     (let [canon  (->canonical fixture :marc/r5637241)
           report (lr/conversion-report (mex/export-losses canon) {:records 1})]
-      (is (= 19 (get-in report [:by-edge :import :total])))
+      (is (= 20 (get-in report [:by-edge :import :total])))   ; the leader is now captured, hence reported
       (is (= 4 (get-in report [:by-edge :export :total])))
-      (is (= 19 (get-in report [:by-category :dropped])))
+      (is (= 20 (get-in report [:by-category :dropped])))
+      (is (contains? (set (mex/pivot-dropped-fields canon)) :marc21/leader))
       (is (= 4 (get-in report [:by-category :under-specified])))
       (testing "the collapses name the multi-source canonical predicates"
         (is (= #{:canon/agent :canon/date :canon/identifier :canon/note}

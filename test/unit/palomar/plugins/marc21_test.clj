@@ -6,6 +6,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.diagnostics :as dx]
+            [palomar.model :as model]
             [palomar.plugins :as plug]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.project :as project]
@@ -115,3 +116,33 @@
     (let [reg (plug/register plug/empty-registry marc21/plugin)]
       (is (some? (mapping/compile-mappings (plug/all-mappings reg)
                                            (plug/effective-transforms reg)))))))
+
+;; --- field occurrences, indicators and the leader (audit S06, tests 2 and 4) --
+
+(def ^:private two-added-entries
+  (str "<collection xmlns=\"http://www.loc.gov/MARC21/slim\"><record>"
+       "<leader>00000cam a2200000 a 4500</leader>"
+       "<controlfield tag=\"001\">7</controlfield>"
+       "<controlfield tag=\"008\">850101s1862    fr            000 1 fre d</controlfield>"
+       "<datafield tag=\"245\" ind1=\"1\" ind2=\"4\"><subfield code=\"a\">Les Misérables</subfield></datafield>"
+       "<datafield tag=\"700\" ind1=\"1\" ind2=\" \"><subfield code=\"a\">Doré, Gustave</subfield>"
+       "<subfield code=\"e\">ill.</subfield><subfield code=\"0\">http://id.loc.gov/n1</subfield></datafield>"
+       "<datafield tag=\"700\" ind1=\"1\" ind2=\" \"><subfield code=\"a\">Brion, Gustave</subfield>"
+       "<subfield code=\"e\">engr.</subfield><subfield code=\"0\">http://id.loc.gov/n2</subfield></datafield>"
+       "</record></collection>"))
+
+(deftest each-field-occurrence-keeps-its-subfields-together-and-in-order
+  (let [rec   (first (marc21/ingest two-added-entries {}))
+        f700s (filter #(= "700" (get-in % [:locator :tag])) (:fragments rec))]
+    (is (model/record-consistent? rec))
+    (testing "two 700s, in order, each with its own name, relator and authority (audit test 2)"
+      (is (= [0 1] (map #(get-in % [:locator :occurrence]) f700s)))
+      (is (= [[["a" "Doré, Gustave"] ["e" "ill."] ["0" "http://id.loc.gov/n1"]]
+              [["a" "Brion, Gustave"] ["e" "engr."] ["0" "http://id.loc.gov/n2"]]]
+             (map #(get-in % [:locator :subfields]) f700s))))
+    (testing "the indicators, the 008 and the leader survive ingest (audit test 4)"
+      (let [f245 (first (filter #(= "245" (get-in % [:locator :tag])) (:fragments rec)))
+            f008 (first (filter #(= "008" (get-in % [:locator :tag])) (:fragments rec)))]
+        (is (= ["1" "4"] [(get-in f245 [:locator :ind1]) (get-in f245 [:locator :ind2])]))
+        (is (str/starts-with? (get-in f008 [:locator :value]) "850101s1862")))
+      (is (= #{"00000cam a2200000 a 4500"} (literals rec :marc21/leader))))))

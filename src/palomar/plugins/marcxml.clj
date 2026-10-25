@@ -8,6 +8,15 @@
    supplies those three policies. Extracted when MARC21 became the second MARC
    parser, so the field/subfield logic lives once (audit R1's drift lesson).
 
+   Two layers come out of a record (audit S06). The flat one, `:ns/fTAG_CODE`
+   (one assertion per subfield) plus `:ns/leader`, is what the mappings read.
+   It loses which subfields belong to the same field and the indicators, so
+   every field occurrence is also kept as a **fragment** (ADR 0011/0012), id
+   `[:ns/fTAG n]` for the n-th occurrence of TAG, whose `:locator` holds the tag,
+   the occurrence, the indicators and the ordered `[code value]` subfields.
+   That locator is the faithful capture: a 700 `$a Doré $e ill.` keeps its
+   relator next to its name, and two 700s keep their order.
+
    Elements are matched by **local name** (`(name (:tag elem))`) and attributes
    by local name too, so whichever keyword form `clojure.data.xml` produced for a
    namespace — URI-encoded or aliased — is irrelevant. Predicate *names* are
@@ -78,16 +87,58 @@
 
       nil)))
 
+(defn- field-fragment
+  "The fragment for the `n`-th occurrence of `field` (a control or data field):
+   its `:locator` is `{:tag :occurrence}` plus, for a controlfield, `:value`, and
+   for a datafield, `:ind1`/`:ind2` and the ordered `:subfields` `[[code value] …]`."
+  [ns record-id field n]
+  (let [tag (attr field "tag")]
+    (model/fragment
+     {:id      (model/mint-fragment-id record-id [(keyword ns (str "f" tag)) n])
+      :source  [:marcxml tag n]
+      :locator (if (= "controlfield" (local-name field))
+                 {:tag tag :occurrence n :value (text-of field)}
+                 {:tag        tag
+                  :occurrence n
+                  :ind1       (attr field "ind1")
+                  :ind2       (attr field "ind2")
+                  :subfields  (vec (for [sf (:content field)
+                                         :when (= "subfield" (local-name sf))]
+                                     [(attr sf "code") (text-of sf)]))})})))
+
+(defn- field-fragments
+  "One `field-fragment` per control/data field of `elem`, numbered per tag in
+   document order."
+  [ns record-id elem]
+  (let [fields (filter #(and (#{"controlfield" "datafield"} (local-name %))
+                             (re-matches #"[A-Za-z0-9]+" (str (attr % "tag"))))
+                       (:content elem))]
+    (first (reduce (fn [[acc seen] f]
+                     (let [tag (attr f "tag")
+                           n   (get seen tag 0)]
+                       [(conj acc (field-fragment ns record-id f n)) (assoc seen tag (inc n))]))
+                   [[] {}] fields))))
+
+(defn- leader-assertion [ns record-id elem]
+  (when-let [l (some #(when (= "leader" (local-name %)) (text-of %)) (:content elem))]
+    [(model/assertion {:subject    record-id
+                       :predicate  (keyword ns "leader")
+                       :value      l
+                       :provenance (model/provenance {:pass :ingest})})]))
+
 (defn- build-record
   "Construct one IR Record from a record `elem` per the family `policies`
-   (`:ns :record-id :kind :source`)."
+   (`:ns :record-id :kind :source`): the flat assertions (leader and subfields)
+   and one fragment per field occurrence."
   [{:keys [ns record-id kind source]} elem]
   (let [rid (record-id elem)]
     (model/record
      {:id         rid
       :kind       (kind elem)
       :source     (when source (source elem))
-      :assertions (vec (mapcat #(field-assertions ns rid %) (:content elem)))})))
+      :fragments  (field-fragments ns rid elem)
+      :assertions (vec (concat (leader-assertion ns rid elem)
+                               (mapcat #(field-assertions ns rid %) (:content elem))))})))
 
 (defn parse-records
   "Parse a MARCXML `xml-string` into a vector of IR Records. The caller supplies
