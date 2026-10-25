@@ -37,8 +37,14 @@
    :lrmoo/R33_has_string    "P3_has_note"})
 
 ;; Indexes keyed by the *IRI strings* as they appear in `export/triples`.
+(def nomen-superclass
+  "`F12_Nomen`'s CIDOC-CRM super-class (LRMoo 1.0 / 1.1.1). Kept apart from
+   `class-superclass`, which lists the WEMI classes only."
+  "E41_Appellation")
+
 (def ^:private class-iri->crm
-  (into {} (for [[k e] class-superclass] [(lrmoo/iri k) (str crm-base e)])))
+  (into {(lrmoo/iri :lrmoo/F12_Nomen) (str crm-base nomen-superclass)}
+        (for [[k e] class-superclass] [(lrmoo/iri k) (str crm-base e)])))
 
 (def ^:private prop-iri->crm
   (into {} (for [[k p] property-superproperty] [(lrmoo/iri k) (str crm-base p)])))

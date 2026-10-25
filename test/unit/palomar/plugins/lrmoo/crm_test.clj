@@ -48,8 +48,11 @@
       (is (contains? ts ["urn:palomar:ent:work" P130 {:iri "urn:palomar:ent:expr"}])))
     (testing "R4 -> P165"
       (is (contains? ts ["urn:palomar:ent:manif" P165 {:iri "urn:palomar:ent:expr"}])))
-    (testing "R33 literal -> P3_has_note literal"
-      (is (contains? ts ["urn:palomar:ent:expr" P3 {:lit "Madame Bovary"}])))))
+    (testing "the Nomen's R33 literal -> P3_has_note literal, and F12 -> E41_Appellation"
+      (let [n (export/nomen-iri "urn:palomar:ent:expr" "Madame Bovary")]
+        (is (contains? ts [n P3 {:lit "Madame Bovary"}]))
+        (is (contains? ts [n "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+                           {:iri "http://www.cidoc-crm.org/cidoc-crm/E41_Appellation"}]))))))
 
 (deftest ntriples-carries-both-vocabularies
   (let [nt (crm/->ntriples rec)]

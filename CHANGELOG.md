@@ -18,6 +18,20 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Interoperability audit follow-up (2026-10-25)** — new capabilities:
+  `palomar.fidelity`, an occurrence-level audit that decodes a conversion's
+  output (N-Triples, JSON, XML) and classifies every source value as present,
+  reported or unaccounted (all 63 spoke × decodable-target pairs are at zero
+  unaccounted); `palomar.plugins.lrmoo.ntriples`, an RDF 1.1 N-Triples reader
+  (escapes, language tags, datatypes, blank nodes, located errors);
+  `palomar.plugins.agents` (role-aware agent reading); `palomar.plugins.record-id`
+  (readable, injective record ids); `palomar.plugins.export-coverage`;
+  `convert/export-records` (one export path, one status policy, optional
+  `:in-force-only?`); `palomar apply-repairs --to <fmt>`; `curate/supersede` and
+  curation reasons; `:provenance :bindings` and `:provenance :also`; the
+  `not-in?` rule guard; three canonical validation rules (agent role, blank
+  value, date year).
+
 - **`NOTICE`** — the Apache-2.0 copyright line (`Copyright 2026 maribakulj`)
   plus a pointer to the licences of the third-party material redistributed
   under `test/fixtures/`. `README.md` and `CONTRIBUTING.md` now name the
@@ -171,6 +185,31 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Fixed
 
+- **Interoperability audit (2026-10-25)**, items S01–S20 and several P2/P3:
+  - Linked Art: a Manifestation is exported as a `LinguisticObject` (the text of
+    an edition), not a `HumanMadeObject`; only an F5 Item is a physical object.
+    One document per Manifestation and per Item, each following its own links.
+    Publishers are a Publishing activity; contributors are reported as loss.
+  - A publisher or contributor no longer keys a Work: agents carry a
+    `:canon/role` (DC, MARC21 1XX/7XX, UNIMARC, INTERMARC, MODS publisher).
+  - CRM import no longer downcasts an `E89` to a Work or an `E24` to an Item.
+  - Rules no longer match rejected, superseded or retracted assertions, and no
+    export emits them.
+  - MARC field occurrences, indicators, subfield order and the leader are kept
+    at ingest (as fragments and `:ns/leader`).
+  - IIIF: every label/summary language and the Canvas extent are kept; only
+    painted images are digital objects; a manifest missing a Presentation 3.0
+    MUST is refused with a diagnostic instead of emitted invalid.
+  - Exports report every predicate they do not write; a refused IIIF manifest
+    reports all of them; Linked Art keeps Expression and Work titles.
+  - An Expression is keyed on its title's language (original vs translation).
+  - Record ids no longer collide when slugging drops information.
+  - Two rules deriving one fact keep both justifications.
+  - `convert --stream` no longer deletes `--out` before the move succeeds, and
+    refuses an `--out` that is its own input.
+  - Entity titles are written to RDF through an F12 Nomen (R33's domain).
+  - Eval docs (BIB-R, OpenLibrary) no longer claim more than they measure.
+
 - Self-review remediation of this line's WP-6/7 work: (1) the WEMI projection's
   loss accounting (`lrmoo.project` `language-losses`/`ambiguity-losses`) now keys
   on the same `work-title` condition that decides whether an Expression is minted
@@ -199,6 +238,14 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
   rule binds a falsey value) and guarded against regression by a behavioural test.
 
 ### Changed
+
+- **Behaviour changes from the interoperability audit (2026-10-25):** a MARC
+  record with only added entries (no 1XX) derives no Work; MARC21→DC emits 7XX
+  agents as `dc:contributor` (the LoC oracle eval now reads 4/9 exact element
+  types, with the divergence asserted); Linked Art roots are `LinguisticObject`;
+  IIIF record ids carry a digest (`:iiif/m-<label>-h<digest>`); MARC21→IIIF
+  emits no manifest (no URI id, no canvas extent) and says why; loss counts
+  grow where losses used to be silent.
 
 - **The project is now named Palomar**, and every identifier that carried the
   former name was migrated with it. Sources live under `src/palomar/` and tests

@@ -18,10 +18,26 @@
    `:lrmoo/*` (opaque keywords to it; the one-way dependency is guarded by
    `palomar.architecture-test`). Local names are the exact LRMoo v1.0
    identifiers, so `iri` round-trips a term to its canonical IRI and the future
-   RDF exporter is a one-liner.")
+   RDF exporter is a one-liner.
+
+   ## Version (checked against LRMoo 1.1.1, 2026-10-25)
+
+   LRMoo 1.1.1 (October 2025, CIDOC CRM 7.1.3) keeps the namespace IRI, and the
+   terms Palomar uses — F1, F2, F3, F5, F12, R3, R4, R7, R33 — have the same
+   super-classes, domains, ranges and super-properties in its OWL as in the
+   vendored v1.0 OWL (audit S32). No mapping change follows from the upgrade;
+   any extension of the mappings should be read against 1.1.1.
+
+   ## R33 in the IR is a shorthand
+
+   R33_has_string has the domain F12 Nomen, not a WEMI class. The IR writes an
+   entity's title as `[entity :lrmoo/R33_has_string \"…\"]` for convenience; the
+   RDF export expands it to entity —P1_is_identified_by→ F12 Nomen
+   —R33_has_string→ \"…\" (`lrmoo.export/string-triples`), and `crm-import`
+   reads that path back.")
 
 (def lrmoo-iri
-  "Namespace IRI of LRMoo v1.0 (from the spec header)."
+  "Namespace IRI of LRMoo (v1.0 spec header; unchanged in 1.1.1)."
   "http://iflastandards.info/ns/lrm/lrmoo/")
 
 (def entity-kinds

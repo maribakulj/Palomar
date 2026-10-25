@@ -33,6 +33,7 @@
    - Cross-record execution, retract semantics, convergence detection,
      projection."
   (:require [malli.core :as m]
+            [palomar.model :as model]
             [palomar.rules :as rules]))
 
 ;; ---------------------------------------------------------------------------
@@ -105,11 +106,30 @@
           record
           (assoc record :assertions (assoc-in as [idx :provenance :also] (conj also p))))))))
 
+(defn- merge-entity
+  "Append entity `e` unless its id is already there (a re-mint, ADR 0016). When
+   the two carry different `:iri`s the same id names two things — a hash
+   collision or a modelling defect — so the first is kept and an
+   `:entity-id-collision` error is recorded instead of merging silently
+   (audit S36)."
+  [record e]
+  (if-let [prev (some #(when (= (:id e) (:id %)) %) (:entities record))]
+    (if (and (:iri prev) (:iri e) (not= (:iri prev) (:iri e)))
+      (dedup-append record :diagnostics
+                    (model/diagnostic {:severity :error
+                                       :code     :entity-id-collision
+                                       :subject  (:id e)
+                                       :message  (str "entity id " (:id e) " names both " (:iri prev)
+                                                      " and " (:iri e))})
+                    diagnostic-identity)
+      record)
+    (update record :entities (fnil conj []) e)))
+
 (defn- merge-production [record production]
   (case (:kind production)
     :assertion  (merge-assertion record (:value production))
     :diagnostic (dedup-append record :diagnostics (:value production) diagnostic-identity)
-    :entity     (dedup-append record :entities    (:value production) entity-identity)
+    :entity     (merge-entity record (:value production))
     :fragment   (dedup-append record :fragments   (:value production) fragment-identity)
     :repair     record  ;; standalone repairs not merged in V1
     record))

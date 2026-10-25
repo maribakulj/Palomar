@@ -173,7 +173,9 @@
                (and (string? value)
                     (boolean (re-find (re-pattern re) value))))
    'in?      (fn [_ _ value coll]
-               (boolean (some #(= value %) coll)))})
+               (boolean (some #(= value %) coll)))
+   'not-in?  (fn [_ _ value coll]
+               (not-any? #(= value %) coll))})
 
 (defn stdlib-predicate? [sym] (contains? predicate-stdlib sym))
 
@@ -292,9 +294,12 @@
   "Combine the engine's authoritative fields with whatever the rule
    template supplied. Template fields like `:source`, `:derivation` and
    `:timestamp` are preserved; engine fields (`:rule`, `:pass`) always
-   win to keep the trace honest."
-  [template-prov rule-id phase]
-  (merge (or template-prov {}) (engine-provenance rule-id phase)))
+   win to keep the trace honest. `:bindings` records the match that fired
+   the rule (variable → value), so each production can be traced back to
+   the exact facts that triggered it (audit S27)."
+  [template-prov rule-id phase bindings]
+  (cond-> (merge (or template-prov {}) (engine-provenance rule-id phase))
+    (seq bindings) (assoc :bindings bindings)))
 
 (defn- default-status-for-phase
   "Per ADR 0005: assertions produced in :infer or :repair phases are
@@ -311,7 +316,7 @@
                      :confidence 1.0}
                     base
                     {:provenance (merge-provenance (:provenance base)
-                                                   rule-id phase)}))}))
+                                                   rule-id phase bindings)}))}))
 
 (defn- run-diagnostic
   [template bindings rule-id phase]
@@ -319,7 +324,7 @@
     {:kind :diagnostic
      :value (model/diagnostic
              (assoc base :provenance (merge-provenance (:provenance base)
-                                                       rule-id phase)))}))
+                                                       rule-id phase bindings)))}))
 
 (defn- run-repair
   [template bindings _rule-id _phase]
@@ -336,7 +341,7 @@
     {:kind :entity
      :value (model/entity
              (assoc base :provenance (merge-provenance (:provenance base)
-                                                       rule-id phase)))}))
+                                                       rule-id phase bindings)))}))
 
 (def ^:private action-runners
   {:assert     run-assert

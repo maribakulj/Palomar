@@ -318,3 +318,17 @@
         ;; 50 tag-rules each produce 1 assertion, 5 validators each produce
         ;; 1 diagnostic — a single pass. All 55 must appear.
         (is (= 55 (count fired-rules)))))))
+
+(deftest one-entity-id-with-two-iris-is-a-collision-not-a-merge
+  (testing "audit S36: the first entity is kept and an :entity-id-collision error recorded"
+    (let [e1  (model/entity {:id :ent/F1_Work.0000000000000000 :kind :lrmoo/F1_Work :iri "http://a/w"})
+          e2  (model/entity {:id :ent/F1_Work.0000000000000000 :kind :lrmoo/F1_Work :iri "http://b/w"})
+          out (rt/merge-productions (book :r/e) [{:kind :entity :value e1} {:kind :entity :value e2}])]
+      (is (= [e1] (:entities out)))
+      (is (= [:entity-id-collision] (map :code (:diagnostics out))))
+      (is (= :error (:severity (first (:diagnostics out)))))))
+  (testing "a plain re-mint (same id, same or no iri) is still a silent no-op"
+    (let [e  (model/entity {:id :ent/F1_Work.1 :kind :lrmoo/F1_Work})
+          out (rt/merge-productions (book :r/e) [{:kind :entity :value e} {:kind :entity :value e}])]
+      (is (= [e] (:entities out)))
+      (is (empty? (:diagnostics out))))))

@@ -158,3 +158,27 @@
       (is (= 4 (count (filter model/accepted? after))))
       (is (zero? (count (filter model/proposed? after))))
       (is (= n-asrt (count (filter model/asserted? after)))))))
+
+;; --- reasons and explicit supersession (audit S28) ---------------------------
+
+(deftest a-decision-can-carry-its-reason
+  (let [r (model/record {:id :r/x :kind :t
+                         :assertions [(model/assertion {:subject :r/x :predicate :p/a :value 1
+                                                        :status :proposed})]})
+        {:keys [transitions]} (curate/curate-record r (constantly [:reject "duplicate of :r/y"]))]
+    (is (= [{:subject :r/x :predicate :p/a :from :proposed :to :rejected
+             :verdict :reject :reason "duplicate of :r/y"}]
+           transitions))))
+
+(deftest supersede-replaces-an-assertion-and-logs-why
+  (let [old (model/assertion {:subject :r/x :predicate :canon/date :value "1826" :status :asserted})
+        new (model/assertion {:subject :r/x :predicate :canon/date :value "1862"})
+        r   (model/record {:id :r/x :kind :t :assertions [old]})
+        {:keys [record transitions]} (curate/supersede r old new "typo in the source: 1826 for 1862")]
+    (is (= [:superseded :accepted] (map :status (:assertions record))))
+    (is (= [:r/x] (get-in (second (:assertions record)) [:provenance :derivation])))
+    (is (= :superseded (:to (first transitions))))
+    (is (= "1862" (get-in (first transitions) [:replaced-by :value])))
+    (is (= "typo in the source: 1826 for 1862" (:reason (first transitions))))
+    (testing "only an in-force assertion can be superseded"
+      (is (thrown? clojure.lang.ExceptionInfo (curate/supersede record old new "again"))))))

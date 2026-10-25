@@ -132,3 +132,15 @@
       (is (some #(and (= :coerced (dx/loss-category %))
                       (= :lrmoo/R33_has_string (dx/loss-source-field %))) diagnostics))  ; @fr not carried
       (is (some #(= (keyword "rdf" "http://purl.org/dc/terms/extent") (dx/loss-source-field %)) diagnostics)))))
+
+(deftest a-title-round-trips-through-its-nomen
+  (testing "R33 strings exported via P1 -> F12 Nomen come back on their entity, with nothing reported lost"
+    (let [rec (-> (wemi-record)
+                  (update :assertions conj
+                          (model/assertion {:subject :ent/manif :predicate :lrmoo/R33_has_string
+                                            :value "Madame Bovary : mœurs de province"})))
+          {:keys [record diagnostics]} (crm-import/->record (crm/->ntriples rec) :rec/back)]
+      (is (= [[manif-iri "Madame Bovary : mœurs de province"]]
+             (for [a (:assertions record) :when (= :lrmoo/R33_has_string (:predicate a))]
+               [(:subject a) (:value a)])))
+      (is (empty? diagnostics)))))

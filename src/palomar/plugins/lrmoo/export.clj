@@ -67,11 +67,40 @@
   [k]
   (or (lrmoo/entity-kind? k) (crm-term? k)))
 
+(def nomen-class
+  "IRI of `F12_Nomen`, the domain of `R33_has_string`."
+  (lrmoo/iri :lrmoo/F12_Nomen))
+
+(def identified-by
+  "IRI of `P1_is_identified_by` (CIDOC CRM), linking an entity to its Nomen."
+  (str crm-base "P1_is_identified_by"))
+
+(defn nomen-iri
+  "A deterministic IRI for the Nomen carrying string `s` of the entity at
+   `entity-iri`: the same title of the same entity always names the same Nomen."
+  [entity-iri s]
+  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                   (.getBytes (str entity-iri "|" s) "UTF-8"))]
+    (str "urn:palomar:nomen:" (apply str (map #(format "%02x" (bit-and % 0xff)) (take 8 d))))))
+
+(defn- string-triples
+  "The RDF for an entity's string `v` (`:lrmoo/R33_has_string` in the IR). The
+   domain of R33 is `F12_Nomen` (LRMoo 1.0 and 1.1.1), not a Work, Expression or
+   Manifestation, so the string hangs on a Nomen the entity is identified by:
+   entity —P1_is_identified_by→ Nomen (F12) —R33_has_string→ \"v\". In the IR
+   `R33` on an entity stays a shorthand for that path."
+  [s-iri v]
+  (let [n (nomen-iri s-iri v)]
+    [[s-iri identified-by {:iri n}]
+     [n rdf-type {:iri nomen-class}]
+     [n (lrmoo/iri :lrmoo/R33_has_string) {:lit v}]]))
+
 (defn triples
   "The LRMoo view of `record` as RDF triples. Each WEMI entity is typed to its
    F-class; each `:lrmoo/*` assertion becomes an object-property triple (when its
-   value is a reference) or a literal triple. Each item is `[s-iri p-iri o]` with
-   `o` = `{:iri s}` | `{:lit v}`.
+   value is a reference) or a literal triple, except an entity's R33 string,
+   which is written through an F12 Nomen (`string-triples`). Each item is
+   `[s-iri p-iri o]` with `o` = `{:iri s}` | `{:lit v}`.
 
    With `{:certified-only? true}` (D7), only `:asserted` assertions are emitted —
    the proof-backed subgraph an institution can ship with no fabricated identity —
@@ -99,13 +128,18 @@
       (for [e ents
             :when (typed-kind? (:kind e))]
         [(iri (:id e)) rdf-type {:iri (term-iri (:kind e))}])
-      (for [a view-as]
-        (let [v (:value a)]
-          [(iri (:subject a))
-           (term-iri (:predicate a))
-           (if (model/reference-value? v)
-             {:iri (iri (:value/target v))}
-             {:lit v})]))))))
+      (mapcat (fn [a]
+                (let [v (:value a)]
+                  (cond
+                    (model/reference-value? v)
+                    [[(iri (:subject a)) (term-iri (:predicate a)) {:iri (iri (:value/target v))}]]
+
+                    (= :lrmoo/R33_has_string (:predicate a))
+                    (string-triples (iri (:subject a)) v)
+
+                    :else
+                    [[(iri (:subject a)) (term-iri (:predicate a)) {:lit v}]])))
+              view-as)))))
 
 (defn- nt-escape [s]
   (-> (str s)

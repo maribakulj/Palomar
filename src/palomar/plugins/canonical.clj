@@ -141,13 +141,58 @@
                           :message  "Record has no :canon/title assertion"}}
    :doc     "Warn when a record carries no :canon/title (ADR 0003)."})
 
+(def agent-role-known-rule
+  "A `:canon/role` coord takes a value from `agent-roles`. A mapping that writes
+   another value would silently change what keys the Work (only `:creator` does),
+   so it is flagged."
+  {:id      :rule.canonical/agent-role-known
+   :phase   :validate
+   :match   '[[?f :canon/role ?role]
+              (not-in? ?role [:creator :contributor :publisher])]
+   :produce {:diagnostic {:severity :warning
+                          :code     :unknown-agent-role
+                          :subject  '?f
+                          :message  "agent role is not :creator, :contributor or :publisher"}}
+   :doc     "Warn on a :canon/role outside the agent-role vocabulary."})
+
+(def no-blank-value-rule
+  "A documentary value that is empty or whitespace once trimmed carries nothing
+   and is usually a mapping or source defect."
+  {:id      :rule.canonical/no-blank-value
+   :phase   :validate
+   :match   '[[?s ?p ?v]
+              (in? ?p [:canon/title :canon/uniform-title :canon/identifier :canon/agent
+                       :canon/date :canon/relation :canon/note :canon/digital-object])
+              (matches? ?v "^\\s*$")]
+   :produce {:diagnostic {:severity :warning
+                          :code     :blank-value
+                          :subject  '?s
+                          :message  "a canonical documentary value is blank"}}
+   :doc     "Warn on a blank canonical documentary value."})
+
+(def date-has-a-year-rule
+  "A `:canon/date` normally carries a year (`1862`, `[1957?]`, `c1999`, an ISO
+   date). One with no run of three or four digits cannot be placed in time by
+   any consumer; it is kept, and reported for review."
+  {:id      :rule.canonical/date-has-a-year
+   :phase   :validate
+   :match   '[[?s :canon/date ?d]
+              (matches? ?d "^(?!.*\\d{3,4})")]
+   :produce {:diagnostic {:severity :info
+                          :code     :date-without-year
+                          :subject  '?s
+                          :message  "the :canon/date has no recognisable year"}}
+   :doc     "Report a :canon/date with no three- or four-digit year."})
+
 (def rules
-  "The V1 canonical validation rule set. One grounded rule for now —
-   `title-required` — exercised end-to-end by
-   `palomar.canonical-integration-test`. Date/ISO and other cross-source
-   rules wait for a concrete producer of the predicates they would check
-   (growth discipline, ADR 0003 §Consequences)."
-  [title-required-rule])
+  "The canonical validation rule set, exercised end-to-end by
+   `palomar.canonical-integration-test`: a title is present, an agent role is
+   from the vocabulary, no documentary value is blank, a date has a year
+   (audit S26: validation was the title rule alone, so VALID meant little).
+   Each rule checks a predicate a spoke actually produces (growth discipline,
+   ADR 0003 §Consequences). None is an error: they report incompleteness or
+   likely defects, and the caller's policy decides what fails."
+  [title-required-rule agent-role-known-rule no-blank-value-rule date-has-a-year-rule])
 
 ;; ---------------------------------------------------------------------------
 ;; Plugin map (ADR 0007)
