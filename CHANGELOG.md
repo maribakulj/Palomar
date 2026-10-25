@@ -18,6 +18,12 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Source evidence** (ADR 0031): each value records where it was read —
+  an XPath for MARC subfields and DC/MODS elements, the canvas and `xywh`
+  region for IIIF images, the source document's SHA-256 — carried through
+  normalisation and projection (`:provenance :evidence`,
+  `model/evidence-of`) and written to PROV-O as W3C Web Annotation
+  `oa:SpecificResource`s.
 - **Run manifest** (ADR 0030): `convert --manifest <file>` writes an EDN record
   of the run — version, plugins with mapping and rule digests, ontology files,
   input and output SHA-256, options, active rules, loss summary, times;

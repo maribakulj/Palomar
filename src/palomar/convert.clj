@@ -124,6 +124,15 @@
     (mapping/compile-mappings (plug/all-mappings reg)
                               (plug/effective-transforms reg))))
 
+(defn- with-source-digest
+  "`record` with the SHA-256 of the document it was read from on its provenance
+   (`[:provenance :source :sha256]`, ADR 0031), unless it already names its
+   source: every attestation inside it points into that exact document."
+  [record source]
+  (if (and (string? source) (nil? (get-in record [:provenance :source])))
+    (assoc-in record [:provenance :source] {:sha256 (model/sha256-hex source 64)})
+    record))
+
 (defn to-wemi
   "Import `source` through `spoke`, normalise to the canonical floor, then project
    each record to WEMI by the appropriate rung — INTERMARC's enriched `derive-wemi`
@@ -136,7 +145,8 @@
         {:keys [records diagnostics]} ((:importer plugin) opts source)
         compiled (compiled-mappings from)]
     {:ingest  diagnostics
-     :records (mapv #(to-pivot (:record (runtime/run-phase % compiled :normalize))) records)}))
+     :records (mapv #(to-pivot (:record (runtime/run-phase (with-source-digest % source) compiled :normalize)))
+                    records)}))
 
 (defn- in-force-or-unstated? [a]
   (or (nil? (:status a)) (model/in-force? a)))

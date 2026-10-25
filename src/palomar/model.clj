@@ -84,12 +84,28 @@
 ;; Provenance
 ;; ---------------------------------------------------------------------------
 
+(def Evidence
+  "One attestation of an assertion in a source (ADR 0031): where in which
+   document the value was read. `:source` names the document (`:uri`,
+   `:version`, `:sha256`, `:retrieved`, as known); `:fragment` the record
+   fragment holding it; `:selector` the place inside, as a W3C Web Annotation
+   selector in data (`{:type :xpath :value \"…\"}`, `{:type :fragment :value
+   \"xywh=…\" :conforms-to …}`, `{:type :text-quote :exact …}`, `:refined-by`
+   for a selector inside a selector). Every key is optional; the shapes of
+   source and selector are the producer's, opaque to the core."
+  [:map
+   [:source {:optional true} [:map-of :keyword :any]]
+   [:fragment {:optional true} Id]
+   [:selector {:optional true} [:map-of :keyword :any]]])
+
 (def Provenance
   "Where an assertion came from. All fields optional; a bare `{}` is valid
    (e.g. for hand-constructed test data). `:bindings` is the rule match that
    produced the item (variable → value). `:also` lists the other provenances
    that derived the same fact: the runtime keeps one assertion per fact
-   (ADR 0008) but every path of proof (audit S09)."
+   (ADR 0008) but every path of proof (audit S09). `:evidence` lists where the
+   value is attested in its sources (ADR 0031) — the documentary provenance, as
+   opposed to the transformation one the other keys describe."
   [:map
    [:source {:optional true} :any]
    [:pass {:optional true} Phase]
@@ -97,6 +113,7 @@
    [:derivation {:optional true} [:vector Id]]
    [:timestamp {:optional true} inst?]
    [:bindings {:optional true} :map]
+   [:evidence {:optional true} [:vector Evidence]]
    [:also {:optional true} [:vector :map]]])
 
 ;; ---------------------------------------------------------------------------
@@ -504,13 +521,21 @@
 
 (defn provenance
   "Construct a Provenance map. All fields optional; missing ones are omitted."
-  [{:keys [source pass rule derivation timestamp]}]
+  [{:keys [source pass rule derivation timestamp evidence]}]
   (cond-> {}
-    source     (assoc :source source)
-    pass       (assoc :pass pass)
-    rule       (assoc :rule rule)
-    derivation (assoc :derivation (vec derivation))
-    timestamp  (assoc :timestamp timestamp)))
+    source          (assoc :source source)
+    pass            (assoc :pass pass)
+    rule            (assoc :rule rule)
+    derivation      (assoc :derivation (vec derivation))
+    timestamp       (assoc :timestamp timestamp)
+    (seq evidence)  (assoc :evidence (vec (distinct evidence)))))
+
+(defn evidence-of
+  "The evidence `a`'s provenance carries, its own and its alternative
+   justifications' (`:also`), distinct, in order."
+  [a]
+  (let [p (:provenance a)]
+    (vec (distinct (concat (:evidence p) (mapcat :evidence (:also p)))))))
 
 (defn fragment
   "Construct a Fragment. `id` and `source` are required."

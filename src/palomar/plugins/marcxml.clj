@@ -63,34 +63,58 @@
             (text-of e)))
         (elements record-elem)))
 
+(defn- xpath-step
+  "One XPath step selecting the `n`-th (1-based) child `local` whose attribute
+   `attr` is `v`, by local name (MARCXChange and MARC21slim differ only in
+   namespace)."
+  [local attr v n]
+  (str "*[local-name()='" local "'][@" attr "='" v "'][" n "]"))
+
 (defn field-assertions
   "Native assertions for one control/data `field` of a record, predicate
    namespace `ns` (a string, e.g. \"intermarc\" / \"marc21\"):
    - `controlfield tag=T`            → `:ns/fT` = text;
    - `subfield code=C` of `datafield tag=T` → `:ns/fT_C` = text (one per
-     occurrence, repeatable)."
-  [ns record-id field]
-  (let [tag (attr field "tag")]
-    (case (local-name field)
-      "controlfield"
-      (when-let [v (text-of field)]
-        [(model/assertion {:subject    record-id
-                           :predicate  (keyword ns (str "f" tag))
-                           :value      v
-                           :provenance (model/provenance {:pass :ingest})})])
+     occurrence, repeatable).
+   With the field's 0-based occurrence `occ` among the fields of its tag, and
+   its fragment id `fid` when it has one, each assertion carries its evidence
+   (ADR 0031): the fragment, and an XPath to the subfield relative to the
+   record element."
+  ([ns record-id field] (field-assertions ns record-id field nil nil))
+  ([ns record-id field occ fid]
+   (let [tag  (attr field "tag")
+         ev   (fn [path] (when occ
+                           [(cond-> {:selector {:type :xpath :value path}}
+                              fid (assoc :fragment fid))]))
+         prov (fn [path] (model/provenance {:pass :ingest :evidence (ev path)}))]
+     (case (local-name field)
+       "controlfield"
+       (when-let [v (text-of field)]
+         [(model/assertion {:subject    record-id
+                            :predicate  (keyword ns (str "f" tag))
+                            :value      v
+                            :provenance (prov (when occ (xpath-step "controlfield" "tag" tag (inc occ))))})])
 
-      "datafield"
-      (for [sf (:content field)
-            :when (= "subfield" (local-name sf))
-            :let  [code (attr sf "code")
-                   v    (text-of sf)]
-            :when (and code v)]
-        (model/assertion {:subject    record-id
-                          :predicate  (keyword ns (str "f" tag "_" code))
-                          :value      v
-                          :provenance (model/provenance {:pass :ingest})}))
+       "datafield"
+       (let [field-path (when occ (xpath-step "datafield" "tag" tag (inc occ)))]
+         (first
+          (reduce (fn [[acc seen] sf]
+                    (let [code (attr sf "code")
+                          v    (text-of sf)
+                          k    (inc (get seen code 0))]
+                      (if (and (= "subfield" (local-name sf)) code v)
+                        [(conj acc (model/assertion
+                                    {:subject    record-id
+                                     :predicate  (keyword ns (str "f" tag "_" code))
+                                     :value      v
+                                     :provenance (prov (when field-path
+                                                         (str field-path "/" (xpath-step "subfield" "code" code k))))}))
+                         (assoc seen code k)]
+                        [acc seen])))
+                  [[] {}]
+                  (:content field))))
 
-      nil)))
+       nil))))
 
 (defn- field-fragment
   "The fragment for the `n`-th occurrence of `field` (a control or data field):
@@ -124,6 +148,23 @@
                        [(conj acc (field-fragment ns record-id f n)) (assoc seen tag (inc n))]))
                    [[] {}] fields))))
 
+(defn- field-occurrence-assertions
+  "`field-assertions` for every field of `elem`, each knowing its occurrence
+   among the fields of its tag and, for an alphanumeric tag, its fragment id
+   (the same numbering as `field-fragments`)."
+  [ns record-id elem]
+  (first
+   (reduce (fn [[acc seen] f]
+             (if (#{"controlfield" "datafield"} (local-name f))
+               (let [tag (str (attr f "tag"))
+                     n   (get seen tag 0)
+                     fid (when (re-matches #"[A-Za-z0-9]+" tag)
+                           (model/mint-fragment-id record-id [(keyword ns (str "f" tag)) n]))]
+                 [(into acc (field-assertions ns record-id f n fid)) (assoc seen tag (inc n))])
+               [acc seen]))
+           [[] {}]
+           (:content elem))))
+
 (defn- leader-assertion [ns record-id elem]
   (when-let [l (some #(when (= "leader" (local-name %)) (text-of %)) (:content elem))]
     [(model/assertion {:subject    record-id
@@ -143,7 +184,7 @@
       :source     (when source (source elem))
       :fragments  (field-fragments ns rid elem)
       :assertions (vec (concat (leader-assertion ns rid elem)
-                               (mapcat #(field-assertions ns rid %) (:content elem))))})))
+                               (field-occurrence-assertions ns rid elem)))})))
 
 (defn parse-records
   "Parse a MARCXML `xml-string` into a vector of IR Records. The caller supplies

@@ -104,57 +104,71 @@
   [nt]
   (= "performers" (get-in nt [:attrs :type])))
 
-(defn- assertion [rid pred v]
-  (model/assertion {:subject    rid
-                    :predicate  (keyword "mods" pred)
-                    :value      v
-                    :provenance (model/provenance {:pass :ingest})}))
+(defn- assertion
+  "A native `:mods/<pred>` assertion, with the XPath of the element it was read
+   from (relative to the `<mods>` element, ADR 0031) when given."
+  ([rid pred v] (assertion rid pred v nil))
+  ([rid pred v xpath]
+   (model/assertion {:subject    rid
+                     :predicate  (keyword "mods" pred)
+                     :value      v
+                     :provenance (model/provenance
+                                  {:pass     :ingest
+                                   :evidence (when xpath [{:selector {:type :xpath :value xpath}}])})})))
+
+(defn- step [local i] (str "*[local-name()='" local "'][" (inc i) "]"))
+
+(defn- indexed-children
+  "`[[i child] …]` for the children of `e` named `nm`, `i` their 0-based position
+   among them."
+  [e nm]
+  (map-indexed vector (children-named e nm)))
 
 (defn- record-assertions [rid mods]
   (concat
    ;; the transcribed title proper — every titleInfo EXCEPT the uniform one
-   (for [ti (children-named mods "titleInfo")
+   (for [[i ti] (indexed-children mods "titleInfo")
          :when (not (uniform-title-info? ti))
-         t  (children-named ti "title")
+         [j t]  (indexed-children ti "title")
          :let [v (title-string ti t)] :when v]
-     (assertion rid "title" v))
+     (assertion rid "title" v (str (step "titleInfo" i) "/" (step "title" j))))
    ;; the work's controlled title — <titleInfo type="uniform"> (the WEMI-derivation key)
-   (for [ti (children-named mods "titleInfo")
+   (for [[i ti] (indexed-children mods "titleInfo")
          :when (uniform-title-info? ti)
-         t  (children-named ti "title")
+         [j t]  (indexed-children ti "title")
          :let [v (title-string ti t)] :when v]
-     (assertion rid "uniform-title" v))
-   (for [ti (children-named mods "titleInfo")
-         st (children-named ti "subTitle")
+     (assertion rid "uniform-title" v (str (step "titleInfo" i) "/" (step "title" j))))
+   (for [[i ti] (indexed-children mods "titleInfo")
+         [j st] (indexed-children ti "subTitle")
          :let [v (text-of st)] :when v]
-     (assertion rid "subtitle" v))
-   (for [n (children-named mods "name")
+     (assertion rid "subtitle" v (str (step "titleInfo" i) "/" (step "subTitle" j))))
+   (for [[i n] (indexed-children mods "name")
          :let [nm (name-string n)] :when (seq nm)]
-     (assertion rid "name" nm))
-   (for [oi (children-named mods "originInfo")
-         p  (children-named oi "publisher")
+     (assertion rid "name" nm (step "name" i)))
+   (for [[i oi] (indexed-children mods "originInfo")
+         [j p]  (indexed-children oi "publisher")
          :let [v (text-of p)] :when v]
-     (assertion rid "publisher" v))
-   (for [oi (children-named mods "originInfo")
-         d  (children-named oi "dateIssued")
+     (assertion rid "publisher" v (str (step "originInfo" i) "/" (step "publisher" j))))
+   (for [[i oi] (indexed-children mods "originInfo")
+         [j d]  (indexed-children oi "dateIssued")
          :let [v (text-of d)] :when v]
-     (assertion rid "date-issued" v))
-   (for [i (children-named mods "identifier")
-         :let [v (text-of i)] :when v]
-     (assertion rid "identifier" v))
-   (for [a (children-named mods "abstract")
+     (assertion rid "date-issued" v (str (step "originInfo" i) "/" (step "dateIssued" j))))
+   (for [[i e] (indexed-children mods "identifier")
+         :let [v (text-of e)] :when v]
+     (assertion rid "identifier" v (step "identifier" i)))
+   (for [[i a] (indexed-children mods "abstract")
          :let [v (text-of a)] :when v]
-     (assertion rid "abstract" v))
-   (for [toc (children-named mods "tableOfContents")
+     (assertion rid "abstract" v (step "abstract" i)))
+   (for [[i toc] (indexed-children mods "tableOfContents")
          :let [v (text-of toc)] :when v]
-     (assertion rid "table-of-contents" v))
-   (for [nt (children-named mods "note")
+     (assertion rid "table-of-contents" v (step "tableOfContents" i)))
+   (for [[i nt] (indexed-children mods "note")
          :let [v (text-of nt)] :when v]
-     (assertion rid (if (performers-note? nt) "performers-note" "note") v))
-   (for [loc (children-named mods "location")
-         u   (children-named loc "url")
+     (assertion rid (if (performers-note? nt) "performers-note" "note") v (step "note" i)))
+   (for [[i loc] (indexed-children mods "location")
+         [j u]   (indexed-children loc "url")
          :let [v (text-of u)] :when v]
-     (assertion rid "url" v))))
+     (assertion rid "url" v (str (step "location" i) "/" (step "url" j))))))
 
 (defn- ingest-losses
   "One import-edge `:loss/dropped` per distinct unmodelled top-level MODS element."

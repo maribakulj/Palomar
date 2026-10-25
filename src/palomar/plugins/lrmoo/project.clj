@@ -69,6 +69,17 @@
   [record]
   (or (first-literal record :canon/uniform-title) (title-of record)))
 
+(defn- with-evidence-of
+  "`prov` with the evidence (ADR 0031) of `record`'s `:canon/title` or
+   `:canon/uniform-title` assertions whose value is `v`: a WEMI string is
+   attested where the title it copies is."
+  [prov record v]
+  (let [ev (into [] (comp (filter #(and (#{:canon/title :canon/uniform-title} (:predicate %)) (= v (:value %))))
+                          (mapcat model/evidence-of)
+                          (distinct))
+                 (:assertions record))]
+    (cond-> prov (seq ev) (assoc :evidence ev))))
+
 (defn- entity-prod [id kind prov]
   {:kind :entity :value (model/entity {:id id :kind kind :provenance prov})})
 
@@ -119,7 +130,7 @@
       ;; the Manifestation's own *transcribed* title is transcription -> certified
       ;; (D7); the Work/Expression below are string-key inference -> :proposed, and
       ;; key on the uniform title when present.
-      title      (conj (assert-prod manif :lrmoo/R33_has_string title prov :asserted))
+      title      (conj (assert-prod manif :lrmoo/R33_has_string title (with-evidence-of prov record title) :asserted))
       work-title (into (let [wkey (str (or agent "") "|" (text/norm work-title))
                              ;; a single stated language belongs to the Expression's
                              ;; identity, not the Work's: an original and its
@@ -132,10 +143,10 @@
                          ;; kind is part of the content hash (`mint-entity-id`).
                          (cond-> [(entity-prod expr :lrmoo/F2_Expression prov)
                                   (assert-prod manif :lrmoo/R4_embodies (model/reference expr) prov)
-                                  (assert-prod expr :lrmoo/R33_has_string work-title prov)]
+                                  (assert-prod expr :lrmoo/R33_has_string work-title (with-evidence-of prov record work-title))]
                            work (into [(entity-prod work :lrmoo/F1_Work prov)
                                        (assert-prod work :lrmoo/R3_is_realised_in (model/reference expr) prov)
-                                       (assert-prod work :lrmoo/R33_has_string work-title prov)])))))))
+                                       (assert-prod work :lrmoo/R33_has_string work-title (with-evidence-of prov record work-title))])))))))
 
 (def mapped-source-fields
   "Canonical predicates the WEMI projection represents. Every other `:canon/*`
