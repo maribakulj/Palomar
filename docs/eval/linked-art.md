@@ -13,17 +13,30 @@ fetched and read directly.
 
 ## Entity mapping
 
-The WEMI chain maps to three *distinct* Linked Art resources (no collapse — Linked
-Art is more precise here than plain CRM, where F2/F3 both become E73):
+*Revised 2026-10-25 (interoperability audit S01, S10).* The first version rooted
+each record at the Manifestation as a `HumanMadeObject`. That was a category
+error: an F3 Manifestation is an *edition*, an abstract publication, and Linked
+Art's textual-document model (<https://linked.art/model/document/>) separates
+"the physical or digital carrier of the text, and the text itself" — the text is
+a `LinguisticObject`, which every physical copy (`HumanMadeObject`) `carries`.
+The `yul_10801219` example the first version relied on is precisely a *copy*
+("Yale's copy of Koot's Night Watch"), i.e. an F5 Item.
 
 | WEMI | Linked Art type | linked by | source example |
 |------|-----------------|-----------|----------------|
-| **F3 Manifestation** (the published item, carries the ARK) | `HumanMadeObject` | `carries` → the Expression | a book *carries* its text content |
-| **F2 Expression** (the text) | `LinguisticObject` | `part_of` → the Work | the text *part_of* the conceptualization |
-| **F1 Work** (the abstract conceptualization) | `PropositionalObject` | — | matches our CRM choice F1 → E89 |
+| **F3 Manifestation** + its **F2 Expression** (the text as published, carries the ARK) | `LinguisticObject` | `part_of` → the Work | `example/text/koot_nightwatch/1`, `/2` |
+| **F1 Work** (the abstract conceptualization) | `PropositionalObject` | — | `koot_idea`; matches our CRM choice F1 → E89 |
+| **F5 Item** (a physical copy) | `HumanMadeObject` | `carries` → the text | `example/object/yul_10801219/1` |
 
-This lines up with the CIDOC-CRM down-projection (`lrmoo.crm`): F1 → E89
-(PropositionalObject), and the Expression/Manifestation distinction is preserved.
+Linked Art "does not … provide FRBR or other complex conceptual hierarchies"
+(model/document): there is no edition level between the text and the abstract
+work. Each Expression therefore folds into its Manifestation's
+`LinguisticObject`, and the export reports that fold as `:under-specified` loss
+rather than inventing a level. One document is emitted per Manifestation, each
+following its own R4/R3 links, and one per Item following its R7; an entity no
+document reaches is reported as `:dropped`. When a record has several
+Manifestations, its record-level canonical fields (agents, notes, images,
+identifiers) cannot be attributed to one of them and are reported, not guessed.
 
 ## Field patterns (each AAT term verified against an example)
 
@@ -31,7 +44,8 @@ This lines up with the CIDOC-CRM down-projection (`lrmoo.crm`): F1 → E89
 |---------------|--------------------|-----------|
 | title (`R33`) | `identified_by` → `Name` | `aat:300404670` Primary Name |
 | ARK / `:canon/identifier` | `identified_by` → `Identifier` | `aat:300435704` System-Assigned Number |
-| creator (`:canon/agent`) | on the Expression: `created_by` → `Creation` → `carried_out_by` → `Person` | — |
+| creator (`:canon/agent`, role `:creator` or unstated) | `created_by` → `Creation` → `carried_out_by` → `Person` | — |
+| publisher (`:canon/agent`, role `:publisher`) | `used_for` → `Activity` (Publishing) → `carried_out_by` → `Group` | `aat:300054686` Publishing |
 | note (`:canon/note`) | `referred_to_by` → `LinguisticObject` | `aat:300435416` Description / `aat:300418049` Brief Text |
 | digital (`:canon/digital-object`) | `representation` → `VisualItem` → `digitally_shown_by` → `DigitalObject` | `aat:300215302` Digital Image |
 
@@ -42,8 +56,11 @@ This lines up with the CIDOC-CRM down-projection (`lrmoo.crm`): F1 → E89
 The reference bundle (Linked Art `@context` + curated model example JSON files)
 was fetched from the official site and read directly. The decisive examples:
 
-- **object → carries → text** (`HumanMadeObject` carries a `LinguisticObject`) —
-  `https://linked.art/example/object/yul_10801219/1`
+- **a copy → carries → text** (`HumanMadeObject` carries a `LinguisticObject`) —
+  `https://linked.art/example/object/yul_10801219/1` (an F5 Item, not an edition)
+- **authorship and publication of a text** (`created_by` Creation, `used_for`
+  Publishing Activity carried out by a Group) —
+  `https://linked.art/example/text/koot_nightwatch/2`
 - **text → part_of → conceptualization** (`LinguisticObject` part_of a
   `PropositionalObject`) — `https://linked.art/example/text/koot_nightwatch/1`
 - **creation of a text** (`created_by` → `Creation` → `Person`) —
@@ -82,15 +99,20 @@ with the same ISNI already mint the same agent id by content).
   `palomar.eval.linked-art-conformance-test`. Honest calibration: that schema is
   *stricter than real Linked Art* (it models `carries`/`part_of` as id-only refs and
   is `additionalProperties:false`), so even Getty's own Mona Lisa example fails it.
-  Our output is **cleaner** than that example — zero root-level errors, the only
-  deviations being `additionalProperties` on the embedded Expression under
-  `/carries` (no `type`/`const`/`required`/`format` errors). The remaining
+  Manifestation documents are validated against `text.json`, Item documents
+  against `object.json`. The MARC21 sample validates with **zero errors**. A
+  richer record deviates in exactly two known ways: a Person or Group with no
+  authority id lacks the `id` a schema reference requires (the floor holds no
+  authority for it, and minting one would fabricate an identity), and `part_of` →
+  `PropositionalObject` follows Linked Art's own published example although the
+  schema only allows a LinguisticObject or VisualItem there. The remaining
   institutional piece (a **Louvre-specific** profile / acceptance criteria) is the
   only part that still needs a partnership.
-- `created_by` is emitted whenever a `:canon/agent` is present — **all five spokes
-  now populate it** (INTERMARC via the controlled `100`; DC/MARC21/MODS via their
-  mappings). When the agent carries an authority id (INTERMARC's ISNI) the `Person`
-  carries it as `id` (see *Identified agents* above); otherwise it is label-only.
+- `created_by` is emitted whenever the record names a creator (a `:canon/agent`
+  with role `:creator`, or with no stated role). A publisher goes to the
+  Publishing activity; a contributor is reported as export loss. When the creator
+  carries an authority id (INTERMARC's ISNI) the `Person` carries it as `id` (see
+  *Identified agents* above); otherwise it is label-only.
 - Dates, relations and native predicates are not expressed; they are reported as
   export-edge loss (ADR 0015).
 - A `subject_of` link to the IIIF *manifest* (vs `representation` of the image) is

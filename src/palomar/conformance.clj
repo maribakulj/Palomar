@@ -31,6 +31,7 @@
             [palomar.convert :as convert]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
+            [palomar.plugins.agents :as agents]
             [palomar.plugins.lrmoo.view :as view]))
 
 ;; ---------------------------------------------------------------------------
@@ -77,10 +78,11 @@
   (boolean (some #(and (= :lrmoo/R33_has_string (:predicate %)) (string? (:value %)))
                  (:assertions record))))
 
-(defn- has-agent?
+(defn- has-creator?
+  "The record names a creator (role `:creator`, or an agent with no stated role);
+   a contributor or publisher is not one."
   [record]
-  (boolean (some #(and (= :canon/agent (:predicate %)) (string? (:value %)))
-                 (:assertions record))))
+  (boolean (seq (agents/creators record))))
 
 (defn- identified-agent?
   "An authority-identified creator entity (`:crm/E21_Person` with an `:iri`) — the
@@ -98,33 +100,34 @@
 
 (def linked-art-profile
   "Linked Art (Louvre) — the museum target's requirement set, grounded in the
-   public Linked Art object model. Two hard requirements (a HumanMadeObject root
-   with a name), three richness warnings (the carried Expression, its Work, an
-   identified creator), one identifier hint. The acceptance threshold is the
-   caller's `policy`."
+   public Linked Art object model. Two hard requirements (a Manifestation to
+   export as the root LinguisticObject — the text of an edition, not a physical
+   object, audit S01 — with a name), three richness warnings (the embodied
+   Expression, its Work, an identified creator), one identifier hint. The
+   acceptance threshold is the caller's `policy`."
   {:id    :linked-art
    :label "Linked Art (Louvre)"
    :checks
-   [{:id :root-human-made-object
+   [{:id :root-linguistic-object
      :severity :error
-     :message "no Manifestation: Linked Art needs a HumanMadeObject root, none was projected"
+     :message "no Manifestation: nothing to export as the root LinguisticObject (the text of an edition)"
      :conformant? #(seq (view/manifestations %))}
     {:id :has-name
      :severity :error
      :message "no title: Linked Art requires an identified_by Primary Name"
      :conformant? titled?}
-    {:id :carries-expression
+    {:id :embodies-expression
      :severity :warning
-     :message "no Expression: the HumanMadeObject carries no LinguisticObject (thin object)"
+     :message "no Expression: the Manifestation embodies no realised content (thin text)"
      :conformant? #(seq (view/expressions %))}
     {:id :expression-realises-work
      :severity :warning
-     :message "no Work: the Expression is not part_of a PropositionalObject (incomplete WEMI chain)"
+     :message "no Work: the text is not part_of a PropositionalObject (incomplete WEMI chain)"
      :conformant? #(seq (view/works %))}
     {:id :creator-identified
      :severity :warning
      :message "creator is a bare name, not an authority-identified Person (not reconcilable, ADR 0018)"
-     :conformant? #(or (not (has-agent? %)) (identified-agent? %))}
+     :conformant? #(or (not (has-creator? %)) (identified-agent? %))}
     {:id :has-identifier
      :severity :info
      :message "no stable identifier (ARK / :canon/identifier) for an identified_by Identifier"

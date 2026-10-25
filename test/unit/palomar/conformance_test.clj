@@ -35,11 +35,24 @@
     (let [diags (conf/check-record conf/linked-art-profile
                                    (model/record {:id :rec/bare :kind :test}))
           errs  (filter #(= :error (:severity %)) diags)]
-      (is (= #{"root-human-made-object" "has-name"} (codes errs)))
+      (is (= #{"root-linguistic-object" "has-name"} (codes errs)))
       (testing "and the richness checks downgrade to warnings / info, not errors"
-        (is (contains? (codes diags) "carries-expression"))
+        (is (contains? (codes diags) "embodies-expression"))
         (is (contains? (codes diags) "expression-realises-work"))
         (is (contains? (codes diags) "has-identifier"))))))
+
+(deftest creator-identified-ignores-a-publisher
+  (testing "a publisher-only record has no creator, so no creator-identified warning"
+    (let [fid :frag/rec.p.dc-publisher.0
+          r   (model/record {:id :rec/p :kind :test
+                             :entities [(model/entity {:id :m/p :kind :lrmoo/F3_Manifestation})]
+                             :fragments [(model/fragment {:id fid :source [:test]})]
+                             :assertions [(model/assertion {:subject :m/p :predicate :lrmoo/R33_has_string :value "T"})
+                                          (model/assertion {:subject :rec/p :predicate :canon/agent
+                                                            :value (model/reference fid)})
+                                          (model/assertion {:subject fid :predicate :canon/agent :value "Gallimard"})
+                                          (model/assertion {:subject fid :predicate :canon/role :value :publisher})]})]
+      (is (not (contains? (codes (conf/check-record conf/linked-art-profile r)) "creator-identified"))))))
 
 (deftest creator-identified-discriminates-bare-label-from-authority-id
   (let [base {:id :rec/c :kind :test
@@ -79,8 +92,10 @@
         (is (= 2 records))
         (is (false? failed?))
         (is (= :warning (:max-severity summary)))
-        (testing "the floor creators are bare labels -> a creator-identified warning each"
-          (is (= 2 (count (filter #(= :conformance.linked-art/creator-identified (:code %))
+        (testing "both records credit only added entries (contributors), so there is no creator to identify"
+          (is (empty? (filter #(= :conformance.linked-art/creator-identified (:code %)) diagnostics))))
+        (testing "and no creator means no Work: an incomplete-chain warning each"
+          (is (= 2 (count (filter #(= :conformance.linked-art/expression-realises-work (:code %))
                                   diagnostics)))))))
     (testing "raising the acceptance threshold (the institution's knob) makes the warnings fail"
       (is (true? (:failed? (run :errors-and-warnings)))))))

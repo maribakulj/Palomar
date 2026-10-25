@@ -36,7 +36,7 @@
                            [:jsonld     "@graph"]
                            [:crm        "cidoc-crm/E73_Information_Object"]
                            [:crm-only   "cidoc-crm/E73_Information_Object"]
-                           [:linked-art "HumanMadeObject"]
+                           [:linked-art "\"type\":\"LinguisticObject\""]
                            [:dc         "<dc:title"]
                            [:marc21     "<controlfield tag=\"001\""]
                            [:mods       "<mods xmlns="]]]
@@ -49,9 +49,10 @@
           (is (contains? (set (:source-fields loss)) :iiif/manifest)))))))
 
 (deftest the-marc21-to-linked-art-path-is-faithful
-  (testing "MARC21 -> pivot -> Linked Art carries the title onto a HumanMadeObject"
+  (testing "MARC21 -> pivot -> Linked Art carries the title onto the edition's text (a LinguisticObject, not a physical object)"
     (let [{:keys [output]} (cv/convert {:from :marc21 :to :linked-art :source (src :marc21)})]
-      (is (str/includes? output "\"type\":\"HumanMadeObject\""))
+      (is (str/includes? output "\"type\":\"LinguisticObject\""))
+      (is (not (str/includes? output "HumanMadeObject")))
       (is (str/includes? output "The Great Ray Charles"))
       (is (str/includes? output "https://linked.art/ns/v1/linked-art.json")))))
 

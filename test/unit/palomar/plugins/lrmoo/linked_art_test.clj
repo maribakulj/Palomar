@@ -1,8 +1,9 @@
 (ns palomar.plugins.lrmoo.linked-art-test
   "Unit tests for the Linked Art JSON-LD export (museum spoke). The WEMI→Linked Art
    mapping is verified against the official Linked Art model examples
-   (docs/eval/linked-art.md): F3→HumanMadeObject carries F2→LinguisticObject
-   part_of F1→PropositionalObject, with AAT-classified Names/Identifiers."
+   (docs/eval/linked-art.md, model/document): F3 (+ its F2) → LinguisticObject
+   part_of F1 → PropositionalObject; only an F5 Item is a HumanMadeObject, which
+   carries the text. AAT-classified Names/Identifiers."
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
@@ -35,10 +36,11 @@
 
 (deftest builds-the-wemi-chain-as-linked-art
   (let [doc (json/read-str (la/->jsonld rec))]
-    (testing "root is the Manifestation as a HumanMadeObject identified by the ARK"
+    (testing "root is the Manifestation's text, a LinguisticObject (an edition is not a physical object, audit S01)"
       (is (= "https://linked.art/ns/v1/linked-art.json" (get doc "@context")))
       (is (= "http://data.bnf.fr/ark:/12148/cbX" (get doc "id")))
-      (is (= "HumanMadeObject" (get doc "type")))
+      (is (= "LinguisticObject" (get doc "type")))
+      (is (nil? (get doc "carries")))
       (is (= "Madame Bovary" (get doc "_label"))))
     (testing "identified_by: a Primary Name and a System-Assigned Number (the ARK)"
       (let [ib    (get doc "identified_by")
@@ -48,13 +50,11 @@
         (is (= "http://vocab.getty.edu/aat/300404670" (get-in named ["classified_as" 0 "id"])))
         (is (= "http://data.bnf.fr/ark:/12148/cbX" (get ident "content")))
         (is (= "http://vocab.getty.edu/aat/300435704" (get-in ident ["classified_as" 0 "id"])))))
-    (testing "carries the Expression (LinguisticObject), created_by the author, part_of the Work"
-      (let [expr (first (get doc "carries"))]
-        (is (= "LinguisticObject" (get expr "type")))
-        (is (= "Creation" (get-in expr ["created_by" "type"])))
-        (is (= "Flaubert" (get-in expr ["created_by" "carried_out_by" 0 "_label"])))
-        (is (= "Person" (get-in expr ["created_by" "carried_out_by" 0 "type"])))
-        (is (= "PropositionalObject" (get-in expr ["part_of" 0 "type"])))))
+    (testing "the text is created_by the author and part_of the Work"
+      (is (= "Creation" (get-in doc ["created_by" "type"])))
+      (is (= "Flaubert" (get-in doc ["created_by" "carried_out_by" 0 "_label"])))
+      (is (= "Person" (get-in doc ["created_by" "carried_out_by" 0 "type"])))
+      (is (= "PropositionalObject" (get-in doc ["part_of" 0 "type"]))))
     (testing "the note is a referred_to_by LinguisticObject; the image a representation DigitalObject"
       (is (= "a novel" (get-in doc ["referred_to_by" 0 "content"])))
       (is (= "VisualItem" (get-in doc ["representation" 0 "type"])))
@@ -70,15 +70,18 @@
       (is (contains? fields :canon/date))
       (is (not (contains? fields :canon/agent)))     ; agent IS expressed
       (is (not (contains? fields :lrmoo/R33_has_string)))
-      (is (every? #(= :loss/dropped (:code %)) ls))
-      (is (every? #(= :export (get-in % [:detail :loss/edge])) ls)))))
+      (is (every? #(= :export (get-in % [:detail :loss/edge])) ls))
+      (testing "the Expression folded into the Manifestation's text is :under-specified"
+        (is (= [:lrmoo/F2_Expression]
+               (map #(get-in % [:detail :loss/source-field])
+                    (filter #(= :loss/under-specified (:code %)) ls))))))))
 
 (deftest empty-record-and-exporter-contract
   (testing "a record with no Manifestation yields the empty string"
     (is (= "" (la/->jsonld (model/record {:id :record/x :kind :book})))))
   (testing "the ADR 0007 exporter renders and reports loss"
     (let [{:keys [output diagnostics]} (la/exporter {} [rec])]
-      (is (str/includes? output "HumanMadeObject"))
+      (is (str/includes? output "LinguisticObject"))
       (is (seq diagnostics)))))
 
 (deftest a-creatorless-floor-record-omits-created-by-and-work
@@ -91,12 +94,11 @@
                            (first (:records (dc/importer {:record-id :dc/t}
                                                          "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:title>Anonymous Chronicle</dc:title></metadata>")))
                            comp :normalize)))
-          doc   (json/read-str (la/->jsonld rec*))
-          expr  (first (get doc "carries"))]
+          doc   (json/read-str (la/->jsonld rec*))]
       (is (= "Anonymous Chronicle" (get doc "_label")))
-      (is (= "LinguisticObject" (get expr "type")))
-      (is (nil? (get expr "created_by")))           ; no creator
-      (is (nil? (get expr "part_of"))))))           ; no Work
+      (is (= "LinguisticObject" (get doc "type")))
+      (is (nil? (get doc "created_by")))            ; no creator
+      (is (nil? (get doc "part_of"))))))            ; no Work
 
 (deftest an-identified-agent-entity-puts-its-iri-on-the-person
   (testing "a :crm/E21_Person entity with an ISNI iri -> created_by Person carries that id (D7)"
@@ -113,7 +115,7 @@
                            (model/assertion {:subject :record/r1 :predicate :canon/agent
                                              :value "Flaubert, Gustave"})]})
           person (-> (la/->jsonld r) json/read-str
-                     (get-in ["carries" 0 "created_by" "carried_out_by" 0]))]
+                     (get-in ["created_by" "carried_out_by" 0]))]
       (is (= "Person" (get person "type")))
       (is (= "Flaubert, Gustave" (get person "_label")))
       (is (= "https://isni.org/isni/0000000122762442" (get person "id"))))))
@@ -128,22 +130,73 @@
                                  comp :normalize)))))
 
 (deftest a-publisher-is-not-the-creator
-  (testing "dc:creator + dc:publisher: only the creator is carried_out_by; the publisher is export loss"
+  (testing "dc:creator + dc:publisher: the creator is created_by, the publisher carries out the Publishing"
     (let [rec*    (dc->wemi (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
                                  "<dc:title>Les Misérables</dc:title>"
                                  "<dc:publisher>Gallimard</dc:publisher>"
                                  "<dc:creator>Victor Hugo</dc:creator></metadata>"))
-          expr    (first (get (json/read-str (la/->jsonld rec*)) "carries"))
-          names   (map #(get % "_label") (get-in expr ["created_by" "carried_out_by"]))
+          doc     (json/read-str (la/->jsonld rec*))
+          names   (map #(get % "_label") (get-in doc ["created_by" "carried_out_by"]))
+          pub     (first (get doc "used_for"))
           dropped (filter #(= :canon/agent (get-in % [:detail :loss/source-field]))
                           (la/export-losses rec*))]
       (is (= ["Victor Hugo"] names))
+      (is (= "http://vocab.getty.edu/aat/300054686" (get-in pub ["classified_as" 0 "id"])))
+      (is (= [{"type" "Group" "_label" "Gallimard"}] (get pub "carried_out_by")))
+      (is (empty? dropped))))
+  (testing "a contributor is neither creator nor publisher: export loss"
+    (let [rec*    (dc->wemi (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
+                                 "<dc:title>Les Misérables</dc:title>"
+                                 "<dc:creator>Victor Hugo</dc:creator>"
+                                 "<dc:contributor>Gustave Brion</dc:contributor></metadata>"))
+          dropped (filter #(= :canon/agent (get-in % [:detail :loss/source-field]))
+                          (la/export-losses rec*))]
       (is (= 1 (count dropped)))
-      (is (str/includes? (:message (first dropped)) "Gallimard"))))
+      (is (str/includes? (:message (first dropped)) "Gustave Brion"))))
   (testing "a publisher alone: no created_by, no Work (audit test 1)"
     (let [rec* (dc->wemi (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
                               "<dc:title>Les Misérables</dc:title>"
                               "<dc:publisher>Gallimard</dc:publisher></metadata>"))
-          expr (first (get (json/read-str (la/->jsonld rec*)) "carries"))]
-      (is (nil? (get expr "created_by")))
-      (is (nil? (get expr "part_of"))))))
+          doc  (json/read-str (la/->jsonld rec*))]
+      (is (nil? (get doc "created_by")))
+      (is (nil? (get doc "part_of")))
+      (is (= "Gallimard" (get-in doc ["used_for" 0 "carried_out_by" 0 "_label"]))))))
+
+(def ^:private two-editions-and-a-copy
+  "A graph record (INTERMARC-NG style): one Work, two Expressions, a Manifestation
+   of each, and an Item of the second Manifestation."
+  (model/record
+   {:id :record/g :kind :lrmoo/graph
+    :entities (mapv model/entity [{:id :ent/w :kind :lrmoo/F1_Work}
+                                  {:id :ent/e1 :kind :lrmoo/F2_Expression}
+                                  {:id :ent/e2 :kind :lrmoo/F2_Expression}
+                                  {:id :ent/m1 :kind :lrmoo/F3_Manifestation :iri "http://ex/m1"}
+                                  {:id :ent/m2 :kind :lrmoo/F3_Manifestation :iri "http://ex/m2"}
+                                  {:id :ent/i2 :kind :lrmoo/F5_Item :iri "http://ex/i2"}
+                                  {:id :ent/orphan :kind :lrmoo/F2_Expression}])
+    :assertions (mapv model/assertion
+                      [{:subject :ent/w :predicate :lrmoo/R3_is_realised_in :value (model/reference :ent/e1)}
+                       {:subject :ent/w :predicate :lrmoo/R3_is_realised_in :value (model/reference :ent/e2)}
+                       {:subject :ent/m1 :predicate :lrmoo/R4_embodies :value (model/reference :ent/e1)}
+                       {:subject :ent/m2 :predicate :lrmoo/R4_embodies :value (model/reference :ent/e2)}
+                       {:subject :ent/i2 :predicate :lrmoo/R7_exemplifies :value (model/reference :ent/m2)}
+                       {:subject :ent/m1 :predicate :lrmoo/R33_has_string :value "Les Misérables"}
+                       {:subject :ent/m2 :predicate :lrmoo/R33_has_string :value "Les Misérables (trad.)"}
+                       {:subject :record/g :predicate :canon/note :value "a note"}])}))
+
+(deftest every-manifestation-and-item-gets-its-own-document
+  (testing "two Manifestations -> two LinguisticObjects, each part_of the Work; the Item is a HumanMadeObject (audit S10)"
+    (let [docs (mapv json/read-str (str/split-lines (la/->jsonld two-editions-and-a-copy)))]
+      (is (= ["LinguisticObject" "LinguisticObject" "HumanMadeObject"] (map #(get % "type") docs)))
+      (is (= ["http://ex/m1" "http://ex/m2" "http://ex/i2"] (map #(get % "id") docs)))
+      (is (= ["Les Misérables" "Les Misérables (trad.)"] (map #(get % "_label") (take 2 docs))))
+      (is (every? #(= "PropositionalObject" (get-in % ["part_of" 0 "type"])) (take 2 docs)))
+      (testing "the copy carries the text of the Manifestation it exemplifies"
+        (is (= "http://ex/m2" (get-in (nth docs 2) ["carries" 0 "id"]))))
+      (testing "a record-level note cannot be attributed to one of two Manifestations"
+        (is (not-any? #(contains? % "referred_to_by") docs)))))
+  (testing "the losses name the unreached Expression and the unattributed note"
+    (let [ls (la/export-losses two-editions-and-a-copy)]
+      (is (some #(and (= :loss/dropped (:code %)) (= :ent/orphan (:subject %))) ls))
+      (is (some #(and (= :loss/under-specified (:code %))
+                      (= :canon/note (get-in % [:detail :loss/source-field]))) ls)))))

@@ -16,7 +16,7 @@
   (testing "convert MARC21 -> Linked Art: output to :out, loss report to :err"
     (let [{:keys [exit out err]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "linked-art"])]
       (is (= 0 exit))
-      (is (str/includes? out "HumanMadeObject"))
+      (is (str/includes? out "LinguisticObject"))
       (is (str/includes? out "The Great Ray Charles"))
       (is (str/includes? err "Loss report"))
       (is (str/includes? err "2 records converted")))))
@@ -228,7 +228,7 @@
       (is (str/includes? err "CONFORMANT"))
       (is (not (str/includes? err "NON-CONFORMANT")))
       (is (str/includes? err "Linked Art (Louvre)"))
-      (is (str/includes? err "creator-identified"))))
+      (is (str/includes? err "expression-realises-work"))))
   (testing "raising the acceptance threshold makes the warnings non-conformant (exit 1)"
     (let [{:keys [exit err]} (cli/run ["conformance" marc21 "--from" "marc21"
                                        "--profile" "linked-art" "--policy" "errors-and-warnings"])]
