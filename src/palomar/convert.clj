@@ -135,14 +135,18 @@
    emitted. By default pending claims (`:proposed`, `:needs-review`) are emitted
    — the floor projection's whole WEMI chain is `:proposed` until curated. With
    `:in-force-only? true` only `:asserted`/`:accepted` (or status-less) assertions
-   are, so an uncurated inference never reaches the output as a fact."
+   are, so an uncurated inference never reaches the output as a fact. An entity
+   that existed only through dropped claims is dropped with them
+   (`model/filter-assertions`): a rejected Work is not typed in the output either."
   ([to records] (export-records to records {}))
   ([to records {:keys [in-force-only?]}]
    (when-not (contains? exporters to)
      (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
    (let [{:keys [render losses]} (exporters to)
-         keep?   (if in-force-only? in-force-or-unstated? (complement model/out-of-force?))
-         records (mapv #(cond-> % (:assertions %) (update :assertions (partial filterv keep?))) records)]
+         records (mapv (if in-force-only?
+                         #(model/filter-assertions % in-force-or-unstated?)
+                         model/without-out-of-force)
+                       records)]
      {:output (->> records
                    (into [] (comp (map render) (remove str/blank?)))
                    (str/join "\n"))

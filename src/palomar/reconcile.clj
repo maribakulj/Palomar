@@ -130,30 +130,45 @@
         vec)))
 
 (defn apply-agent-links
-  "Rewrite `records` onto shared agent nodes from `links` — accepted
-   `propose-agent-links` proposals (`{:name :authority-id :certifiable? …}`).
+  "Rewrite `records` onto shared agent nodes from `links`: `propose-agent-links`
+   proposals that a curator has accepted (`:status :accepted`, or `:asserted`).
    For each record whose creator is a link's `:name` and that has no identified
    agent yet, add the `:crm/E21_Person` entity of the authority id (its id minted
    from the id, as the INTERMARC spoke does, so every record names the same node).
-   A non-certifiable link (no determinate authority id) is never applied: it is
-   returned under `:refused`. Returns `{:records [..] :applied [{:record :name
-   :iri}] :refused [link…]}`."
+
+   Nothing else is applied, and every link left out is returned under `:refused`
+   with a `:reason`: `:not-accepted` (a bare proposal is never applied, D7),
+   `:not-certifiable` (no determinate authority id: the metro-station guard) or
+   `:ambiguous` (one name accepted for several authority ids). Returns
+   `{:records [..] :applied [{:record :name :iri}] :refused [link…]}`."
   [records links]
-  (let [{ok true refused false} (group-by #(boolean (and (:certifiable? %) (:authority-id %))) links)
-        by-name (group-by :name ok)
-        link-of (fn [record]
-                  (when-not (some #(= :crm/E21_Person (:kind %)) (:entities record))
-                    (some #(first (by-name %)) (agents/creators record))))
-        results (for [r records]
-                  (if-let [{:keys [name authority-id]} (link-of r)]
-                    (let [e (model/entity {:id         (model/mint-entity-id :crm/E21_Person authority-id)
-                                           :kind       :crm/E21_Person
-                                           :iri        authority-id
-                                           :provenance (model/provenance {:pass       :repair
-                                                                          :rule       :reconcile/apply-agent-link
-                                                                          :derivation [(:id r)]})})]
-                      [(update r :entities (fnil conj []) e) {:record (:id r) :name name :iri authority-id}])
-                    [r nil]))]
+  (let [accepted?   #(contains? #{:accepted :asserted} (:status %))
+        certifiable #(boolean (and (:certifiable? %) (:authority-id %)))
+        candidates  (filter #(and (accepted? %) (certifiable %)) links)
+        ambiguous   (set (for [[nm ls] (group-by :name candidates)
+                               :when (< 1 (count (distinct (map :authority-id ls))))]
+                           nm))
+        usable      (into {} (for [l candidates :when (not (ambiguous (:name l)))]
+                               [(:name l) l]))
+        refused     (vec (for [l links
+                               :let [r (cond (not (accepted? l))      :not-accepted
+                                             (not (certifiable l))    :not-certifiable
+                                             (ambiguous (:name l))    :ambiguous)]
+                               :when r]
+                           (assoc l :reason r)))
+        link-of     (fn [record]
+                      (when-not (some #(= :crm/E21_Person (:kind %)) (:entities record))
+                        (some usable (agents/creators record))))
+        results     (for [r records]
+                      (if-let [{:keys [name authority-id]} (link-of r)]
+                        (let [e (model/entity {:id         (model/mint-entity-id :crm/E21_Person authority-id)
+                                               :kind       :crm/E21_Person
+                                               :iri        authority-id
+                                               :provenance (model/provenance {:pass       :repair
+                                                                              :rule       :reconcile/apply-agent-link
+                                                                              :derivation [(:id r)]})})]
+                          [(update r :entities (fnil conj []) e) {:record (:id r) :name name :iri authority-id}])
+                        [r nil]))]
     {:records (mapv first results)
      :applied (vec (keep second results))
-     :refused (vec refused)}))
+     :refused refused}))

@@ -798,3 +798,30 @@
                         (:assertions merged)))))
       (is (= [:publisher :publisher]
              (keep #(when (= :canon/role (:predicate %)) (:value %)) (:assertions merged)))))))
+
+(deftest constant-qualifier-edge-cases
+  (let [rule (fn [m] (mapping/compile-mapping (merge minimal-mapping
+                                                     {:mapping/transform [:trim]
+                                                      :mapping/qualifier {:value :publisher :as :canon/role}}
+                                                     m)
+                                              stdlib))
+        run  (fn [r rec] (:record (runtime/run-phase rec [r] :normalize)))
+        roles (fn [rec] (keep #(when (= :canon/role (:predicate %)) [(:subject %) (:value %)]) (:assertions rec)))]
+    (testing "values equal once trimmed make one fragment, as an unqualified value collapses (ADR 0008)"
+      (let [out (run (rule {}) (record-with :native/x ["Gallimard" " Gallimard "]))]
+        (is (= 1 (count (:fragments out))))))
+    (testing "the fragment id carries the coord, apart from an ingest fragment of the same predicate"
+      (is (= :frag/record.r1.native-x.0.canon-role.0
+             (:id (first (:fragments (run (rule {}) (record-with :native/x ["A"]))))))))
+    (testing "a value already on a fragment gets the coord on that fragment"
+      (let [fid :frag/record.r1.native-x.0
+            rec (model/record {:id :record/r1 :kind :test
+                               :fragments [(model/fragment {:id fid :source [:t]})]
+                               :assertions [(model/assertion {:subject :record/r1 :predicate :native/x
+                                                              :value (model/reference fid)})
+                                            (model/assertion {:subject fid :predicate :native/x :value "A"})]})]
+        (is (= [[fid :publisher]] (roles (run (rule {}) rec))))))
+    (testing "an :on-empty :default value is qualified too"
+      (let [out (run (rule {:mapping/on-empty :default :mapping/default "Anonyme"}) (empty-record))]
+        (is (= [:publisher] (map second (roles out))))
+        (is (model/record-consistent? out))))))

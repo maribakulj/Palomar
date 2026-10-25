@@ -111,10 +111,11 @@
    the two carry different `:iri`s the same id names two things — a hash
    collision or a modelling defect — so the first is kept and an
    `:entity-id-collision` error is recorded instead of merging silently
-   (audit S36)."
+   (audit S36). A re-mint carrying an `:iri` the first lacked adds it."
   [record e]
   (if-let [prev (some #(when (= (:id e) (:id %)) %) (:entities record))]
-    (if (and (:iri prev) (:iri e) (not= (:iri prev) (:iri e)))
+    (cond
+      (and (:iri prev) (:iri e) (not= (:iri prev) (:iri e)))
       (dedup-append record :diagnostics
                     (model/diagnostic {:severity :error
                                        :code     :entity-id-collision
@@ -122,7 +123,12 @@
                                        :message  (str "entity id " (:id e) " names both " (:iri prev)
                                                       " and " (:iri e))})
                     diagnostic-identity)
-      record)
+
+      ;; a re-mint that brings the authority iri the first one lacked keeps it
+      (and (:iri e) (not (:iri prev)))
+      (update record :entities (partial mapv #(if (= (:id e) (:id %)) (assoc % :iri (:iri e)) %)))
+
+      :else record)
     (update record :entities (fnil conj []) e)))
 
 (defn- merge-production [record production]

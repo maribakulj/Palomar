@@ -11,7 +11,9 @@
    Two layers come out of a record (audit S06). The flat one, `:ns/fTAG_CODE`
    (one assertion per subfield) plus `:ns/leader`, is what the mappings read.
    It loses which subfields belong to the same field and the indicators, so
-   every field occurrence is also kept as a **fragment** (ADR 0011/0012), id
+   every field occurrence whose tag is alphanumeric (every MARC tag; a malformed
+   tag such as `24 5` keeps only its flat assertions, since it cannot name a
+   fragment) is also kept as a **fragment** (ADR 0011/0012), id
    `[:ns/fTAG n]` for the n-th occurrence of TAG, whose `:locator` holds the tag,
    the occurrence, the indicators and the ordered `[code value]` subfields.
    That locator is the faithful capture: a 700 `$a Doré $e ill.` keeps its

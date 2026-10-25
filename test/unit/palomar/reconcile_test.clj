@@ -79,13 +79,14 @@
   (let [a       (record-with-agent :r/a "Gustave Flaubert" nil)
         b       (record-with-agent :r/b "Gustave Flaubert" nil)
         c       (record-with-agent :r/c "Victor Hugo" nil)
-        links   (rec/propose-agent-links ["Gustave Flaubert" "Victor Hugo"] pool)
+        accept  #(assoc % :status :accepted)
+        links   (mapv accept (rec/propose-agent-links ["Gustave Flaubert" "Victor Hugo"] pool))
         {:keys [records applied refused]} (rec/apply-agent-links [a b c] links)]
-    (testing "the certifiable link is applied to both Flaubert records, as the same node"
+    (testing "the accepted certifiable link is applied to both Flaubert records, as the same node"
       (is (= #{:r/a :r/b} (set (map :record applied))))
       (is (= 1 (count (distinct (map :id (mapcat :entities (take 2 records))))))))
     (testing "the id-less Victor Hugo match (the metro station) is refused, never applied"
-      (is (= ["Victor Hugo"] (map :name refused)))
+      (is (= [["Victor Hugo" :not-certifiable]] (map (juxt :name :reason) refused)))
       (is (empty? (:entities (nth records 2)))))
     (testing "reconcile-agents now sees one person mentioned by two records"
       (let [{:keys [distinct agents]} (rec/reconcile-agents records)]
@@ -94,3 +95,19 @@
     (testing "a record that already has an identified agent is left alone"
       (let [d (record-with-agent :r/d "Gustave Flaubert" flau)]
         (is (empty? (:applied (rec/apply-agent-links [d] links))))))))
+
+(deftest only-accepted-unambiguous-links-are-applied
+  (let [a (record-with-agent :r/a "Gustave Flaubert" nil)]
+    (testing "a bare proposal is never applied (D7)"
+      (let [{:keys [applied refused]} (rec/apply-agent-links [a] (rec/propose-agent-links ["Gustave Flaubert"] pool))]
+        (is (empty? applied))
+        (is (= [:not-accepted] (map :reason refused)))))
+    (testing "a rejected link is not applied"
+      (is (empty? (:applied (rec/apply-agent-links [a] [{:name "Gustave Flaubert" :authority-id "isni:flaubert"
+                                                         :certifiable? true :status :rejected}])))))
+    (testing "one name accepted for two authority ids is ambiguous: neither is applied"
+      (let [{:keys [applied refused]}
+            (rec/apply-agent-links [a] [{:name "Gustave Flaubert" :authority-id "isni:a" :certifiable? true :status :accepted}
+                                        {:name "Gustave Flaubert" :authority-id "isni:b" :certifiable? true :status :accepted}])]
+        (is (empty? applied))
+        (is (= [:ambiguous :ambiguous] (map :reason refused)))))))

@@ -92,10 +92,17 @@
           (:command m)              (recur (rest as) (update m :positional (fnil conj []) a))
           :else                     (recur (rest as) (assoc m :command a)))))))
 
-(defn- ->record-id [s]
+(defn- ->record-id
+  "The `--record-id` as a keyword. It must be `ns/name` with no `.`: fragments
+   and qualified values mint ids from it (ADR 0012), which an un-namespaced or
+   dotted id cannot carry injectively, so it is refused here with a clear message
+   instead of failing mid-conversion."
+  [s]
   (let [s     (str/replace-first s #"^:" "")
         [a b] (str/split s #"/" 2)]
-    (if b (keyword a b) (keyword a))))
+    (when-not (and (seq a) (seq b) (not (str/includes? s ".")))
+      (throw (ex-info (str "--record-id must be ns/name with no '.' (e.g. doc/my-record), got " (pr-str s)) {})))
+    (keyword a b)))
 
 (defn- file-stem [path]
   (-> path (str/replace #".*/" "") (str/replace #"\.[^.]*$" "") (str/replace #"[^A-Za-z0-9]+" "-")))

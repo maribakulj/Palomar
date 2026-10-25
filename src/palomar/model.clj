@@ -550,11 +550,33 @@
   [x]
   (contains? out-of-force-statuses (:status x)))
 
+(defn- referenced-ids
+  "Ids an assertion mentions: its subject and, for a reference value, its target."
+  [a]
+  (cond-> [(:subject a)]
+    (reference-value? (:value a)) (conj (:value/target (:value a)))))
+
+(defn filter-assertions
+  "`record` keeping only the assertions `keep?` accepts. An entity with no
+   authority `:iri` that some dropped assertion mentioned, and no kept one does,
+   goes too: it existed only through the dropped claims (a Work or Expression
+   inferred by a proposal a curator rejected). Entities the dropped assertions
+   never mentioned are left alone."
+  [record keep?]
+  (if-let [as (seq (:assertions record))]
+    (let [{kept true dropped false} (group-by (comp boolean keep?) as)
+          still   (into #{} (mapcat referenced-ids) kept)
+          orphans (into #{} (comp (mapcat referenced-ids) (remove still)) dropped)]
+      (cond-> (assoc record :assertions (vec kept))
+        (and (seq orphans) (:entities record))
+        (update :entities (partial filterv #(or (:iri %) (not (contains? orphans (:id %))))))))
+    record))
+
 (defn without-out-of-force
-  "`record` without its out-of-force assertions (`out-of-force?`)."
+  "`record` without its out-of-force assertions (`out-of-force?`), nor the
+   entities that existed only through them (`filter-assertions`)."
   [record]
-  (cond-> record
-    (:assertions record) (update :assertions #(filterv (complement out-of-force?) %))))
+  (filter-assertions record (complement out-of-force?)))
 
 ;; ---------------------------------------------------------------------------
 ;; Simple queries

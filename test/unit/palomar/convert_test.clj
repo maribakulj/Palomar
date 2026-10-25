@@ -101,3 +101,14 @@
                               "R4_embodies")))
       (is (str/includes? (:output (cv/export-records :ntriples accepted {:in-force-only? true}))
                          "R4_embodies")))))
+
+(deftest an-entity-that-only-a-rejected-claim-made-is-not-exported
+  (testing "after reject-all, the inferred Expression is neither linked nor typed"
+    (let [rejected (:records (curate/curate (dc-wemi) curate/reject-all))
+          nt       (:output (cv/export-records :ntriples rejected))]
+      (is (not (str/includes? nt "lrmoo/F2_Expression")))
+      (is (str/includes? nt "lrmoo/F3_Manifestation"))))     ; the record's own Manifestation stays
+  (testing "with :in-force-only? an uncurated Work and Expression are not typed"
+    (let [nt (:output (cv/export-records :ntriples (dc-wemi) {:in-force-only? true}))]
+      (is (not (str/includes? nt "lrmoo/F1_Work")))
+      (is (not (str/includes? nt "lrmoo/F2_Expression"))))))

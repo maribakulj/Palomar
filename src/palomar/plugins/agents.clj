@@ -10,7 +10,7 @@
   (:require [palomar.plugins.qualified :as qualified]))
 
 (defn occurrences
-  "Every `:canon/agent` literal of `record`, in document order, as
+  "Every in-force `:canon/agent` literal of `record`, in assertion order, as
    `{:name string :role keyword-or-nil}`. `:role` is nil when the source did
    not state one."
   [record]

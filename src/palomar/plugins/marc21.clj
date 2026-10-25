@@ -40,12 +40,15 @@
    - One Record per `<record>`; id `:marc/r<001>` from the control number.
    - Import only; a canonical→MARC21 exporter is a later slice.
    - Leader/008 fixed-field decoding and indicator semantics are out of scope."
-  (:require [palomar.plugins.marcxml :as marcxml]
+  (:require [clojure.data.xml :as xml]
+            [palomar.plugins.marcxml :as marcxml]
             [palomar.plugins.record-id :as record-id]))
 
 ;; ---------------------------------------------------------------------------
 ;; Record identity
 ;; ---------------------------------------------------------------------------
+
+(def ^:private marc21slim-uri "http://www.loc.gov/MARC21/slim")
 
 (defn- record-id-from-control
   "`:marc/r<001>` from the control number. The `r` prefix guards against a
@@ -139,7 +142,10 @@
   "The MARCXML family policies for the MARC21 spoke (shared by `ingest`/`stream`)."
   [opts]
   {:ns        "marc21"
-   :record?   (fn [e] (= "record" (marcxml/local-name e)))
+   ;; MARC21slim's `record`, or an un-namespaced one — not an SRU envelope's
+   ;; `zs:record`, which wraps the real record in `recordData`
+   :record?   (fn [e] (and (= "record" (marcxml/local-name e))
+                           (contains? #{"" marc21slim-uri} (xml/qname-uri (:tag e)))))
    :record-id record-id
    :kind      (fn [_] (or (:kind opts) :marc21/bibliographic))
    :source    (fn [e] (marcxml/control-value e "001"))})

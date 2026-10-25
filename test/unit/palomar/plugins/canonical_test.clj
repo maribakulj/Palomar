@@ -119,3 +119,15 @@
     (is (= flagged? (contains? (codes-of (with-assertions :r/e :r/e :canon/title "T" :r/e :canon/date d))
                                :date-without-year))
         d)))
+
+(deftest an-unknown-note-kind-is-flagged
+  (is (contains? (codes-of (with-assertions :r/n :r/n :canon/title "T" :r/n :canon/note-kind :summary))
+                 :unknown-note-kind))
+  (is (not (contains? (codes-of (with-assertions :r/o :r/o :canon/title "T" :r/o :canon/note-kind :abstract))
+                      :unknown-note-kind))))
+
+(deftest the-blank-and-year-rules-handle-nbsp-and-newlines
+  (is (contains? (codes-of (with-assertions :r/p :r/p :canon/title "T" :r/p :canon/note "\u00A0 "))
+                 :blank-value))
+  (is (not (contains? (codes-of (with-assertions :r/q :r/q :canon/title "T" :r/q :canon/date "circa\n1862"))
+                      :date-without-year))))
