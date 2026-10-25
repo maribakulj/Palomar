@@ -376,3 +376,10 @@
         (is (str/includes? err "--record-id must be ns/name") bad))))
   (testing "a well-formed id converts"
     (is (= 0 (:exit (cli/run ["convert" dc "--from" "dc" "--to" "ntriples" "--record-id" "doc/x"]))))))
+
+(deftest apply-repairs-records-who-decided-in-the-prov-history
+  (testing "--by names the curator in the PROV record of the decisions (ADR 0028)"
+    (let [{:keys [exit out]} (cli/run ["apply-repairs" dc "--from" "dc" "--policy" "reject" "--to" "prov" "--by" "curator-1"])]
+      (is (zero? exit))
+      (is (str/includes? out "wasInvalidatedBy"))
+      (is (str/includes? out "\"curator-1\"")))))

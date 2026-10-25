@@ -200,3 +200,21 @@
           rec (model/record {:id :r/s :kind :doc :assertions [a]})]
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"same fact"
                             (curate/supersede rec a (assoc a :confidence 0.5) "no-op"))))))
+
+(deftest decisions-travel-with-the-record
+  (testing "each decision is an annotation about the assertion it decided, with who, when and why (ADR 0028)"
+    (let [a       (model/assertion {:subject :r/s :predicate :lrmoo/R4_embodies :value "x" :status :proposed})
+          rec     (model/record {:id :r/s :kind :doc :assertions [a]})
+          at      #inst "2026-10-25T12:00:00Z"
+          {:keys [record]} (curate/curate-record rec (constantly [:reject "wrong edition"]) {:by "curator-1" :at at})
+          [h]     (curate/history record a)]
+      (is (= :rejected (:status (first (:assertions record)))))
+      (is (= {:verdict :reject :from :proposed :to :rejected :reason "wrong edition" :by "curator-1" :at at} h))
+      (is (model/valid-record? record))))
+  (testing "a supersession records the replacement's id"
+    (let [old (model/assertion {:subject :r/s :predicate :canon/title :value "Old"})
+          new (model/assertion {:subject :r/s :predicate :canon/title :value "New"})
+          {:keys [record]} (curate/supersede (model/record {:id :r/s :kind :doc :assertions [old]}) old new "typo")
+          [h] (curate/history record old)]
+      (is (= :supersede (:verdict h)))
+      (is (= (model/assertion-id new) (:replaced-by h))))))

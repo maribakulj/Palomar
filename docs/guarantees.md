@@ -27,6 +27,7 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 | Two rules deriving one fact keep both justifications. | `palomar.runtime-test/alternative-justifications-are-recorded-once` |
 | One fact is one assertion whatever status it was derived under, and a rule re-deriving a rejected claim does not bring it back. | `palomar.runtime-test/the-same-fact-is-one-assertion-whatever-its-status` |
 | An assertion has a content-derived id that survives curation; equal values hash alike whatever their construction. | `palomar.model-identity-test/an-assertion-keeps-its-id-through-curation`, `palomar.model-identity-test/equal-values-have-one-canonical-form` |
+| Every curation decision is kept on the record (verdict, statuses, reason, curator, time) and written to PROV-O as an activity that used, and may invalidate, the statement. | `palomar.curate-test/decisions-travel-with-the-record`, `palomar.plugins.lrmoo.prov-test/a-curation-decision-is-a-prov-activity` |
 | A IIIF manifest missing a Presentation 3.0 MUST is not emitted, and the reason is reported. | `palomar.plugins.iiif.export-test/an-invalid-manifest-is-refused-with-a-diagnostic` |
 | MARC field occurrences keep their subfields together, in order, with their indicators; the leader is kept. | `palomar.plugins.marc21-test/each-field-occurrence-keeps-its-subfields-together-and-in-order` |
 | Distinct source identifiers do not share a record id (barring a 40-bit digest collision when slugging changed the identifier). | `palomar.plugins.record-id-test/identifiers-that-slug-alike-stay-distinct` |

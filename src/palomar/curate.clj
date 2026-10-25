@@ -20,10 +20,10 @@
    It is a pure function of (record, decision): no clock, no I/O, deterministic, so
    it is re-runnable and testable. Curation acts only on *pending* assertions
    (`:proposed` or `:needs-review`); everything in force or already resolved is
-   left untouched. The transition log it returns is the audit record — the
-   Provenance schema deliberately does not model a from→to history (ADR 0005 keeps
-   the decision in `:status`), so curation *reports* transitions rather than
-   stamping them.
+   left untouched. The transition log it returns is the run's audit record, and
+   each decision is also stamped on the record as an annotation about the
+   assertion it decided (ADR 0028): the status says where a claim stands, the
+   annotations (`history`) how it got there, who decided and why.
 
    Supersession of an in-force assertion (ADR 0005's conditional \"may cause the
    original to become :superseded\") is not inferred: the core models no
@@ -48,6 +48,26 @@
 ;; ---------------------------------------------------------------------------
 ;; Engine
 ;; ---------------------------------------------------------------------------
+
+(def decision-predicate
+  "The annotation predicate a curation decision is recorded under (ADR 0028)."
+  :palomar.curation/decision)
+
+(defn- decision-annotation
+  "The annotation recording `transition` about assertion `a`: a structured value
+   with the verdict, the statuses, the reason and the curator context (`:by`,
+   `:at`), each field present only when known."
+  [a transition context]
+  (let [fields (cond-> {:verdict (:verdict transition) :to (:to transition)}
+                 (:from transition)        (assoc :from (:from transition))
+                 (:reason transition)      (assoc :reason (:reason transition))
+                 (:replaced-by transition) (assoc :replaced-by (model/assertion-id (:replaced-by transition)))
+                 (:by context)             (assoc :by (:by context))
+                 (:at context)             (assoc :at (:at context)))]
+    (model/annotation {:about     a
+                       :predicate decision-predicate
+                       :value     (model/structured fields)
+                       :provenance (model/provenance {:rule :curate/decision})})))
 
 (defn- curate-assertion
   "Resolve one assertion. If `a` is pending, apply `decide` and transition its
@@ -74,15 +94,35 @@
   "Apply curation `decide` to every *pending* assertion of `record` (ADR 0005).
    Returns `{:record record' :transitions [..]}` — `record'` with pending statuses
    resolved, and the ordered transition log (one entry per assertion decided).
+
+   Each decision is also kept on `record'` itself, as an annotation about the
+   assertion it decided (`decision-predicate`, ADR 0028), so the history travels
+   with the record and is never lost when the status is overwritten. `context`
+   (optional) names who decided and when — `{:by \"curator\" :at #inst …}`; the
+   engine reads no clock, the caller supplies the time.
+
    Non-pending assertions (`:asserted`, already `:accepted`/`:rejected`,
    `:retracted`, `:superseded`) pass through unchanged; a record with no
    assertions is returned untouched."
-  [record decide]
-  (if-let [assertions (seq (:assertions record))]
-    (let [pairs (map #(curate-assertion decide %) assertions)]
-      {:record      (assoc record :assertions (mapv first pairs))
-       :transitions (vec (keep second pairs))})
-    {:record record :transitions []}))
+  ([record decide] (curate-record record decide {}))
+  ([record decide context]
+   (if-let [assertions (seq (:assertions record))]
+     (let [pairs (map #(curate-assertion decide %) assertions)
+           notes (for [[a [_ t]] (map vector assertions pairs) :when t]
+                   (decision-annotation a t context))]
+       {:record      (cond-> (assoc record :assertions (mapv first pairs))
+                       (seq notes) (update :annotations (fnil into []) notes))
+        :transitions (vec (keep second pairs))})
+     {:record record :transitions []})))
+
+(defn history
+  "The curation decisions recorded about assertion `a` (an assertion or its id)
+   on `record`, oldest first, as maps (`:verdict :from :to :reason :by :at
+   :replaced-by`, as known)."
+  [record a]
+  (for [n (model/annotations-of record a)
+        :when (= decision-predicate (:predicate n))]
+    (:value/fields (:value n))))
 
 (defn summarise
   "Counts of a transition log by resulting status, plus the total."
@@ -101,42 +141,51 @@
    becomes `:superseded`; `new` is added `:accepted`, built through
    `model/assertion` with provenance naming this step. Returns
    `{:record record' :transitions [..]}`, the log naming the replacement and the
-   `reason` (ADR 0023). Throws when `old` is not an in-force assertion of
-   `record`."
-  [record old new reason]
-  (let [same? #(and (= (:subject %) (:subject old)) (= (:predicate %) (:predicate old))
-                    (= (:value %) (:value old)) (model/in-force? %))
-        found (first (filter same? (:assertions record)))]
-    (when-not found
-      (throw (ex-info "supersede: no such in-force assertion" {:assertion old})))
-    (when (= (model/assertion-id old) (model/assertion-id new))
-      (throw (ex-info "supersede: the replacement is the same fact (same subject, predicate and value)"
-                      {:assertion old})))
-    {:record      (-> record
-                      (update :assertions (partial mapv #(if (same? %) (assoc % :status :superseded) %)))
-                      (update :assertions conj
-                              (model/assertion
-                               (assoc (select-keys new [:subject :predicate :value :confidence])
-                                      :status     :accepted
-                                      :provenance (model/provenance {:rule :curate/supersede})))))
-     :transitions [{:subject     (:subject found)
-                    :predicate   (:predicate found)
-                    :from        (:status found)
-                    :to          :superseded
-                    :verdict     :supersede
-                    :replaced-by (select-keys new [:subject :predicate :value])
-                    :reason      reason}]}))
+   `reason` (ADR 0023); the decision is also kept as an annotation about `old`
+   (ADR 0028), with the optional `context` (`:by`, `:at`). Throws when `old` is
+   not an in-force assertion of `record`, or when `new` is the same fact."
+  ([record old new reason] (supersede record old new reason {}))
+  ([record old new reason context]
+   (let [same? #(and (= (:subject %) (:subject old)) (= (:predicate %) (:predicate old))
+                     (= (:value %) (:value old)) (model/in-force? %))
+         found (first (filter same? (:assertions record)))]
+     (when-not found
+       (throw (ex-info "supersede: no such in-force assertion" {:assertion old})))
+     (when (= (model/assertion-id old) (model/assertion-id new))
+       (throw (ex-info "supersede: the replacement is the same fact (same subject, predicate and value)"
+                       {:assertion old})))
+     {:record      (-> record
+                       (update :assertions (partial mapv #(if (same? %) (assoc % :status :superseded) %)))
+                       (update :assertions conj
+                               (model/assertion
+                                (assoc (select-keys new [:subject :predicate :value :confidence])
+                                       :status     :accepted
+                                       :provenance (model/provenance {:rule :curate/supersede}))))
+                       (update :annotations (fnil conj [])
+                               (decision-annotation found {:verdict :supersede :from (:status found)
+                                                           :to :superseded :reason reason :replaced-by new}
+                                                    context)))
+      :transitions [{:subject     (:subject found)
+                     :predicate   (:predicate found)
+                     :from        (:status found)
+                     :to          :superseded
+                     :verdict     :supersede
+                     :replaced-by (select-keys new [:subject :predicate :value])
+                     :reason      reason}]})))
 
 (defn curate
-  "Curate a batch of `records` with one decision function `decide`. Returns
-   `{:records [..] :transitions [..] :summary {..}}` — the curated records, the
-   concatenated transition log, and `summarise`d counts."
-  [records decide]
-  (let [results     (map #(curate-record % decide) records)
-        transitions (vec (mapcat :transitions results))]
-    {:records     (mapv :record results)
-     :transitions transitions
-     :summary     (summarise transitions)}))
+  "Curate a batch of `records` with one decision function `decide`, and the
+   optional curator `context` (`curate-record`). Returns `{:records [..]
+   :transitions [..] :summary {..}}` — the curated records (each carrying its
+   decisions as annotations), the concatenated transition log, and `summarise`d
+   counts."
+  ([records decide] (curate records decide {}))
+  ([records decide context]
+   (let [results     (map #(curate-record % decide context) records)
+         transitions (vec (mapcat :transitions results))]
+     {:records     (mapv :record results)
+      :transitions transitions
+      :summary     (summarise transitions)})))
 
 ;; ---------------------------------------------------------------------------
 ;; Policies — ordinary decision functions
