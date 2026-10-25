@@ -213,6 +213,14 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Fixed
 
+- **The PROV-O record keeps the history** (ADR 0025): rejected, superseded and
+  retracted assertions reach the `:prov` output, reified with their status,
+  where they used to be dropped while the target declared no loss. Every other
+  target still leaves them out.
+- **No invalid IRI is written** (ADR 0025): the RDF writers refuse one, a keyword
+  id is percent-encoded (`--record-id` from a file name with a space), a blank
+  node read by crm-import gets a minted id, and `apply-agent-links` refuses an
+  authority id that is no IRI.
 - **Interoperability audit (2026-10-25)**, items S01–S20 and several P2/P3:
   - Linked Art: a Manifestation is exported as a `LinguisticObject` (the text of
     an edition), not a `HumanMadeObject`; only an F5 Item is a physical object.

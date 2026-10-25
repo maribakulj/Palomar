@@ -92,6 +92,16 @@
       (testing "the entities themselves (not claims) are still typed"
         (is (str/includes? (:output (cv/export-records :ntriples rejected)) "lrmoo/F3_Manifestation"))))))
 
+(deftest the-prov-record-keeps-the-history
+  (testing "a rejected claim is no fact in N-Triples, but PROV-O records it, reified, with its status (ADR 0025)"
+    (let [rejected (:records (curate/curate (dc-wemi) curate/reject-all))
+          prov     (:output (cv/export-records :prov rejected))]
+      (is (cv/keeps-history? :prov))
+      (is (not (cv/keeps-history? :ntriples)))
+      (is (str/includes? prov "\"rejected\""))
+      (is (str/includes? prov "R4_embodies"))
+      (is (not (str/includes? (:output (cv/export-records :ntriples rejected)) "R4_embodies"))))))
+
 (deftest in-force-only-keeps-uncurated-inference-out-of-the-output
   (testing "by default the :proposed WEMI chain is exported; with :in-force-only? it is not, until accepted"
     (let [uncurated (dc-wemi)

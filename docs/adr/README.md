@@ -36,8 +36,9 @@ decision from being read as shipped code (an audit honesty rule).
 | [0020](./0020-single-pass-and-retire-project-phase.md) | Single pass per phase; retire the `:project` phase and `:cycles` | Accepted |
 | [0021](./0021-responsibility-kind-and-extent-qualifiers.md) | Responsibility, note kind and extent as qualifier coords; constant qualifiers | Accepted |
 | [0022](./0022-domain-faithful-serialisation.md) | Domain-faithful serialisation: no super-class downcast, titles through a Nomen, editions are texts | Accepted |
-| [0023](./0023-justifications-and-status-at-export.md) | Every justification is kept; out-of-force claims are never read or written | Accepted |
+| [0023](./0023-justifications-and-status-at-export.md) | Every justification is kept; out-of-force claims are never read or written | Accepted (amended by 0025) |
 | [0024](./0024-observed-loss.md) | Observed loss: occurrence-level fidelity audit, exports name what they omit | Accepted |
+| [0025](./0025-history-target-and-iri-safety.md) | The provenance record keeps the history; no invalid IRI is ever written | Accepted |
 
 ## Template
 

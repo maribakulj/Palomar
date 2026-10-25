@@ -22,20 +22,49 @@
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
+            [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.plugins.qualified :as qualified]))
 
 (def rdf-type "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 (def crm-base "http://www.cidoc-crm.org/cidoc-crm/")
 
+(defn- pct-encode
+  "`s` with every character outside the IRI-safe set `[A-Za-z0-9._~!$&'()*+,;=@-]`
+   percent-encoded from its UTF-8 bytes: a record id made from a file name
+   (`:doc/my file`) still gives a valid IRI."
+  [s]
+  (apply str (for [ch (str s)]
+               (if (re-matches #"[A-Za-z0-9._~!$&'()*+,;=@-]" (str ch))
+                 ch
+                 (apply str (map #(format "%%%02X" (bit-and % 0xff)) (.getBytes (str ch) "UTF-8")))))))
+
 (defn entity-iri
   "Fallback IRI for an entity id, used when the entity carries no authority
-   `:iri`. A keyword (the minted `:ent/*` case) becomes a `urn:palomar:` IRI; a
-   string id is assumed to be an IRI already and passes through."
+   `:iri`. A keyword (the minted `:ent/*` case) becomes a `urn:palomar:` IRI,
+   its namespace and name percent-encoded where they hold a character an IRI may
+   not; a string id is assumed to be an IRI already and passes through (the
+   writers refuse it if it is not one, `checked`)."
   [id]
   (cond
-    (keyword? id) (str "urn:palomar:" (namespace id) ":" (name id))
+    (keyword? id) (str "urn:palomar:" (pct-encode (namespace id)) ":" (pct-encode (name id)))
     (string? id)  id
-    :else         (str "urn:palomar:" id)))
+    :else         (str "urn:palomar:" (pct-encode id))))
+
+(defn- check-iri! [iri]
+  (when-let [problem (nt/iri-problem iri)]
+    (throw (ex-info (str "refusing to write an invalid IRI <" iri ">: " problem)
+                    {:iri iri :problem problem}))))
+
+(defn checked
+  "`triples` after checking every IRI they hold (subject, predicate, IRI object,
+   datatype): an invalid one throws rather than corrupting the document."
+  [triples]
+  (doseq [[s p o] triples]
+    (check-iri! s)
+    (check-iri! p)
+    (when (:iri o) (check-iri! (:iri o)))
+    (when (:datatype o) (check-iri! (:datatype o))))
+  triples)
 
 (defn- iri-index
   "Map entity id → its authority `:iri`, for the entities of `record` that carry
@@ -210,7 +239,7 @@
    down-projection) that augment the triple seq before rendering."
   [triples]
   (str/join "\n"
-            (for [[s p o] triples]
+            (for [[s p o] (checked triples)]
               (str "<" s "> <" p "> " (nt-object o) " ."))))
 
 (defn ->ntriples
@@ -250,7 +279,7 @@
    actually used, then statements grouped by subject — `a` for `rdf:type`, `;`
    between predicates and `,` between repeated objects. nil for an empty seq."
   [triples]
-  (when (seq triples)
+  (when (seq (checked triples))
     (let [used     (into (sorted-set)
                          (comp (mapcat (fn [[_ p o]]
                                          [(when (not= p rdf-type) (compact-prefix p))
@@ -275,7 +304,7 @@
    namespace prefixes and an `@graph` of one node object per subject (`@type` for
    `rdf:type`, `{\"@id\" …}` for IRI objects). nil for an empty seq."
   [triples]
-  (when (seq triples)
+  (when (seq (checked triples))
     (let [by-subj (group-by first triples)
           add     (fn [m k v] (update m k (fn [ex] (cond (nil? ex) v (vector? ex) (conj ex v) :else [ex v]))))
           term    (fn [o] (cond

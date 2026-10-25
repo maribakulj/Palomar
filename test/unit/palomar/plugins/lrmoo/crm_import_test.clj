@@ -17,7 +17,9 @@
             [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
             [palomar.plugins.lrmoo.crm :as crm]
-            [palomar.plugins.lrmoo.crm-import :as crm-import]))
+            [palomar.plugins.lrmoo.crm-import :as crm-import]
+            [palomar.plugins.lrmoo.export :as export]
+            [palomar.plugins.lrmoo.ntriples]))
 
 (def ^:private work-iri  "http://example.org/work/bovary")
 (def ^:private expr-iri  "http://example.org/expression/bovary-fr")
@@ -167,3 +169,13 @@
           {:keys [diagnostics]} (crm-import/->record nt :rec/t)]
       (is (= [(keyword "rdf" "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")]
              (map dx/loss-source-field diagnostics))))))
+
+(deftest a-blank-node-entity-gets-a-minted-id-not-a-fake-iri
+  (testing "_:b0 typed F3 becomes an entity with a keyword id and no :iri, so re-export stays valid N-Triples"
+    (let [nt  (str "_:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> "
+                   "<http://iflastandards.info/ns/lrm/lrmoo/F3_Manifestation> .\n")
+          {:keys [record]} (crm-import/->record nt :rec/b)
+          e   (first (:entities record))]
+      (is (keyword? (:id e)))
+      (is (nil? (:iri e)))
+      (is (seq (palomar.plugins.lrmoo.ntriples/parse (export/->ntriples record)))))))

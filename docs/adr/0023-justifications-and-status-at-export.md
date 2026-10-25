@@ -1,6 +1,6 @@
 # 0023 — Every justification is kept; out-of-force claims are never read or written
 
-- Status: Accepted
+- Status: Accepted (amended by [ADR 0025](./0025-history-target-and-iri-safety.md): the PROV target keeps the out-of-force history)
 - Date: 2026-10-25
 - Amends: [ADR 0008](./0008-idempotency-at-merge.md) (what a collapsed duplicate keeps)
 - Extends: [ADR 0005](./0005-status-model.md) (where statuses are enforced)
