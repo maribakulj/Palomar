@@ -9,7 +9,8 @@
 
    - an LRMoo **F-class** IRI (`F1_Work`, `F2_Expression`, `F3_Manifestation`,
      `F5_Item`) ⇒ recovered unambiguously — the additive `:crm`/`:lrmoo` export keeps
-     these, so the trip is lossless;
+     these, so the WEMI typing, links and R33 strings round-trip; anything else
+     in the graph is reported as loss, not dropped silently;
    - failing that, a node typed only by a CRM **E-class** super-class is *not*
      downcast: sub-classing does not invert. `E89_Propositional_Object` is F1's
      super-class, but an `E89` may as well be a theory or a programme, and an `E24`

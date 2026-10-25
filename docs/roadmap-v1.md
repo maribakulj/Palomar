@@ -242,7 +242,7 @@ Also delivered beyond the original WPs: ADR 0018 (entity resolution at scale,
 *Accepted, partially implemented*)** — spokes are bidirectional, the hub is a
 target, and CRM→LRM is a *downcast* that succeeds only
 when the F-typing survives, demonstrated by a CRM→LRMoo round-trip
-(`lrmoo.crm-import`): our additive `:crm` recovers F1/F2/F3 losslessly, our pure
+(`lrmoo.crm-import`): our additive `:crm` recovers the F1/F2/F3 typing, links and R33 strings (lossless for the WEMI view, because it keeps the LRMoo triples; anything else is reported, audit S17/S41), our pure
 `:crm-only` collapses at `E73` into `:ambiguity-collapsed` (the loss the
 down-projection reported is exactly what the up-projection cannot recover); the
 **entity-relation spoke** that ADR 0019 reserved is built —

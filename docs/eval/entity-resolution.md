@@ -17,12 +17,17 @@ signal. Our string-key strategies vs OpenLibrary's `work_key`:
 
 Read honestly:
 
-- **Exact title — genuine precision ≈ 1.0, recall ≈ 0.37.** By construction every
+- **Exact title — measured precision 0.643, recall ≈ 0.37.** By construction every
   one of its 16 450 "false merges" is two editions with the *same author and
-  identical normalised title* that OpenLibrary filed under different works — i.e. a
-  gold self-split, not our error. The 0.643 is the gold's noise, not ours. The real
-  limit is **recall**: variant titles (subtitles, languages, "Illustrated") are
-  missed.
+  identical normalised title* that OpenLibrary filed under different works. Many of
+  these are plausibly gold self-splits (see the 59 split groups below), but this was
+  **not verified pair by pair**, and some are surely distinct works sharing a
+  generic title ("Poems", "Collected Stories", "Selected Works"). So the true
+  precision lies somewhere between the measured 0.643 and 1.0; it is not measured
+  here. *(Corrected 2026-10-25, audit S39: an earlier version called the precision
+  "genuinely ≈ 1.0" and the 0.643 "the gold's noise, not ours", which is more than
+  the measurement shows.)* The clear limit is **recall**: variant titles
+  (subtitles, languages, "Illustrated") are missed.
 - **Loosening** to a 2-word prefix lifts recall to 0.60 but now makes *genuine*
   cross-work merges (precision 0.686). The classic trade.
 - **author-only** collapses prolific authors' whole output into one cluster
@@ -32,7 +37,8 @@ Read honestly:
 same-author/same-title groups are split across >1 `work_key` here — *Frankenstein*
 across **14** works, *Moby Dick* across 6. So even the best open Work/Edition source
 fragments works badly: there is no clean, broad, open work-grouping gold. (Recall is
-therefore the trustworthy signal; precision-vs-OpenLibrary understates us.)
+therefore the more trustworthy signal; precision against OpenLibrary is a lower
+bound, by an amount this eval does not measure.)
 
 It is **directional, not definitive**: 18 canonical authors, English-edition-heavy
 — the opposite of the long tail. What generalises is the *shape*, not the number.

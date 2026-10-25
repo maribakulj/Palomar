@@ -68,7 +68,9 @@ CRM P-properties (verified vs `LRMoo_v1.0.owl`, `lrmoo.crm`). Therefore:
 - **CRM → LRM = downcast (specialisation).** Succeeds **iff the specific type is
   still present**:
   - CRM that keeps the LRMoo F-classes (our additive `:crm`, an INTERMARC-NG→CRM, a
-    BnF LRM graph) → recovers F1/F2/F3 **losslessly** — it is already LRM;
+    BnF LRM graph) → recovers F1/F2/F3 **losslessly** — it is already LRM. "Lossless"
+    is scoped to the WEMI view (types, R-links, R33 strings); every other triple is
+    reported as `:dropped` (amended 2026-10-25, audit S17/S41);
   - CRM flattened to E-classes only (our `:crm-only`, a museum CRM with no LRM) →
     a node typed only `E73` **cannot** be downcast (Expression or Manifestation?);
     it is reported as `:ambiguity-collapsed` (ADR 0015).
