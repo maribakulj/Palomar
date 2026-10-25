@@ -91,3 +91,31 @@
                                      :predicate :canon/title
                                      :value     "Les Misérables"})]}))]
       (is (empty? (:diagnostics enriched))))))
+
+;; --- the rules beyond the title (audit S26) ----------------------------------
+
+(defn- with-assertions [id & triples]
+  (model/record {:id id :kind :test
+                 :assertions (vec (for [[s p v] (partition 3 triples)]
+                                    (model/assertion {:subject s :predicate p :value v})))}))
+
+(defn- codes-of [record] (set (map :code (:diagnostics (validate record)))))
+
+(deftest an-unknown-agent-role-is-flagged
+  (is (contains? (codes-of (with-assertions :r/a :r/a :canon/title "T" :r/a :canon/role :illustrator))
+                 :unknown-agent-role))
+  (is (not (contains? (codes-of (with-assertions :r/b :r/b :canon/title "T" :r/b :canon/role :creator))
+                      :unknown-agent-role))))
+
+(deftest a-blank-documentary-value-is-flagged
+  (is (contains? (codes-of (with-assertions :r/c :r/c :canon/title "T" :r/c :canon/note "   "))
+                 :blank-value))
+  (is (not (contains? (codes-of (with-assertions :r/d :r/d :canon/title "T" :r/d :canon/note "n"))
+                      :blank-value))))
+
+(deftest a-date-without-a-year-is-reported
+  (doseq [[d flagged?] [["s.d." true] ["[19..]" true] ["1862" false] ["[1957?]" false]
+                        ["c1999" false] ["2007-01-06T00:00:00.00" false]]]
+    (is (= flagged? (contains? (codes-of (with-assertions :r/e :r/e :canon/title "T" :r/e :canon/date d))
+                               :date-without-year))
+        d)))

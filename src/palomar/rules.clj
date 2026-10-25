@@ -173,7 +173,9 @@
                (and (string? value)
                     (boolean (re-find (re-pattern re) value))))
    'in?      (fn [_ _ value coll]
-               (boolean (some #(= value %) coll)))})
+               (boolean (some #(= value %) coll)))
+   'not-in?  (fn [_ _ value coll]
+               (not-any? #(= value %) coll))})
 
 (defn stdlib-predicate? [sym] (contains? predicate-stdlib sym))
 
