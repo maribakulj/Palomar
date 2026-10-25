@@ -122,7 +122,7 @@
 
    `opts` may carry `:record-id` for the graph record id."
   [xml-string opts]
-  (let [prov  (model/provenance {:pass :import})
+  (let [prov  (model/provenance {:pass :ingest})
         rid   (or (:record-id opts) :intermarc-ng/graph)
         recs  (record-elems xml-string)
         wemi  (for [r recs

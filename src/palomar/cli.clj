@@ -13,6 +13,7 @@
      palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]
      palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]
      palomar formats
+     palomar ir-schema
      palomar --help
 
    - `report`        — the X→Y loss report alone (the auditor's view), no document.
@@ -37,6 +38,7 @@
             [palomar.convert :as convert]
             [palomar.curate :as curate]
             [palomar.diagnostics :as dx]
+            [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.manifest :as manifest]
             [palomar.reconcile :as reconcile]
@@ -57,9 +59,10 @@
     "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]"
     "  palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]"
     "  palomar formats          list the supported source and target formats"
+    "  palomar ir-schema        print the schema of a pivot record (the EDN IR, --from/--to edn)"
     "  palomar --help"
     ""
-    "  --from        source format (a spoke)"
+    "  --from        source format (a spoke, or edn: the pivot written by --to edn)"
     "  --to          target serialisation (convert, report)"
     "  --profile     conformance profile: linked-art, intermarc, iiif"
     "  --policy      validate / conformance: errors-only (default), errors-and-warnings, strict, never"
@@ -104,12 +107,19 @@
   [s]
   (let [s     (str/replace-first s #"^:" "")
         [a b] (str/split s #"/" 2)]
-    (when-not (and (seq a) (seq b) (not (str/includes? s ".")))
-      (throw (ex-info (str "--record-id must be ns/name with no '.' (e.g. doc/my-record), got " (pr-str s)) {})))
+    (when-not (and (seq a) (seq b) (not (str/includes? s "."))
+                   (re-matches #"[A-Za-z][^/\s]*" a) (re-matches #"[A-Za-z][^/\s]*" b))
+      (throw (ex-info (str "--record-id must be ns/name, each starting with a letter, with no '.' or space"
+                           " (e.g. doc/my-record), got " (pr-str s)) {})))
     (keyword a b)))
 
-(defn- file-stem [path]
-  (-> path (str/replace #".*/" "") (str/replace #"\.[^.]*$" "") (str/replace #"[^A-Za-z0-9]+" "-")))
+(defn- file-stem
+  "A record name from a file path: its stem, non-alphanumerics folded to `-`,
+   prefixed `d` unless it starts with a letter, so the keyword reads back as
+   EDN (ADR 0034)."
+  [path]
+  (let [stem (-> path (str/replace #".*/" "") (str/replace #"\.[^.]*$" "") (str/replace #"[^A-Za-z0-9]+" "-"))]
+    (if (re-find #"^[A-Za-z]" stem) stem (str "d" stem))))
 
 (defn- fmt-line [label fs] (str label (str/join " " (sort (map name fs)))))
 
@@ -481,6 +491,7 @@
       (= command "formats")     {:exit 0 :out ""
                                  :err (str (fmt-line "from: " (convert/source-formats)) "\n"
                                            (fmt-line "to:   " (convert/target-formats)))}
+      (= command "ir-schema")   {:exit 0 :out (ir/schema-edn) :err ""}
       (= command "convert")     (if (get flags "stream")
                                   (do-convert-stream flags (first positional))
                                   (do-convert flags (first positional)))

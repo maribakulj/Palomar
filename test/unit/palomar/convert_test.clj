@@ -75,7 +75,7 @@
     (is (str/includes? (:report r) "import edge"))))
 
 (deftest rejects-unknown-formats
-  (is (= #{:intermarc :intermarc-ng :unimarc :dc :marc21 :mods :iiif} (cv/source-formats)))
+  (is (= #{:intermarc :intermarc-ng :unimarc :dc :marc21 :mods :iiif :edn} (cv/source-formats)))
   (is (contains? (cv/target-formats) :linked-art))
   (is (thrown? Exception (cv/convert {:from :bogus :to :ntriples :source "x"})))
   (is (thrown? Exception (cv/convert {:from :dc :to :bogus :source "x" :opts {:record-id :r}}))))

@@ -16,6 +16,7 @@
    account is exactly `palomar.loss-report`'s artifact."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.model :as model]
             [palomar.plugins :as plug]
@@ -79,7 +80,9 @@
    :prov       {:render prov/->ntriples              :losses prov/export-losses :history? true}
    ;; datasets: every claim, each status class in its own named graph (ADR 0029)
    :nquads     {:render dataset/->nquads             :losses export/export-losses :history? true}
-   :trig       {:render dataset/->trig               :losses export/export-losses :history? true}})
+   :trig       {:render dataset/->trig               :losses export/export-losses :history? true}
+   ;; the pivot itself, as EDN (ADR 0034): every record whole, nothing lost
+   :edn        {:render ir/->edn-line                :losses (constantly [])      :history? true}})
 
 (defn keeps-history?
   "True when target `to` receives every assertion whatever its status: it
@@ -88,7 +91,10 @@
   [to]
   (boolean (get-in exporters [to :history?])))
 
-(defn source-formats [] (spokes/source-formats))
+(defn source-formats
+  "The source formats: the spokes, and `:edn`, the pivot itself (ADR 0034)."
+  []
+  (conj (spokes/source-formats) :edn))
 (defn target-formats [] (set (keys exporters)))
 
 (defn- spoke-streamer [from]
@@ -133,12 +139,7 @@
     (assoc-in record [:provenance :source] {:sha256 (model/sha256-hex source 64)})
     record))
 
-(defn to-wemi
-  "Import `source` through `spoke`, normalise to the canonical floor, then project
-   each record to WEMI by the appropriate rung — INTERMARC's enriched `derive-wemi`
-   (via the 145 $3 link) or the floor `project`. Both run normalize first, so
-   `:canon/*` is populated for every spoke (the round-trip exporters read it).
-   Returns `{:records [wemi…] :ingest [loss…]}`."
+(defn- to-wemi*
   [from opts source]
   (let [plugin   (spokes/plugin from)
         to-pivot (to-pivots from)
@@ -147,6 +148,19 @@
     {:ingest  diagnostics
      :records (mapv #(to-pivot (:record (runtime/run-phase (with-source-digest % source) compiled :normalize)))
                     records)}))
+
+(defn to-wemi
+  "Import `source` through `spoke`, normalise to the canonical floor, then project
+   each record to WEMI by the appropriate rung — INTERMARC's enriched `derive-wemi`
+   (via the 145 $3 link) or the floor `project`. Both run normalize first, so
+   `:canon/*` is populated for every spoke (the round-trip exporters read it).
+   From `:edn` the source is already the pivot (`palomar.ir`, ADR 0034): its
+   records are read, validated, and returned as they were written.
+   Returns `{:records [wemi…] :ingest [loss…]}`."
+  [from opts source]
+  (if (= :edn from)
+    {:ingest [] :records (ir/read-records source)}     ; already the pivot (ADR 0034)
+    (to-wemi* from opts source)))
 
 (defn- in-force-or-unstated? [a]
   (or (nil? (:status a)) (model/in-force? a)))
@@ -207,7 +221,7 @@
    target separates them into graphs instead). Throws with the supported sets on
    an unknown `from`/`to`."
   [{:keys [from to source opts in-force-only?] :or {opts {}}}]
-  (when-not (contains? spokes/plugins from)
+  (when-not (contains? (source-formats) from)
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))

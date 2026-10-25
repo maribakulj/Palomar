@@ -287,13 +287,14 @@
               n))
 
 (defn assertion-id
-  "The content-derived id of assertion `a`: `:asr/<16 hex>` over its canonical
+  "The content-derived id of assertion `a`: `:asr/h<16 hex>` over its canonical
    subject, predicate and value (ADR 0027). Status, confidence and provenance are
    not part of it, so an assertion keeps its id when a curator changes its
    status, and the same fact derived twice has one id. It is never stored on the
-   assertion; recompute it."
+   assertion; recompute it. The `h` keeps the name from starting with a digit,
+   which no EDN reader would read back (ADR 0034)."
   [a]
-  (keyword "asr" (content-digest [(:subject a) (:predicate a) (:value a)] 16)))
+  (keyword "asr" (str "h" (content-digest [(:subject a) (:predicate a) (:value a)] 16))))
 
 (defn mint-entity-id
   "Construct a content-based identifier for a synthesized entity. Returns a

@@ -183,7 +183,7 @@
    `(… -> {:record :diagnostics})`."
   [nt rid]
   (let [{:keys [typed super-class-only ambiguous relations strings unrecovered]} (recover nt)
-        prov   (model/provenance {:pass :import})
+        prov   (model/provenance {:pass :ingest})
         ;; an IRI node is keyed by its IRI, which it also carries; a blank node
         ;; (`_:b0`) has no IRI, so it gets a minted id, scoped to this record
         bnode? #(str/starts-with? % "_:")

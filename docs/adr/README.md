@@ -40,13 +40,14 @@ decision from being read as shipped code (an audit honesty rule).
 | [0024](./0024-observed-loss.md) | Observed loss: occurrence-level fidelity audit, exports name what they omit | Accepted |
 | [0025](./0025-history-target-and-iri-safety.md) | The provenance record keeps the history; no invalid IRI is ever written | Accepted |
 | [0026](./0026-ontology-conformance.md) | RDF output is checked against the vocabularies' own files | Accepted |
-| [0027](./0027-assertion-identity-and-annotations.md) | An assertion is identified by its content; statements about it are annotations | Accepted |
+| [0027](./0027-assertion-identity-and-annotations.md) | An assertion is identified by its content; statements about it are annotations | Accepted (id spelling amended by 0034) |
 | [0028](./0028-curation-decisions-as-annotations.md) | Curation decisions are kept on the record and written to PROV-O | Accepted |
 | [0029](./0029-named-graph-datasets.md) | Facts, proposals, history and provenance in separate named graphs | Accepted |
 | [0030](./0030-run-manifest.md) | A conversion can write a manifest of everything its output depends on | Accepted |
 | [0031](./0031-source-evidence.md) | Every value keeps where it was read in its source | Accepted |
 | [0032](./0032-graded-alignments.md) | Alignments are graded SKOS mapping claims, never owl:sameAs | Accepted |
 | [0033](./0033-loss-taxonomy-and-relation-fidelity.md) | Loss aspects, a projection edge, and relation fidelity | Accepted |
+| [0034](./0034-library-api-and-edn-ir.md) | A stable library API and the pivot as an EDN file | Accepted |
 
 ## Template
 
