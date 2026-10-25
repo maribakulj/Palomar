@@ -47,7 +47,7 @@
    ["palomar — documentary-metadata conversion through the LRMoo pivot"
     ""
     "Usage:"
-    "  palomar convert       <input-file> --from <fmt> --to <fmt> [--record-id <id>] [--out <file>]"
+    "  palomar convert       <input-file> --from <fmt> --to <fmt> [--facts-only] [--record-id <id>] [--out <file>]"
     "  palomar convert       <input-file> --from <marc-fmt> --to <fmt> --stream --out <file>"
     "  palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]"
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
@@ -66,6 +66,7 @@
     "  --record-id   record id for single-record spokes (Dublin Core; default: from the filename)"
     "  --out         write the output to a file instead of stdout (convert)"
     "  --stream      convert in bounded memory, streaming a large flat MARC dump to --out (WP-7)"
+    "  --facts-only  convert: export only in-force claims (no uncurated inference stated as a fact)"
     "  --format      report output: text (default), edn or json (the raw loss-report map, ADR 0015)"
     ""
     "convert writes the document to stdout, the loss report to stderr;"
@@ -88,6 +89,7 @@
         (cond
           (#{"--help" "-h"} a)      (recur (rest as) (assoc m :help? true))
           (#{"--stream"} a)         (recur (rest as) (assoc-in m [:flags "stream"] true)) ; boolean
+          (#{"--facts-only"} a)     (recur (rest as) (assoc-in m [:flags "facts-only"] true)) ; boolean
           (str/starts-with? a "--") (recur (drop 2 as) (assoc-in m [:flags (subs a 2)] (second as)))
           (:command m)              (recur (rest as) (update m :positional (fnil conj []) a))
           :else                     (recur (rest as) (assoc m :command a)))))))
@@ -120,7 +122,7 @@
          " — is --from " from " correct for this file?")
     ""))
 
-(defn- do-convert [{:strs [from to record-id out]} input]
+(defn- do-convert [{:strs [from to record-id out facts-only]} input]
   (cond
     (not (and from to input))
     {:exit 2 :out "" :err (str "convert needs <input-file> --from <fmt> --to <fmt>\n\n" usage)}
@@ -136,6 +138,7 @@
             result (convert/convert {:from   (keyword from)
                                      :to     (keyword to)
                                      :source (slurp input)
+                                     :in-force-only? (boolean facts-only)
                                      :opts   (cond-> {} rid (assoc :record-id rid))})
             report (str (lr/format-conversion-report (:loss result))
                         "\n(" (:records result) " record"

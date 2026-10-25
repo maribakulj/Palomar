@@ -62,6 +62,14 @@
   (testing "a lone CR ends a line"
     (is (= 2 (count (nt/parse "<http://ex/s> <http://ex/p> \"1\" .\r<http://ex/s> <http://ex/p> \"2\" .\r\n"))))))
 
+(deftest reads-n-quads
+  (testing "a graph label is optional; N-Triples is valid N-Quads"
+    (is (= [[{:iri "http://ex/s"} {:iri "http://ex/p"} {:lit "o"} {:iri "http://ex/g"}]
+            [{:iri "http://ex/s"} {:iri "http://ex/p"} {:lit "o"} nil]]
+           (nt/parse-quads "<http://ex/s> <http://ex/p> \"o\" <http://ex/g> .\n<http://ex/s> <http://ex/p> \"o\" .")))
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (nt/parse "<http://ex/s> <http://ex/p> \"o\" <http://ex/g> .")))))
+
 (deftest term-key-names-a-node
   (is (= "http://ex/s" (nt/term-key {:iri "http://ex/s"})))
   (is (= "_:b0" (nt/term-key {:bnode "b0"})))

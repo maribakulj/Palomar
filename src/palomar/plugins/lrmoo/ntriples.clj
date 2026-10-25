@@ -160,28 +160,43 @@
       :else (fail line i (str "expected " what)))))
 
 (defn- parse-line
-  "The triple on `s` (line number `line`), or nil for a blank or comment line."
-  [^String s line]
+  "The statement on `s` (line number `line`), or nil for a blank or comment
+   line: `[s p o]`, or with `quads?` `[s p o g]` where `g` is nil for the default
+   graph (N-Quads)."
+  [^String s line quads?]
   (let [i (skip-ws s 0)]
     (when-not (or (= i (count s)) (= \# (.charAt s i)))
       (let [[subj i] (read-term s i line #{:iri :bnode} "a subject (IRI or blank node)")
             [pred i] (read-term s (skip-ws s i) line #{:iri} "a predicate IRI")
             [obj i]  (read-term s (skip-ws s i) line #{:iri :bnode :lit} "an object")
-            i        (skip-ws s i)]
+            i        (skip-ws s i)
+            [graph i] (if (and quads? (< i (count s)) (#{\< \_} (.charAt s i)))
+                        (let [[g j] (read-term s i line #{:iri :bnode} "a graph label")] [g (skip-ws s j)])
+                        [nil i])]
         (when-not (and (< i (count s)) (= \. (.charAt s i)))
-          (fail line i "expected '.' at the end of the triple"))
+          (fail line i (str "expected '.' at the end of the " (if quads? "quad" "triple"))))
         (let [i (skip-ws s (inc i))]
           (when-not (or (= i (count s)) (= \# (.charAt s i)))
-            (fail line i "unexpected content after the triple")))
-        [subj pred obj]))))
+            (fail line i "unexpected content after the statement")))
+        (if quads? [subj pred obj graph] [subj pred obj])))))
+
+(defn- parse-lines [doc quads?]
+  (into []
+        (keep-indexed (fn [idx l] (parse-line l (inc idx) quads?)))
+        (str/split (str doc) #"\r\n?|\n")))
 
 (defn parse
   "Parse an N-Triples document into `[subject predicate object]` term triples
    (see the namespace doc for the term shapes), in document order."
   [nt]
-  (into []
-        (keep-indexed (fn [idx l] (parse-line l (inc idx))))
-        (str/split (str nt) #"\r\n?|\n")))
+  (parse-lines nt false))
+
+(defn parse-quads
+  "Parse an N-Quads document (https://www.w3.org/TR/n-quads/) into `[subject
+   predicate object graph]`, `graph` nil for a statement of the default graph.
+   An N-Triples document is valid N-Quads."
+  [nq]
+  (parse-lines nq true))
 
 (defn term-key
   "A string key for a subject/object node: the IRI, or `_:label` for a blank node."

@@ -23,6 +23,7 @@
             [palomar.plugins.iiif.export :as iiif-export]
             [palomar.plugins.intermarc.wemi :as wemi]
             [palomar.plugins.lrmoo.crm :as crm]
+            [palomar.plugins.lrmoo.dataset :as dataset]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.linked-art :as linked-art]
             [palomar.plugins.lrmoo.project :as project]
@@ -62,7 +63,9 @@
    Every renderer takes a projected WEMI record (which retains its canonical and
    native assertions, so the round-trip exporters read `:canon/*` off it).
    `:history? true` marks a target that records assertions rather than states
-   them, and so receives the out-of-force ones too (ADR 0025)."
+   them, and so receives the out-of-force ones too (ADR 0025): PROV-O, and the
+   N-Quads/TriG datasets, which keep each status class in its own named graph
+   (ADR 0029)."
   {:ntriples   {:render export/->ntriples            :losses export/export-losses}
    :turtle     {:render export/->turtle              :losses export/export-losses}
    :jsonld     {:render export/->jsonld              :losses export/export-losses}
@@ -73,7 +76,10 @@
    :marc21     {:render marc21-export/->marcxml      :losses marc21-export/export-losses}
    :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses}
    :iiif       {:render iiif-export/->json           :losses iiif-export/export-losses}
-   :prov       {:render prov/->ntriples              :losses prov/export-losses :history? true}})
+   :prov       {:render prov/->ntriples              :losses prov/export-losses :history? true}
+   ;; datasets: every claim, each status class in its own named graph (ADR 0029)
+   :nquads     {:render dataset/->nquads             :losses export/export-losses :history? true}
+   :trig       {:render dataset/->trig               :losses export/export-losses :history? true}})
 
 (defn keeps-history?
   "True when target `to` receives every assertion whatever its status: it
@@ -171,15 +177,18 @@
    `{:output String :loss <conversion-report> :records N}`.
 
    `opts` is threaded to the importer (e.g. `:record-id` for the single-record
-   spokes). Throws with the supported sets on an unknown `from`/`to`."
-  [{:keys [from to source opts] :or {opts {}}}]
+   spokes). `:in-force-only? true` exports only the in-force claims, so no
+   uncurated inference reaches the output as a fact (`export-records`; a dataset
+   target separates them into graphs instead). Throws with the supported sets on
+   an unknown `from`/`to`."
+  [{:keys [from to source opts in-force-only?] :or {opts {}}}]
   (when-not (contains? spokes/plugins from)
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
   (let [{:keys [records ingest]} (to-wemi from opts source)
         projection-loss (dx/collect-many records)
-        {output :output export-loss :loss} (export-records to records)]
+        {output :output export-loss :loss} (export-records to records {:in-force-only? in-force-only?})]
     {:output  output
      :records (count records)
      :loss    (lr/conversion-report (concat ingest projection-loss export-loss)

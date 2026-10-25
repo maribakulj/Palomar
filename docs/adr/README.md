@@ -42,6 +42,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0026](./0026-ontology-conformance.md) | RDF output is checked against the vocabularies' own files | Accepted |
 | [0027](./0027-assertion-identity-and-annotations.md) | An assertion is identified by its content; statements about it are annotations | Accepted |
 | [0028](./0028-curation-decisions-as-annotations.md) | Curation decisions are kept on the record and written to PROV-O | Accepted |
+| [0029](./0029-named-graph-datasets.md) | Facts, proposals, history and provenance in separate named graphs | Accepted |
 
 ## Template
 
