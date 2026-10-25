@@ -39,7 +39,7 @@
     (project/project (:record (runtime/run-phase (first records) compiled :normalize)))))
 
 (defn- wemi-shape [w] [(count (view/works w)) (count (view/expressions w)) (count (view/manifestations w))])
-(defn- agent-of [w] (some #(when (= :canon/agent (:predicate %)) (:value %)) (:assertions w)))
+(defn- agent-of [w] (some #(when (and (= :canon/agent (:predicate %)) (string? (:value %))) (:value %)) (:assertions w)))
 
 ;; --- synthetic same-item records across dialects ----------------------------
 

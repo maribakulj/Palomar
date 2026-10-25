@@ -64,14 +64,38 @@
       (is (contains? (literals canon :canon/digital-object) "http://www.whitehouse.gov")))))
 
 (deftest projects-to-the-wemi-pivot-and-rdf
-  (testing "the canonical floor projects to a full WEMI chain and serialises"
+  (testing "the canonical floor projects to Manifestation + Expression and serialises"
     (let [wemi (project/project (normalize (by-id :marc/r5637241)))
           nt   (export/->ntriples wemi)]
       (is (= 1 (count (view/manifestations wemi))))
       (is (= 1 (count (view/expressions wemi))))
+      (is (str/includes? nt "The Great Ray Charles"))
+      (testing "no Work: the record has no 1XX main entry, and its 700 performer is not a creator"
+        (is (empty? (view/works wemi)))))))
+
+(def ^:private main-and-added-entry
+  "One MARCXML record with a 100 main entry and a 700 added entry (audit test 3)."
+  (str "<collection xmlns=\"http://www.loc.gov/MARC21/slim\"><record>"
+       "<controlfield tag=\"001\">42</controlfield>"
+       "<datafield tag=\"700\" ind1=\"1\" ind2=\" \"><subfield code=\"a\">Doré, Gustave</subfield></datafield>"
+       "<datafield tag=\"100\" ind1=\"1\" ind2=\" \"><subfield code=\"a\">Hugo, Victor</subfield></datafield>"
+       "<datafield tag=\"245\" ind1=\"1\" ind2=\"0\"><subfield code=\"a\">Notre-Dame de Paris</subfield></datafield>"
+       "</record></collection>"))
+
+(deftest the-main-entry-keys-the-work-not-the-added-entry
+  (testing "100 is a creator, 700 a contributor: only the 100 keys the Work, whatever the field order"
+    (let [canon     (normalize (first (marc21/ingest main-and-added-entry {})))
+          wemi      (project/project canon)
+          hugo-only (project/project (normalize (first (marc21/ingest
+                                                        (str/replace main-and-added-entry
+                                                                     #"<datafield tag=\"700\".*?</datafield>" "")
+                                                        {}))))]
       (is (= 1 (count (view/works wemi))))
-      (is (str/includes? nt "lrmoo/F1_Work"))
-      (is (str/includes? nt "The Great Ray Charles")))))
+      (is (= (:id (first (view/works hugo-only))) (:id (first (view/works wemi)))))
+      (testing "both agents stay on the floor, each with its role"
+        (is (= #{"Hugo, Victor" "Doré, Gustave"} (literals canon :canon/agent)))
+        (is (= #{:creator :contributor} (set (keep #(when (= :canon/role (:predicate %)) (:value %))
+                                                   (:assertions canon)))))))))
 
 (deftest canonical-fields-outside-wemi-are-projection-loss
   (testing "identifier/date/note are on the floor but not in WEMI -> :import :dropped"

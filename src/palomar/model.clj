@@ -524,6 +524,23 @@
   (let [s (:status x)]
     (or (= :proposed s) (= :needs-review s))))
 
+(def out-of-force-statuses
+  "Statuses of assertions that no longer hold (ADR 0005): a curator rejected the
+   claim, or it was superseded or retracted. Inference must not read them and an
+   export must not emit them."
+  #{:rejected :superseded :retracted})
+
+(defn out-of-force?
+  "True for an assertion whose status is in `out-of-force-statuses`."
+  [x]
+  (contains? out-of-force-statuses (:status x)))
+
+(defn without-out-of-force
+  "`record` without its out-of-force assertions (`out-of-force?`)."
+  [record]
+  (cond-> record
+    (:assertions record) (update :assertions #(filterv (complement out-of-force?) %))))
+
 ;; ---------------------------------------------------------------------------
 ;; Simple queries
 ;; ---------------------------------------------------------------------------

@@ -16,7 +16,7 @@
   (testing "convert MARC21 -> Linked Art: output to :out, loss report to :err"
     (let [{:keys [exit out err]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "linked-art"])]
       (is (= 0 exit))
-      (is (str/includes? out "HumanMadeObject"))
+      (is (str/includes? out "LinguisticObject"))
       (is (str/includes? out "The Great Ray Charles"))
       (is (str/includes? err "Loss report"))
       (is (str/includes? err "2 records converted")))))
@@ -171,7 +171,8 @@
       (is (str/includes? out ":canon/title"))
       (is (str/includes? out "The Great Ray Charles"))
       (is (str/includes? out "entities:"))
-      (is (str/includes? out "lrmoo/F1_Work")))))
+      (is (str/includes? out "lrmoo/F3_Manifestation"))
+      (is (str/includes? out "lrmoo/F2_Expression")))))
 
 (deftest reconcile-groups-agents-by-authority-id
   (testing "reconcile INTERMARC (Victor Hugo 50): agents reconciled by ISNI"
@@ -204,11 +205,23 @@
       (is (= 0 exit))
       (is (str/includes? out "(flag)"))
       (is (str/includes? out "4 needs-review"))))
-  (testing "MARC21 (two records): eight proposals curated"
+  (testing "MARC21 (two records, added entries only — no Work): four proposals curated"
     (let [{:keys [exit out]} (cli/run ["apply-repairs" marc21 "--from" "marc21" "--policy" "reject"])]
       (is (= 0 exit))
-      (is (str/includes? out "8 proposals curated"))
-      (is (str/includes? out "8 rejected")))))
+      (is (str/includes? out "4 proposals curated"))
+      (is (str/includes? out "4 rejected")))))
+
+(deftest apply-repairs-exports-the-curated-records
+  (testing "--to exports the curated records; the curation outcome moves to stderr"
+    (let [rej (cli/run ["apply-repairs" dc "--from" "dc" "--policy" "reject" "--to" "ntriples"])
+          acc (cli/run ["apply-repairs" dc "--from" "dc" "--policy" "accept" "--to" "ntriples"])]
+      (is (= 0 (:exit rej)))
+      (is (str/includes? (:err rej) "4 rejected"))
+      (is (str/includes? (:out rej) "lrmoo/F3_Manifestation"))
+      (is (not (str/includes? (:out rej) "R4_embodies")))     ; a rejected claim is not exported
+      (is (str/includes? (:out acc) "R4_embodies"))))
+  (testing "an unknown --to exits 2"
+    (is (= 2 (:exit (cli/run ["apply-repairs" dc "--from" "dc" "--to" "bogus"]))))))
 
 (deftest apply-repairs-guards-its-inputs
   (testing "an unknown --policy exits 2"
@@ -227,7 +240,7 @@
       (is (str/includes? err "CONFORMANT"))
       (is (not (str/includes? err "NON-CONFORMANT")))
       (is (str/includes? err "Linked Art (Louvre)"))
-      (is (str/includes? err "creator-identified"))))
+      (is (str/includes? err "expression-realises-work"))))
   (testing "raising the acceptance threshold makes the warnings non-conformant (exit 1)"
     (let [{:keys [exit err]} (cli/run ["conformance" marc21 "--from" "marc21"
                                        "--profile" "linked-art" "--policy" "errors-and-warnings"])]
@@ -295,6 +308,29 @@
                                        "--stream" "--out" "/tmp/palomar-x.nt"])]
       (is (= 2 exit))
       (is (str/includes? err "not supported")))))
+
+(deftest convert-stream-replaces-existing-out-only-on-success
+  (testing "an existing --out is replaced by the streamed document"
+    (let [out (str (System/getProperty "java.io.tmpdir") "/palomar-replace-" (System/nanoTime) ".nt")]
+      (try
+        (spit out "PREVIOUS OUTPUT")
+        (let [{:keys [exit]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "ntriples"
+                                       "--stream" "--out" out])]
+          (is (= 0 exit))
+          (is (str/includes? (slurp out) "lrmoo/F3_Manifestation")))
+        (finally (.delete (java.io.File. out))))))
+  (testing "when the final move fails, the previous --out is left intact (not deleted first)"
+    (let [out (str (System/getProperty "java.io.tmpdir") "/palomar-keep-" (System/nanoTime) ".nt")]
+      (try
+        (spit out "PREVIOUS OUTPUT")
+        (with-redefs-fn {#'palomar.cli/replace-file! (fn [_ _] false)}
+          (fn []
+            (let [{:keys [exit err]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "ntriples"
+                                               "--stream" "--out" out])]
+              (is (= 2 exit))
+              (is (str/includes? err "could not move")))))
+        (is (= "PREVIOUS OUTPUT" (slurp out)))
+        (finally (.delete (java.io.File. out)))))))
 
 (deftest convert-stream-fails-atomically-leaving-no-partial-out
   (testing "a malformed input mid-stream: exit 2 and NO --out file is left (all-or-nothing, like batch)"

@@ -250,3 +250,46 @@
         (is (str/includes? nt "Les Mis"))
         (is (not (str/includes? nt "lrmoo/F1_Work")))
         (is (not (str/includes? nt "lrmoo/F2_Expression")))))))
+
+;; --- agent roles (:canon/role qualifier; audit S02–S04) ----------------------
+
+(defn- with-agents
+  "A canonical record `id` titled `title`, carrying each `[name role]` of `agents`
+   as a role-qualified agent fragment (the shape a constant-qualifier mapping mints)."
+  [id title agents]
+  (let [frags (map-indexed (fn [i _] (model/mint-fragment-id id [:src/agent i])) agents)]
+    (model/record
+     {:id id :kind :document
+      :fragments  (mapv #(model/fragment {:id % :source [:test %]}) frags)
+      :assertions (into [(model/assertion {:subject id :predicate :canon/title :value title})]
+                        (mapcat (fn [fid [nm role]]
+                                  [(model/assertion {:subject id :predicate :canon/agent
+                                                     :value (model/reference fid)})
+                                   (model/assertion {:subject fid :predicate :canon/agent :value nm})
+                                   (model/assertion {:subject fid :predicate :canon/role :value role})])
+                                frags agents))})))
+
+(deftest a-publisher-alone-does-not-key-a-work
+  (testing "an edition whose only agent is its publisher gets no Work (audit test 1)"
+    (let [r (project/project (with-agents :record/p "Les Misérables" [["Gallimard" :publisher]]))]
+      (is (model/record-consistent? r))
+      (is (= 1 (count (view/expressions r))))
+      (is (empty? (view/works r)))))
+  (testing "a contributor alone does not key a Work either"
+    (let [r (project/project (with-agents :record/c "Les Misérables" [["Un traducteur" :contributor]]))]
+      (is (empty? (view/works r))))))
+
+(deftest the-creator-keys-the-work-whatever-the-agent-order
+  (testing "a contributor listed before the creator does not become the Work key (audit test 3)"
+    (let [creator-only (project/project (with-agents :record/a "Notre-Dame de Paris"
+                                          [["Victor Hugo" :creator]]))
+          mixed        (project/project (with-agents :record/b "Notre-Dame de Paris"
+                                          [["Gallimard" :publisher]
+                                           ["Un illustrateur" :contributor]
+                                           ["Victor Hugo" :creator]]))]
+      (is (= 1 (count (view/works mixed))))
+      (is (= (:id (first (view/works creator-only))) (:id (first (view/works mixed)))))))
+  (testing "the role coord is a mapped qualifier — not reported as dropped loss"
+    (let [r      (project/project (with-agents :record/r "X" [["Hugo" :creator]]))
+          fields (set (map #(get-in % [:detail :loss/source-field]) (dx/losses (:diagnostics r))))]
+      (is (not (contains? fields :canon/role))))))

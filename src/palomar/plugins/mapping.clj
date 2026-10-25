@@ -48,15 +48,25 @@
 ;; ---------------------------------------------------------------------------
 
 (def Qualifier
-  "Shape of the `:mapping/qualifier` sub-map. `:from` names the source
-   attribute carrying the qualifier (e.g. `:xml/lang`); `:as` names the
-   predicate the qualifier coord takes on the fragment after
-   normalization (e.g. `:canon/lang`). Both are keywords; namespacing
-   is conventional but not enforced here — the canonical vocabulary
-   imposes its own discipline at its own layer."
-  [:map {:closed true}
-   [:from :keyword]
-   [:as   :keyword]])
+  "Shape of the `:mapping/qualifier` sub-map, in one of two forms:
+
+   - `{:from :as}` — `:from` names the source attribute carrying the
+     qualifier (e.g. `:xml/lang`); the shape adapter mints the fragments
+     at ingest and normalize renames the coord to `:as` (e.g. `:canon/lang`).
+   - `{:value :as}` — a *constant* qualifier the rule itself knows (e.g.
+     `dc:publisher` is always `:canon/role :publisher`). Normalize mints one
+     fragment per record-level occurrence, moves the value onto it, and adds
+     the `:as` coord with `:value`.
+
+   All are keywords; namespacing is conventional but not enforced here —
+   the canonical vocabulary imposes its own discipline at its own layer."
+  [:or
+   [:map {:closed true}
+    [:from :keyword]
+    [:as   :keyword]]
+   [:map {:closed true}
+    [:value :keyword]
+    [:as    :keyword]]])
 
 (def MappingRule
   "Malli schema for one mapping rule, per ADR 0009 §Decision.
@@ -91,9 +101,9 @@
       (= (vector? (:mapping/from m))
          (contains? m :mapping/combine)))]
    [:fn {:error/message
-         ":mapping/qualifier requires a single-keyword :mapping/from (it cannot qualify a combine)"}
+         ":mapping/qualifier :from requires a single-keyword :mapping/from (it cannot qualify a combine)"}
     (fn [m]
-      (or (not (contains? m :mapping/qualifier))
+      (or (not (contains? (:mapping/qualifier m) :from))
           (keyword? (:mapping/from m))))]])
 
 (defn valid-mapping?
@@ -265,6 +275,28 @@
         qualifier  (:mapping/qualifier mapping-rule)
         q-from     (:from qualifier)
         q-as       (:as qualifier)
+        constant?  (contains? qualifier :value)
+        q-value    (:value qualifier)
+        anchor     (first from-preds)
+
+        ;; Place one canonical value. Without a constant qualifier it is the plain
+        ;; `[s to v]`. With one, a record-level primitive moves onto a fragment
+        ;; minted from the native predicate and the occurrence index (ADR 0012),
+        ;; which also carries the qualifier coord — the same shape the shape
+        ;; adapter gives an `{:from :as}` qualifier, so readers see one form.
+        place
+        (fn [rid s idx v]
+          (if (and constant? (= s rid) (model/primitive-value? v))
+            (let [fid (model/mint-fragment-id s [anchor idx])]
+              [{:kind :fragment :value (model/fragment {:id fid :source [:normalize anchor idx]})}
+               (assertion-production {:subject s :predicate to :value (model/reference fid)
+                                      :confidence confidence :rule-id rule-id})
+               (assertion-production {:subject fid :predicate to :value v
+                                      :confidence confidence :rule-id rule-id})
+               (assertion-production {:subject fid :predicate q-as :value q-value
+                                      :confidence confidence :rule-id rule-id})])
+            [(assertion-production {:subject s :predicate to :value v
+                                    :confidence confidence :rule-id rule-id})]))
 
         ;; A match yields a seq of productions: the rename assertion, plus a
         ;; `:coerced` loss only when a lossy transform *actually changed* the
@@ -272,22 +304,18 @@
         ;; value — lowercasing already-lowercase text — discarded nothing, so it
         ;; is no loss; reporting one anyway over-counts coercion.
         emit-rename-match
-        (fn [[s _p v]]
+        (fn [rid idx [s _p v]]
           (cond
             (nil? v)
             []
 
             (or (empty? chain) (not (model/primitive-value? v)))
-            [(assertion-production
-              {:subject s :predicate to :value v
-               :confidence confidence :rule-id rule-id})]
+            (place rid s idx v)
 
             :else
             (let [v' (transform v)]
               (if (some? v')
-                (cond-> [(assertion-production
-                          {:subject s :predicate to :value v'
-                           :confidence confidence :rule-id rule-id})]
+                (cond-> (place rid s idx v')
                   (and lossy? (not= v' v))
                   (conj (coerced-production
                          {:subject s :from from :chain chain :rule-id rule-id})))
@@ -323,7 +351,7 @@
         ;; multi-source value, so the `:coerced`/`:transform-failed` accounting
         ;; mirrors the single-source path.
         emit-combine
-        (fn [s triples]
+        (fn [rid idx s triples]
           (let [parts  (for [fp from-preds
                              :let [v (some (fn [[s2 p2 v2]]
                                              (when (and (= s2 s) (= p2 fp)
@@ -336,9 +364,7 @@
             (when joined
               (let [v' (if (empty? chain) joined (transform joined))]
                 (if (some? v')
-                  (cond-> [(assertion-production
-                            {:subject s :predicate to :value v'
-                             :confidence confidence :rule-id rule-id})]
+                  (cond-> (place rid s idx v')
                     (and lossy? (not= v' joined))
                     (conj (coerced-production
                            {:subject s :from (first from-preds) :chain chain :rule-id rule-id})))
@@ -349,16 +375,19 @@
 
         runner
         (fn run [record]
-          (let [triples (rules/record-triples record)]
+          (let [triples (rules/record-triples record)
+                rid     (:id record)]
             (if multi?
               (let [subjects (distinct (keep (fn [[s p _]] (when (from-set p) s)) triples))
-                    prods    (into [] (mapcat #(emit-combine % triples) subjects))]
-                (if (seq prods) prods (emit-on-empty (:id record))))
+                    prods    (into [] (apply concat
+                                             (map-indexed #(emit-combine rid %1 %2 triples) subjects)))]
+                (if (seq prods) prods (emit-on-empty rid)))
               (let [from-matches (filterv (fn [[_ p _]] (= p from)) triples)
                     base-prods   (if (seq from-matches)
-                                   (into [] (mapcat emit-rename-match) from-matches)
-                                   (emit-on-empty (:id record)))]
-                (if qualifier
+                                   (into [] (apply concat
+                                                   (map-indexed #(emit-rename-match rid %1 %2) from-matches)))
+                                   (emit-on-empty rid))]
+                (if q-from
                   (let [qual-matches (filterv (fn [[_ p _]] (= p q-from)) triples)]
                     (into base-prods (keep emit-qualifier-match) qual-matches))
                   base-prods)))))]

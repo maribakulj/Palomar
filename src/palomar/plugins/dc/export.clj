@@ -7,12 +7,13 @@
    record imported to the canonical floor and exported back, with the report
    accounting exactly what did not survive the trip.
 
-   Two losses are inherent to the floor and surfaced at the export edge (ADR 0015):
-   - the canonical vocabulary has a single `:canon/agent`, so the DC
-     creator / contributor / publisher roles collapse — every agent is emitted as
-     `dc:creator` and the role is unrecoverable (`:under-specified`);
-   - likewise `dc:relation` and `dc:source` both import to `:canon/relation`, so
-     export cannot tell them apart and emits `dc:relation`.
+   Agents keep their DC element: the importer qualifies each `:canon/agent` with
+   its `:canon/role` (creator / contributor / publisher), and export emits the
+   matching element back. Two losses remain, surfaced at the export edge (ADR 0015):
+   - an agent with no role (from a spoke whose source did not state one) is
+     emitted as `dc:creator`, a guess reported as `:under-specified`;
+   - `dc:relation` and `dc:source` both import to `:canon/relation`, so export
+     cannot tell them apart and emits `dc:relation`.
    The six DCMES elements with no canonical home (subject, type, …) were already
    dropped at import; they simply do not reappear — the round-trip's hard loss.
 
@@ -33,16 +34,20 @@
    canonical predicate at import; export picks one DC element back and reports the
    collapse as loss (see ns doc). Ordered so the serialisation is deterministic."
   [[:canon/title      "title"]
-   [:canon/agent      "creator"]        ; contributor/publisher also -> creator (lossy)
+   [:canon/agent      "creator"]        ; per :canon/role, see `role->dc`; no role -> creator (lossy)
    [:canon/date       "date"]
    [:canon/identifier "identifier"]
    [:canon/relation   "relation"]       ; source also -> relation (lossy)
    [:canon/note       "description"]])
 
+(def ^:private role->dc
+  "DC element for an agent with a stated `:canon/role`."
+  {:creator "creator" :contributor "contributor" :publisher "publisher"})
+
 (defn- occurrences
-  "Record-level `{:value :lang}` occurrences of canonical predicate `p`, resolving
-   a fragment reference (qualified value) to its literal + `:canon/lang`. Flat
-   literals come back with `:lang nil`."
+  "Record-level `{:value :lang :role}` occurrences of canonical predicate `p`,
+   resolving a fragment reference (qualified value) to its literal plus its
+   `:canon/lang` and `:canon/role` coords. Flat literals come back with nil coords."
   [record p]
   (let [rid (:id record)]
     (for [a (:assertions record)
@@ -52,8 +57,9 @@
           (let [fid (:value/target v)
                 fas (filter #(= fid (:subject %)) (:assertions record))]
             {:value (some #(when (and (= p (:predicate %)) (string? (:value %))) (:value %)) fas)
-             :lang  (some #(when (= :canon/lang (:predicate %)) (:value %)) fas)})
-          {:value v :lang nil})))))
+             :lang  (some #(when (= :canon/lang (:predicate %)) (:value %)) fas)
+             :role  (some #(when (= :canon/role (:predicate %)) (:value %)) fas)})
+          {:value v :lang nil :role nil})))))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -76,24 +82,24 @@
   (let [lines (for [[p local] canon->dc
                     occ        (occurrences record p)
                     :when      (some? (:value occ))]
-                (dc-line local occ))]
+                (dc-line (get role->dc (:role occ) local) occ))]
     (when (seq lines)
       (str "<metadata xmlns:dc=\"" dc/dc-uri "\">\n"
            (str/join "\n" lines)
            "\n</metadata>"))))
 
 (defn export-losses
-  "Export-edge loss (ADR 0015) for the canonical→DC projection: the agent-role and
-   relation/source collapses the DC target can express but the canonical floor
-   cannot. One `:under-specified` per affected predicate that the record carries."
+  "Export-edge loss (ADR 0015) for the canonical→DC projection: agents whose role
+   the floor does not know, and the relation/source collapse. One
+   `:under-specified` per affected predicate that the record carries."
   [record]
   (cond-> []
-    (seq (occurrences record :canon/agent))
+    (some #(nil? (:role %)) (occurrences record :canon/agent))
     (conj (dx/loss {:category     :under-specified
                     :subject      (:id record)
                     :edge         :export
                     :source-field :canon/agent
-                    :message      "creator/contributor/publisher roles collapsed — all agents emitted as dc:creator"}))
+                    :message      "agent role not stated in the source — emitted as dc:creator"}))
 
     (seq (occurrences record :canon/relation))
     (conj (dx/loss {:category     :under-specified

@@ -91,9 +91,9 @@
              (:relations recovered))))))
 
 (deftest the-museum-view-carries-the-identified-creator
-  (testing "NG → Linked Art: the Manifestation carries the Expression, created_by the identified Baudelaire"
+  (testing "NG → Linked Art: the Manifestation's text (LinguisticObject), created_by the identified Baudelaire"
     (let [ld (linked-art/->jsonld (import1))]
-      (is (str/includes? ld "\"type\":\"HumanMadeObject\""))
+      (is (str/includes? ld "\"type\":\"LinguisticObject\""))
       (is (str/includes? ld "Les fleurs du mal"))
       (is (str/includes? ld "\"created_by\""))
       (is (str/includes? ld "Baudelaire, Charles"))
@@ -110,7 +110,7 @@
       (is (pos? (:total loss)))))                            ; the :canon floor predicates are export loss in RDF
   (testing "convert :intermarc-ng -> :linked-art / :crm-only also serialise the entity graph"
     (is (str/includes? (:output (convert/convert {:from :intermarc-ng :to :linked-art :source fixture}))
-                       "HumanMadeObject"))
+                       "LinguisticObject"))
     (is (str/includes? (:output (convert/convert {:from :intermarc-ng :to :crm-only :source fixture}))
                        "E73_Information_Object"))))
 

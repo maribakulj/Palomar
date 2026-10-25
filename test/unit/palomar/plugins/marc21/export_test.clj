@@ -10,6 +10,8 @@
             [palomar.plugins :as plug]
             [palomar.plugins.mapping :as mapping]
             [palomar.plugins.marc21 :as marc21]
+            [palomar.plugins.lrmoo.project :as project]
+            [palomar.plugins.lrmoo.view :as view]
             [palomar.plugins.marc21.export :as mex]
             [palomar.runtime :as runtime]))
 
@@ -93,3 +95,37 @@
         (let [text (lr/format-conversion-report report)]
           (is (str/includes? text "import edge"))
           (is (str/includes? text "export edge")))))))
+
+(def ^:private main-and-added-entry
+  (str "<collection xmlns=\"http://www.loc.gov/MARC21/slim\"><record>"
+       "<controlfield tag=\"001\">42</controlfield>"
+       "<datafield tag=\"100\" ind1=\"1\" ind2=\" \"><subfield code=\"a\">Hugo, Victor</subfield></datafield>"
+       "<datafield tag=\"245\" ind1=\"1\" ind2=\"0\"><subfield code=\"a\">Notre-Dame de Paris</subfield></datafield>"
+       "<datafield tag=\"700\" ind1=\"1\" ind2=\" \"><subfield code=\"a\">Doré, Gustave</subfield></datafield>"
+       "</record></collection>"))
+
+(deftest agent-roles-survive-the-marc-round-trip
+  (testing "the creator comes back as the 100 main entry, the contributor as a 700"
+    (let [c1  (->canonical main-and-added-entry nil)
+          out (mex/->marcxml c1)
+          c2  (->canonical out nil)]
+      (is (re-find #"tag=\"100\"[^>]*><subfield code=\"a\">Hugo, Victor<" out))
+      (is (re-find #"tag=\"700\"[^>]*><subfield code=\"a\">Doré, Gustave<" out))
+      (testing "so the Work keyed on the creator is the same after the trip"
+        (let [w1 (view/works (project/project c1))
+              w2 (view/works (project/project c2))]
+          (is (= 1 (count w1)))
+          (is (= (map :id w1) (map :id w2)))))))
+  (testing "a publisher (from another spoke) is written as 260 $b, not as an added entry"
+    (let [rid :marc/p
+          fid (keyword "frag" "marc.p.dc-publisher.0")
+          rec {:id rid :kind :document
+               :fragments  [{:id fid :source [:test]}]
+               :assertions [{:subject rid :predicate :canon/title :value "X"}
+                            {:subject rid :predicate :canon/agent :value {:value/kind :reference :value/target fid}}
+                            {:subject fid :predicate :canon/agent :value "Gallimard"}
+                            {:subject fid :predicate :canon/role :value :publisher}]}
+          out (mex/->marcxml rec)]
+      (is (re-find #"tag=\"260\"[^>]*><subfield code=\"b\">Gallimard<" out))
+      (is (not (str/includes? out "tag=\"100\"")))
+      (is (not (str/includes? out "tag=\"700\""))))))

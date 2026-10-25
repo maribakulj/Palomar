@@ -42,7 +42,8 @@
       (is (str/includes? out "<recordInfo><recordIdentifier>11761548</recordIdentifier></recordInfo>")) ; from :source
       (is (str/includes? out "<titleInfo><title>Sound and fury</title></titleInfo>"))
       (is (str/includes? out "<name><namePart>Alterman, Eric</namePart></name>"))
-      (is (str/includes? out "<name><namePart>Cornell University Press</namePart></name>")) ; publisher -> name
+      (is (str/includes? out "<originInfo><publisher>Cornell University Press</publisher></originInfo>")) ; role kept
+      (is (not (str/includes? out "<name><namePart>Cornell University Press")))
       (is (str/includes? out "<originInfo><dateIssued>c1999</dateIssued></originInfo>"))
       (is (str/includes? out "<identifier>99042030</identifier>"))
       (testing "both notes come back as <note> (the note-type collapsed)"
@@ -70,15 +71,16 @@
         (is (= 2 (count (floor-literals c2 :canon/note))))))))
 
 (deftest loss-report-accounts-the-pivot-cost
-  (testing "subTitle is a dropped native; agent and note are export-edge collapses"
+  (testing "subTitle is a dropped native; note is an export-edge collapse, agent no longer is"
     (let [canon  (->canonical fixture :mods/r11761548)
           losses (mex/export-losses canon)]
       (is (contains? (set (mex/pivot-dropped-fields canon)) :mods/subtitle))
       (is (some #(and (= :dropped (dx/loss-category %)) (= :mods/subtitle (dx/loss-source-field %))) losses))
       (testing "name/publisher -> :canon/agent and abstract/note -> :canon/note are the collapses"
         (is (= #{:canon/agent :canon/note} mex/collapsed-predicates))
-        (is (some #(and (= :under-specified (dx/loss-category %))
-                        (= :canon/agent (dx/loss-source-field %))) losses))
+        (testing "but the publisher keeps its role, so the agent collapse is recovered on export"
+          (is (not-any? #(and (= :under-specified (dx/loss-category %))
+                              (= :canon/agent (dx/loss-source-field %))) losses)))
         (is (some #(and (= :under-specified (dx/loss-category %))
                         (= :canon/note (dx/loss-source-field %))) losses))))))
 

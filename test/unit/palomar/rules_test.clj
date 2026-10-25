@@ -49,6 +49,21 @@
     (is (contains? (set triples) [:r/r1 :meta/kind :book]))
     (is (contains? (set triples) [:r/r1 :canon/title "Les Misérables"]))))
 
+(deftest record-triples-leaves-out-assertions-no-longer-in-force
+  (testing "rejected, superseded and retracted assertions do not feed the matcher; proposed ones do"
+    (let [a  (fn [status v]
+               (model/assertion {:subject :r/x :predicate :canon/title :value v :status status}))
+          r  (model/record {:id :r/x :kind :book
+                            :assertions [(a :asserted "Kept")
+                                         (a :proposed "Proposed")
+                                         (a :rejected "Rejected")
+                                         (a :superseded "Superseded")
+                                         (a :retracted "Retracted")]})
+          titles (set (for [[_ p v] (rules/record-triples r)
+                            :when (= :canon/title p)]
+                        v))]
+      (is (= #{"Kept" "Proposed"} titles)))))
+
 (deftest record-triples-exposes-source-and-provenance
   (let [prov (model/provenance {:source :xml/sample :pass :ingest})
         r    (model/record {:id :r/s :kind :book

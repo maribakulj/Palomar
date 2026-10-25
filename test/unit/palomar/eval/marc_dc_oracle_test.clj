@@ -13,15 +13,21 @@
 
    What the differential shows on the LoC sample collection (2 records):
 
-   - **Shared documentary spine (5 of the oracle's 9 element types).** Both emit
-     `title creator date description identifier`. On `date` the two crosswalks agree
-     *exactly* (same values). title/creator agree in count.
+   - **Shared documentary spine (4 of the oracle's 9 element types).** Both emit
+     `title date description identifier`. On `date` the two crosswalks agree
+     *exactly* (same values). title agrees in count.
+   - **The agents agree, their role does not (deliberately).** Both sample records
+     credit their agent only in an *added entry* (700 performer `prf`, 710), with no
+     1XX main entry. The LoC stylesheet flattens every 1XX/7XX to `dc:creator`;
+     Palomar keeps the MARC responsibility (`:canon/role`) and emits added entries as
+     `dc:contributor` (DCMES: \"an entity responsible for making contributions\").
+     Same two agents, same count, a different element — recorded, not hidden.
    - **The gap is the coded / controlled axes (4 types): `language publisher
      subject type`.** This is not an accident of coverage — it is ADR 0003's scope:
      the canonical floor models *transcribed documentary statements*, not coded
      fields (`language` ← 008/35-37, `type` ← leader 06/07), controlled vocabularies
-     (`subject` ← 6xx), or a publisher *role* the single `:canon/agent` cannot carry
-     distinctly. Palomar drops these at import by design; the oracle decodes them.
+     (`subject` ← 6xx), or the 260 $b publisher, which the MARC21 spoke does not map
+     yet. Palomar drops these at import by design; the oracle decodes them.
    - **Identifier provenance diverges (and disjointly).** Palomar keys
      `dc:identifier` on the bibliographic numbers (010 LCCN, 035 control#); the
      oracle keys it on the 856 access URL and 020 ISBN. Palomar deliberately routes
@@ -33,10 +39,12 @@
      ($d $4); Palomar strips to the proper element / controlled name. So Palomar is
      *not* a strict subset — it is cleaner on some fields, thinner on others.
 
-   Honest headline: **5/9 element-type coverage vs the LoC oracle**, with the missing
-   4 being the coded/controlled axes the floor does not model — measured, not
-   claimed. Closing them is future work (a controlled-vocab / fixed-field layer),
-   not a silent omission."
+   Honest headline: **4/9 element types shared exactly with the LoC oracle, plus its
+   `creator` agents emitted as `dc:contributor`** — the missing 4 being the
+   coded/controlled axes the floor does not model. Measured, not claimed. (Before
+   agent roles, 2026-10-25, the agents also came out as `dc:creator`: 5/9.)
+   Closing the gap is future work (a controlled-vocab / fixed-field layer), not a
+   silent omission."
   (:require [clojure.data.xml :as xml]
             [clojure.set :as set]
             [clojure.string :as str]
@@ -94,19 +102,23 @@
            (freq @oracle))
         "the LoC oracle emits its 9 known DC element types over the sample collection")))
 
-(deftest shared-documentary-spine-five-of-nine
+(deftest shared-documentary-spine-four-of-nine
   (testing "Palomar and the LoC oracle share exactly the documentary spine"
-    (is (= #{"title" "creator" "date" "description" "identifier"}
+    (is (= #{"title" "date" "description" "identifier"}
            (set/intersection (types @oracle) (types @palomar)))))
-  (testing "Palomar invents no DC element the oracle does not also emit (it is a projection, not an embellishment)"
-    (is (empty? (set/difference (types @palomar) (types @oracle)))))
-  (testing "honest headline: 5 of the oracle's 9 element types are covered"
+  (testing "the only element Palomar emits that the oracle does not is contributor — the oracle's creators"
+    (is (= #{"contributor"} (set/difference (types @palomar) (types @oracle))))
+    (is (every? (fn [c] (some #(str/starts-with? % c) (values @oracle "creator")))
+                (values @palomar "contributor"))
+        "each Palomar contributor is one of the oracle's creators (oracle keeps $d/$4 on top)"))
+  (testing "honest headline: 4 of the oracle's 9 element types are shared exactly"
     (is (= 9 (count (types @oracle))))
-    (is (= 5 (count (set/intersection (types @oracle) (types @palomar)))))))
+    (is (= 4 (count (set/intersection (types @oracle) (types @palomar)))))))
 
 (deftest the-gap-is-the-coded-and-controlled-axes
-  (testing "the 4 uncovered types are precisely language/publisher/subject/type — the floor's deliberate scope (ADR 0003)"
-    (is (= #{"language" "publisher" "subject" "type"}
+  (testing "the uncovered types are language/publisher/subject/type — the floor's deliberate scope (ADR 0003) —
+            plus creator, whose agents Palomar emits as contributor"
+    (is (= #{"creator" "language" "publisher" "subject" "type"}
            (set/difference (types @oracle) (types @palomar))))))
 
 (deftest date-agrees-exactly
@@ -114,16 +126,16 @@
     (is (= (values @oracle "date") (values @palomar "date")))
     (is (= #{"[1957?]" "1994-"} (values @palomar "date")))))
 
-(deftest title-and-creator-agree-in-count-but-not-subfield-discipline
-  (testing "both emit one title and one creator per record (2 each)"
+(deftest title-and-agent-agree-in-count-but-not-subfield-discipline
+  (testing "both emit one title and one agent per record (2 each): oracle creator, Palomar contributor"
     (is (= 2 (get (freq @oracle) "title") (get (freq @palomar) "title")))
-    (is (= 2 (get (freq @oracle) "creator") (get (freq @palomar) "creator"))))
+    (is (= 2 (get (freq @oracle) "creator") (get (freq @palomar) "contributor"))))
   (testing "the oracle over-includes: GMD in the title, the relator/date in the creator"
     (is (some #(str/includes? % "[sound recording]") (values @oracle "title")))
     (is (some #(str/includes? % "prf") (values @oracle "creator"))))
   (testing "Palomar strips to the proper title and the controlled name — cleaner, not a superset"
     (is (not-any? #(str/includes? % "[sound recording]") (values @palomar "title")))
-    (is (not-any? #(str/includes? % "prf") (values @palomar "creator")))
+    (is (not-any? #(str/includes? % "prf") (values @palomar "contributor")))
     (is (contains? (values @palomar "title") "The Great Ray Charles"))))
 
 (deftest identifier-provenance-diverges-disjointly

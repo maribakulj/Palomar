@@ -23,14 +23,15 @@
    entry (the Victor Hugo *metro station*) can never be promoted."
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [palomar.plugins.agents :as agents]
             [palomar.text :as text]))
 
 (defn- agent-label
-  "The record's controlled agent name (`:canon/agent`), used as the reconciled
-   agent's display label."
+  "The record's controlled creator name (`:canon/agent` with role `:creator`, or
+   with no stated role), used as the reconciled agent's display label. A
+   contributor or publisher never labels the identified creator."
   [record]
-  (some #(when (and (= :canon/agent (:predicate %)) (string? (:value %))) (:value %))
-        (:assertions record)))
+  (first (agents/creators record)))
 
 (defn- record-agents
   "`{:iri :id :label :record}` for each identified agent entity of `record`."

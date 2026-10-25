@@ -20,15 +20,20 @@
 
    ## What we prove about our output
 
-   Against that strict bar, `convert … :linked-art`:
-   - has **zero root-level errors** — every emitted doc is a `HumanMadeObject` with
-     all required root fields, correctly typed; and
-   - its **only** deviations are `additionalProperties` on the **embedded
-     Expression** under `/carries` (the same embedding pattern Linked Art itself
-     uses) — **no** `type` / `const` / `required` / `format` errors. Our error
-     *kinds* are a strict subset of the canonical Mona Lisa example's, i.e. our
-     output is structurally and type-correct, and *cleaner* than Getty's own example
-     against the same schema.
+   A Manifestation is exported as a `LinguisticObject` (the text of an edition;
+   only an F5 Item is a `HumanMadeObject`, audit S01), so its documents are
+   validated against `text.json`, and Item documents against `object.json`.
+   Against that strict bar:
+   - `convert :marc21 … :linked-art` (the LoC sample) validates with **zero
+     errors** — every doc a `LinguisticObject`, every property allowed and typed;
+   - a richer record (creator, publisher, Work) deviates in exactly two known
+     ways, asserted below: (1) a Person or Group with no authority id lacks the
+     `id` the schema requires of a reference — the canonical floor carries no
+     authority for that agent, and minting one would fabricate an identity; and
+     (2) `part_of` → `PropositionalObject`, which Linked Art's own published
+     example uses (`example/text/koot_nightwatch/1`) although its schema only
+     allows a LinguisticObject or VisualItem there;
+   - an Item document validates against `object.json` with zero errors.
 
    ## One documented normalization (applied at load, fixtures stay pristine)
 
@@ -42,7 +47,8 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [palomar.convert :as convert])
+            [palomar.convert :as convert]
+            [palomar.plugins.lrmoo.linked-art :as linked-art])
   (:import [com.networknt.schema SchemaLocation SchemaRegistry SpecificationVersion]
            [com.networknt.schema.serialization JsonMapperFactory]
            [java.util HashMap]
@@ -76,14 +82,27 @@
 (def ^:private object-schema
   (delay (.getSchema @registry (SchemaLocation/of (str iri-base "object.json")))))
 
+(def ^:private text-schema
+  (delay (.getSchema @registry (SchemaLocation/of (str iri-base "text.json")))))
+
 (def ^:private mapper (delay (JsonMapperFactory/getInstance)))
 
-(defn- errors
-  "Validate a JSON string against the Linked Art `object.json` schema. Returns
-   `[{:key message-key :at instance-location} …]`."
-  [json-str]
-  (->> (.validate @object-schema (.readTree @mapper json-str))
+(defn- errors-against
+  "Validate a JSON string against `schema`. Returns `[{:key message-key :at
+   instance-location} …]`."
+  [schema json-str]
+  (->> (.validate @schema (.readTree @mapper json-str))
        (mapv (fn [e] {:key (.getMessageKey e) :at (str (.getInstanceLocation e))}))))
+
+(defn- errors
+  "Validate a JSON string against the Linked Art `object.json` schema."
+  [json-str]
+  (errors-against object-schema json-str))
+
+(defn- text-errors
+  "Validate a JSON string against the Linked Art `text.json` schema."
+  [json-str]
+  (errors-against text-schema json-str))
 
 (defn- root-errors [errs] (filter #(= "" (:at %)) errs))
 
@@ -116,26 +135,42 @@
       (testing "but its root object is fine — the strictness bites only nested/embedded objects"
         (is (empty? (root-errors errs)))))))
 
-(deftest our-output-roots-are-schema-valid
-  (testing "every convert→linked-art doc is a HumanMadeObject with a conformant root"
+(deftest our-marc-output-validates-strictly
+  (testing "every convert :marc21 → :linked-art doc is a LinguisticObject with zero schema errors"
     (is (seq @our-docs))
     (doseq [d @our-docs]
-      (is (str/includes? d "\"type\":\"HumanMadeObject\""))
-      (is (empty? (root-errors (errors d)))                        ; no missing-required / wrong-type / const at the root
-          (str "unexpected root error: " (root-errors (errors d)))))))
+      (is (str/includes? d "\"type\":\"LinguisticObject\""))
+      (is (empty? (text-errors d)) (str "unexpected error: " (text-errors d))))))
 
-(deftest our-only-deviation-is-the-embedding-not-malformedness
-  (testing "our sole schema errors are additionalProperties on the embedded Expression under /carries"
-    (doseq [d @our-docs]
-      (let [errs (errors d)]
-        (is (seq errs))                                            ; we don't vacuously pass either (same strict bar)
-        (is (every? #(= "additionalProperties" (:key %)) errs)
-            (str "a non-additionalProperties error leaked: " (remove #(= "additionalProperties" (:key %)) errs)))
-        (is (every? #(str/includes? (:at %) "carries") errs)      ; located on the embedded object, not the root
-            (str "an error outside /carries: " (remove #(str/includes? (:at %) "carries") errs))))))
-  (testing "our error kinds are a subset of the canonical example's — we are no messier than Getty's own"
-    (let [mona-kinds (set (map :key (errors @mona)))
-          our-kinds  (set (mapcat #(map :key (errors %)) @our-docs))]
-      (is (every? mona-kinds our-kinds))
-      (is (not (contains? our-kinds "const")))                     ; we never emit a wrong type
-      (is (not (contains? our-kinds "required"))))))               ; we never omit a required field
+(def ^:private rich-doc
+  (delay (:output (convert/convert
+                   {:from :dc :to :linked-art :opts {:record-id :dc/x}
+                    :source (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
+                                 "<dc:title>Les Misérables</dc:title><dc:creator>Victor Hugo</dc:creator>"
+                                 "<dc:publisher>Gallimard</dc:publisher><dc:description>n</dc:description>"
+                                 "</metadata>")}))))
+
+(deftest a-rich-record-deviates-only-in-the-two-known-ways
+  (let [errs (text-errors @rich-doc)]
+    (is (seq errs))                                                ; the bar is not vacuous
+    (testing "no error at the root"
+      (is (empty? (root-errors errs))))
+    (testing "every error sits on an agent reference without an id, or on part_of"
+      (is (every? #(or (re-find #"^/(created_by|used_for/0)/carried_out_by/0" (:at %))
+                       (str/starts-with? (:at %) "/part_of/0"))
+                  errs)
+          (str "an unexpected error location: " errs)))
+    (testing "the agent errors are a missing id (or the Person/Group alternative), the part_of one a type const"
+      (is (every? #{"required" "const"} (map :key errs))))))
+
+(deftest an-item-document-validates-as-a-human-made-object
+  (testing "an F5 Item is a HumanMadeObject that carries the text, with zero schema errors"
+    (let [rec {:id :record/g :kind :lrmoo/graph
+               :entities [{:id :ent/m :kind :lrmoo/F3_Manifestation :iri "http://ex/m"}
+                          {:id :ent/i :kind :lrmoo/F5_Item :iri "http://ex/i"}]
+               :assertions [{:subject :ent/i :predicate :lrmoo/R7_exemplifies
+                             :value {:value/kind :reference :value/target :ent/m}}
+                            {:subject :ent/m :predicate :lrmoo/R33_has_string :value "T"}]}
+          item (last (str/split-lines (:output (linked-art/exporter {} [rec]))))]
+      (is (str/includes? item "\"type\":\"HumanMadeObject\""))
+      (is (empty? (errors item)) (str "unexpected error: " (errors item))))))

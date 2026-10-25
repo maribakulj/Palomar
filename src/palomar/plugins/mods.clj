@@ -24,8 +24,8 @@
    |---------------------------------|----------------------|
    | `titleInfo/title` (+ nonSort)   | `:canon/title`       |
    | `titleInfo[@type=uniform]/title`| `:canon/uniform-title` |
-   | `name` (joined nameParts)       | `:canon/agent`       |
-   | `originInfo/publisher`          | `:canon/agent`       |
+   | `name` (joined nameParts)       | `:canon/agent` (no role: `role/roleTerm` not read yet) |
+   | `originInfo/publisher`          | `:canon/agent`, `:canon/role :publisher` |
    | `originInfo/dateIssued`         | `:canon/date`        |
    | `identifier`                    | `:canon/identifier`  |
    | `abstract`, `note`              | `:canon/note`        |
@@ -223,7 +223,8 @@
    {:mapping/id :map/mods-name :mapping/from :mods/name :mapping/to :canon/agent
     :mapping/transform [:trim]}
    {:mapping/id :map/mods-publisher :mapping/from :mods/publisher :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :publisher :as :canon/role}}
    {:mapping/id :map/mods-date :mapping/from :mods/date-issued :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/mods-identifier :mapping/from :mods/identifier :mapping/to :canon/identifier

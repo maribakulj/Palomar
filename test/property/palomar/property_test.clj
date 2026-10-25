@@ -68,12 +68,13 @@
 ;; cannot bind variables for an assertion that the user can see.
 ;; ---------------------------------------------------------------------------
 
-(defspec record-triples-includes-every-assertion prop-runs
+(defspec record-triples-includes-every-in-force-assertion prop-runs
   (prop/for-all [r (mg/generator model/Record)]
                 (let [triples (set (rules/record-triples r))]
                   (every? (fn [a]
-                            (contains? triples
-                                       [(:subject a) (:predicate a) (:value a)]))
+                            (or (contains? #{:rejected :superseded :retracted} (:status a))
+                                (contains? triples
+                                           [(:subject a) (:predicate a) (:value a)])))
                           (:assertions r)))))
 
 ;; ---------------------------------------------------------------------------

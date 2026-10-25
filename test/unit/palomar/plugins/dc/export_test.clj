@@ -2,11 +2,12 @@
   "Round-trip tests (WP-4): DC → canonical → DC. The real W3C fixture imports to
    the canonical floor, exports back to Dublin Core XML, and the test pins down
    exactly what survived and what the floor cost (ADR 0015): the six unmodelled
-   elements gone, the agent roles and relation/source collapsed — then proves the
-   trip is stable on a second pass."
+   elements gone, relation/source collapsed, the agent roles kept — then proves
+   the trip is stable on a second pass."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.loss-report :as lr]
+            [palomar.model :as model]
             [palomar.plugins :as plug]
             [palomar.plugins.dc :as dc]
             [palomar.plugins.dc.export :as dce]
@@ -35,12 +36,11 @@
       (is (str/includes? out "<dc:date>2007-01-06T00:00:00.00</dc:date>"))
       (is (str/includes? out "<dc:identifier>http://example.org/DC_example1.jpg</dc:identifier>"))
       (is (str/includes? out "<dc:description"))
-      (testing "the three agents all come back, but as dc:creator (roles collapsed)"
-        (is (= 3 (count (re-seq #"<dc:creator>" out))))
-        (is (str/includes? out "Alan Kelsey"))
-        (is (str/includes? out "The Dublin Core Task Force"))
-        (is (not (str/includes? out "<dc:contributor>")))
-        (is (not (str/includes? out "<dc:publisher>"))))
+      (testing "the three agents come back under their own DC element (roles kept)"
+        (is (str/includes? out "<dc:creator>Alan Kelsey</dc:creator>"))
+        (is (str/includes? out "<dc:contributor>The Dublin Core Task Force</dc:contributor>"))
+        (is (str/includes? out "<dc:publisher>Alan Kelsey, Ltd.</dc:publisher>"))
+        (is (= 1 (count (re-seq #"<dc:creator>" out)))))
       (testing "relation + source both come back as dc:relation"
         (is (= 2 (count (re-seq #"<dc:relation>" out))))
         (is (not (str/includes? out "<dc:source>")))))))
@@ -53,14 +53,21 @@
         (is (not (str/includes? out (str "<dc:" el))) (str "dc:" el " should be dropped"))))))
 
 (deftest export-reports-the-collapse-as-under-specified
-  (testing "agent-role and relation/source collapses are :export :under-specified loss"
+  (testing "the relation/source collapse is :export :under-specified loss; role-qualified agents are not"
     (let [{:keys [canon]} (->canonical fixture :dc/rt)
           ls (dce/export-losses canon)]
-      (is (= 2 (count ls)))
+      (is (= 1 (count ls)))
       (is (every? #(= :loss/under-specified (:code %)) ls))
       (is (every? #(= :export (get-in % [:detail :loss/edge])) ls))
-      (is (= #{:canon/agent :canon/relation}
-             (set (map #(get-in % [:detail :loss/source-field]) ls)))))))
+      (is (= #{:canon/relation}
+             (set (map #(get-in % [:detail :loss/source-field]) ls))))))
+  (testing "an agent with no stated role is still emitted as dc:creator and reported"
+    (let [r  (model/record {:id :dc/x :kind :document
+                            :assertions [(model/assertion {:subject :dc/x :predicate :canon/agent
+                                                           :value "Anonyme"})]})
+          ls (dce/export-losses r)]
+      (is (str/includes? (dce/->dc-xml r) "<dc:creator>Anonyme</dc:creator>"))
+      (is (= [:canon/agent] (map #(get-in % [:detail :loss/source-field]) ls))))))
 
 (deftest the-round-trip-is-stable-after-the-first-pass
   (testing "DC -> canon -> DC -> canon -> DC: the loss happens once, then fixes"
@@ -76,13 +83,13 @@
           (is (= #{"Alan Kelsey" "The Dublin Core Task Force" "Alan Kelsey, Ltd."} agents)))))))
 
 (deftest the-round-trip-loss-report-accounts-for-the-whole-gap
-  (testing "import (6 dropped) + export (2 under-specified) is the round-trip's full loss"
+  (testing "import (6 dropped) + export (1 under-specified) is the round-trip's full loss"
     (let [{:keys [canon ingest]} (->canonical fixture :dc/rt)
           export-loss (dce/export-losses canon)
           report      (lr/conversion-report (concat ingest export-loss) {:records 1})]
       (is (= 6 (get-in report [:by-edge :import :total])))
-      (is (= 2 (get-in report [:by-edge :export :total])))
-      (is (= 2 (get-in report [:by-category :under-specified])))
+      (is (= 1 (get-in report [:by-edge :export :total])))
+      (is (= 1 (get-in report [:by-category :under-specified])))
       (is (= 6 (get-in report [:by-category :dropped])))
       (testing "renders for an institutional audit"
         (let [text (lr/format-conversion-report report)]

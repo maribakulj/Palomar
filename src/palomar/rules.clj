@@ -91,7 +91,8 @@
 (defn record-triples
   "Return a vector of [subject predicate value] triples representing the
    record, combining struct fields (via the structural vocabulary) and
-   explicit assertions.
+   explicit assertions. Assertions whose status is out of force (rejected,
+   superseded, retracted) are left out.
 
    Struct triples cover the full structural vocabulary (`:meta/id`,
    `:meta/kind`, `:meta/source`, `:meta/fragment`, `:meta/diagnostic`,
@@ -120,7 +121,10 @@
         (mapv (fn [d] [id model/meta-diagnostic (:code d)])
               (:diagnostics record))
         assertion-triples
-        (mapv (fn [a] [(:subject a) (:predicate a) (:value a)])
+        (into []
+              ;; `:proposed` stays visible on purpose: inference chains through it
+              (comp (remove model/out-of-force?)
+                    (map (fn [a] [(:subject a) (:predicate a) (:value a)])))
               (:assertions record))]
     (-> struct-triples
         (into fragment-triples)

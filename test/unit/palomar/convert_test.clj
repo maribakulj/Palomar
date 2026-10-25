@@ -4,7 +4,8 @@
    edges — proving the parts compose into one `convert` call."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [palomar.convert :as cv]))
+            [palomar.convert :as cv]
+            [palomar.curate :as curate]))
 
 (def ^:private fixtures
   {:intermarc    "test/fixtures/documentary/intermarc/sru/intermarcXchange/bib-flaubert-madame-bovary-start1-max30.xml"
@@ -36,19 +37,23 @@
                            [:jsonld     "@graph"]
                            [:crm        "cidoc-crm/E73_Information_Object"]
                            [:crm-only   "cidoc-crm/E73_Information_Object"]
-                           [:linked-art "HumanMadeObject"]
+                           [:linked-art "\"type\":\"LinguisticObject\""]
                            [:dc         "<dc:title"]
                            [:marc21     "<controlfield tag=\"001\""]
-                           [:mods       "<mods xmlns="]
-                           [:iiif       "\"type\":\"Manifest\""]]]
+                           [:mods       "<mods xmlns="]]]
         (let [{:keys [output loss]} (cv/convert {:from :marc21 :to to :source s})]
           (is (str/includes? output needle) (str "target " to))
-          (is (pos? (:total loss)) (str "target " to " reported loss")))))))
+          (is (pos? (:total loss)) (str "target " to " reported loss"))))
+      (testing "target :iiif — a MARC record is not a valid manifest (no URI id, no canvas extent): refused, and said so"
+        (let [{:keys [output loss]} (cv/convert {:from :marc21 :to :iiif :source s})]
+          (is (= "" output))
+          (is (contains? (set (:source-fields loss)) :iiif/manifest)))))))
 
 (deftest the-marc21-to-linked-art-path-is-faithful
-  (testing "MARC21 -> pivot -> Linked Art carries the title onto a HumanMadeObject"
+  (testing "MARC21 -> pivot -> Linked Art carries the title onto the edition's text (a LinguisticObject, not a physical object)"
     (let [{:keys [output]} (cv/convert {:from :marc21 :to :linked-art :source (src :marc21)})]
-      (is (str/includes? output "\"type\":\"HumanMadeObject\""))
+      (is (str/includes? output "\"type\":\"LinguisticObject\""))
+      (is (not (str/includes? output "HumanMadeObject")))
       (is (str/includes? output "The Great Ray Charles"))
       (is (str/includes? output "https://linked.art/ns/v1/linked-art.json")))))
 
@@ -73,3 +78,26 @@
   (is (contains? (cv/target-formats) :linked-art))
   (is (thrown? Exception (cv/convert {:from :bogus :to :ntriples :source "x"})))
   (is (thrown? Exception (cv/convert {:from :dc :to :bogus :source "x" :opts {:record-id :r}}))))
+
+;; --- the export status policy (audit S08) -----------------------------------
+
+(defn- dc-wemi [] (:records (cv/to-wemi :dc {:record-id :dc/x} (src :dc))))
+
+(deftest a-rejected-claim-is-never-exported
+  (testing "after rejecting the inferred WEMI links, no target emits them"
+    (let [rejected (:records (curate/curate (dc-wemi) curate/reject-all))
+          accepted (:records (curate/curate (dc-wemi) curate/accept-all))]
+      (is (not (str/includes? (:output (cv/export-records :ntriples rejected)) "R4_embodies")))
+      (is (str/includes? (:output (cv/export-records :ntriples accepted)) "R4_embodies"))
+      (testing "the entities themselves (not claims) are still typed"
+        (is (str/includes? (:output (cv/export-records :ntriples rejected)) "lrmoo/F3_Manifestation"))))))
+
+(deftest in-force-only-keeps-uncurated-inference-out-of-the-output
+  (testing "by default the :proposed WEMI chain is exported; with :in-force-only? it is not, until accepted"
+    (let [uncurated (dc-wemi)
+          accepted  (:records (curate/curate (dc-wemi) curate/accept-all))]
+      (is (str/includes? (:output (cv/export-records :ntriples uncurated)) "R4_embodies"))
+      (is (not (str/includes? (:output (cv/export-records :ntriples uncurated {:in-force-only? true}))
+                              "R4_embodies")))
+      (is (str/includes? (:output (cv/export-records :ntriples accepted {:in-force-only? true}))
+                         "R4_embodies")))))

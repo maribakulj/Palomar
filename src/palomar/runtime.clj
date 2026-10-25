@@ -21,6 +21,9 @@
    - `:diagnostic` productions → appended to `record[:diagnostics]`.
    - `:entity` productions → appended to `record[:entities]`, deduplicated by
      id (ADR 0014/0017). A re-mint of the same content-derived id is a no-op.
+   - `:fragment` productions → appended to `record[:fragments]`, deduplicated by
+     id. A mapping with a constant qualifier mints one per qualified occurrence
+     (e.g. an agent and its `:canon/role`).
    - `:repair` productions → not merged into the record in V1; authors
      that want repairs attached to a diagnostic place them inline in
      the diagnostic template's `:repairs` vector. Standalone repairs
@@ -70,6 +73,12 @@
   [e]
   (:id e))
 
+(defn fragment-identity
+  "Identity key for fragment deduplication: the fragment id alone. Fragment ids
+   are minted from record id + locator (ADR 0012), so a re-mint is a no-op."
+  [f]
+  (:id f))
+
 (defn- dedup-append [record k item identity-fn]
   (let [existing      (get record k [])
         existing-keys (into #{} (map identity-fn) existing)]
@@ -82,6 +91,7 @@
     :assertion  (dedup-append record :assertions  (:value production) assertion-identity)
     :diagnostic (dedup-append record :diagnostics (:value production) diagnostic-identity)
     :entity     (dedup-append record :entities    (:value production) entity-identity)
+    :fragment   (dedup-append record :fragments   (:value production) fragment-identity)
     :repair     record  ;; standalone repairs not merged in V1
     record))
 
