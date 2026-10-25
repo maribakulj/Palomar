@@ -84,12 +84,17 @@
               provs (cons (dissoc p :also) (:also p))]
           (concat
            [[st (str rdf "type") {:iri (str rdf "Statement")}]
+            ;; a statement is what an activity generates, so a prov:Entity (the
+            ;; domain of wasGeneratedBy), and so is what it derives from
+            [st (str rdf "type") {:iri (str prov "Entity")}]
             [st (str rdf "subject") {:iri (node-iri idx (:subject a))}]
             [st (str rdf "predicate") {:iri (term-iri (:predicate a))}]
             [st (str rdf "object") (object idx (:value a))]]
            (when (:status a) [[st (str pal "status") {:lit (name (:status a))}]])
            (when (:bindings p) [[st (str pal "bindings") {:lit (pr-str (:bindings p))}]])
-           (for [d (:derivation p)] [st (str prov "wasDerivedFrom") {:iri (node-iri idx d)}])
+           (mapcat (fn [d] [[st (str prov "wasDerivedFrom") {:iri (node-iri idx d)}]
+                            [(node-iri idx d) (str rdf "type") {:iri (str prov "Entity")}]])
+                   (:derivation p))
            (for [q provs :when (or (:pass q) (:rule q))
                  t (cons [st (str prov "wasGeneratedBy") {:iri (activity-iri rid q)}]
                          (activity-triples rid q))]

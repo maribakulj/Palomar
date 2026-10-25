@@ -18,6 +18,11 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Ontology conformance** (ADR 0026): `palomar.ontology` checks RDF output
+  against the domains and ranges declared by the vocabularies' own files (the
+  vendored CIDOC CRM 7.1.3 RDFS and LRMoo 1.0 OWL, plus the PROV-O terms
+  Palomar writes); every spoke's LRMoo, CRM, pure-CRM and PROV-O output is
+  pinned at zero violations. PROV statements are now typed `prov:Entity`.
 - **Interoperability audit follow-up (2026-10-25)** — new capabilities:
   `palomar.fidelity`, an occurrence-level audit that decodes a conversion's
   output (N-Triples, JSON, XML) and classifies every source value as present,

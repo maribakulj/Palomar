@@ -39,6 +39,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0023](./0023-justifications-and-status-at-export.md) | Every justification is kept; out-of-force claims are never read or written | Accepted (amended by 0025) |
 | [0024](./0024-observed-loss.md) | Observed loss: occurrence-level fidelity audit, exports name what they omit | Accepted |
 | [0025](./0025-history-target-and-iri-safety.md) | The provenance record keeps the history; no invalid IRI is ever written | Accepted |
+| [0026](./0026-ontology-conformance.md) | RDF output is checked against the vocabularies' own files | Accepted |
 
 ## Template
 
