@@ -171,7 +171,8 @@
       (is (str/includes? out ":canon/title"))
       (is (str/includes? out "The Great Ray Charles"))
       (is (str/includes? out "entities:"))
-      (is (str/includes? out "lrmoo/F1_Work")))))
+      (is (str/includes? out "lrmoo/F3_Manifestation"))
+      (is (str/includes? out "lrmoo/F2_Expression")))))
 
 (deftest reconcile-groups-agents-by-authority-id
   (testing "reconcile INTERMARC (Victor Hugo 50): agents reconciled by ISNI"
@@ -204,11 +205,11 @@
       (is (= 0 exit))
       (is (str/includes? out "(flag)"))
       (is (str/includes? out "4 needs-review"))))
-  (testing "MARC21 (two records): eight proposals curated"
+  (testing "MARC21 (two records, added entries only — no Work): four proposals curated"
     (let [{:keys [exit out]} (cli/run ["apply-repairs" marc21 "--from" "marc21" "--policy" "reject"])]
       (is (= 0 exit))
-      (is (str/includes? out "8 proposals curated"))
-      (is (str/includes? out "8 rejected")))))
+      (is (str/includes? out "4 proposals curated"))
+      (is (str/includes? out "4 rejected")))))
 
 (deftest apply-repairs-guards-its-inputs
   (testing "an unknown --policy exits 2"

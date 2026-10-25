@@ -81,15 +81,16 @@
 
 (defn- qualified-predicate-map
   "Return `{native-predicate → qualifier-from-key}` for every mapping
-   rule that declares a `:mapping/qualifier`. If two rules share the
-   same `:mapping/from` with different qualifier configs, the last
-   one wins; cross-rule ingest consistency is a plugin-authoring
-   discipline in V1."
+   rule that declares a `:mapping/qualifier` read from a source attribute
+   (`:from`). A constant qualifier (`:value`) is minted at normalize, not
+   at ingest, so it is left out. If two rules share the same
+   `:mapping/from` with different qualifier configs, the last one wins;
+   cross-rule ingest consistency is a plugin-authoring discipline in V1."
   [mapping-rules]
   (into {}
         (keep (fn [r]
-                (when-let [q (:mapping/qualifier r)]
-                  [(:mapping/from r) (:from q)])))
+                (when-let [q-from (:from (:mapping/qualifier r))]
+                  [(:mapping/from r) q-from])))
         mapping-rules))
 
 (defn- mapped-predicate-set

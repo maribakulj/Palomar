@@ -761,3 +761,40 @@
                          [cr] :normalize)]
       (is (some #(and (= :canon/agent (:predicate %)) (= "Verne, Jules" (:value %)))
                 (:assertions enr))))))
+
+;; ---------------------------------------------------------------------------
+;; Constant qualifier (`{:value :as}`) — e.g. an agent's :canon/role
+;; ---------------------------------------------------------------------------
+
+(deftest schema-accepts-a-constant-qualifier-even-on-a-combine
+  (is (mapping/valid-mapping? (assoc minimal-mapping :mapping/qualifier {:value :creator :as :canon/role})))
+  (is (mapping/valid-mapping? {:mapping/id :map/c :mapping/from [:native/a :native/b] :mapping/combine ", "
+                               :mapping/to :canon/x :mapping/qualifier {:value :creator :as :canon/role}}))
+  (testing "a source-attribute qualifier still cannot qualify a combine"
+    (is (not (mapping/valid-mapping? {:mapping/id :map/c :mapping/from [:native/a :native/b] :mapping/combine ", "
+                                      :mapping/to :canon/x :mapping/qualifier {:from :native/l :as :canon/lang}}))))
+  (testing "a qualifier carries :from or :value, not both"
+    (is (not (mapping/valid-mapping? (assoc minimal-mapping :mapping/qualifier
+                                            {:from :native/l :value :creator :as :canon/role}))))))
+
+(deftest a-constant-qualifier-mints-one-fragment-per-occurrence
+  (let [rule   (mapping/compile-mapping (assoc minimal-mapping
+                                               :mapping/transform [:trim]
+                                               :mapping/qualifier {:value :publisher :as :canon/role})
+                                        stdlib)
+        rec    (record-with :native/x ["  Gallimard " "Hachette"])
+        merged (:record (runtime/run-phase rec [rule] :normalize))
+        frags  (map :id (:fragments merged))]
+    (is (= 2 (count frags)))
+    (is (model/record-consistent? merged))
+    (testing "the record references each fragment; each fragment carries the value and the role"
+      (is (= (set frags)
+             (set (keep #(when (and (= :record/r1 (:subject %)) (= :canon/x (:predicate %)))
+                           (:value/target (:value %)))
+                        (:assertions merged)))))
+      (is (= #{"Gallimard" "Hachette"}
+             (set (keep #(when (and (contains? (set frags) (:subject %)) (= :canon/x (:predicate %)))
+                           (:value %))
+                        (:assertions merged)))))
+      (is (= [:publisher :publisher]
+             (keep #(when (= :canon/role (:predicate %)) (:value %)) (:assertions merged)))))))

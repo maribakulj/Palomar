@@ -13,7 +13,8 @@
    |------------------------------------------|-------------------------|
    | `200 $a` (titre propre)                  | `:canon/title`          |
    | `500 $a` (titre uniforme)                | `:canon/uniform-title`  |
-   | `700/701/702 $a`, `710/711/712 $a`       | `:canon/agent`          |
+   | `700/701 $a`, `710/711 $a` (principale, alternative) | `:canon/agent`, `:canon/role :creator` |
+   | `702 $a`, `712 $a` (secondaire)          | `:canon/agent`, `:canon/role :contributor` |
    | `210 $d` (date de publication)           | `:canon/date`           |
    | `010 $a` ISBN, `011 $a` ISSN, `001`      | `:canon/identifier`     |
    | `856 $u`                                 | `:canon/digital-object` |
@@ -74,17 +75,23 @@
    {:mapping/id :map/unimarc-uniform-500 :mapping/from :unimarc/f500_a :mapping/to :canon/uniform-title
     :mapping/transform [:trim]}
    {:mapping/id :map/unimarc-author-700 :mapping/from :unimarc/f700_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/unimarc-author-701 :mapping/from :unimarc/f701_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/unimarc-author-702 :mapping/from :unimarc/f702_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contributor :as :canon/role}}
    {:mapping/id :map/unimarc-corporate-710 :mapping/from :unimarc/f710_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/unimarc-corporate-711 :mapping/from :unimarc/f711_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/unimarc-corporate-712 :mapping/from :unimarc/f712_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contributor :as :canon/role}}
    {:mapping/id :map/unimarc-date-210 :mapping/from :unimarc/f210_d :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/unimarc-isbn-010 :mapping/from :unimarc/f010_a :mapping/to :canon/identifier

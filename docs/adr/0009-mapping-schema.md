@@ -131,6 +131,20 @@ takes on the fragment.
 Plugins that don't use qualifiers omit the key entirely; the canonical
 value is the bare primitive on the record, no fragment minted.
 
+**Constant qualifier (amended 2026-10-25).** Some qualifiers are not read
+from the source but known to the rule: `dc:publisher` is always a
+publisher, MARC 700 always an added entry. The interoperability audit
+(S02–S04) showed that collapsing these onto one `:canon/agent` let a
+publisher or contributor key the Work. Such a rule declares
+`:mapping/qualifier {:value :publisher :as :canon/role}`. There is no
+source attribute, so the shape adapter mints nothing at ingest; instead
+the normalize rule mints one fragment per record-level occurrence
+(locator `[native-predicate idx]`, ADR 0012), moves the value onto it and
+adds the `:as` coord with `:value`. The result has exactly the shape
+above, so readers handle both forms the same way. Unlike `{:from :as}`, a
+constant qualifier may sit on a combine rule (one fragment per combined
+value). The runtime merges the minted fragments (`:fragment` productions).
+
 This applies to **mapping-driven** qualifiers (the typical case). For
 atomic compound values where neither coordinate would ever sensibly
 become the subject of further assertions on its own (monetary amounts,

@@ -18,7 +18,9 @@
    Field patterns (each from a Getty AAT-classified example):
    - title (R33)            -> `identified_by` Name, classified_as aat:300404670 (Primary Name)
    - ARK / `:canon/identifier` -> `identified_by` Identifier, aat:300435704 (System-Assigned Number)
-   - creator (`:canon/agent`)  -> on the Expression: `created_by` Creation, carried_out_by Person
+   - creator (`:canon/agent`, role `:creator` or unstated) -> on the Expression:
+     `created_by` Creation, carried_out_by Person. A contributor or publisher is
+     not a creator: it is left out of `created_by` and reported as export loss.
    - note (`:canon/note`)      -> `referred_to_by` LinguisticObject (Description / Brief Text)
    - digital (`:canon/digital-object`) -> `representation` VisualItem digitally_shown_by DigitalObject
 
@@ -32,6 +34,7 @@
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.plugins.agents :as agents]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.view :as view]))
 
@@ -69,13 +72,13 @@
   (some #(when (and (= :crm/E21_Person (:kind %)) (:iri %)) (:iri %)) (:entities record)))
 
 (defn- persons
-  "Linked Art Person objects for the record's `agents`. When there is exactly one
+  "Linked Art Person objects for the record's `names`. When there is exactly one
    agent and an identified agent entity, that one Person carries the authority id."
-  [record agents]
+  [record names]
   (let [iri (agent-iri record)]
-    (if (and iri (= 1 (count agents)))
-      [(person-obj (first agents) iri)]
-      (mapv #(person-obj % nil) agents))))
+    (if (and iri (= 1 (count names)))
+      [(person-obj (first names) iri)]
+      (mapv #(person-obj % nil) names))))
 (defn- digital-obj [url] {"type" "VisualItem"
                           "digitally_shown_by" [{"type" "DigitalObject"
                                                  "classified_as" [(type-obj aat-digital-image "Digital Image")]
@@ -86,7 +89,7 @@
 (def ^:private expressed
   "Predicates the Linked Art profile expresses (everything else is export loss)."
   #{:lrmoo/R33_has_string :lrmoo/R3_is_realised_in :lrmoo/R4_embodies
-    :canon/agent :canon/note :canon/digital-object :canon/identifier})
+    :canon/agent :canon/role :canon/note :canon/digital-object :canon/identifier})
 
 (defn- title-of [record subject]
   (->> (:assertions record)
@@ -110,7 +113,7 @@
           title  (or (title-of record (:id manif))
                      (and expr (title-of record (:id expr)))
                      (and work (title-of record (:id work))))
-          agents (canon-vals record :canon/agent)
+          creators (agents/creators record)
           notes  (canon-vals record :canon/note)
           digis  (canon-vals record :canon/digital-object)
           ids    (canon-vals record :canon/identifier)
@@ -121,8 +124,8 @@
           expr-node (when expr
                       (cond-> {"id" (export/entity-iri (:id expr)) "type" "LinguisticObject"}
                         title        (assoc "_label" title "identified_by" [(name-obj title)])
-                        (seq agents) (assoc "created_by" {"type" "Creation"
-                                                          "carried_out_by" (persons record agents)})
+                        (seq creators) (assoc "created_by" {"type" "Creation"
+                                                            "carried_out_by" (persons record creators)})
                         work         (assoc "part_of" [(cond-> {"id" (export/entity-iri (:id work))
                                                                 "type" "PropositionalObject"}
                                                          title (assoc "_label" title))])))]
@@ -141,22 +144,37 @@
   [record]
   (if-let [r (linked-art record)] (json/write-str r :escape-slash false) ""))
 
+(defn- non-creator-losses
+  "One `:dropped` loss per agent the profile leaves out of `created_by`: a
+   contributor or publisher (Linked Art would need a distinct activity for it)."
+  [record]
+  (let [creators (set (agents/creators record))]
+    (for [{nm :name role :role} (distinct (agents/occurrences record))
+          :when (not (contains? creators nm))]
+      (dx/loss {:category     :dropped
+                :subject      (:id record)
+                :edge         :export
+                :source-field :canon/agent
+                :message      (str "agent " (pr-str nm) " (" (if role (name role) "no role")
+                                   ") is not a creator; not expressed in the Linked Art profile (V1)")}))))
+
 (defn export-losses
   "Export-edge loss (ADR 0015): every predicate the Linked Art profile does not
    express (dates, relations, native source predicates), one per distinct
-   [subject predicate]."
+   [subject predicate], plus one per agent left out of `created_by`."
   [record]
-  (->> (:assertions record)
-       (remove #(contains? expressed (:predicate %)))
-       (remove #(= :canon/loss-marker (:predicate %)))
-       (map (juxt :subject :predicate))
-       distinct
-       (mapv (fn [[s p]]
-               (dx/loss {:category     :dropped
-                         :subject      s
-                         :edge         :export
-                         :source-field p
-                         :message      (str (pr-str p) " not expressed in the Linked Art profile (V1)")})))))
+  (-> (->> (:assertions record)
+           (remove #(contains? expressed (:predicate %)))
+           (remove #(= :canon/loss-marker (:predicate %)))
+           (map (juxt :subject :predicate))
+           distinct
+           (mapv (fn [[s p]]
+                   (dx/loss {:category     :dropped
+                             :subject      s
+                             :edge         :export
+                             :source-field p
+                             :message      (str (pr-str p) " not expressed in the Linked Art profile (V1)")}))))
+      (into (non-creator-losses record))))
 
 (defn exporter
   "ADR 0007 exporter: render the Linked Art view of `records` (one JSON-LD document

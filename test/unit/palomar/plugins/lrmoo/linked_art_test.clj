@@ -117,3 +117,33 @@
       (is (= "Person" (get person "type")))
       (is (= "Flaubert, Gustave" (get person "_label")))
       (is (= "https://isni.org/isni/0000000122762442" (get person "id"))))))
+
+(defn- dc->wemi
+  "Import a DC `xml` document, normalise it and project it to the WEMI view."
+  [xml]
+  (let [reg  (plug/register plug/empty-registry dc/plugin)
+        comp (mapping/compile-mappings (plug/all-mappings reg) (plug/effective-transforms reg))]
+    (project/project
+     (:record (runtime/run-phase (first (:records (dc/importer {:record-id :dc/p} xml)))
+                                 comp :normalize)))))
+
+(deftest a-publisher-is-not-the-creator
+  (testing "dc:creator + dc:publisher: only the creator is carried_out_by; the publisher is export loss"
+    (let [rec*    (dc->wemi (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
+                                 "<dc:title>Les Misérables</dc:title>"
+                                 "<dc:publisher>Gallimard</dc:publisher>"
+                                 "<dc:creator>Victor Hugo</dc:creator></metadata>"))
+          expr    (first (get (json/read-str (la/->jsonld rec*)) "carries"))
+          names   (map #(get % "_label") (get-in expr ["created_by" "carried_out_by"]))
+          dropped (filter #(= :canon/agent (get-in % [:detail :loss/source-field]))
+                          (la/export-losses rec*))]
+      (is (= ["Victor Hugo"] names))
+      (is (= 1 (count dropped)))
+      (is (str/includes? (:message (first dropped)) "Gallimard"))))
+  (testing "a publisher alone: no created_by, no Work (audit test 1)"
+    (let [rec* (dc->wemi (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
+                              "<dc:title>Les Misérables</dc:title>"
+                              "<dc:publisher>Gallimard</dc:publisher></metadata>"))
+          expr (first (get (json/read-str (la/->jsonld rec*)) "carries"))]
+      (is (nil? (get expr "created_by")))
+      (is (nil? (get expr "part_of"))))))

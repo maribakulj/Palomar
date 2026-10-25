@@ -71,15 +71,18 @@
                                            (plug/effective-transforms reg)))))))
 
 (deftest every-format-reaches-the-same-pivot
-  (testing "all four real records yield the same LRMoo WEMI shape (F3 + F2 + F1)"
+  (testing "all four real records yield the same LRMoo WEMI shape (F3 + F2, and F1 when a creator is known)"
     (let [im   (intermarc-showcase)
           m21  (:wemi (floor-project marc21/plugin {} marc21-fixture))     ; Ray Charles (first)
           dc   (:wemi (floor-project dc/plugin {:record-id :dc/example1} dc-fixture))
           mds  (:wemi (floor-project mods/plugin {} mods-fixture))]        ; Sound and fury
       (doseq [[label w] [["intermarc" im] ["marc21" m21] ["dc" dc] ["mods" mds]]]
         (is (= 1 (count (view/manifestations w))) (str label " manifestation"))
-        (is (= 1 (count (view/expressions w)))    (str label " expression"))
-        (is (= 1 (count (view/works w)))          (str label " work"))))))
+        (is (= 1 (count (view/expressions w)))    (str label " expression")))
+      (doseq [[label w] [["intermarc" im] ["dc" dc] ["mods" mds]]]
+        (is (= 1 (count (view/works w))) (str label " work")))
+      (testing "the MARC21 record credits its performer only in a 700 added entry: no creator, no Work"
+        (is (empty? (view/works m21)))))))
 
 (deftest one-loss-report-spans-all-four-vocabularies
   (testing "a single ADR 0015 report aggregates loss from INTERMARC, MARC21, DC and MODS"

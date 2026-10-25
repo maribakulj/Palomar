@@ -88,7 +88,8 @@
     :mapping/transform [:trim]}
    {:mapping/id :map/intermarc-agent
     :mapping/from [:intermarc/f100_a :intermarc/f100_m] :mapping/combine ", "
-    :mapping/to :canon/agent :mapping/transform [:trim]}
+    :mapping/to :canon/agent :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/intermarc-date :mapping/from :intermarc/f260_d :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/intermarc-control :mapping/from :intermarc/f001 :mapping/to :canon/identifier

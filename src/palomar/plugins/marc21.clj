@@ -68,23 +68,30 @@
 
 (def mapping
   "Declarative MARC21→canonical mapping for the modelled bibliographic subset.
-   Several MARC fields collapse onto one canonical predicate (the agent roles,
-   the identifier flavours); that under-specification is the floor's, surfaced as
-   loss when the pivot is projected to a role-aware target."
+   Several MARC fields collapse onto one canonical predicate (the agent fields,
+   the identifier flavours). The agents keep their responsibility as a
+   `:canon/role` coord: 1XX main entries are `:creator`, 7XX added entries
+   `:contributor`, so only a main entry keys the Work. Relator codes ($4/$e)
+   are not read yet."
   [{:mapping/id :map/marc21-title :mapping/from :marc21/f245_a :mapping/to :canon/title
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-uniform-240 :mapping/from :marc21/f240_a :mapping/to :canon/uniform-title
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-author-100 :mapping/from :marc21/f100_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/marc21-corporate-110 :mapping/from :marc21/f110_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/marc21-meeting-111 :mapping/from :marc21/f111_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/marc21-added-700 :mapping/from :marc21/f700_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contributor :as :canon/role}}
    {:mapping/id :map/marc21-added-corporate-710 :mapping/from :marc21/f710_a :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contributor :as :canon/role}}
    {:mapping/id :map/marc21-date-260 :mapping/from :marc21/f260_c :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-date-264 :mapping/from :marc21/f264_c :mapping/to :canon/date

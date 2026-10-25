@@ -27,6 +27,16 @@
    design, not by omission. A *uniform title*, by contrast, is documentary
    (it names what the work is), so it earns a predicate, not a fragment coord.
 
+   `:canon/role` is the second qualifier coord (added 2026-10-25, after the
+   interoperability audit). It qualifies a `:canon/agent` occurrence with the
+   responsibility the source states — `:creator`, `:contributor` or
+   `:publisher` (`agent-roles`). It is a constant qualifier: the mapping rule
+   knows the role (`dc:publisher` is always a publisher), so normalize mints the
+   fragment (ADR 0009 §Qualifier). An agent with no role is one whose source did
+   not say; consumers that need a creator (the Work key, Linked Art
+   `created_by`) take creators first and fall back to role-less agents, never to
+   a contributor or publisher.
+
    ## The core stays vocabulary-blind
 
    This is a plugin like any other (ADR 0003 §Consequences). The core —
@@ -72,6 +82,15 @@
     :canon/note
     :canon/digital-object
     :canon/loss-marker})
+
+(def qualifier-coords
+  "The canonical qualifier coords (ADR 0011): predicates that ride on a
+   fragment to qualify a documentary value, never documentary themselves."
+  #{:canon/lang :canon/role})
+
+(def agent-roles
+  "The values a `:canon/role` coord takes on a `:canon/agent` fragment."
+  #{:creator :contributor :publisher})
 
 (defn documentary?
   "True if `predicate` is one of the canonical documentary

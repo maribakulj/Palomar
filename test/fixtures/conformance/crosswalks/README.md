@@ -31,8 +31,10 @@ by the JDK's built-in XSLT 1.0 engine (no added dependency).
 
 ## What the oracles show
 
-- **MARC→DC** (`docs/eval/marc-dc-crosswalk.md`). **5 of the oracle's 9 DC element
-  types** covered (`title creator date description identifier`); the gap is the four
+- **MARC→DC** (`docs/eval/marc-dc-crosswalk.md`). **4 of the oracle's 9 DC element
+  types** shared exactly (`title date description identifier`), plus the oracle's
+  `creator` agents, which Palomar emits as `contributor` (both are MARC added
+  entries; the role is kept since 2026-10-25); the gap is the four
   coded/controlled axes (`language publisher subject type`) the canonical floor does
   not model (ADR 0003); `date` agrees exactly; `identifier` provenance diverges
   disjointly (010/035 control numbers vs 856 access URLs).

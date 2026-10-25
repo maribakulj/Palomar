@@ -58,16 +58,18 @@
 (defn- canon-floor
   "Run `plugin`'s importer output through `:normalize`, then return, per record, a
    map `{canonical-predicate #{string values…}}` of the record's own canonical
-   assertions — the documentary floor each route lands on."
+   assertions — the documentary floor each route lands on. A qualified value (an
+   agent with its `:canon/role`, a title with its `:canon/lang`) lives on one of the
+   record's fragments, so fragment-level values count as the record's own."
   [plugin importer-out]
   (let [reg      (plug/register plug/empty-registry plugin)
         compiled (mapping/compile-mappings (plug/all-mappings reg)
                                            (plug/effective-transforms reg))]
     (mapv (fn [rec]
-            (let [r   (:record (runtime/run-phase rec compiled :normalize))
-                  rid (:id r)]
+            (let [r    (:record (runtime/run-phase rec compiled :normalize))
+                  own? (into #{(:id r)} (map :id) (:fragments r))]
               (->> (:assertions r)
-                   (filter #(and (= rid (:subject %))
+                   (filter #(and (own? (:subject %))
                                  (= "canon" (namespace (:predicate %)))
                                  (string? (:value %))))
                    (reduce (fn [m a] (update m (:predicate a) (fnil conj #{}) (:value a))) {}))))

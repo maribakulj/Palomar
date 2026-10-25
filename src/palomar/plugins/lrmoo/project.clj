@@ -24,6 +24,7 @@
      `:ambiguity-collapsed`. Minted claims default to `:proposed` (ADR 0005)."
   (:require [palomar.diagnostics :as dx]
             [palomar.model :as model]
+            [palomar.plugins.agents :as agents]
             [palomar.rules :as rules]
             [palomar.runtime :as runtime]
             [palomar.text :as text]))
@@ -96,7 +97,9 @@
         manif      (model/mint-entity-id :lrmoo/F3_Manifestation (str rid))
         title      (title-of record)
         work-title (work-title-of record)
-        agent      (first-literal record :canon/agent)]
+        ;; only a creator keys the Work: an edition credited only to its
+        ;; publisher or a contributor has no derivable Work (audit S02–S04)
+        agent      (first (agents/creators record))]
     (cond-> [(entity-prod manif :lrmoo/F3_Manifestation prov)]
       ;; the Manifestation's own *transcribed* title is transcription -> certified
       ;; (D7); the Work/Expression below are string-key inference -> :proposed, and
@@ -119,7 +122,8 @@
    assertion a record carries is reported as loss (ADR 0015)."
   #{:canon/title          ; -> R33 strings (Manifestation / Expression / Work)
     :canon/uniform-title  ; -> Work/Expression key + R33 (uniform-title bridging)
-    :canon/agent})        ; -> F1_Work key (creator)
+    :canon/agent          ; -> F1_Work key (creator)
+    :canon/role})         ; -> selects which agent keys the Work
 
 (defn- source-fields
   "Distinct `:canon/*` predicates the record carries, excluding the in-graph

@@ -68,15 +68,21 @@
 (def mapping
   "Declarative DC→canonical mapping for the nine DCMES elements with a canonical
    home. `dc:title` and `dc:description` are qualified by `xml:lang` (→
-   `:canon/lang` on a fragment, ADR 0011). Every rule trims (XML whitespace)."
+   `:canon/lang` on a fragment, ADR 0011). `dc:creator`, `dc:contributor` and
+   `dc:publisher` all map to `:canon/agent` with a constant `:canon/role`
+   (`:creator`, `:contributor`, `:publisher`), so the role survives the floor.
+   Every rule trims (XML whitespace)."
   [{:mapping/id :map/dc-title :mapping/from :dc/title :mapping/to :canon/title
     :mapping/transform [:trim] :mapping/qualifier {:from :xml/lang :as :canon/lang}}
    {:mapping/id :map/dc-creator :mapping/from :dc/creator :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :creator :as :canon/role}}
    {:mapping/id :map/dc-contributor :mapping/from :dc/contributor :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :contributor :as :canon/role}}
    {:mapping/id :map/dc-publisher :mapping/from :dc/publisher :mapping/to :canon/agent
-    :mapping/transform [:trim]}
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :publisher :as :canon/role}}
    {:mapping/id :map/dc-date :mapping/from :dc/date :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/dc-identifier :mapping/from :dc/identifier :mapping/to :canon/identifier
