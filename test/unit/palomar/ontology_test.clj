@@ -5,6 +5,9 @@
   (:require [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
             [palomar.curate]
+            [palomar.model :as model]
+            [palomar.plugins.lrmoo.export]
+            [palomar.reconcile :as reconcile]
             [palomar.ontology :as onto]
             [palomar.plugins.lrmoo.ntriples :as nt]))
 
@@ -70,3 +73,12 @@
                    :record)
           ts   (for [[s p o] (nt/parse (:output (convert/export-records :prov [cur])))] [(nt/term-key s) (:iri p) o])]
       (is (empty? (onto/violations @sch ts)) (pr-str (take 3 (onto/violations @sch ts)))))))
+
+(deftest an-aligned-record-respects-its-vocabularies
+  (let [r  (model/record {:id :doc/a :kind :doc
+                          :assertions [(model/assertion {:subject :doc/a :predicate :canon/agent :value "Gustave Flaubert"})]})
+        [a] (reconcile/align-agents [r] [{:name "Gustave Flaubert" :authority-id "https://isni.org/isni/0000000122762442"
+                                          :score 1.0 :certifiable? true}])
+        ts  (for [[s p o] (nt/parse (palomar.plugins.lrmoo.export/->ntriples a))] [(nt/term-key s) (:iri p) o])]
+    (is (seq ts))
+    (is (empty? (onto/violations @sch ts)))))

@@ -3,7 +3,10 @@
    identified-agent entities by authority id, on hand-built records."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [palomar.curate :as curate]
             [palomar.model :as model]
+            [palomar.plugins.lrmoo.dataset :as dataset]
+            [palomar.plugins.lrmoo.export :as export]
             [palomar.reconcile :as rec]))
 
 (defn- record-with-agent [rid label iri]
@@ -120,3 +123,34 @@
           {:keys [applied refused]} (rec/apply-agent-links [r] [link])]
       (is (empty? applied))
       (is (= [:invalid-iri] (map :reason refused))))))
+
+;; --- alignments in the IR (ADR 0032) ----------------------------------------
+
+(defn- named [rid nm]
+  (model/record {:id rid :kind :doc
+                 :assertions [(model/assertion {:subject rid :predicate :canon/agent :value nm})]}))
+
+(deftest a-proposal-is-a-proposed-skos-mapping-not-a-merge
+  (let [props   [{:name "Gustave Flaubert" :authority-id "https://isni.org/isni/0000000122762442"
+                  :authority-label "Flaubert, Gustave" :score 1.0 :certifiable? true :status :proposed}
+                 {:name "G. Flaubert" :authority-id "https://isni.org/isni/0000000122762442"
+                  :authority-label "Flaubert, Gustave" :score 0.5 :certifiable? true :status :proposed}]
+        [a b]   (rec/align-agents [(named :doc/a "Gustave Flaubert") (named :doc/b "G. Flaubert")] props)
+        preds   (fn [r] (set (keep #(when (= "skos" (namespace (:predicate %))) [(:predicate %) (:status %)]) (:assertions r))))]
+    (testing "an exact, certifiable name is an exactMatch; a partial one a closeMatch; both only proposed"
+      (is (= #{[:skos/exactMatch :proposed]} (preds a)))
+      (is (= #{[:skos/closeMatch :proposed]} (preds b))))
+    (testing "nothing is linked until a curator accepts; a close match is never a link"
+      (is (empty? (rec/accepted-links [a b])))
+      (let [acc (:records (curate/curate [a b] curate/accept-all))]
+        (is (= ["Gustave Flaubert"] (map :name (rec/accepted-links acc))))
+        (testing "and the accepted link rewrites the record onto the authority's agent"
+          (is (= 1 (count (:applied (rec/apply-agent-links acc (rec/accepted-links acc)))))))))
+    (testing "the alignment reaches RDF as SKOS, never as owl:sameAs"
+      (let [nt (export/->ntriples a)]
+        (is (str/includes? nt "skos/core#exactMatch"))
+        (is (not (str/includes? nt "sameAs")))))
+    (testing "a rejected alignment moves to the history graph"
+      (let [rej (first (:records (curate/curate [a] curate/reject-all)))
+            nq  (dataset/->nquads rej)]
+        (is (some #(and (str/includes? % "exactMatch") (str/includes? % "graph:history")) (str/split-lines nq)))))))

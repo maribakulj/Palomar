@@ -31,7 +31,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0015](./0015-loss-model.md) | Loss model: unit, edges, categories, metric | Accepted (partially implemented — see ADR; extended by 0024) |
 | [0016](./0016-wemi-derivation.md) | WEMI derivation under LRMoo: synthesizing entities, identity, and reconciliation | Accepted (partially implemented; scale layer in 0018) |
 | [0017](./0017-entity-representation.md) | Synthesized entity representation (entities on records) | Accepted |
-| [0018](./0018-entity-resolution-at-scale.md) | Entity resolution at scale: reconcile-to-authority, equivalence as assertion, revisability | Accepted (partially implemented — see ADR) |
+| [0018](./0018-entity-resolution-at-scale.md) | Entity resolution at scale: reconcile-to-authority, equivalence as assertion, revisability | Accepted (partially implemented — see ADR; §2 amended by 0032) |
 | [0019](./0019-conversion-directionality.md) | Conversion directionality: spokes bidirectional, hub a target, CRM→LRM a downcast | Accepted (partially implemented — see ADR; partially superseded by 0022) |
 | [0020](./0020-single-pass-and-retire-project-phase.md) | Single pass per phase; retire the `:project` phase and `:cycles` | Accepted |
 | [0021](./0021-responsibility-kind-and-extent-qualifiers.md) | Responsibility, note kind and extent as qualifier coords; constant qualifiers | Accepted |
@@ -45,6 +45,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0029](./0029-named-graph-datasets.md) | Facts, proposals, history and provenance in separate named graphs | Accepted |
 | [0030](./0030-run-manifest.md) | A conversion can write a manifest of everything its output depends on | Accepted |
 | [0031](./0031-source-evidence.md) | Every value keeps where it was read in its source | Accepted |
+| [0032](./0032-graded-alignments.md) | Alignments are graded SKOS mapping claims, never owl:sameAs | Accepted |
 
 ## Template
 
