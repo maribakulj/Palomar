@@ -3,6 +3,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
+            [palomar.curate]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.plugins.lrmoo.prov :as prov]))
 
@@ -34,3 +35,12 @@
 (deftest the-prov-target-converts-and-parses
   (let [{:keys [output]} (convert/convert {:from :dc :to :prov :source dc :opts {:record-id :dc/x}})]
     (is (seq (nt/parse output)))))
+
+(deftest a-statement-keeps-its-iri-through-curation
+  (testing "the statement IRI is the assertion id, so accepting a claim does not rename it (ADR 0027)"
+    (let [r        (wemi)
+          accepted (first (:records (palomar.curate/curate [r] palomar.curate/accept-all)))
+          stmts    (fn [rec] (set (keep #(when (= "http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement" (:iri (nth % 2)))
+                                           (:iri (first %)))
+                                        (nt/parse (prov/->ntriples rec)))))]
+      (is (= (stmts r) (stmts accepted))))))
