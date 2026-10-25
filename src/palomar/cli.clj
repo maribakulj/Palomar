@@ -38,6 +38,8 @@
             [palomar.convert :as convert]
             [palomar.curate :as curate]
             [palomar.diagnostics :as dx]
+            [palomar.plugins.agents :as agents]
+            [palomar.plugins.authorities :as authorities]
             [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.manifest :as manifest]
@@ -55,19 +57,21 @@
     "  palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]"
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
     "  palomar inspect       <input-file> --from <fmt> [--record-id <id>]"
-    "  palomar reconcile     <input-file> --from <fmt> [--record-id <id>]"
+    "  palomar reconcile     <input-file> --from <fmt> [--authorities <file.rdf|file.nt>] [--record-id <id>]"
     "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]"
     "  palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]"
     "  palomar formats          list the supported source and target formats"
     "  palomar ir-schema        print the schema of a pivot record (the EDN IR, --from/--to edn)"
     "  palomar --help"
     ""
-    "  --from        source format (a spoke, or edn: the pivot written by --to edn)"
+    "  --from        source format (a spoke; edn, the pivot written by --to edn; oai, an OAI-PMH response)"
     "  --to          target serialisation (convert, report)"
     "  --profile     conformance profile: linked-art, intermarc, iiif"
     "  --policy      validate / conformance: errors-only (default), errors-and-warnings, strict, never"
     "                apply-repairs: flag (default), accept, reject"
     "  --record-id   record id for single-record spokes (Dublin Core; default: from the filename)"
+    "  --authorities reconcile: a MADS or SKOS authority file (RDF/XML, or N-Triples as .nt) to match names against"
+    "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
     "  --out         write the output to a file instead of stdout (convert)"
     "  --stream      convert in bounded memory, streaming a large flat MARC dump to --out (WP-7)"
     "  --facts-only  convert: export only in-force claims (no uncurated inference stated as a fact)"
@@ -161,7 +165,9 @@
             rid    (cond record-id      (->record-id record-id)
                          (= from "dc")   (keyword "doc" (file-stem input))
                          :else           nil)
-            opts   (cond-> {} rid (assoc :record-id rid))
+            opts   (cond-> {}
+                     rid                         (assoc :record-id rid)
+                     (get flags "metadata-prefix") (assoc :metadata-prefix (get flags "metadata-prefix")))
             result (convert/convert {:from   (keyword from)
                                      :to     (keyword to)
                                      :source (slurp input)
@@ -406,13 +412,24 @@
   "Cross-record agent reconciliation (ADR 0018, by authority id) to stdout. Real
    for INTERMARC, whose 100 $1 ISNI mints identified agents; other spokes report
    no authority-identified agents (honest, not an error)."
-  [{:strs [from record-id]} input]
+  [{:strs [from record-id authorities]} input]
   (let [{:keys [err from source opts]} (read-source from input record-id "reconcile")]
-    (if err
-      {:exit 2 :out "" :err err}
-      (guard #(let [{:keys [records]} (convert/to-wemi from opts source)]
+    (cond
+      err {:exit 2 :out "" :err err}
+
+      (and authorities (not (.exists (java.io.File. ^String authorities))))
+      {:exit 2 :out "" :err (str "authority file not found: " authorities)}
+
+      :else
+      (guard #(let [{:keys [records]} (convert/to-wemi from opts source)
+                    pool  (when authorities
+                            (:entries (authorities/read-pool (if (str/ends-with? authorities ".nt") :ntriples :rdfxml)
+                                                             (slurp authorities))))
+                    names (distinct (map :name (mapcat agents/occurrences records)))]
                 {:exit 0
-                 :out  (reconcile/format-agent-reconciliation (reconcile/reconcile-agents records))
+                 :out  (str (reconcile/format-agent-reconciliation (reconcile/reconcile-agents records))
+                            (when pool
+                              (str "\n" (reconcile/format-proposals (reconcile/propose-agent-links names pool)))))
                  :err  ""})))))
 
 (def ^:private repair-policies

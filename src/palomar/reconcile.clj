@@ -134,6 +134,20 @@
 ;; Alignments in the IR (ADR 0032) — proposals as SKOS mapping assertions
 ;; ---------------------------------------------------------------------------
 
+(defn format-proposals
+  "Human-readable rendering of `propose-agent-links` proposals, for the CLI:
+   one line per proposal, the strongest first, saying which an alignment would
+   make an exact match (ADR 0032)."
+  [proposals]
+  (if (empty? proposals)
+    "Authority proposals: none above the threshold."
+    (str/join "\n"
+              (cons (str "Authority proposals: " (count proposals))
+                    (for [{:keys [name authority-id authority-label score certifiable?]} proposals]
+                      (str "  " (pr-str name) " → " (pr-str authority-label) " <" authority-id ">"
+                           (format "  %.2f" (double score))
+                           (if (and certifiable? (>= score 1.0)) "  exact" "  close")))))))
+
 (def exact-score
   "A proposal scoring at least this is put forward as `skos:exactMatch`;
    below it, `skos:closeMatch` (ADR 0032)."

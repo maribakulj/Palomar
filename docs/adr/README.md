@@ -50,6 +50,8 @@ decision from being read as shipped code (an audit honesty rule).
 | [0034](./0034-library-api-and-edn-ir.md) | A stable library API and the pivot as an EDN file | Accepted |
 | [0035](./0035-construct-templates.md) | Graph templates in the rule language: construct, mint, optional, not | Accepted |
 | [0036](./0036-publication-events.md) | Publication and production events | Accepted |
+| [0037](./0037-oai-pmh-and-dcmi-terms.md) | OAI-PMH responses and DCMI Terms | Accepted |
+| [0038](./0038-authority-files.md) | Authority files as reconciliation pools | Accepted |
 
 ## Template
 

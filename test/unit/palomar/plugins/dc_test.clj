@@ -4,6 +4,7 @@
    that refuses to silently drop unmodelled DC elements (ADR 0003/0015)."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [palomar.convert]
             [palomar.diagnostics :as dx]
             [palomar.plugins :as plug]
             [palomar.plugins.dc :as dc]
@@ -97,7 +98,7 @@
   (testing "DC is a well-formed ADR 0007 plugin whose mapping compiles cleanly"
     (is (= :palomar/dublin-core (:id dc/plugin)))
     (is (fn? (:importer dc/plugin)))
-    (is (= 9 (count (:mapping dc/plugin))))
+    (is (= 26 (count (:mapping dc/plugin))))   ; 9 DCMES + 17 DCMI Terms (ADR 0037)
     (is (= #{:dc/subject :dc/type :dc/format :dc/language :dc/coverage :dc/rights}
            dc/unmodelled-elements))
     (let [reg (plug/register plug/empty-registry dc/plugin)]
@@ -111,3 +112,24 @@
                             (dc/importer {} src)))                       ; nil record-id
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"requires a namespaced-keyword :record-id"
                             (dc/importer {:record-id :bare} src))))))    ; un-namespaced keyword
+
+(deftest dcmi-terms-are-read-too
+  (let [xml (str "<metadata xmlns:dcterms=\"http://purl.org/dc/terms/\">"
+                 "<dcterms:title>Nadja</dcterms:title>"
+                 "<dcterms:creator>Breton, André</dcterms:creator>"
+                 "<dcterms:issued>1928</dcterms:issued>"
+                 "<dcterms:isPartOf>Collection blanche</dcterms:isPartOf>"
+                 "<dcterms:abstract>Un récit.</dcterms:abstract>"
+                 "<dcterms:spatial>Paris</dcterms:spatial>"
+                 "</metadata>")
+        {:keys [records diagnostics]} (dc/importer {:record-id :doc/nadja} xml)
+        natives (set (map :predicate (:assertions (first records))))]
+    (is (every? natives [:dcterms/title :dcterms/creator :dcterms/issued :dcterms/isPartOf :dcterms/abstract]))
+    (is (= [:dcterms/spatial] (keep #(get-in % [:detail :loss/source-field]) diagnostics))
+        "a DCMI term with no home is reported, not dropped")
+    (testing "and they reach the floor as their DCMES counterparts would"
+      (let [r     (first (:records (palomar.convert/to-wemi :dc {:record-id :doc/nadja} xml)))
+            canon (set (keep #(when (= "canon" (namespace (:predicate %))) [(:predicate %) (:value %)]) (:assertions r)))]
+        (is (contains? canon [:canon/date "1928"]))
+        (is (contains? canon [:canon/relation "Collection blanche"]))
+        (is (contains? canon [:canon/note-kind :abstract]))))))

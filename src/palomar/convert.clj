@@ -17,6 +17,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.plugins.events :as events]
+            [palomar.plugins.oai :as oai]
             [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.model :as model]
@@ -94,9 +95,11 @@
   (boolean (get-in exporters [to :history?])))
 
 (defn source-formats
-  "The source formats: the spokes, and `:edn`, the pivot itself (ADR 0034)."
+  "The source formats: the spokes, `:edn` (the pivot itself, ADR 0034) and
+   `:oai`, an OAI-PMH response read through the spoke of its metadata format
+   (ADR 0037)."
   []
-  (conj (spokes/source-formats) :edn))
+  (conj (spokes/source-formats) :edn :oai))
 (defn target-formats [] (set (keys exporters)))
 
 (defn- spoke-streamer [from]
@@ -134,22 +137,37 @@
 
 (defn- with-source-digest
   "`record` with the SHA-256 of the document it was read from on its provenance
-   (`[:provenance :source :sha256]`, ADR 0031), unless it already names its
-   source: every attestation inside it points into that exact document."
+   (`[:provenance :source :sha256]`, ADR 0031), unless it names another source
+   or a digest already: every attestation inside it points into that exact
+   document."
   [record source]
-  (if (and (string? source) (nil? (get-in record [:provenance :source])))
-    (assoc-in record [:provenance :source] {:sha256 (model/sha256-hex source 64)})
-    record))
+  (let [src (get-in record [:provenance :source])]
+    (if (and (string? source) (or (nil? src) (and (map? src) (not (contains? src :sha256)))))
+      (assoc-in record [:provenance :source :sha256] (model/sha256-hex source 64))
+      record)))
+
+(defn- pivot-imported
+  "Normalise and project the `records` spoke `from` imported from `source`."
+  [from source records]
+  (let [to-pivot (to-pivots from)
+        compiled (compiled-mappings from)]
+    (mapv #(to-pivot (:record (runtime/run-phase (with-source-digest % source) compiled :normalize)))
+          records)))
 
 (defn- to-wemi*
   [from opts source]
-  (let [plugin   (spokes/plugin from)
-        to-pivot (to-pivots from)
-        {:keys [records diagnostics]} ((:importer plugin) opts source)
-        compiled (compiled-mappings from)]
+  (let [{:keys [records diagnostics]} ((:importer (spokes/plugin from)) opts source)]
     {:ingest  diagnostics
-     :records (mapv #(to-pivot (:record (runtime/run-phase (with-source-digest % source) compiled :normalize)))
-                    records)}))
+     :records (pivot-imported from source records)}))
+
+(defn- oai-to-wemi
+  "An OAI-PMH response (ADR 0037): each record through the spoke of its
+   metadata format (`:metadata-prefix` in `opts`, default `oai_dc`)."
+  [opts source]
+  (let [prefix (get opts :metadata-prefix "oai_dc")
+        {:keys [records diagnostics]} (oai/import-response prefix source)]
+    {:ingest  diagnostics
+     :records (pivot-imported (oai/formats prefix) source records)}))
 
 (defn to-wemi
   "Import `source` through `spoke`, normalise to the canonical floor, then project
@@ -160,8 +178,9 @@
    records are read, validated, and returned as they were written.
    Returns `{:records [wemi…] :ingest [loss…]}`."
   [from opts source]
-  (if (= :edn from)
-    {:ingest [] :records (ir/read-records source)}     ; already the pivot (ADR 0034)
+  (case from
+    :edn {:ingest [] :records (ir/read-records source)}     ; already the pivot (ADR 0034)
+    :oai (oai-to-wemi opts source)
     (to-wemi* from opts source)))
 
 (defn- in-force-or-unstated? [a]
