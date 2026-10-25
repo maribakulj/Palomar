@@ -10,13 +10,15 @@
    - an LRMoo **F-class** IRI (`F1_Work`, `F2_Expression`, `F3_Manifestation`,
      `F5_Item`) ⇒ recovered unambiguously — the additive `:crm`/`:lrmoo` export keeps
      these, so the trip is lossless;
-   - failing that, a CRM **E-class** super-class: `E89 → F1`, `E24 → F5` are 1:1 and
-     recover; but `E73_Information_Object` is the super-class of *both* `F2` and
-     `F3`, so a node typed only `E73` cannot be downcast — it is reported as an
-     `:ambiguity-collapsed` loss (ADR 0015). This is precisely the collapse the
-     pure-CRM (`:crm-only`) export warned about in `crm/crm-only-losses`: the loss
-     report of the down-projection *is* the spec of what the up-projection cannot
-     recover.
+   - failing that, a node typed only by a CRM **E-class** super-class is *not*
+     downcast: sub-classing does not invert. `E89_Propositional_Object` is F1's
+     super-class, but an `E89` may as well be a theory or a programme, and an `E24`
+     any physical made thing. Such a node is reported as an `:under-specified` loss
+     (ADR 0015) and no entity is minted. `E73_Information_Object` is the super-class
+     of *both* `F2` and `F3`, so a node typed only `E73` is reported as an
+     `:ambiguity-collapsed` loss. This is the collapse the pure-CRM (`:crm-only`)
+     export warns about in `crm/crm-only-losses`: the loss report of the
+     down-projection *is* the spec of what the up-projection cannot recover.
 
    This is not wired as a documentary `convert` source — CRM is the hub-as-output,
    not a spoke. It exists to demonstrate the directionality rule on real data
@@ -65,23 +67,32 @@
 ;; --- recovery ---------------------------------------------------------------
 
 (defn- node-kind
-  "Recover the WEMI kind of a node from its set of rdf:type IRIs — most-specific
-   first. Returns `[:typed kind]`, `[:ambiguous #{kinds}]`, or `[:unknown iris]`."
+  "Recover the WEMI kind of a node from its set of rdf:type IRIs. Only an LRMoo
+   F-class types a node. A CRM super-class alone yields the candidate kinds it
+   *could* specialise to, never a kind. Returns `[:typed kind]`,
+   `[:super-class-only #{kind}]` (one candidate), `[:ambiguous #{kinds}]`, or
+   `[:unknown iris]`."
   [type-iris]
   (if-let [specific (some lrmoo-class->kind type-iris)]
     [:typed specific]
     (let [cands (reduce into #{} (keep crm-class->kinds type-iris))]
       (cond
-        (= 1 (count cands)) [:typed (first cands)]
+        (= 1 (count cands)) [:super-class-only cands]
         (seq cands)         [:ambiguous cands]
         :else               [:unknown type-iris]))))
+
+(defn- super-class-field
+  "The CRM super-class shared by candidate `kinds`, as a `:crm/*` source field."
+  [kinds]
+  (keyword "crm" (crm/class-superclass (first kinds))))
 
 (defn recover
   "Recover the LRMoo view from CRM/LRMoo N-Triples `nt`. Returns:
 
-     {:typed     {node-iri kind}        ; unambiguously recovered WEMI entities
-      :ambiguous {node-iri #{kinds}}     ; only a CRM super-class — cannot downcast
-      :relations #{[from-iri R-pred to-iri]}}  ; WEMI links (from LRMoo R-properties)"
+     {:typed            {node-iri kind}     ; F-typed, unambiguously recovered WEMI entities
+      :super-class-only {node-iri #{kind}}  ; a CRM super-class with one candidate — not downcast
+      :ambiguous        {node-iri #{kinds}} ; a CRM super-class with several candidates
+      :relations        #{[from-iri R-pred to-iri]}}  ; WEMI links (from LRMoo R-properties)"
   [nt]
   (let [triples   (parse-ntriples nt)
         by-subj   (group-by first (filter (fn [[_ p _]] (= p export/rdf-type)) triples))
@@ -91,31 +102,36 @@
                              :let  [pred (lrmoo-prop->pred p)]
                              :when (and pred (:iri o))]
                          [s pred (:iri o)]))]
-    {:typed     (into {} (for [[s [tag k]] resolved :when (= tag :typed)]     [s k]))
-     :ambiguous (into {} (for [[s [tag k]] resolved :when (= tag :ambiguous)] [s k]))
-     :relations relations}))
+    {:typed            (into {} (for [[s [tag k]] resolved :when (= tag :typed)]            [s k]))
+     :super-class-only (into {} (for [[s [tag k]] resolved :when (= tag :super-class-only)] [s k]))
+     :ambiguous        (into {} (for [[s [tag k]] resolved :when (= tag :ambiguous)]        [s k]))
+     :relations        relations}))
 
 (defn ->record
   "Mint an IR record from recovered CRM/LRMoo RDF: one `model/entity` per
-   unambiguously-typed node (keyed by its IRI), a relation assertion per WEMI link,
-   and one `:ambiguity-collapsed` loss (ADR 0015) per node that carries only a CRM
-   super-class (the `E73` Expression/Manifestation collapse). `(… -> {:record
-   :diagnostics})`."
+   F-typed node (keyed by its IRI), a relation assertion per WEMI link, and one
+   loss (ADR 0015) per node that carries only a CRM super-class:
+   `:under-specified` when the super-class has a single WEMI specialisation
+   (`E89`, `E24`), `:ambiguity-collapsed` when it has several (the `E73`
+   Expression/Manifestation collapse). No entity is minted for either.
+   `(… -> {:record :diagnostics})`."
   [nt rid]
-  (let [{:keys [typed ambiguous relations]} (recover nt)
+  (let [{:keys [typed super-class-only ambiguous relations]} (recover nt)
         prov   (model/provenance {:pass :import})
         ents   (for [[iri kind] typed]
                  (model/entity {:id iri :kind kind :iri iri :provenance prov}))
         rels   (for [[from pred to] relations]
                  (model/assertion {:subject from :predicate pred
                                    :value (model/reference to) :provenance prov}))
-        losses (for [[iri cands] ambiguous]
-                 (dx/loss {:category     :ambiguity-collapsed
+        loss   (fn [category iri cands]
+                 (dx/loss {:category     category
                            :subject      iri
                            :edge         :import
-                           :source-field :crm/E73_Information_Object
+                           :source-field (super-class-field cands)
                            :message      (str iri " carries only a CRM super-class; cannot downcast to "
-                                              (str/join " | " (sort (map name cands))))}))]
+                                              (str/join " | " (sort (map name cands))))}))
+        losses (concat (for [[iri cands] super-class-only] (loss :under-specified iri cands))
+                       (for [[iri cands] ambiguous]        (loss :ambiguity-collapsed iri cands)))]
     {:record      (model/record {:id rid :kind :lrmoo/recovered
                                  :entities (vec ents) :assertions (vec rels)})
      :diagnostics (vec losses)}))

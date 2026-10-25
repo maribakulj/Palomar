@@ -64,8 +64,9 @@
   (testing "the pure :crm-only view flattens F2 and F3 to E73 — the downcast cannot tell them apart"
     (let [rec       (wemi-record)
           recovered (crm-import/recover (crm/->crm-only-ntriples rec))]
-      (testing "the Work survives (E89 is F1's super-class, 1:1)"
-        (is (= :lrmoo/F1_Work (get (:typed recovered) work-iri))))
+      (testing "the Work is not recovered: E89 is F1's super-class, but an E89 need not be a Work"
+        (is (not (contains? (:typed recovered) work-iri)))
+        (is (= #{:lrmoo/F1_Work} (get (:super-class-only recovered) work-iri))))
       (testing "the Expression and Manifestation are irrecoverably ambiguous (both E73)"
         (is (= #{:lrmoo/F2_Expression :lrmoo/F3_Manifestation} (get (:ambiguous recovered) expr-iri)))
         (is (= #{:lrmoo/F2_Expression :lrmoo/F3_Manifestation} (get (:ambiguous recovered) manif-iri)))
@@ -78,6 +79,24 @@
       (is (some #(and (= :under-specified (dx/loss-category %))
                       (= :lrmoo/F3_Manifestation (dx/loss-source-field %))) losses)))))
 
+(deftest external-crm-super-classes-are-not-downcast
+  (testing "an E89 or E24 from outside Palomar is not assumed to be a Work or an Item"
+    (let [crm   "http://www.cidoc-crm.org/cidoc-crm/"
+          rdf   "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"
+          nt    (str "<urn:ext:theory> " rdf " <" crm "E89_Propositional_Object> .\n"
+                     "<urn:ext:sculpture> " rdf " <" crm "E24_Physical_Human-Made_Thing> .\n")
+          recovered (crm-import/recover nt)
+          {:keys [record diagnostics]} (crm-import/->record nt :rec/ext)]
+      (is (empty? (:typed recovered)))
+      (is (= {"urn:ext:theory"    #{:lrmoo/F1_Work}
+              "urn:ext:sculpture" #{:lrmoo/F5_Item}}
+             (:super-class-only recovered)))
+      (is (empty? (:entities record)))                       ; nothing fabricated
+      (is (= 2 (count diagnostics)))
+      (is (every? #(= :under-specified (dx/loss-category %)) diagnostics))
+      (is (= #{:crm/E89_Propositional_Object :crm/E24_Physical_Human-Made_Thing}
+             (set (map dx/loss-source-field diagnostics)))))))
+
 (deftest recovered-ir-mints-entities-and-flags-ambiguity-as-loss
   (testing ":crm → ->record mints the three WEMI entities and the links, no loss"
     (let [{:keys [record diagnostics]} (crm-import/->record (crm/->ntriples (wemi-record)) :rec/back)]
@@ -85,8 +104,11 @@
              (set (map :kind (:entities record)))))
       (is (= 2 (count (:assertions record))))                ; R4 + R3
       (is (empty? diagnostics))))
-  (testing ":crm-only → ->record mints only the Work, and reports the E73 collapse as :ambiguity-collapsed"
+  (testing ":crm-only → ->record mints no entity: E89 is under-specified, the E73 pair ambiguous"
     (let [{:keys [record diagnostics]} (crm-import/->record (crm/->crm-only-ntriples (wemi-record)) :rec/back)]
-      (is (= [:lrmoo/F1_Work] (map :kind (:entities record))))
-      (is (= 2 (count diagnostics)))                          ; the Expression + the Manifestation
-      (is (every? #(= :ambiguity-collapsed (dx/loss-category %)) diagnostics)))))
+      (is (empty? (:entities record)))
+      (is (= 3 (count diagnostics)))                          ; the Work + the Expression + the Manifestation
+      (is (= {:under-specified 1 :ambiguity-collapsed 2}
+             (frequencies (map dx/loss-category diagnostics))))
+      (is (= #{:crm/E89_Propositional_Object :crm/E73_Information_Object}
+             (set (map dx/loss-source-field diagnostics)))))))

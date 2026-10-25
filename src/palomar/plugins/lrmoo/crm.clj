@@ -138,10 +138,22 @@
 (defn crm-only-losses
   "Export-edge loss (ADR 0015) the pure-CRM replacement incurs: the E73 type
    collapse (`:under-specified`, when both an Expression and a Manifestation are
-   present) and each WEMI relation's generalisation to a generic CRM property
+   present), the Work and Item typed only by their super-class (`:under-specified`:
+   an E89 or E24 does not say it is a Work or an Item, so `crm-import` will not
+   recover it), and each WEMI relation's generalisation to a generic CRM property
    (`:coerced`)."
   [record]
-  (let [collapse (when (and (has-kind? record :lrmoo/F2_Expression)
+  (let [generic  (for [kind [:lrmoo/F1_Work :lrmoo/F5_Item]
+                       :when (has-kind? record kind)]
+                   (dx/loss {:category     :under-specified
+                             :subject      (:id record)
+                             :edge         :export
+                             :source-field kind
+                             :message      (str (name kind) " serialises as "
+                                                (class-superclass kind)
+                                                ", which does not identify it as a "
+                                                (name kind) " in pure CRM")}))
+        collapse (when (and (has-kind? record :lrmoo/F2_Expression)
                             (has-kind? record :lrmoo/F3_Manifestation))
                    [(dx/loss {:category     :under-specified
                               :subject      (:id record)
@@ -158,7 +170,7 @@
                              :source-field p
                              :message      (str (name p) " serialised as the generic "
                                                 (property-superproperty p))}))]
-    (vec (concat collapse coerced))))
+    (vec (concat generic collapse coerced))))
 
 (defn crm-only-exporter
   "ADR 0007 exporter for the *pure* CRM serialisation: only E/P triples, with the

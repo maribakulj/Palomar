@@ -81,9 +81,10 @@
         codes  (frequencies (map :code ls))
         fields (set (map #(get-in % [:detail :loss/source-field]) ls))]
     (is (every? #(= :export (get-in % [:detail :loss/edge])) ls))
-    (testing "E73 collapse -> one :under-specified (Expression + Manifestation both present)"
-      (is (= 1 (:loss/under-specified codes)))
-      (is (contains? fields :lrmoo/F3_Manifestation)))
+    (testing ":under-specified for the E73 collapse and for the Work typed only E89"
+      (is (= 2 (:loss/under-specified codes)))
+      (is (contains? fields :lrmoo/F3_Manifestation))
+      (is (contains? fields :lrmoo/F1_Work)))
     (testing "each WEMI relation generalised -> :coerced (R3, R4, R33 present)"
       (is (= 3 (:loss/coerced codes)))
       (is (contains? fields :lrmoo/R3_is_realised_in))

@@ -72,6 +72,12 @@ CRM P-properties (verified vs `LRMoo_v1.0.owl`, `lrmoo.crm`). Therefore:
   - CRM flattened to E-classes only (our `:crm-only`, a museum CRM with no LRM) →
     a node typed only `E73` **cannot** be downcast (Expression or Manifestation?);
     it is reported as `:ambiguity-collapsed` (ADR 0015).
+  - A node typed only `E89` or `E24` is **not** downcast either, although each has
+    a single WEMI specialisation (F1, F5). Sub-classing does not invert: an `E89`
+    may be a theory, an `E24` any physical made thing. It is reported as
+    `:under-specified` and no entity is minted (amended 2026-10-25, after the
+    interoperability audit; earlier text treated these as 1:1). The pure-CRM export
+    reports the same two cases as `:under-specified` on the export edge.
 
 The deep tie: **the loss report of the down-projection is the specification of what
 the up-projection cannot recover.** You never recover a distinction the source did
