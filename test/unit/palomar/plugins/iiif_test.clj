@@ -81,9 +81,28 @@
       (is (contains? fields :iiif/canvas-thumbnail))
       (is (contains? fields :iiif/annotation))
       (is (contains? fields :iiif/painting-body))
+      (testing "the Choice is reported: its alternatives become separate images"
+        (is (some #(and (= :iiif/image (get-in % [:detail :loss/source-field]))
+                        (= :under-specified (dx/loss-category %)))
+                  (dx/losses diagnostics))))
       (testing "each image keeps its canvas extent"
         (is (= #{10} (set (keep #(when (= :iiif/width (:predicate %)) (:value %)) (:assertions rec)))))
         (is (= #{20} (set (keep #(when (= :iiif/height (:predicate %)) (:value %)) (:assertions rec)))))))))
+
+(deftest what-the-importer-cannot-keep-from-items-and-metadata-is-reported
+  (testing "an id-less Image, a non-integer extent, several metadata strings (audit S3)"
+    (let [m  {"id" "https://ex/u/manifest.json" "type" "Manifest" "label" {"en" ["U"]}
+              "metadata" [{"label" {"en" ["Author"]} "value" {"en" ["A" "B"]}}]
+              "items" [{"id" "https://ex/u/c1" "type" "Canvas" "height" 20.5 "width" 10
+                        "items" [{"id" "https://ex/u/p1" "type" "AnnotationPage"
+                                  "items" [{"id" "https://ex/u/a1" "type" "Annotation" "motivation" "painting"
+                                            "body" {"type" "Image"}}]}]}]}
+          {:keys [diagnostics]} (iiif/importer {} (json/write-str m))
+          by (into {} (map (juxt dx/loss-source-field dx/loss-category))
+                   (dx/losses diagnostics))]
+      (is (= :dropped (by :iiif/image)))
+      (is (= :dropped (by :iiif/canvas-extent)))
+      (is (= :coerced (by :iiif/metadata))))))
 
 (deftest a-creatorless-manifest-projects-to-manifestation-and-expression-no-work
   (testing "IIIF carries a title but no creator -> Manifestation + Expression, no Work (the honest floor result)"

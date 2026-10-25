@@ -408,7 +408,10 @@
                                                    (map-indexed #(emit-rename-match rid %1 %2) from-matches)))
                                    (emit-on-empty rid))]
                 (if q-from
-                  (let [qual-matches (filterv (fn [[_ p _]] (= p q-from)) triples)]
+                  ;; only the coords of a subject that carries `from`: another
+                  ;; field's fragment with the same coord is that field's rule's
+                  (let [carriers     (into #{} (keep (fn [[s p _]] (when (= p from) s))) triples)
+                        qual-matches (filterv (fn [[s p _]] (and (= p q-from) (carriers s))) triples)]
                     (into base-prods (keep emit-qualifier-match) qual-matches))
                   base-prods)))))]
     (rules/compiled-rule {:id rule-id :phase :normalize :doc doc :runner runner})))

@@ -21,6 +21,7 @@ MODS, not our hand-written fixtures.
 | `identifier` (LCCN) | ✅ `91758335` in both | ✅ `00530046` in both | the bibliographic number survives both routes |
 | `date` (transcribed) | ✅ `[1957?]` in both | ✅ `1994-` in both | the 260 $c form survives both routes |
 | `digital-object` | (none) | ✅ exact (both 856 URLs) | the access URLs converge for the web record |
+| `note` | ✅ exact (500, 505, 511) | ✅ exact | the 505 track listing comes through MODS `tableOfContents`, the 511 credits through `note type="performers"`, each with its `:canon/note-kind` |
 
 ## What diverges (MODS carries more, and flattens differently)
 
@@ -28,9 +29,10 @@ Asserted in the eval, not hidden — convergence is on the spine *through a stan
 **not** round-trip equality. The two importers have different scopes and MODS is the
 richer interchange format:
 
-- **agent.** Path B folds the date `namePart` into the name (`Charles, Ray 1930-`)
-  *and* promotes `originInfo/publisher` to a second agent (`Atlantic`); Path A keeps
-  only the 700 $a name (`Charles, Ray,`). Two defensible flattenings of one record.
+- **agent.** Both paths carry the publisher as a second agent: Path A from 260 $b
+  with its ISBD comma (`Atlantic,`), Path B from `originInfo/publisher` (`Atlantic`).
+  Path B also folds the date `namePart` into the name (`Charles, Ray 1930-`) where
+  Path A keeps the 700 $a name (`Charles, Ray,`). Two defensible flattenings.
 - **date.** Path B also carries the MARC-*coded* normalised form (`1957`;
   `1994`/`9999`) the LoC stylesheet emits as a second `dateIssued`; Path A keeps only
   the transcribed 260 $c.
@@ -39,14 +41,12 @@ richer interchange format:
   control numbers (035) and routes 856 $u to a *digital object*, not an identifier.
   (So in Path B the access URLs appear as *both* identifier and digital object — the
   LoC MODS duplicates 856 $u into `<identifier type="uri">` and `<location><url>`.)
-- **note.** Path A keeps the 505 track listing; the LoC stylesheet routes it to
-  `<tableOfContents>`, which the MODS floor does not map (ADR 0003) → dropped in B.
 
 ## Reading it honestly
 
 The headline is **the documentary spine converges through an external standard** —
 strongest on `title` (exact, and dependent on a real piece of importer logic), and
-holding on the LCCN, the transcribed date, and the digital objects. The divergences
+holding on the LCCN, the transcribed date, the notes and the digital objects. The divergences
 are not failures; they are the two importers' different scopes made visible, and a
 demonstration that the MODS importer handles genuine LoC output (modsCollection,
 nonSort, typed nameParts, dual dateIssued) — shapes the hand-written fixtures only

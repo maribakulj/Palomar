@@ -85,7 +85,7 @@
 (deftest the-plugin-conforms-and-composes-with-the-other-spokes
   (testing "MODS is a well-formed plugin; its mapping ids don't collide with DC/MARC21"
     (is (= :palomar/mods (:id mods/plugin)))
-    (is (= 9 (count (:mapping mods/plugin))))               ; +uniform-title (bridging)
+    (is (= 11 (count (:mapping mods/plugin))))              ; +uniform-title, +contents, +performers
     (let [reg (reduce plug/register plug/empty-registry [mods/plugin dc/plugin marc21/plugin])]
       (is (some? (mapping/compile-mappings (plug/all-mappings reg)
                                            (plug/effective-transforms reg)))))))

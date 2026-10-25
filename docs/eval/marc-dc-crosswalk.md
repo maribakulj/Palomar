@@ -26,12 +26,13 @@ Element types emitted over the 2-record sample (DCMES local names, with counts):
 | `description`  | 7 | 5 | shared — oracle sweeps a wider 5xx block (and double-counts 520) |
 | `identifier`   | 2 | 3 | shared *type*, **disjoint values** (provenance diverges) |
 | `language`     | 2 | 0 | **gap** |
-| `publisher`    | 2 | 0 | **gap** |
+| `publisher`    | 2 | 2 | shared — Palomar's 260 $b is in the oracle's, which prepends the place ($a) |
 | `subject`      | 6 | 0 | **gap** |
 | `type`         | 2 | 0 | **gap** |
 
-**Element-type coverage: 4 / 9 exactly shared**, plus the oracle's `creator` agents
-emitted as `contributor`. Shared spine = `title date description identifier`. The
+**Element-type coverage: 5 / 9 exactly shared**, plus the oracle's `creator` agents
+emitted as `contributor`. Shared spine = `title date description identifier
+publisher`. The
 only DC element Palomar emits that the oracle does not is `contributor`, and its
 values are the oracle's creators (asserted by the eval).
 
@@ -41,7 +42,8 @@ only in an added entry — a 700 performer (`$4 prf`) and a 710 — with no 1XX 
 entry. The LoC stylesheet flattens all 1XX/7XX to `dc:creator`; Palomar now keeps
 the MARC responsibility and emits added entries as `dc:contributor`, which matches
 the DCMES definitions. The drop from 5 to 4 is that deliberate divergence, not lost
-data: the same two agents are exported.
+data: the same two agents are exported. The MARC21 spoke then mapped 260 $b to an
+agent with role `:publisher`, and `publisher` joined the shared spine (4 → 5).
 
 ## Reading the result honestly
 
@@ -50,8 +52,7 @@ once, and the eval asserts each:
 
 1. **The gap is the coded / controlled axes, by design.** `language` (008/35-37) and
    `type` (leader 06/07) are *coded* fixed fields; `subject` (6xx) is a *controlled
-   vocabulary*; `publisher` (260 $a$b) is not mapped by the MARC21 spoke yet (the
-   floor can now carry a publisher role, `:canon/role :publisher`). ADR 0003 scopes the canonical floor to
+   vocabulary*. ADR 0003 scopes the canonical floor to
    **transcribed documentary statements** — title, creator name, date, note,
    identifier — and deliberately omits coded/controlled fields. The oracle *decodes*
    them; Palomar drops them at import. Closing this gap is a future controlled-vocab /
@@ -68,7 +69,7 @@ once, and the eval asserts each:
    oracle's `title` carries the GMD `[sound recording]` ($h); its agent carries
    the `prf` relator code and the `1930-` date ($4, $d) concatenated into the name
    string. Palomar strips to the proper title and the controlled name. So Palomar is
-   **not a strict subset** of the oracle — on these fields it is cleaner; on the four
+   **not a strict subset** of the oracle — on these fields it is cleaner; on the three
    axes above it is thinner.
 
 ## Offline caveat

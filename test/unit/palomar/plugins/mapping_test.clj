@@ -639,6 +639,18 @@
                         (= :canon/lang (-> % :value :predicate)))
                   prods))))))
 
+(deftest qualified-mapping-renames-only-its-own-fields-coords
+  (testing "a fragment of another field with the same coord is left to that field's rule"
+    (let [cr     (mapping/compile-mapping qualified-mapping stdlib)
+          record (update (multilingual-record :dc/title :xml/lang [["Hello" "en"]])
+                         :assertions conj
+                         (model/assertion {:subject :frag/other :predicate :dc/description :value "x"})
+                         (model/assertion {:subject :frag/other :predicate :xml/lang :value "fr"}))
+          langs  (->> (rules/apply-rule cr record)
+                      (filter #(= :canon/lang (-> % :value :predicate)))
+                      (map (comp :subject :value)))]
+      (is (= [:frag/f0] langs)))))
+
 ;; ---------------------------------------------------------------------------
 ;; Runtime integration
 ;; ---------------------------------------------------------------------------

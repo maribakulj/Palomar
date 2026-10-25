@@ -51,7 +51,7 @@
   (testing "245/700/260/010 of the Ray Charles record reach canonical (trimmed)"
     (let [canon (normalize (by-id :marc/r5637241))]
       (is (= #{"The Great Ray Charles"} (literals canon :canon/title)))
-      (is (= #{"Charles, Ray,"} (literals canon :canon/agent)))         ; 700 $a
+      (is (= #{"Charles, Ray," "Atlantic,"} (literals canon :canon/agent))) ; 700 $a, 260 $b
       (is (= #{"[1957?]"} (literals canon :canon/date)))                ; 260 $c
       (is (= #{"91758335"} (literals canon :canon/identifier)))         ; 010 $a, padding trimmed
       (is (= 3 (count (literals canon :canon/note))))                   ; 500 + 505 + 511
@@ -61,7 +61,7 @@
   (testing "the White House record's 856 $u maps to :canon/digital-object"
     (let [canon (normalize (by-id :marc/r12149120))]
       (is (= #{"The White House"} (literals canon :canon/title)))
-      (is (= #{"White House Web Team."} (literals canon :canon/agent)))  ; 710 $a
+      (is (= #{"White House Web Team." "White House Web Team,"} (literals canon :canon/agent))) ; 710 $a, 260 $b
       (is (contains? (literals canon :canon/digital-object) "http://www.whitehouse.gov")))))
 
 (deftest projects-to-the-wemi-pivot-and-rdf
@@ -112,7 +112,7 @@
   (testing "MARC21 is a well-formed ADR 0007 plugin whose mapping compiles cleanly"
     (is (= :palomar/marc21 (:id marc21/plugin)))
     (is (fn? (:importer marc21/plugin)))
-    (is (= 18 (count (:mapping marc21/plugin))))           ; +240 uniform-title (bridging)
+    (is (= 19 (count (:mapping marc21/plugin))))           ; +240 uniform-title, +260 $b publisher
     (let [reg (plug/register plug/empty-registry marc21/plugin)]
       (is (some? (mapping/compile-mappings (plug/all-mappings reg)
                                            (plug/effective-transforms reg)))))))

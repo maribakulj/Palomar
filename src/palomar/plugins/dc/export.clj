@@ -89,13 +89,9 @@
            (str/join "\n" lines)
            "\n</metadata>"))))
 
-(defn- expressed?
-  "Predicates the DC export writes: its canonical fields and their coords, and
-   the DC spoke's own natives (rebuilt from the floor on a DC round trip)."
-  [p]
-  (or (contains? #{:canon/title :canon/agent :canon/role :canon/date :canon/identifier
-                   :canon/relation :canon/note :canon/lang :xml/lang} p)
-      (= "dc" (namespace p))))
+(def ^:private written
+  "The canonical fields and coords the DC export writes."
+  (into #{:canon/role :canon/lang} (map first) canon->dc))
 
 (defn export-losses
   "Export-edge loss (ADR 0015) for the canonical→DC projection: agents whose role
@@ -118,7 +114,7 @@
                           :edge         :export
                           :source-field :canon/relation
                           :message      "relation/source distinction not recoverable — emitted as dc:relation"})))
-        (cov/unexpressed record expressed? "Dublin Core")))
+        (cov/unexpressed record written "Dublin Core")))
 
 (defn exporter
   "ADR 0007 exporter: render the canonical view of `records` as Dublin Core XML

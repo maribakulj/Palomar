@@ -24,7 +24,7 @@
    |-----------------------------------------|----------------------|
    | `245 $a`                                | `:canon/title`       |
    | `240 $a`                                | `:canon/uniform-title` |
-   | `100/110/111 $a`, `700/710 $a`          | `:canon/agent`       |
+   | `100/110/111 $a`, `700/710 $a`, `260 $b` | `:canon/agent`      |
    | `260/264 $c`                            | `:canon/date`        |
    | `010/020/022/035 $a`                    | `:canon/identifier`  |
    | `856 $u`                                | `:canon/digital-object` |
@@ -38,7 +38,7 @@
    ## Scope (V1)
 
    - One Record per `<record>`; id `:marc/r<001>` from the control number.
-   - Import only; a canonical→MARC21 exporter is a later slice.
+   - The canonical→MARC21 exporter is `palomar.plugins.marc21.export`.
    - Leader/008 fixed-field decoding and indicator semantics are out of scope."
   (:require [clojure.data.xml :as xml]
             [palomar.plugins.marcxml :as marcxml]
@@ -74,8 +74,10 @@
    Several MARC fields collapse onto one canonical predicate (the agent fields,
    the identifier flavours). The agents keep their responsibility as a
    `:canon/role` coord: 1XX main entries are `:creator`, 7XX added entries
-   `:contributor`, so only a main entry keys the Work. Relator codes ($4/$e)
-   are not read yet."
+   `:contributor`, 260 $b `:publisher`, so only a main entry keys the Work.
+   264 $b is not read: its second indicator says whether it names a publisher,
+   a distributor or a manufacturer, and indicators are not captured. Relator
+   codes ($4/$e) are not read yet."
   [{:mapping/id :map/marc21-title :mapping/from :marc21/f245_a :mapping/to :canon/title
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-uniform-240 :mapping/from :marc21/f240_a :mapping/to :canon/uniform-title
@@ -95,6 +97,9 @@
    {:mapping/id :map/marc21-added-corporate-710 :mapping/from :marc21/f710_a :mapping/to :canon/agent
     :mapping/transform [:trim]
     :mapping/qualifier {:value :contributor :as :canon/role}}
+   {:mapping/id :map/marc21-publisher-260 :mapping/from :marc21/f260_b :mapping/to :canon/agent
+    :mapping/transform [:trim]
+    :mapping/qualifier {:value :publisher :as :canon/role}}
    {:mapping/id :map/marc21-date-260 :mapping/from :marc21/f260_c :mapping/to :canon/date
     :mapping/transform [:trim]}
    {:mapping/id :map/marc21-date-264 :mapping/from :marc21/f264_c :mapping/to :canon/date

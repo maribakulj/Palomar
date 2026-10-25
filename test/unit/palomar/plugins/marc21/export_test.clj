@@ -2,7 +2,7 @@
   "Round-trip tests (WP-4): MARC21 → canonical floor → MARC21. The real LoC Ray
    Charles record imports, normalises to the floor, and exports back to MARCXML;
    the test pins down what the *pivot* preserves (the bibliographic subset) and
-   what it costs (20 native fields the floor never carried + 4 many-to-one
+   what it costs (19 native fields the floor never carried + 3 many-to-one
    collapses, ADR 0015) — then proves the trip is id-stable and idempotent."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
@@ -72,7 +72,7 @@
       (is (= out1 out2))                              ; stable after the first pass
       (testing "the surviving floor values are unchanged"
         (is (= #{"The Great Ray Charles"} (floor-literals c2 :canon/title)))
-        (is (= #{"Charles, Ray,"} (floor-literals c2 :canon/agent)))
+        (is (= #{"Charles, Ray," "Atlantic,"} (floor-literals c2 :canon/agent)))
         (is (= #{"91758335"} (floor-literals c2 :canon/identifier)))))))
 
 (deftest pivot-dropped-fields-excludes-the-reconstructed-001
@@ -83,12 +83,12 @@
       (is (contains? (set (mex/pivot-dropped-fields canon)) :marc21/f300_a))))) ; physical
 
 (deftest the-round-trip-loss-report-quantifies-the-whole-gap
-  (testing "20 floor-coverage drops (import) + 3 collapses (export) = the trip's loss"
+  (testing "19 floor-coverage drops (import) + 3 collapses (export) = the trip's loss"
     (let [canon  (->canonical fixture :marc/r5637241)
           report (lr/conversion-report (mex/export-losses canon) {:records 1})]
-      (is (= 20 (get-in report [:by-edge :import :total])))   ; the leader is now captured, hence reported
+      (is (= 19 (get-in report [:by-edge :import :total])))   ; the leader is now captured, hence reported
       (is (= 3 (get-in report [:by-edge :export :total])))
-      (is (= 20 (get-in report [:by-category :dropped])))
+      (is (= 19 (get-in report [:by-category :dropped])))
       (is (contains? (set (mex/pivot-dropped-fields canon)) :marc21/leader))
       (is (= 3 (get-in report [:by-category :under-specified])))
       (testing "the collapses name the multi-source canonical predicates"
@@ -132,3 +132,18 @@
       (is (re-find #"tag=\"260\"[^>]*><subfield code=\"b\">Gallimard<" out))
       (is (not (str/includes? out "tag=\"100\"")))
       (is (not (str/includes? out "tag=\"700\""))))))
+
+(deftest the-imprint-is-one-260-and-fields-are-in-tag-order
+  (testing "a creator who is also the publisher keeps both 100 and 260 $b; $b and $c share one 260 (audit S4/S8)"
+    (let [xml (str "<collection xmlns=\"http://www.loc.gov/MARC21/slim\"><record>"
+                   "<controlfield tag=\"001\">9</controlfield>"
+                   "<datafield tag=\"260\" ind1=\" \" ind2=\" \"><subfield code=\"b\">Hugo, Victor</subfield>"
+                   "<subfield code=\"c\">1862</subfield></datafield>"
+                   "<datafield tag=\"100\" ind1=\"1\" ind2=\" \"><subfield code=\"a\">Hugo, Victor</subfield></datafield>"
+                   "<datafield tag=\"245\" ind1=\"1\" ind2=\"0\"><subfield code=\"a\">Les Misérables</subfield></datafield>"
+                   "</record></collection>")
+          out (mex/->marcxml (->canonical xml nil))]
+      (is (re-find #"tag=\"100\"[^>]*><subfield code=\"a\">Hugo, Victor<" out))
+      (is (re-find #"tag=\"260\"[^>]*><subfield code=\"b\">Hugo, Victor</subfield><subfield code=\"c\">1862</subfield></datafield>" out))
+      (is (= 1 (count (re-seq #"tag=\"260\"" out))))
+      (is (= ["100" "245" "260"] (map second (re-seq #"datafield tag=\"(\d+)\"" out)))))))

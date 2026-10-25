@@ -173,10 +173,8 @@
    ;; is emitted — is named (audit S11)
    (cov/unexpressed record
                     (if (seq (missing-required record))
-                      (constantly false)
-                      #(or (contains? emitted-predicates %)
-                           (contains? #{:canon/lang :canon/width :canon/height} %)
-                           (= "iiif" (namespace %))))
+                      #{}
+                      (into emitted-predicates #{:canon/lang :canon/width :canon/height}))
                     "IIIF")
    (when (> (count (canon-literals record :canon/identifier)) 1)
      [(dx/loss {:category     :dropped
