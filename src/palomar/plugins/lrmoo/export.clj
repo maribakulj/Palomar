@@ -89,11 +89,29 @@
    Manifestation, so the string hangs on a Nomen the entity is identified by:
    entity —P1_is_identified_by→ Nomen (F12) —R33_has_string→ \"v\". In the IR
    `R33` on an entity stays a shorthand for that path."
-  [s-iri v]
+  [s-iri v lang]
   (let [n (nomen-iri s-iri v)]
     [[s-iri identified-by {:iri n}]
      [n rdf-type {:iri nomen-class}]
-     [n (lrmoo/iri :lrmoo/R33_has_string) {:lit v}]]))
+     [n (lrmoo/iri :lrmoo/R33_has_string) (cond-> {:lit v} lang (assoc :lang lang))]]))
+
+(defn- title-langs
+  "String → language for the record's language-qualified canonical titles: a
+   `:canon/title` or `:canon/uniform-title` fragment carrying `:canon/lang`. An
+   entity string equal to such a title takes its language (audit S31); a string
+   with two different languages takes none."
+  [record]
+  (let [by   (group-by :subject (:assertions record))
+        lang (fn [fid] (some #(when (= :canon/lang (:predicate %)) (:value %)) (by fid)))
+        hits (for [a (:assertions record)
+                   :when (and (#{:canon/title :canon/uniform-title} (:predicate a)) (string? (:value a)))
+                   :let  [l (lang (:subject a))]
+                   :when (string? l)]
+               [(:value a) l])]
+    (into {} (for [[v ls] (group-by first hits)
+                   :let  [ls (distinct (map second ls))]
+                   :when (= 1 (count ls))]
+               [v (first ls)]))))
 
 (defn triples
   "The LRMoo view of `record` as RDF triples. Each WEMI entity is typed to its
@@ -109,6 +127,7 @@
   ([record {:keys [certified-only?]}]
    (let [idx     (iri-index record)
          iri     (fn [id] (or (get idx id) (entity-iri id)))
+         langs   (title-langs record)
          as      (cond->> (:assertions record)
                    certified-only? (filterv model/asserted?))
          view-as (filterv #(viewable-predicate? (:predicate %)) as)
@@ -135,7 +154,7 @@
                     [[(iri (:subject a)) (term-iri (:predicate a)) {:iri (iri (:value/target v))}]]
 
                     (= :lrmoo/R33_has_string (:predicate a))
-                    (string-triples (iri (:subject a)) v)
+                    (string-triples (iri (:subject a)) v (get langs v))
 
                     :else
                     [[(iri (:subject a)) (term-iri (:predicate a)) {:lit v}]])))
@@ -149,13 +168,20 @@
       (str/replace "\r" "\\r")
       (str/replace "\t" "\\t")))
 
+(defn- literal-suffix
+  "A literal's language tag (`@fr`) or datatype (`^^<…>`), as N-Triples/Turtle write it."
+  [o]
+  (cond (:lang o)     (str "@" (:lang o))
+        (:datatype o) (str "^^<" (:datatype o) ">")
+        :else         ""))
+
 (defn- nt-object [o]
   (if (:iri o)
     (str "<" (:iri o) ">")
-    (str "\"" (nt-escape (:lit o)) "\"")))
+    (str "\"" (nt-escape (:lit o)) "\"" (literal-suffix o))))
 
 (defn render-ntriples
-  "Render a seq of `[s p o]` triples (o = `{:iri _}` | `{:lit _}`) as N-Triples,
+  "Render a seq of `[s p o]` triples (o = `{:iri _}` | `{:lit _ :lang :datatype}`) as N-Triples,
    one `<s> <p> o .` per line. Reused by alternative projections (e.g. the CRM
    down-projection) that augment the triple seq before rendering."
   [triples]
@@ -193,7 +219,7 @@
   (some (fn [[pfx ns]] (when (str/starts-with? iri ns) pfx)) rdf-prefixes))
 
 (defn- ttl-iri [iri] (or (compact-iri iri) (str "<" iri ">")))
-(defn- ttl-term [o] (if (:iri o) (ttl-iri (:iri o)) (str "\"" (nt-escape (:lit o)) "\"")))
+(defn- ttl-term [o] (if (:iri o) (ttl-iri (:iri o)) (str "\"" (nt-escape (:lit o)) "\"" (literal-suffix o))))
 
 (defn render-turtle
   "Render a `[s p o]` triple seq as Turtle: `@prefix` headers for the namespaces
@@ -228,7 +254,11 @@
   (when (seq triples)
     (let [by-subj (group-by first triples)
           add     (fn [m k v] (update m k (fn [ex] (cond (nil? ex) v (vector? ex) (conj ex v) :else [ex v]))))
-          term    (fn [o] (if (:iri o) {"@id" (or (compact-iri (:iri o)) (:iri o))} (:lit o)))
+          term    (fn [o] (cond
+                            (:iri o)      {"@id" (or (compact-iri (:iri o)) (:iri o))}
+                            (:lang o)     {"@value" (:lit o) "@language" (:lang o)}
+                            (:datatype o) {"@value" (:lit o) "@type" (:datatype o)}
+                            :else         (:lit o)))
           node    (fn [s]
                     (reduce (fn [acc [_ p o]]
                               (if (= p rdf-type)

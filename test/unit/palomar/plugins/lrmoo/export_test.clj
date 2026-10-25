@@ -4,8 +4,10 @@
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [palomar.convert :as convert]
             [palomar.model :as model]
-            [palomar.plugins.lrmoo.export :as export]))
+            [palomar.plugins.lrmoo.export :as export]
+            [palomar.plugins.lrmoo.ntriples :as nt]))
 
 (def rec
   (model/record
@@ -201,3 +203,18 @@
                                                               :value "t" :status :proposed})]})]
           (is (= "" (export/->turtle p {:certified-only? true})))
           (is (= "" (export/->jsonld p {:certified-only? true}))))))))
+
+;; --- language-tagged literals (audit S31) ------------------------------------
+
+(deftest a-titles-language-reaches-the-rdf-literal
+  (let [{:keys [records]} (convert/to-wemi :dc {:record-id :dc/x}
+                                           (slurp "test/fixtures/documentary/dublin-core/w3c_dc_example1.xml"))
+        rec (first records)
+        nt  (export/->ntriples rec)]
+    (testing "N-Triples: the Nomen's string carries @en, read back by the RDF 1.1 reader"
+      (is (str/includes? nt "\"Dublin Core Tutorial\"@en"))
+      (is (some #(= {:lit "Dublin Core Tutorial" :lang "en"} (nth % 2))
+                (nt/parse nt))))
+    (testing "Turtle and JSON-LD carry it too"
+      (is (str/includes? (export/->turtle rec) "\"Dublin Core Tutorial\"@en"))
+      (is (str/includes? (export/->jsonld rec) "\"@language\":\"en\"")))))
