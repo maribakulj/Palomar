@@ -33,6 +33,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.plugins.agents :as agents]
+            [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.marc21 :as marc21]))
 
 (def canon->marc
@@ -131,12 +132,26 @@
        distinct
        (sort-by str)))
 
+(def ^:private written-canon
+  "The canonical fields and coords the MARC21 export writes (`canon->marc`; the
+   role picks 100/700/260 $b)."
+  (into #{:canon/role} (map first) canon->marc))
+
+(defn- expressed?
+  "What the MARC21 export accounts for itself: the canonical fields it writes,
+   and every `:marc21/*` native (`pivot-dropped-fields` reports the unmapped ones)."
+  [p]
+  (or (contains? written-canon p) (= "marc21" (namespace p))))
+
 (defn export-losses
   "Loss for the canonical→MARC round-trip (ADR 0015): the floor-coverage drops
-   (`:import :dropped`, per native field the floor never carried) and the
-   many-to-one collapses (`:export :under-specified`)."
+   (`:import :dropped`, per native field the floor never carried), the
+   many-to-one collapses (`:export :under-specified`), and one `:export :dropped`
+   per other predicate the export does not write (`export-coverage/unexpressed`:
+   a relation, a language, another spoke's native fields)."
   [record]
   (concat
+   (cov/unexpressed record expressed? "MARC21")
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

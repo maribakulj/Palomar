@@ -137,9 +137,12 @@
    `record-fields?`, the record-level canonical fields (creators, publishers,
    notes, images, identifiers) attach to it."
   [record {:keys [manif expr work]} record-fields?]
-  (let [title      (or (title-of record (:id manif))
-                       (and expr (title-of record expr))
-                       (and work (title-of record work)))
+  (let [expr-title (when expr (title-of record expr))
+        work-title (when work (title-of record work))
+        title      (or (title-of record (:id manif)) expr-title work-title)
+        ;; the Expression folds into this text, so its own title, when it differs,
+        ;; is a further Name of it rather than a silent loss
+        other-name (when (and expr-title (not= expr-title title)) (name-obj expr-title))
         creators   (when record-fields? (agents/creators record))
         publishers (when record-fields? (agents/with-role record :publisher))
         notes      (when record-fields? (canon-vals record :canon/note))
@@ -151,13 +154,15 @@
              "id"       (text-iri manif)
              "type"     "LinguisticObject"
              "_label"   (or title (text-iri manif))}
-      (or title (seq idents)) (assoc "identified_by" (into (if title [(name-obj title)] []) idents))
+      (or title (seq idents)) (assoc "identified_by" (-> (if title [(name-obj title)] [])
+                                                         (cond-> other-name (conj (dissoc other-name "classified_as")))
+                                                         (into idents)))
       (seq creators)          (assoc "created_by" {"type" "Creation"
                                                    "carried_out_by" (persons record creators)})
       (seq publishers)        (assoc "used_for" [(publishing publishers)])
       work                    (assoc "part_of" [(cond-> {"id" (export/entity-iri work)
                                                          "type" "PropositionalObject"}
-                                                  title (assoc "_label" title))])
+                                                  (or work-title title) (assoc "_label" (or work-title title)))])
       (seq notes)             (assoc "referred_to_by" (mapv note-obj notes))
       (seq digis)             (assoc "representation" (mapv digital-obj digis)))))
 

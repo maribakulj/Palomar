@@ -134,7 +134,9 @@
       (testing "namespaces survive on both keys and vector values (no collisions)"
         ;; data.json's default key-fn is `name`, which would drop the namespace;
         ;; the report qualifies them, so :canon/date -> \"canon/date\", not \"date\".
-        (is (every? #(str/starts-with? % "canon/") (get m "source-fields")))
+        (is (every? #(re-find #"^[a-z0-9]+/" %) (get m "source-fields")))
+        (is (some #(str/starts-with? % "canon/") (get m "source-fields")))
+        (is (some #(str/starts-with? % "marc21/") (get m "source-fields")))   ; the MARC fields DC cannot write
         (is (every? #(str/includes? % "/")
                     (keys (get-in m ["by-edge" "import" "by-source-field"]))))))))
 

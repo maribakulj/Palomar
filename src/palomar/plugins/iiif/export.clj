@@ -37,7 +37,8 @@
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
-            [palomar.model :as model]))
+            [palomar.model :as model]
+            [palomar.plugins.export-coverage :as cov]))
 
 (def ^:private context "http://iiif.io/api/presentation/3/context.json")
 
@@ -144,16 +145,6 @@
 
 ;; --- loss accounting --------------------------------------------------------
 
-(defn- present-content-predicates
-  "Distinct `:canon/*` content predicates on `record` (excluding the qualifier
-   coords and the loss marker)."
-  [record]
-  (->> (:assertions record)
-       (map :predicate)
-       (filter #(= "canon" (namespace %)))
-       (remove #{:canon/lang :canon/role :canon/width :canon/height :canon/loss-marker})
-       distinct))
-
 (defn export-losses
   "Loss for the canonical→IIIF projection (ADR 0015): a record whose manifest is
    not emitted (`:dropped` warning naming the missing MUSTs), images with no
@@ -178,13 +169,15 @@
                 :source-field :canon/digital-object
                 :message      (str (count n) " digital object(s) with no canvas extent (width/height) — "
                                    "a IIIF Canvas must have one, so they are not placed")})])
-   (for [p     (present-content-predicates record)
-         :when (not (contains? emitted-predicates p))]
-     (dx/loss {:category     :dropped
-               :subject      (:id record)
-               :edge         :export
-               :source-field p
-               :message      (str (name p) " has no home in a IIIF manifest — dropped on export")}))
+   ;; every predicate the manifest does not write — all of them when no manifest
+   ;; is emitted — is named (audit S11)
+   (cov/unexpressed record
+                    (if (seq (missing-required record))
+                      (constantly false)
+                      #(or (contains? emitted-predicates %)
+                           (contains? #{:canon/lang :canon/width :canon/height} %)
+                           (= "iiif" (namespace %))))
+                    "IIIF")
    (when (> (count (canon-literals record :canon/identifier)) 1)
      [(dx/loss {:category     :dropped
                 :subject      (:id record)

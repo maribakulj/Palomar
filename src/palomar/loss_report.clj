@@ -13,7 +13,11 @@
    Honest scope: this reports the loss measured at both edges of one conversion.
    A *full* round-trip that re-imports B and diffs it against A needs a reverse
    importer (future); the per-field survival account here is the assemblable,
-   institution-useful 90 %."
+   institution-useful 90 %.
+
+   This report aggregates what the components *declare*; it is not by itself
+   evidence that nothing else was lost. `palomar.fidelity` checks that claim
+   occurrence by occurrence against the rendered output (audit S11/S12)."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]))
 
