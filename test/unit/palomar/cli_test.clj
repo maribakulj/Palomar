@@ -334,6 +334,20 @@
         (is (= "PREVIOUS OUTPUT" (slurp out)))
         (finally (.delete (java.io.File. out)))))))
 
+(deftest convert-stream-refuses-to-overwrite-its-input
+  (testing "--out naming the input file (even by another path) is refused and the input is untouched"
+    (let [dir   (str (System/getProperty "java.io.tmpdir") "/palomar-same-" (System/nanoTime))
+          input (str dir "/in.xml")]
+      (try
+        (.mkdirs (java.io.File. dir))
+        (spit input (slurp marc21))
+        (let [{:keys [exit err]} (cli/run ["convert" input "--from" "marc21" "--to" "ntriples"
+                                           "--stream" "--out" (str dir "/./in.xml")])]
+          (is (= 2 exit))
+          (is (str/includes? err "is the input file"))
+          (is (= (slurp marc21) (slurp input))))
+        (finally (.delete (java.io.File. input)) (.delete (java.io.File. dir)))))))
+
 (deftest convert-stream-fails-atomically-leaving-no-partial-out
   (testing "a malformed input mid-stream: exit 2 and NO --out file is left (all-or-nothing, like batch)"
     (let [bad (str (System/getProperty "java.io.tmpdir") "/palomar-bad-" (System/nanoTime) ".xml")

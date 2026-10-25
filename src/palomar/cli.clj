@@ -244,6 +244,11 @@
     (not (.exists (java.io.File. ^String input)))
     {:exit 2 :out "" :err (str "input file not found: " input)}
 
+    ;; the stream is read while --out is written: the same file would be replaced
+    ;; by the output at the end, losing the source (audit S40)
+    (= (.getCanonicalPath (java.io.File. ^String input)) (.getCanonicalPath (java.io.File. ^String out)))
+    {:exit 2 :out "" :err (str "convert --stream: --out is the input file (" input "); choose another path")}
+
     (not (convert/streamable? (keyword from)))
     {:exit 2 :out "" :err (str "--stream is not supported for " from
                                " (streamable: " (str/join " " (map name (convert/streamable-sources))) ")")}
