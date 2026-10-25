@@ -249,8 +249,8 @@ Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as
   and the full CLI (`convert · validate · report · inspect · reconcile ·
   apply-repairs · conformance · formats`).
 - **WP-4 spokes** — seven importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF)
-  reach the pivot and project to ten targets (RDF · CIDOC-CRM · Linked Art ·
-  the floor formats); four floor round-trips; Linked Art validated against the
+  reach the pivot and project to eleven targets (RDF · CIDOC-CRM · Linked Art ·
+  the floor formats · PROV-O); four floor round-trips; Linked Art validated against the
   official draft-2020-12 schema.
 - **WP-6 conformance** — the mechanism + three profiles (Linked Art / IIIF / BnF
   INTERMARC); institutional *certification* on real samples is partnership-gated.

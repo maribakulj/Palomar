@@ -1,6 +1,6 @@
 # 0011 — Fragments as the canonical home for qualified values
 
-- Status: Accepted
+- Status: Accepted (normalize-minted fragments added by [ADR 0021](./0021-responsibility-kind-and-extent-qualifiers.md))
 - Date: 2026-05-27
 
 ## Context

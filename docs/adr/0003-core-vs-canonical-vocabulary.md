@@ -1,6 +1,6 @@
 # 0003 — Structural vocabulary at core, documentary vocabulary in a plugin
 
-- Status: Accepted
+- Status: Accepted (qualifier coords extended by [ADR 0021](./0021-responsibility-kind-and-extent-qualifiers.md))
 - Date: 2026-04-17
 
 ## Context
