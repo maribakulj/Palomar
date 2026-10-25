@@ -85,7 +85,7 @@
         ls (dx/losses (:diagnostics r))]
     (is (seq ls))
     (is (every? #(= :loss/dropped (:code %)) ls))
-    (is (every? #(= :import (get-in % [:detail :loss/edge])) ls))
+    (is (every? #(= :projection (get-in % [:detail :loss/edge])) ls))
     (testing "mapped fields are NOT reported as loss, dropped ones are"
       (let [fields (set (map #(get-in % [:detail :loss/source-field]) ls))]
         (is (not (contains? fields :intermarc/f145_3)))   ; projected -> Expression id
@@ -95,7 +95,7 @@
       (let [s (dx/loss-summary (:diagnostics r))]
         (is (pos? (:total s)))
         (is (= (:total s) (get-in s [:by-category :dropped])))
-        (is (pos? (get-in s [:by-edge :import])))))
+        (is (pos? (get-in s [:by-edge :projection])))))
     (testing "loss diagnostics keep the record consistent (subject = record id)"
       (is (model/record-consistent? r)))))
 

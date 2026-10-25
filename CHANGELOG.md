@@ -18,6 +18,12 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Loss aspects and relation fidelity** (ADR 0033): a loss may name what it
+  touched (`:value`, `:relation`, `:qualifier`, `:class`, `:granularity`,
+  `:provenance`), counted `:by-aspect` in the report; the WEMI projections
+  report on a new `:projection` edge; a stating target reports the source
+  evidence it does not write; and the fidelity audit checks, for the
+  N-Triples family, that every relation survives (`:relations`).
 - **Graded alignments** (ADR 0032): `reconcile/align-agents` puts agent
   proposals into the records as `:proposed` `skos:exactMatch` /
   `skos:closeMatch` claims, curated, exported (SKOS in RDF, by status graph in

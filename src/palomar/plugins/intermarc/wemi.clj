@@ -117,7 +117,7 @@
     {:kind  :diagnostic
      :value (dx/loss {:category     :dropped
                       :subject      (:id record)
-                      :edge         :import
+                      :edge         :projection
                       :source-field p
                       :message      (str (name p) " not represented in the LRMoo view")})}))
 

@@ -63,6 +63,7 @@
                                       :opts {:record-id :dc/x}})
           fields (set (:source-fields loss))]
       (is (pos? (get-in loss [:by-edge :import :total])))
+      (is (pos? (get-in loss [:by-edge :projection :total])))
       (is (pos? (get-in loss [:by-edge :export :total])))
       (is (contains? fields :dc/subject))      ; DC report-at-ingest
       (is (contains? fields :canon/date)))))   ; not on the Linked Art profile
@@ -122,3 +123,18 @@
     (let [nt (:output (cv/export-records :ntriples (dc-wemi) {:in-force-only? true}))]
       (is (not (str/includes? nt "lrmoo/F1_Work")))
       (is (not (str/includes? nt "lrmoo/F2_Expression"))))))
+
+(deftest a-stating-target-reports-the-provenance-it-leaves-out
+  (testing "MARC values are anchored in their source; only a history target writes the anchors (ADR 0033)"
+    (let [aspect (fn [to] (get-in (cv/convert {:from :marc21 :to to :source (src :marc21)})
+                                  [:loss :by-aspect :provenance] 0))]
+      (is (pos? (aspect :ntriples)))
+      (is (pos? (aspect :mods)))
+      (is (zero? (aspect :prov)))
+      (is (zero? (aspect :trig))))))
+
+(deftest loss-aspects-name-what-a-conversion-touched
+  (let [{:keys [loss]} (cv/convert {:from :intermarc :to :crm-only :source (src :intermarc)})]
+    (is (pos? (get-in loss [:by-aspect :class] 0)) "E73 collapse and super-class typing")
+    (is (pos? (get-in loss [:by-aspect :relation] 0)) "R3/R4/R7 generalised to P130/P165/P128")
+    (is (= (:total loss) (reduce + (vals (:by-aspect loss)))))))

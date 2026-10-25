@@ -150,6 +150,7 @@
                              :subject      (:id record)
                              :edge         :export
                              :source-field kind
+                             :aspect       :class
                              :message      (str (name kind) " serialises as "
                                                 (class-superclass kind)
                                                 ", which does not identify it as a "
@@ -160,6 +161,7 @@
                               :subject      (:id record)
                               :edge         :export
                               :source-field :lrmoo/F3_Manifestation
+                              :aspect       :class
                               :message      (str "F2_Expression and F3_Manifestation both serialise as "
                                                  "E73_Information_Object; the WEMI type distinction is "
                                                  "lost in pure CRM")})])
@@ -169,6 +171,7 @@
                              :subject      (:id record)
                              :edge         :export
                              :source-field p
+                             :aspect       :relation
                              :message      (str (name p) " serialised as the generic "
                                                 (property-superproperty p))}))]
     (vec (concat generic collapse coerced))))
