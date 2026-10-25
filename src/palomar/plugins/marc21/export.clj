@@ -27,7 +27,8 @@
    Output is a `<record>` string in the MARC21slim namespace (correct XML
    escaping), re-importable through `palomar.plugins.marc21`; `001` is emitted
    from the record's `:source` (its original control number) so the trip is
-   id-stable. Indicators were not captured at ingest, so blanks are emitted. Like
+   id-stable. The floor carries no indicators (ingest keeps them only on the
+   native field fragments), so blanks are emitted. Like
    the LRMoo/DC exporters this is kept out of the plugin `:exporter` slot to avoid
    a require cycle — wiring is a later assembly step."
   (:require [clojure.string :as str]
@@ -112,9 +113,9 @@
 (defn ->marcxml
   "Render `record`'s canonical content as a MARC21slim `<record>` document, or
    `nil` if it carries nothing exportable. `001` comes from `:source` (the
-   original control number) for an id-stable round-trip. Indicators were not
-   captured at ingest, so every datafield has blank indicators (`ind1`/`ind2`
-   \" \"), which MARC reads as undefined, not as a stated value."
+   original control number) for an id-stable round-trip. The floor carries no
+   indicators, so every datafield has blank indicators (`ind1`/`ind2` \" \"),
+   which MARC reads as undefined, not as a stated value."
   [record]
   (let [ctrl  (:source record)
         lines (cond-> []
@@ -170,13 +171,21 @@
 
 (defn export-losses
   "Loss for the canonical→MARC round-trip (ADR 0015): the floor-coverage drops
-   (`:import :dropped`, per native field the floor never carried), the
+   (`:import :dropped`, per native field the floor never carried), the stated
+   indicators written blank (`:export :dropped`), the
    many-to-one collapses (`:export :under-specified`), and one `:export :dropped`
    per other predicate the export does not write (`export-coverage/unexpressed`:
    a relation, a language, another spoke's native fields)."
   [record]
   (concat
    (cov/unexpressed record written-canon "marc21" "MARC21")
+   (when (some #(some (fn [k] (not (str/blank? (get-in % [:locator k])))) [:ind1 :ind2])
+               (:fragments record))
+     [(dx/loss {:category     :dropped
+                :subject      (:id record)
+                :edge         :export
+                :source-field :marc21/indicators
+                :message      "field indicators are not carried by the floor; every datafield is written with blank indicators"})])
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

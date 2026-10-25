@@ -77,7 +77,8 @@
    `:canon/role` coord: 1XX main entries are `:creator`, 7XX added entries
    `:contributor`, 260 $b `:publisher`, so only a main entry keys the Work.
    264 $b is not read: its second indicator says whether it names a publisher,
-   a distributor or a manufacturer, and indicators are not captured. Relator
+   a distributor or a manufacturer, and the flat subfields a mapping reads do
+   not carry indicators (only the field fragment's locator does). Relator
    codes ($4/$e) are not read yet."
   [{:mapping/id :map/marc21-title :mapping/from :marc21/f245_a :mapping/to :canon/title
     :mapping/transform [:trim]}
