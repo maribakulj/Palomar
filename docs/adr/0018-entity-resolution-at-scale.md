@@ -2,7 +2,8 @@
 
 - Status: Accepted (partially implemented — the certified + fuzzy agent tiers are
   landed; the equivalence-verdict store and the live-reconciliation yield are
-  deferred, see below)
+  deferred, see below; §2 amended by [ADR 0032](./0032-graded-alignments.md):
+  verdicts are graded SKOS mapping claims, never `owl:sameAs`)
 - Date: 2026-06-02
 - Partially implemented (2026-06-04): the **certified tier** of decisions 1 and 5
   — reconcile *to an authority*, by a determinate id, never pairwise — is real for

@@ -18,6 +18,11 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Graded alignments** (ADR 0032): `reconcile/align-agents` puts agent
+  proposals into the records as `:proposed` `skos:exactMatch` /
+  `skos:closeMatch` claims, curated, exported (SKOS in RDF, by status graph in
+  the datasets) and kept in history; `reconcile/accepted-links` feeds accepted
+  exact matches to `apply-agent-links`. No `owl:sameAs` is ever written.
 - **Source evidence** (ADR 0031): each value records where it was read —
   an XPath for MARC subfields and DC/MODS elements, the canvas and `xywh`
   region for IIIF images, the source document's SHA-256 — carried through

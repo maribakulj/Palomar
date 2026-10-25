@@ -45,6 +45,7 @@
   (case (namespace k)
     "lrmoo" (lrmoo/iri k)
     "crm"   (str export/crm-base (name k))
+    "skos"  (str export/skos-base (name k))
     (str "urn:palomar:pred:" (namespace k) ":" (name k))))
 
 (defn- node-iri [idx id] (or (get idx id) (export/entity-iri id)))

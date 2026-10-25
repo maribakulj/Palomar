@@ -130,6 +130,84 @@
         (sort-by (comp - :score))
         vec)))
 
+;; ---------------------------------------------------------------------------
+;; Alignments in the IR (ADR 0032) — proposals as SKOS mapping assertions
+;; ---------------------------------------------------------------------------
+
+(def exact-score
+  "A proposal scoring at least this is put forward as `skos:exactMatch`;
+   below it, `skos:closeMatch` (ADR 0032)."
+  1.0)
+
+(defn- named-agent
+  "The local agent entity standing for the name `nm` on record `rid`: a Person
+   the record names, not yet identified (its id is scoped to the record, as
+   two records' homonyms are not the same person by name alone)."
+  [rid nm]
+  (model/entity {:id   (model/mint-entity-id :crm/E21_Person (str rid "|" nm))
+                 :kind :crm/E21_Person}))
+
+(defn align-agents
+  "Put `propose-agent-links` proposals into `records` as data (ADR 0032): for
+   each record naming a proposal's `:name`, a local agent entity for that name
+   (labelled with it), the authority entity (its `:iri` the authority id), and a
+   `:proposed` assertion between them — `:skos/exactMatch` for a certifiable
+   proposal scoring `exact-score`, `:skos/closeMatch` otherwise, the score as
+   confidence and the authority's label among its bindings. The authority is
+   the mapping's target, not an identified person: it is no `:crm/E21_Person`
+   until a curator accepts the match and `apply-agent-links` applies it. Curation then accepts or rejects it like any claim; nothing is
+   ever an `owl:sameAs`, and a rejected alignment stays in the record's history.
+   Returns the records."
+  [records proposals]
+  (let [by-name (group-by :name proposals)]
+    (mapv
+     (fn [r]
+       (let [rid   (:id r)
+             hits  (for [{nm :name} (agents/occurrences r)
+                         p (get by-name nm)
+                         :when (and (:authority-id p) (nil? (nt/iri-problem (:authority-id p))))]
+                     p)]
+         (reduce
+          (fn [r {:keys [name authority-id authority-label score certifiable?]}]
+            (let [local (named-agent rid name)
+                  ;; the authority as the alignment's target only: not an E21,
+                  ;; since a proposal must not make an identified person
+                  auth  (model/entity {:id (model/mint-entity-id :reconcile/authority authority-id)
+                                       :kind :reconcile/authority :iri authority-id})
+                  prov  (model/provenance {:pass :infer :rule :reconcile/propose-agent-link :derivation [rid]})
+                  pred  (if (and certifiable? (>= score exact-score)) :skos/exactMatch :skos/closeMatch)
+                  add   (fn [r e] (if (some #(= (:id e) (:id %)) (:entities r)) r (update r :entities (fnil conj []) e)))]
+              (-> r
+                  (add local)
+                  (add auth)
+                  (update :assertions (fnil into [])
+                          [(model/assertion {:subject (:id local) :predicate :crm/P190_has_symbolic_content
+                                             :value name :status :asserted :provenance prov})
+                           (model/assertion {:subject (:id local) :predicate pred
+                                             :value (model/reference (:id auth)) :status :proposed
+                                             :confidence (double score)
+                                             :provenance (cond-> prov authority-label (assoc :bindings {'?label authority-label}))})]))))
+          r hits)))
+     records)))
+
+(defn accepted-links
+  "The alignments a curator accepted in `records`, as `apply-agent-links` links:
+   an `:accepted` (or `:asserted`) `:skos/exactMatch` from a record's local
+   agent to an authority entity. A close match is never a link: it says the two
+   are alike, not the same."
+  [records]
+  (vec (distinct
+        (for [r records
+              :let [ents  (into {} (map (juxt :id identity)) (:entities r))
+                    names (into {} (for [a (:assertions r)
+                                         :when (= :crm/P190_has_symbolic_content (:predicate a))]
+                                     [(:subject a) (:value a)]))]
+              a (:assertions r)
+              :when (and (= :skos/exactMatch (:predicate a)) (#{:accepted :asserted} (:status a)))
+              :let [auth (ents (:value/target (:value a)))]
+              :when (and auth (:iri auth) (names (:subject a)))]
+          {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted}))))
+
 (defn apply-agent-links
   "Rewrite `records` onto shared agent nodes from `links`: `propose-agent-links`
    proposals that a curator has accepted (`:status :accepted`, or `:asserted`).
@@ -161,7 +239,7 @@
                                :when r]
                            (assoc l :reason r)))
         link-of     (fn [record]
-                      (when-not (some #(= :crm/E21_Person (:kind %)) (:entities record))
+                      (when-not (some #(and (= :crm/E21_Person (:kind %)) (:iri %)) (:entities record))
                         (some usable (agents/creators record))))
         results     (for [r records]
                       (if-let [{:keys [name authority-id]} (link-of r)]

@@ -78,17 +78,23 @@
   [x]
   (and (keyword? x) (= "crm" (namespace x))))
 
+(def skos-base "http://www.w3.org/2004/02/skos/core#")
+
 (defn- viewable-predicate?
-  "Predicates the RDF view expresses: the LRMoo WEMI vocabulary *and* the CIDOC-CRM
-   predicates the rich graph carries (e.g. `:crm/P129_is_about` for a subject). The
-   floor (`:canon/*`) and native (`:intermarc/*`) predicates are still export loss."
+  "Predicates the RDF view expresses: the LRMoo WEMI vocabulary, the CIDOC-CRM
+   predicates the rich graph carries (e.g. `:crm/P129_is_about` for a subject),
+   and the SKOS mapping properties of an alignment (`:skos/exactMatch`, ADR
+   0032). The floor (`:canon/*`) and native (`:intermarc/*`) predicates are
+   still export loss."
   [p]
-  (and (keyword? p) (contains? #{"lrmoo" "crm"} (namespace p))))
+  (and (keyword? p) (contains? #{"lrmoo" "crm" "skos"} (namespace p))))
 
 (defn- term-iri
-  "IRI of an `:lrmoo/*` or `:crm/*` term (class or property)."
+  "IRI of an `:lrmoo/*`, `:crm/*` or `:skos/*` term (class or property)."
   [k]
-  (if (crm-term? k) (str crm-base (name k)) (lrmoo/iri k)))
+  (cond (crm-term? k)               (str crm-base (name k))
+        (= "skos" (namespace k))    (str skos-base (name k))
+        :else                       (lrmoo/iri k)))
 
 (defn- typed-kind?
   "True if entity kind `k` is one the RDF view types — an LRMoo WEMI class or any
@@ -258,7 +264,8 @@
 (def ^:private rdf-prefixes
   {"crm"   "http://www.cidoc-crm.org/cidoc-crm/"
    "lrmoo" "http://iflastandards.info/ns/lrm/lrmoo/"
-   "rdf"   "http://www.w3.org/1999/02/22-rdf-syntax-ns#"})
+   "rdf"   "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   "skos"  "http://www.w3.org/2004/02/skos/core#"})
 
 (defn- compact-iri
   "`prefix:local` if `iri` sits under a known namespace, else nil."
