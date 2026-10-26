@@ -93,7 +93,7 @@
   (let [src    (slurp (fixtures :marc21))
         result (api/convert {:from :marc21 :to :ntriples :source src})
         report (:loss result)]
-    (is (= #{:output :records :loss} (set (keys result))))
+    (is (= #{:output :records :loss :deleted} (set (keys result))))
     (is (every? (set (keys report))
                 [:total :distinct-losses :by-category :by-edge :by-aspect :source-fields :records]))
     (is (= #{:output :loss :withheld} (set (keys (api/export :ntriples (pivot :marc21))))))

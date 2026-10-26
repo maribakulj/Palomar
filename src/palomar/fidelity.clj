@@ -173,6 +173,20 @@
      :reported    (count (:reported klass))
      :unaccounted (vec (:unaccounted klass))}))
 
+(defn- literals-by-subject
+  "For an RDF `doc` of target `to`: subject IRI → the normalised literals it
+   carries, directly or through an appellation it is identified by (`P1` →
+   `P190`, ADR 0022), so a value is found on its own node, not anywhere."
+  [to doc]
+  (let [ts      ((relation-parsers to) doc)
+        p1      (str export/crm-base "P1_is_identified_by")
+        direct  (reduce (fn [m [s _ o]] (if (and (:iri s) (:lit o)) (update m (:iri s) (fnil conj #{}) (norm (:lit o))) m))
+                        {} ts)
+        appells (reduce (fn [m [s p o]] (if (and (= p1 (:iri p)) (:iri o)) (update m (:iri s) (fnil conj #{}) (:iri o)) m))
+                        {} ts)]
+    (into {} (for [s (into (set (keys direct)) (keys appells))]
+               [s (into (get direct s #{}) (mapcat direct (get appells s)))]))))
+
 (defn audit-record
   "Audit one WEMI `record` exported to `to`, against the loss diagnostics it
    carries, the export's own losses and the extra `losses` (e.g. the import edge).
@@ -189,7 +203,12 @@
    (`convert/export-records`); nor are those an inference or repair pass derived
    (`export-coverage/derived?`), which copy source values checked in their own
    right. A history target (`convert/keeps-history?`, PROV-O) is checked on
-   its out-of-force assertions too, since it must record them (ADR 0025)."
+   its out-of-force assertions too, since it must record them (ADR 0025). An
+   RDF target of `relation-targets` is checked node by node: a value is present
+   only on the node of its own subject (or that node's appellation), and the
+   strings the RDF view derives are checked as well.
+   The audit observes the export with its proposals (`:with-proposals? true`):
+   it judges the exporter, and withholding them is the export's policy."
   ([to record] (audit-record to record []))
   ([to record losses]
    (if-let [decode (decoders to)]
@@ -197,17 +216,27 @@
      ;; proposals included: withholding them by default (ADR 0042) is policy,
      ;; counted in the report, not a loss of the exporter's
      (let [{:keys [output loss]} (convert/export-records to [record] {:with-proposals? true})
+           rdf?    (contains? relation-parsers to)
            seen    (if (str/blank? output) #{} (into #{} (map norm) (decode output)))
+           ;; an RDF output is checked node by node: a value counts as present
+           ;; only on its own subject (post-audit: the right text on the wrong
+           ;; resource is a loss); and the strings the view derives (a WEMI
+           ;; title) are checked too, since an exporter can misplace them
+           idx     (into {} (keep (fn [e] (when-let [i (:iri e)] [(:id e) i]))) (:entities record))
+           on      (when (and rdf? (not (str/blank? output))) (literals-by-subject to output))
+           here?   (fn [{:keys [subject value]}]
+                     (contains? (get on (or (get idx subject) (export/entity-iri subject)) #{}) (norm value)))
            all     (concat loss losses)
            checked (distinct
                     (for [a (:assertions record)
                           :when (and (string? (:value a))
                                      (or (convert/keeps-history? to) (not (model/out-of-force? a)))
-                                     (not (cov/derived? a)))]
+                                     (or (not (cov/derived? a))
+                                         (and rdf? (export/viewable-predicate? (:predicate a)))))]
                       (select-keys a [:subject :predicate :value])))
-           klass   (group-by #(cond (present? seen (:predicate %) (:value %)) :present
-                                    (reported? all (:id record) %)           :reported
-                                    :else                                    :unaccounted)
+           klass   (group-by #(cond (if rdf? (here? %) (present? seen (:predicate %) (:value %))) :present
+                                    (reported? all (:id record) %)                               :reported
+                                    :else                                                        :unaccounted)
                              checked)]
        (cond-> {:target      to
                 :checked     (count checked)

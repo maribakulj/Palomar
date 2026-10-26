@@ -60,7 +60,7 @@
 
 (defn- occurrences
   "The event-stating field occurrences of `record`: `{:fragment id :tag t
-   :locator loc :subfields {code [value evidence]}}`, in fragment order."
+   :locator loc :subfields {code [[value evidence]…]}}`, in fragment order."
   [record]
   (let [locs (into {} (map (juxt :id :locator)) (:fragments record))
         hits (for [a (:assertions record)
@@ -77,46 +77,51 @@
        :tag       tag
        :spec      (get-in field-events [ns tag])
        :locator   (locs fid)
-       :subfields (reduce (fn [m {:keys [code value ev]}] (if (contains? m code) m (assoc m code [value ev])))
+       ;; every occurrence of a code, in order: a 260 may name two places and
+       ;; two publishers, and each is part of the event (post-audit test 06)
+       :subfields (reduce (fn [m {:keys [code value ev]}] (update m code (fnil conj []) [value ev]))
                           {} hs)})))
 
 (defn- kind-of [{:keys [spec locator]}]
   (let [k (:kind spec)] (if (map? k) (get k (:ind2 locator)) k)))
 
 (defn- event-productions
-  "The productions of one field occurrence `occ` about Manifestation `manif`."
+  "The productions of one field occurrence `occ` about Manifestation `manif`:
+   the event, one time-span carrying every date of the field, and a Place and
+   an Actor for every place and agent it names."
   [rid manif occ]
   (let [{:keys [spec subfields fragment]} occ
-        prov   (fn [code] (cond-> {:pass :infer :rule :rule.events/manifestation-creation :derivation [rid]}
-                            (get-in subfields [code 1]) (assoc :evidence [(get-in subfields [code 1])])))
-        claim  (fn [s p v code] {:kind  :assertion
-                                 :value (model/assertion {:subject s :predicate p :value v :status :asserted
-                                                          :provenance (model/provenance (prov code))})})
+        prov   (fn [ev] (cond-> {:pass :infer :rule :rule.events/manifestation-creation :derivation [rid]}
+                          ev (assoc :evidence [ev])))
+        claim  (fn [s p v ev] {:kind  :assertion
+                               :value (model/assertion {:subject s :predicate p :value v :status :asserted
+                                                        :provenance (model/provenance (prov ev))})})
         entity (fn [id kind] {:kind :entity :value (model/entity {:id id :kind kind
                                                                   :provenance (model/provenance (prov nil))})})
         event  (model/mint-entity-id :lrmoo/F30_Manifestation_Creation [manif fragment])
-        value  (fn [k] (some-> (get-in subfields [(get spec k) 0]) clean))
-        date   (some-> (get-in subfields [(:date spec) 0]) str/trim not-empty)
-        place  (value :place)
-        agent  (value :agent)]
+        named  (fn [k] (distinct (for [[v ev] (get subfields (get spec k))
+                                       :let [c (clean v)]
+                                       :when (and c (not-empty (text/norm c)))]
+                                   [c ev])))
+        dates  (distinct (for [[v ev] (get subfields (:date spec))
+                               :let [d (some-> v str/trim not-empty)]
+                               :when d]
+                           [d ev]))
+        ts     (when (seq dates) (model/mint-entity-id :crm/E52_Time-Span [event (mapv first dates)]))
+        node   (fn [kind link [n ev]]
+                 (let [id (model/mint-entity-id kind [manif (text/norm n)])]
+                   [(entity id kind)
+                    (claim event link (model/reference id) ev)
+                    (claim id :crm/P190_has_symbolic_content n ev)]))]
     (concat
      [(entity event :lrmoo/F30_Manifestation_Creation)
       (claim event :lrmoo/R24_created (model/reference manif) nil)]
-     (when date
-       (let [ts (model/mint-entity-id :crm/E52_Time-Span [event date])]
-         [(entity ts :crm/E52_Time-Span)
-          (claim event :crm/P4_has_time-span (model/reference ts) (:date spec))
-          (claim ts :crm/P82_at_some_time_within date (:date spec))]))
-     (when-let [k (and place (not-empty (text/norm place)))]
-       (let [pl (model/mint-entity-id :crm/E53_Place [manif k])]
-         [(entity pl :crm/E53_Place)
-          (claim event :crm/P7_took_place_at (model/reference pl) (:place spec))
-          (claim pl :crm/P190_has_symbolic_content place (:place spec))]))
-     (when-let [k (and agent (not-empty (text/norm agent)))]
-       (let [ac (model/mint-entity-id :crm/E39_Actor [manif k])]
-         [(entity ac :crm/E39_Actor)
-          (claim event :crm/P14_carried_out_by (model/reference ac) (:agent spec))
-          (claim ac :crm/P190_has_symbolic_content agent (:agent spec))])))))
+     (when ts
+       (into [(entity ts :crm/E52_Time-Span)
+              (claim event :crm/P4_has_time-span (model/reference ts) (second (first dates)))]
+             (for [[d ev] dates] (claim ts :crm/P82_at_some_time_within d ev))))
+     (mapcat #(node :crm/E53_Place :crm/P7_took_place_at %) (named :place))
+     (mapcat #(node :crm/E39_Actor :crm/P14_carried_out_by %) (named :agent)))))
 
 (defn- runner
   "The events of `record`, when it has exactly one Manifestation to hang them on."

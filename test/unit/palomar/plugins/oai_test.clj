@@ -49,8 +49,15 @@
     (is (= ["oai:example.org:1" "oai:example.org:2"] (mapv (comp oai/record-identifier :id) records)))
     (is (= ["oai:example.org:gone"] deleted))
     (is (= "oai:example.org:1" (get-in (first records) [:provenance :source :oai :identifier])))
+    (testing "the record keeps where it came from at three levels: response, record, metadata document"
+      (let [r (first (:records (convert/to-wemi :oai {} xml)))]
+        (is (some? (get-in r [:provenance :source :sha256])) "the response")
+        (is (= "oai:example.org:1" (get-in r [:provenance :source :oai :identifier])) "the harvested record")
+        (is (re-matches #"[0-9a-f]{64}" (get-in r [:provenance :source :oai :metadata-sha256])) "the document its XPaths point into")))
+    (testing "a deleted record reaches convert's result, for a synchroniser to remove (post-audit test 07)"
+      (is (= ["oai:example.org:gone"] (:deleted (convert/convert {:from :oai :to :ntriples :source xml})))))
     (testing "and on through the pivot to any target"
-      (let [{:keys [output records]} (convert/convert {:from :oai :to :ntriples :source xml})]
+      (let [{:keys [output records]} (convert/convert {:from :oai :to :ntriples :with-proposals? true :source xml})]
         (is (= 2 records))
         (is (str/includes? output "Nadja"))
         (is (str/includes? output "Les Champs magn"))))))

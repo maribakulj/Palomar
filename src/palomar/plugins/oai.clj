@@ -8,7 +8,11 @@
    adapter is not a spoke: it unwraps the envelope, lets the spoke of the
    record's format import the metadata, and keeps the header on the record's
    provenance (`[:provenance :source :oai]`), so a converted record still says
-   which repository item it came from.
+   which repository item it came from, beside the SHA-256 of the metadata
+   document the values' XPaths point into (`:metadata-sha256`): the response
+   is one document, each record's metadata another. A deleted record is
+   reported (`:deleted`) all the way to `convert`, so a synchronisation can
+   remove it.
 
    Harvesting is the caller's: `harvest` takes the function that fetches a URL,
    so Palomar opens no connection of its own and a test, a cache or a rate
@@ -16,6 +20,7 @@
    returns the pages lazily."
   (:require [clojure.data.xml :as data-xml]
             [clojure.string :as str]
+            [palomar.model :as model]
             [palomar.spokes :as spokes]
             [palomar.xml :as rx]))
 
@@ -111,7 +116,12 @@
                    :when metadata]
                (let [{rs :records ds :diagnostics} (imp (cond-> {} (= :dc from) (assoc :record-id (record-id (:identifier header))))
                                                         metadata)]
-                 {:records     (mapv #(assoc-in % [:provenance :source :oai] header) rs)
+                 ;; three levels: the response (its digest, added by `convert`), the
+                 ;; harvested record (its header) and the metadata document the
+                 ;; values' XPaths point into (its digest)
+                 {:records     (mapv #(assoc-in % [:provenance :source :oai]
+                                                (assoc header :metadata-sha256 (model/sha256-hex metadata 64)))
+                                     rs)
                   :diagnostics ds}))]
     (cond-> {:records     (vec (mapcat :records outs))
              :diagnostics (vec (mapcat :diagnostics outs))

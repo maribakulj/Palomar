@@ -4,7 +4,8 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
-            [palomar.fidelity :as fidelity]))
+            [palomar.fidelity :as fidelity]
+            [palomar.plugins.lrmoo.export :as export]))
 
 (def ^:private fixtures
   {:intermarc    "test/fixtures/documentary/intermarc/sru/intermarcXchange/bib-flaubert-madame-bovary-start1-max30.xml"
@@ -50,7 +51,7 @@
           rejected (update rec :assertions
                            (partial mapv #(if (= :dc/date (:predicate %)) (assoc % :status :rejected) %)))
           strict   (fidelity/audit-record :prov rejected)
-          plain    (fidelity/audit-record :ntriples rejected)]
+          plain    (fidelity/audit-record :jsonld rejected)]
       (is (empty? (:unaccounted strict)))
       (is (> (:checked strict) (:checked plain))))))
 
@@ -81,3 +82,17 @@
     (is (pos? checked))
     (is (= checked present) "R3/R4/R7 are written as P130/P165/P128, which counts as present")
     (is (empty? unaccounted))))
+
+(deftest the-right-text-on-the-wrong-node-is-caught
+  (testing "an exporter that writes a Work's title on the Manifestation's node fails the RDF audit (post-audit)"
+    (let [real   @#'convert/exporters
+          moved  (fn [r] (let [doc   ((get-in real [:ntriples :render]) r)
+                               work  (some #(when (= :lrmoo/F1_Work (:kind %)) (export/entity-iri (:id %))) (:entities r))
+                               manif (some #(when (= :lrmoo/F3_Manifestation (:kind %)) (export/entity-iri (:id %))) (:entities r))]
+                           (if (and work manif) (str/replace doc (str "<" work "> <http://www.cidoc-crm.org/cidoc-crm/P1_is_identified_by>")
+                                                             (str "<" manif "> <http://www.cidoc-crm.org/cidoc-crm/P1_is_identified_by>"))
+                               doc)))
+          broken (update real :ntriples assoc :render moved)
+          {:keys [unaccounted]} (with-redefs-fn {#'convert/exporters broken} #(audit :intermarc :ntriples))]
+      (is (seq unaccounted) "the title still appears in the file, but not on its Work")
+      (is (every? #(= :lrmoo/R33_has_string (:predicate %)) unaccounted)))))
