@@ -410,7 +410,8 @@
    evaluated arguments (`::unbound` never reaches one but `or`):
 
    - `(mint kind part…)` — the content-derived id of an entity of `kind`, keyed
-     by the parts joined with `|` (`model/mint-entity-id`); the entity is
+     by the tuple of its parts (`model/tuple-key`: no two tuples share a key);
+     the entity is
      declared with the triples that use it;
    - `(ref x)` — a reference value to entity `x`;
    - `(norm s)` — `palomar.text/norm`, the matching form of a string;
@@ -432,8 +433,10 @@
               vs             (map #(eval-term bindings %) parts)]
           (if (some #{::unbound} vs)
             ::unbound
-            (let [key (str/join "|" (map #(let [v (if (::mint %) (::mint %) %)] (if (string? v) v (str v))) vs))]
-              (if (str/blank? key) ::unbound {::mint (model/mint-entity-id kind key) ::kind kind}))))
+            (let [parts (mapv #(if (::mint %) (::mint %) %) vs)]
+              (if (every? #(and (string? %) (str/blank? %)) parts)
+                ::unbound
+                {::mint (model/mint-entity-id kind parts) ::kind kind}))))
         (let [vs (map #(eval-term bindings %) args)]
           (case op
             or   (or (first (remove #(or (nil? %) (= ::unbound %)) vs)) ::unbound)

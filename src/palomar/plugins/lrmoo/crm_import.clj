@@ -188,7 +188,7 @@
         ;; (`_:b0`) has no IRI, so it gets a minted id, scoped to this record
         bnode? #(str/starts-with? % "_:")
         id-of  (into {} (for [[k kind] typed]
-                          [k (if (bnode? k) (model/mint-entity-id kind (str rid "|" k)) k)]))
+                          [k (if (bnode? k) (model/mint-entity-id kind [rid k]) k)]))
         ents   (for [[k kind] typed]
                  (model/entity (cond-> {:id (id-of k) :kind kind :provenance prov}
                                  (not (bnode? k)) (assoc :iri k))))

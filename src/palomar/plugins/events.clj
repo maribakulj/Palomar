@@ -89,7 +89,7 @@
                                                           :provenance (model/provenance (prov code))})})
         entity (fn [id kind] {:kind :entity :value (model/entity {:id id :kind kind
                                                                   :provenance (model/provenance (prov nil))})})
-        event  (model/mint-entity-id :lrmoo/F30_Manifestation_Creation (str manif "|" fragment))
+        event  (model/mint-entity-id :lrmoo/F30_Manifestation_Creation [manif fragment])
         value  (fn [k] (some-> (get-in subfields [(get spec k) 0]) clean))
         date   (some-> (get-in subfields [(:date spec) 0]) str/trim not-empty)
         place  (value :place)
@@ -98,17 +98,17 @@
      [(entity event :lrmoo/F30_Manifestation_Creation)
       (claim event :lrmoo/R24_created (model/reference manif) nil)]
      (when date
-       (let [ts (model/mint-entity-id :crm/E52_Time-Span (str event "|" date))]
+       (let [ts (model/mint-entity-id :crm/E52_Time-Span [event date])]
          [(entity ts :crm/E52_Time-Span)
           (claim event :crm/P4_has_time-span (model/reference ts) (:date spec))
           (claim ts :crm/P82_at_some_time_within date (:date spec))]))
      (when-let [k (and place (not-empty (text/norm place)))]
-       (let [pl (model/mint-entity-id :crm/E53_Place k)]
+       (let [pl (model/mint-entity-id :crm/E53_Place [k])]
          [(entity pl :crm/E53_Place)
           (claim event :crm/P7_took_place_at (model/reference pl) (:place spec))
           (claim pl :crm/P190_has_symbolic_content place (:place spec))]))
      (when-let [k (and agent (not-empty (text/norm agent)))]
-       (let [ac (model/mint-entity-id :crm/E39_Actor k)]
+       (let [ac (model/mint-entity-id :crm/E39_Actor [k])]
          [(entity ac :crm/E39_Actor)
           (claim event :crm/P14_carried_out_by (model/reference ac) (:agent spec))
           (claim ac :crm/P190_has_symbolic_content agent (:agent spec))])))))

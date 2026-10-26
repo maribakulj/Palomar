@@ -2,8 +2,12 @@
   "OAI-PMH 2.0 responses (ADR 0037): the envelope is unwrapped, each record
    goes through the spoke of its format, its header stays on its provenance,
    and a harvest follows the resumption tokens through an injected fetch."
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
             [palomar.convert :as convert]
             [palomar.plugins.oai :as oai]))
 
@@ -42,7 +46,7 @@
                                          (dc-record "oai:example.org:2" "Les Champs magnétiques")
                                          deleted))
         {:keys [records deleted]} (oai/import-response "oai_dc" xml)]
-    (is (= [:oai/oai-example-org-1 :oai/oai-example-org-2] (mapv :id records)))
+    (is (= ["oai:example.org:1" "oai:example.org:2"] (mapv (comp oai/record-identifier :id) records)))
     (is (= ["oai:example.org:gone"] deleted))
     (is (= "oai:example.org:1" (get-in (first records) [:provenance :source :oai :identifier])))
     (testing "and on through the pivot to any target"
@@ -86,5 +90,16 @@
     (is (= 2 (count @asked)) "an empty token ends the harvest")))
 
 (deftest an-oai-identifier-makes-a-readable-record-id
-  (is (= :oai/oai-bnf-fr-gallica-ark-12148-bpt6k9410570f (oai/record-id "oai:bnf.fr:gallica/ark:/12148/bpt6k9410570f")))
-  (is (= :oai/r123 (oai/record-id "123"))))
+  (is (= :oai/oai_3Aabc_2Fa (oai/record-id "oai:abc/a")))
+  (testing "distinct identifiers never share a record id (post-audit test 02)"
+    (is (not= (oai/record-id "oai:abc/a") (oai/record-id "oai:abc:a")))
+    (is (not= (oai/record-id "a_3A") (oai/record-id "a:"))))
+  (testing "the id reads back as EDN and gives back its identifier"
+    (doseq [s ["oai:bnf.fr:gallica/ark:/12148/bpt6k9410570f" "123" "é_x" "-a" "a b"]]
+      (let [k (oai/record-id s)]
+        (is (= k (edn/read-string (str k))) s)
+        (is (= s (oai/record-identifier k)) s)))))
+
+(defspec record-ids-are-injective 200
+  (prop/for-all [a gen/string b gen/string]
+                (= (= a b) (= (oai/record-id a) (oai/record-id b)))))

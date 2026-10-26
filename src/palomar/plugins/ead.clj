@@ -175,7 +175,7 @@
 
 ;; --- projection (ADR 0039) ----------------------------------------------------
 
-(defn- manifestation-of [rid] (model/mint-entity-id :lrmoo/F3_Manifestation (str rid)))
+(defn- manifestation-of [rid] (model/mint-entity-id :lrmoo/F3_Manifestation [(str rid)]))
 
 (defn- runner
   "A unit's Manifestation, its title (`:asserted`, transcription), the link to

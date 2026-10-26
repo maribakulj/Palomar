@@ -296,6 +296,15 @@
   [a]
   (keyword "asr" (str "h" (content-digest [(:subject a) (:predicate a) (:value a)] 16))))
 
+(defn tuple-key
+  "An unambiguous string for the tuple `parts` (strings, keywords, numbers): its
+   printed EDN vector, so `[\"a|b\" \"c\"]` and `[\"a\" \"b|c\"]` stay apart, as
+   `\"1\"` and `1` do (C1, the post-audit plan). Joining parts with a separator,
+   as keys once did, made distinct tuples one key. It always starts with `[`."
+  [parts]
+  (binding [*print-namespace-maps* false *print-length* nil *print-level* nil]
+    (pr-str (vec parts))))
+
 (defn mint-entity-id
   "Construct a content-based identifier for a synthesized entity. Returns a
    keyword in the `:ent` namespace whose name is the entity `kind` followed by a
@@ -303,16 +312,18 @@
 
    Unlike `mint-fragment-id` (which encodes a source locator), an entity id is a
    pure function of *content*: `kind` plus an opaque, plugin-supplied canonical
-   `key` string. Two records that imply the same entity therefore mint the same
+   `key` — a string that is itself an identifier (an ARK, an IRI), or a vector
+   of parts, encoded by `tuple-key`; a string key may not start with `[`, so
+   the two forms never meet. Two records that imply the same entity therefore mint the same
    id independently — no shared state — and collapse by id at merge (ADR 0008).
    The core does not interpret `kind` or `key`; it only hashes them.
 
    Example:
 
-     (mint-entity-id :lrmoo/work \"flaubert|madame bovary\")
+     (mint-entity-id :lrmoo/work [\"flaubert\" \"madame bovary\"])
      ;; => :ent/work.<16 hex chars>
 
-   `kind` must be a keyword; `key` must be a non-empty string.
+   `kind` must be a keyword; `key` a non-empty string or a non-empty vector.
 
    Collision policy (audit S36). The hash is the first 64 bits of SHA-256, and
    the kind is part of both the hashed input and the id, so ids collide only
@@ -326,9 +337,11 @@
   [kind key]
   (when-not (keyword? kind)
     (throw (ex-info "mint-entity-id requires a keyword kind" {:kind kind})))
-  (when-not (and (string? key) (seq key))
-    (throw (ex-info "mint-entity-id requires a non-empty string key" {:key key})))
-  (keyword "ent" (str (name kind) "." (sha256-hex (pr-str [kind key]) 16))))
+  (when-not (or (and (string? key) (seq key) (not (str/starts-with? key "[")))
+                (and (vector? key) (seq key)))
+    (throw (ex-info "mint-entity-id requires a non-empty string key not starting with [, or a vector of parts"
+                    {:key key})))
+  (keyword "ent" (str (name kind) "." (sha256-hex (pr-str [kind (if (vector? key) (tuple-key key) key)]) 16))))
 
 ;; ---------------------------------------------------------------------------
 ;; Value
