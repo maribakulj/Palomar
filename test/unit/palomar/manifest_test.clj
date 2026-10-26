@@ -56,3 +56,16 @@
 
 (deftest build-info-falls-back-to-dev
   (is (string? (:version (manifest/build-info)))))
+
+(deftest the-manifest-names-the-code-that-ran
+  (testing "the source of every loaded Palomar namespace is digested (post-audit test 09)"
+    (let [{:keys [sha256 namespaces]} (get-in (manifest/manifest {:from :dc :to :ntriples}) [:palomar :code])]
+      (is (re-matches #"[0-9a-f]{64}" sha256))
+      (is (< 20 namespaces))))
+  (testing "a changed source file changes the digest, a reordering does not"
+    (let [srcs [["palomar/a.clj" "(ns a)"] ["palomar/plugins/lrmoo/export.clj" "(ns export)"]]]
+      (is (= (manifest/sources-digest srcs) (manifest/sources-digest (reverse srcs))))
+      (is (not= (manifest/sources-digest srcs)
+                (manifest/sources-digest (assoc-in srcs [1 1] "(ns export) ;; changed"))))
+      (is (not= (manifest/sources-digest [["ab" "c"]]) (manifest/sources-digest [["a" "bc"]]))
+          "path and content are delimited"))))

@@ -1,21 +1,39 @@
 # What Palomar guarantees — and what it does not
 
-*State of 2026-10-25, after the interoperability audit follow-up (audit S42: "a
-versioned manifest of the guarantees actually delivered"). No release is tagged
-yet; this file is the reference until one is, and each release should carry its
-own copy.*
+*State of 2026-10-26, after the post-audit corrections (C1–C5). No release is
+tagged yet; this file is the reference until one is, and each release should
+carry its own copy.*
 
 Every guarantee below is a behaviour a test pins. If the test is removed or
 fails, the guarantee is withdrawn. Anything not listed is not promised.
+`palomar.guarantees-test` checks that every test named here exists and that
+the formats below are exactly those the code registers.
+
+## Formats
+
+Source formats: dc, ead, edn, iiif, intermarc, intermarc-ng, marc21, mods, oai, unimarc
+
+Target formats: crm, crm-only, dc, edn, iiif, jsonld, linked-art, marc21, mods, nquads, ntriples, prov, trig, turtle
+
+`edn` is the pivot itself (ADR 0034); `oai` an OAI-PMH response read through
+the spoke of its metadata format (ADR 0037). The EAD spoke is experimental:
+its RDF shape is provisional (ADR 0044).
 
 ## Guaranteed
 
 | Guarantee | Pinned by |
 |-----------|-----------|
-| For the seven source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O, N-Quads), every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
+| For the source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O, N-Quads), every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
 | An exporter that omits a value without reporting it is caught. | `palomar.fidelity-test/a-silent-omission-is-caught` |
-| For the seven source spokes and the N-Triples, CRM, CRM-only and N-Quads targets, every relation the RDF view expresses (a WEMI link, a CRM or SKOS reference) is written — by its predicate or, in pure CRM, its super-property — or named by a loss. | `palomar.fidelity-test/every-relation-survives-in-the-rdf-outputs` |
+| For the source spokes and the N-Triples, CRM, CRM-only and N-Quads targets, every relation the RDF view expresses (a WEMI link, a CRM or SKOS reference) is written — by its predicate or, in pure CRM, its super-property — or named by a loss. | `palomar.fidelity-test/every-relation-survives-in-the-rdf-outputs` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
+| In the N-Triples family a value counts as preserved only on its own node: the right text on the wrong resource is caught. | `palomar.fidelity-test/the-right-text-on-the-wrong-node-is-caught` |
+| Minted ids are injective in their parts: no two distinct tuples share a key (ADR 0040). | `palomar.model-entity-test/tuple-keys-are-injective`, `palomar.rules-test/mint-keys-are-tuples-not-joined-strings` |
+| Distinct OAI identifiers give distinct record ids, and the id gives its identifier back. | `palomar.plugins.oai-test/record-ids-are-injective`, `palomar.plugins.oai-test/an-oai-identifier-makes-a-readable-record-id` |
+| An alignment accepted in one record never identifies another record's homonym; a link scoped to no record is refused (ADR 0041). | `palomar.reconcile-test/an-accepted-alignment-does-not-identify-a-homonym` |
+| Two creator-less records with one title are two Expressions; two records' same place or publisher name are two nodes. | `palomar.plugins.lrmoo.project-test/a-title-without-a-creator-identifies-nothing`, `palomar.plugins.events-test/a-place-name-is-not-a-place-across-records` |
+| An OAI-PMH response's deleted records reach `convert`'s result. | `palomar.plugins.oai-test/each-record-goes-through-the-spoke-of-its-format` |
+| A manifest names the code that ran: a changed source file changes its digest. | `palomar.manifest-test/the-manifest-names-the-code-that-ran` |
 | A publisher or contributor never keys a Work; only a creator (or an agent of unstated role) does. | `palomar.plugins.lrmoo.project-test/a-publisher-alone-does-not-key-a-work` |
 | An original and its translation are one Work and two Expressions. | `palomar.plugins.lrmoo.project-test/an-original-and-its-translation-are-one-work-two-expressions` |
 | A Manifestation is exported to Linked Art as a text (`LinguisticObject`), only an F5 Item as a physical object; one document per Manifestation and per Item. | `palomar.plugins.lrmoo.linked-art-test/every-manifestation-and-item-gets-its-own-document` |
@@ -43,19 +61,22 @@ fails, the guarantee is withdrawn. Anything not listed is not promised.
 
 ## Not guaranteed
 
-- **Fidelity is checked by value, on the fixture corpus.** A value that also
-  occurs elsewhere in an output counts as present; the audit can miss a loss,
-  never invent one. Turtle output is not decoded; relations are checked only
-  for the N-Triples family. A loss on another predicate of
-  the same subject can stand for a value it does not concern.
+- **Fidelity is checked on the fixture corpus.** In the N-Triples family a
+  value is checked on its own node; in the other formats by value, so a value
+  that also occurs elsewhere in the output counts as present. The audit can
+  miss a loss, never invent one. Turtle output is not decoded; relations are
+  checked only for the N-Triples family. A loss on another predicate of the
+  same subject can stand for a value it does not concern.
 - **Semantic correctness beyond the tests.** The mappings are checked against
   the published standards they cite (LRMoo 1.0/1.1.1, Linked Art, IIIF 3.0, the
   LoC crosswalks) where a test says so, not exhaustively.
 - **Precision of Work clustering on a whole catalogue.** The evaluations
   measure it on joinable subsets (`docs/eval/bibr-work-clustering.md`,
   `docs/eval/entity-resolution.md`).
-- **Archival and museum domains.** There is no EAD, EAC-CPF, RiC-O or LIDO
-  spoke, and no CIDOC CRM event model (production, acquisition, exhibition…).
+- **Archival and museum domains.** EAD and EAC-CPF are read, but the EAD RDF
+  shape (a Manifestation per unit, `P106i` to its parent) is provisional until
+  the RiC-O projection (ADR 0044). There is no LIDO spoke; the only CRM events
+  are publication and production (ADR 0036).
 - **Institutional validation of INTERMARC-NG.** Its spoke is tested on
   synthetic data only.
 - **Entity id collisions.** Ids carry a 64-bit hash; the policy and its limits

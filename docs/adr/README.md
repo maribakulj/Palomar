@@ -52,11 +52,12 @@ decision from being read as shipped code (an audit honesty rule).
 | [0036](./0036-publication-events.md) | Publication and production events | Accepted |
 | [0037](./0037-oai-pmh-and-dcmi-terms.md) | OAI-PMH responses and DCMI Terms | Accepted |
 | [0038](./0038-authority-files.md) | Authority files as reconciliation pools | Accepted |
-| [0039](./0039-archival-description.md) | Archival description: EAD units and EAC-CPF authorities | Accepted |
+| [0039](./0039-archival-description.md) | Archival description: EAD units and EAC-CPF authorities | Accepted (amended by 0044) |
 | [0040](./0040-tuple-keys.md) | Identity keys are tuples, never joined strings | Accepted |
 | [0041](./0041-resemblance-identity-shared-node.md) | Resemblance is not identity, and identity alone shares a node | Accepted |
 | [0042](./0042-facts-only-by-default.md) | A target that states facts states only facts, by default | Accepted |
 | [0043](./0043-occurrences-and-node-fidelity.md) | Occurrences are kept, deletions reported, values checked on their node | Accepted |
+| [0044](./0044-archives-toward-ric-o.md) | Archives project to RiC-O, not to WEMI; EAD ids come from the source | Accepted (direction) |
 
 ## Template
 
