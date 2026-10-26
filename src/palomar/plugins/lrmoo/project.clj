@@ -131,7 +131,10 @@
       ;; (D7); the Work/Expression below are string-key inference -> :proposed, and
       ;; key on the uniform title when present.
       title      (conj (assert-prod manif :lrmoo/R33_has_string title (with-evidence-of prov record title) :asserted))
-      work-title (into (let [wkey [(or agent "") (text/norm work-title)]
+      ;; with no creator, nothing but the title keys the Expression, and a title
+      ;; is no identity (\"Correspondance\", \"Poems\"): it is scoped to the
+      ;; record (ADR 0041); the Work needs a creator anyway
+      work-title (into (let [wkey (if agent [agent (text/norm work-title)] [:record rid (text/norm work-title)])
                              ;; a single stated language belongs to the Expression's
                              ;; identity, not the Work's: an original and its
                              ;; translation are one Work, two Expressions (audit S19)

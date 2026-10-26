@@ -42,6 +42,15 @@
       (is (= 1 (count (view/expressions r))))
       (is (empty? (view/works r))))))
 
+(deftest a-title-without-a-creator-identifies-nothing
+  (testing "two creator-less records titled \"Correspondance\" are two Expressions (post-audit test 04, ADR 0041)"
+    (let [a (project/project (canon :record/a :canon/title "Correspondance"))
+          b (project/project (canon :record/b :canon/title "Correspondance"))]
+      (is (not= (:id (first (view/expressions a))) (:id (first (view/expressions b)))))
+      (testing "and the same record still projects to the same Expression"
+        (is (= (:id (first (view/expressions a)))
+               (:id (first (view/expressions (project/project (canon :record/a :canon/title "Correspondance")))))))))))
+
 (deftest empty-record-yields-a-bare-manifestation
   (testing "no canonical title -> only the Manifestation (the record itself)"
     (let [r (project/project (canon :record/e :canon/note "just a note"))]

@@ -208,7 +208,9 @@
   "The alignments a curator accepted in `records`, as `apply-agent-links` links:
    an `:accepted` (or `:asserted`) `:skos/exactMatch` from a record's local
    agent to an authority entity. A close match is never a link: it says the two
-   are alike, not the same."
+   are alike, not the same. Each link is scoped to the record it was accepted
+   in (`:records #{rid}`, ADR 0041): that this record's \"Gustave Flaubert\" is
+   the authority says nothing of another record's."
   [records]
   (vec (distinct
         (for [r records
@@ -220,7 +222,8 @@
               :when (and (= :skos/exactMatch (:predicate a)) (#{:accepted :asserted} (:status a)))
               :let [auth (ents (:value/target (:value a)))]
               :when (and auth (:iri auth) (names (:subject a)))]
-          {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted}))))
+          {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted
+           :records #{(:id r)}}))))
 
 (defn apply-agent-links
   "Rewrite `records` onto shared agent nodes from `links`: `propose-agent-links`
@@ -229,8 +232,15 @@
    agent yet, add the `:crm/E21_Person` entity of the authority id (its id minted
    from the id, as the INTERMARC spoke does, so every record names the same node).
 
+   A link applies only to the records it is scoped to (ADR 0041): its
+   `:records`, a set of record ids (`accepted-links` scopes each link to the
+   record it was accepted in), or `:all`, a curator's explicit decision that
+   the name is one person across the corpus. A same name in another record is
+   a homonym until shown otherwise.
+
    Nothing else is applied, and every link left out is returned under `:refused`
-   with a `:reason`: `:not-accepted` (a bare proposal is never applied, D7),
+   with a `:reason`: `:unscoped` (a link that names no records: a name alone
+   identifies no one), `:not-accepted` (a bare proposal is never applied, D7),
    `:not-certifiable` (no determinate authority id: the metro-station guard),
    `:invalid-iri` (an authority id that is no IRI, which would corrupt every RDF
    output) or `:ambiguous` (one name accepted for several authority ids). Returns
@@ -239,22 +249,27 @@
   (let [accepted?   #(contains? #{:accepted :asserted} (:status %))
         certifiable #(boolean (and (:certifiable? %) (:authority-id %)))
         valid-iri?  #(nil? (nt/iri-problem (:authority-id %)))
-        candidates  (filter #(and (accepted? %) (certifiable %) (valid-iri? %)) links)
-        ambiguous   (set (for [[nm ls] (group-by :name candidates)
-                               :when (< 1 (count (distinct (map :authority-id ls))))]
-                           nm))
-        usable      (into {} (for [l candidates :when (not (ambiguous (:name l)))]
-                               [(:name l) l]))
+        scoped?     #(let [rs (:records %)] (or (= :all rs) (and (set? rs) (seq rs))))
+        in-scope?   (fn [l rid] (or (= :all (:records l)) (contains? (:records l) rid)))
+        candidates  (filter #(and (scoped? %) (accepted? %) (certifiable %) (valid-iri? %)) links)
+        ;; one name accepted for two authorities where both reach one record
+        ambiguous?  (fn [l] (some #(and (= (:name l) (:name %)) (not= (:authority-id l) (:authority-id %))
+                                        (or (= :all (:records l)) (= :all (:records %))
+                                            (seq (set/intersection (:records l) (:records %)))))
+                                  candidates))
+        usable      (remove ambiguous? candidates)
         refused     (vec (for [l links
                                :let [r (cond (not (accepted? l))      :not-accepted
+                                             (not (scoped? l))        :unscoped
                                              (not (certifiable l))    :not-certifiable
                                              (not (valid-iri? l))     :invalid-iri
-                                             (ambiguous (:name l))    :ambiguous)]
+                                             (ambiguous? l)           :ambiguous)]
                                :when r]
                            (assoc l :reason r)))
         link-of     (fn [record]
                       (when-not (some #(and (= :crm/E21_Person (:kind %)) (:iri %)) (:entities record))
-                        (some usable (agents/creators record))))
+                        (let [names (set (agents/creators record))]
+                          (first (filter #(and (names (:name %)) (in-scope? % (:id record))) usable)))))
         results     (for [r records]
                       (if-let [{:keys [name authority-id]} (link-of r)]
                         (let [e (model/entity {:id         (model/mint-entity-id :crm/E21_Person authority-id)
