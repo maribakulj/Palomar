@@ -11,13 +11,13 @@ the formats below are exactly those the code registers.
 
 ## Formats
 
-Source formats: dc, ead, edn, iiif, intermarc, intermarc-ng, marc21, mods, oai, unimarc
+Source formats: dc, eac-cpf, ead, edn, iiif, intermarc, intermarc-ng, marc21, mods, oai, unimarc
 
 Target formats: crm, crm-only, dc, edn, iiif, jsonld, linked-art, marc21, mods, nquads, ntriples, prov, trig, turtle
 
 `edn` is the pivot itself (ADR 0034); `oai` an OAI-PMH response read through
-the spoke of its metadata format (ADR 0037). The EAD spoke is experimental:
-its RDF shape is provisional (ADR 0044).
+the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
+(ADR 0044, 0045).
 
 ## Guaranteed
 
@@ -73,10 +73,10 @@ its RDF shape is provisional (ADR 0044).
 - **Precision of Work clustering on a whole catalogue.** The evaluations
   measure it on joinable subsets (`docs/eval/bibr-work-clustering.md`,
   `docs/eval/entity-resolution.md`).
-- **Archival and museum domains.** EAD and EAC-CPF are read, but the EAD RDF
-  shape (a Manifestation per unit, `P106i` to its parent) is provisional until
-  the RiC-O projection (ADR 0044). There is no LIDO spoke; the only CRM events
-  are publication and production (ADR 0036).
+- **Archival and museum domains.** EAD units project to RiC-O (ADR 0045),
+  checked against RiC-O 1.1 on the fixtures only: the spoke stays
+  experimental until validated on a real corpus. There is no LIDO spoke; the
+  only CRM events are publication and production (ADR 0036).
 - **Institutional validation of INTERMARC-NG.** Its spoke is tested on
   synthetic data only.
 - **Entity id collisions.** Ids carry a 64-bit hash; the policy and its limits

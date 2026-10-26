@@ -18,6 +18,12 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **EAC-CPF spoke and collectivities** (ADR 0045): `--from eac-cpf` reads an
+  authority record as a RiC-O Person, CorporateBody or Family (names,
+  existence dates, history; its `entityId` as IRI only when it is one;
+  relations reported); reconciliation carries the authority's entity type, so
+  a corporate body or family is applied as a `crm:E74_Group`.
+
 - **Archival description** (ADR 0039): an EAD 2002 / EAD3 spoke (`--from
   ead`), one record per unit of description, with an archival projection — a
   Manifestation per unit, `P106i_forms_part_of` its parent's, no Work or
@@ -363,6 +369,12 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
   rule binds a falsey value) and guarded against regression by a behavioural test.
 
 ### Changed
+
+- The archival view is RiC-O (ADR 0045): EAD units are `rico:RecordSet` /
+  `rico:Record` with their record set type, title, identifier, date, scope,
+  typed creators and `rico:isOrWasIncludedIn`, instead of LRMoo
+  Manifestations; RiC-O 1.1 is vendored and checked; pure CRM reports it as
+  loss.
 
 - Archives (ADR 0044): the direction is RiC-O, not WEMI, and the EAD spoke is
   experimental until it lands; EAD unit ids now come from the finding aid's

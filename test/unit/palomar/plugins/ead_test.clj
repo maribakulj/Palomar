@@ -50,19 +50,36 @@
       (is (some #(= :ead/recordid (get-in % [:detail :loss/source-field])) diagnostics))
       (is (= 32 (count (distinct (map :id records))))))))
 
-(deftest the-archival-view
+(defn- of-kind [r k] (filter #(= k (:kind %)) (:entities r)))
+
+(defn- value [r s p] (some #(when (and (= s (:subject %)) (= p (:predicate %))) (:value %)) (:assertions r)))
+
+(deftest the-archival-view-is-ric-o
   (let [{:keys [records]} (convert/to-wemi :ead {} (slurp ead3))
-        [fonds series] records
-        m (comp :id first view/manifestations)]
-    (is (every? #(empty? (view/works %)) records) "a unit is no edition: no Work")
-    (is (every? #(empty? (view/expressions %)) records))
-    (is (some #(and (= (m series) (:subject %)) (= :crm/P106i_forms_part_of (:predicate %))
-                    (= (m fonds) (get-in % [:value :value/target])) (= :asserted (:status %)))
-              (:assertions series))
-        "a series' Manifestation forms part of the fonds'")
-    (testing "what the view leaves out is a projection loss"
-      (is (some #(and (= :projection (get-in % [:detail :loss/edge])) (= :canon/agent (get-in % [:detail :loss/source-field])))
-                (:diagnostics fonds))))))
+        [fonds series]    records
+        set-of            (comp :id first #(of-kind % :rico/RecordSet))]
+    (testing "a unit is no edition: no Work, Expression or Manifestation (ADR 0045)"
+      (is (every? #(and (empty? (view/works %)) (empty? (view/expressions %)) (empty? (view/manifestations %))) records)))
+    (testing "the collection (archdesc level=collection) is a RecordSet of type Collection, with its title, identifier and creator"
+      (let [u (set-of fonds)]
+        (is (= "Lowell Thomas Papers" (value fonds u :rico/title)))
+        (is (= "MA-1" (value fonds u :rico/identifier)))
+        (is (= "https://www.ica.org/standards/RiC/vocabularies/recordSetTypes#Collection"
+               (:iri (first (of-kind fonds :rico/RecordSetType)))))
+        (is (= 1 (count (of-kind fonds :rico/Person))) "persname origination is a Person")
+        (is (some #(and (= u (:subject %)) (= :rico/hasCreator (:predicate %))) (:assertions fonds)))))
+    (testing "a series is included in the fonds, asserted"
+      (is (some #(and (= (set-of series) (:subject %)) (= :rico/isOrWasIncludedIn (:predicate %))
+                      (= (set-of fonds) (get-in % [:value :value/target])) (= :asserted (:status %)))
+                (:assertions series))))
+    (testing "the RDF says it in RiC-O"
+      (let [nt (:output (convert/convert {:from :ead :to :ntriples :source (slurp ead3)}))]
+        (is (str/includes? nt "RiC/ontology#RecordSet"))
+        (is (str/includes? nt "RiC/ontology#isOrWasIncludedIn"))
+        (is (not (str/includes? nt "lrmoo/F3_Manifestation")))))
+    (testing "pure CRM has no archival view, and says so"
+      (let [{:keys [loss]} (convert/convert {:from :ead :to :crm-only :source (slurp ead3)})]
+        (is (some #{:rico/isOrWasIncludedIn} (:source-fields loss)))))))
 
 (deftest a-finding-aid-converts-to-every-format
   (doseq [to [:ntriples :crm-only :linked-art :dc :marc21 :mods :trig]]

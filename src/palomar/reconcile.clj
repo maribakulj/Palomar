@@ -30,6 +30,19 @@
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.text :as text]))
 
+(def agent-kinds
+  "The CRM classes of an identified agent: a Person, or a Group — a corporate
+   body or a family (C7, the post-audit plan)."
+  #{:crm/E21_Person :crm/E74_Group})
+
+(defn agent-kind
+  "The CRM class for an authority's `entity-type` (EAC-CPF `entityType`, the
+   MADS name class): a Group for a corporate body or a family, else a Person."
+  [entity-type]
+  (if (contains? #{"corporateBody" "family"} entity-type) :crm/E74_Group :crm/E21_Person))
+
+(defn- entity-type-of [kind] (when (= :crm/E74_Group kind) "corporateBody"))
+
 (defn- agent-label
   "The record's controlled creator name (`:canon/agent` with role `:creator`, or
    with no stated role), used as the reconciled agent's display label. A
@@ -42,7 +55,7 @@
   [record]
   (let [label (agent-label record)]
     (for [e (:entities record)
-          :when (and (= :crm/E21_Person (:kind e)) (:iri e))]
+          :when (and (agent-kinds (:kind e)) (:iri e))]
       {:iri (:iri e) :id (:id e) :label label :record (:id record)})))
 
 (defn reconcile-agents
@@ -121,12 +134,13 @@
               cand authority
               :let [score (name-score name cand)]
               :when (>= score threshold)]
-          {:name            name
-           :authority-id    (:id cand)
-           :authority-label (:label cand)
-           :score           score
-           :certifiable?    (boolean (:id cand))
-           :status          :proposed})
+          (cond-> {:name            name
+                   :authority-id    (:id cand)
+                   :authority-label (:label cand)
+                   :score           score
+                   :certifiable?    (boolean (:id cand))
+                   :status          :proposed}
+            (:entity-type cand) (assoc :entity-type (:entity-type cand))))
         (sort-by (comp - :score))
         vec)))
 
@@ -157,9 +171,9 @@
   "The local agent entity standing for the name `nm` on record `rid`: a Person
    the record names, not yet identified (its id is scoped to the record, as
    two records' homonyms are not the same person by name alone)."
-  [rid nm]
-  (model/entity {:id   (model/mint-entity-id :crm/E21_Person [rid nm])
-                 :kind :crm/E21_Person}))
+  [rid nm kind]
+  (model/entity {:id   (model/mint-entity-id kind [rid nm])
+                 :kind kind}))
 
 (defn align-agents
   "Put `propose-agent-links` proposals into `records` as data (ADR 0032): for
@@ -182,8 +196,8 @@
                          :when (and (:authority-id p) (nil? (nt/iri-problem (:authority-id p))))]
                      p)]
          (reduce
-          (fn [r {:keys [name authority-id authority-label score certifiable?]}]
-            (let [local (named-agent rid name)
+          (fn [r {:keys [name authority-id authority-label score certifiable? entity-type]}]
+            (let [local (named-agent rid name (agent-kind entity-type))
                   ;; the authority as the alignment's target only: not an E21,
                   ;; since a proposal must not make an identified person
                   auth  (model/entity {:id (model/mint-entity-id :reconcile/authority authority-id)
@@ -222,14 +236,17 @@
               :when (and (= :skos/exactMatch (:predicate a)) (#{:accepted :asserted} (:status a)))
               :let [auth (ents (:value/target (:value a)))]
               :when (and auth (:iri auth) (names (:subject a)))]
-          {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted
-           :records #{(:id r)}}))))
+          (cond-> {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted
+                   :records #{(:id r)}}
+            (entity-type-of (:kind (ents (:subject a)))) (assoc :entity-type (entity-type-of (:kind (ents (:subject a))))))))))
 
 (defn apply-agent-links
   "Rewrite `records` onto shared agent nodes from `links`: `propose-agent-links`
    proposals that a curator has accepted (`:status :accepted`, or `:asserted`).
    For each record whose creator is a link's `:name` and that has no identified
-   agent yet, add the `:crm/E21_Person` entity of the authority id (its id minted
+   agent yet, add the agent entity of the authority id — a `:crm/E21_Person`,
+   or a `:crm/E74_Group` when the link's `:entity-type` is a corporate body or
+   a family (`agent-kind`) — (its id minted
    from the id, as the INTERMARC spoke does, so every record names the same node).
 
    A link applies only to the records it is scoped to (ADR 0041): its
@@ -267,17 +284,18 @@
                                :when r]
                            (assoc l :reason r)))
         link-of     (fn [record]
-                      (when-not (some #(and (= :crm/E21_Person (:kind %)) (:iri %)) (:entities record))
+                      (when-not (some #(and (agent-kinds (:kind %)) (:iri %)) (:entities record))
                         (let [names (set (agents/creators record))]
                           (first (filter #(and (names (:name %)) (in-scope? % (:id record))) usable)))))
         results     (for [r records]
-                      (if-let [{:keys [name authority-id]} (link-of r)]
-                        (let [e (model/entity {:id         (model/mint-entity-id :crm/E21_Person authority-id)
-                                               :kind       :crm/E21_Person
-                                               :iri        authority-id
-                                               :provenance (model/provenance {:pass       :repair
-                                                                              :rule       :reconcile/apply-agent-link
-                                                                              :derivation [(:id r)]})})]
+                      (if-let [{:keys [name authority-id entity-type]} (link-of r)]
+                        (let [kind (agent-kind entity-type)
+                              e    (model/entity {:id         (model/mint-entity-id kind authority-id)
+                                                  :kind       kind
+                                                  :iri        authority-id
+                                                  :provenance (model/provenance {:pass       :repair
+                                                                                 :rule       :reconcile/apply-agent-link
+                                                                                 :derivation [(:id r)]})})]
                           [(update r :entities (fnil conj []) e) {:record (:id r) :name name :iri authority-id}])
                         [r nil]))]
     {:records (mapv first results)

@@ -17,7 +17,8 @@
 
 (deftest a-mads-authority-is-an-entry-with-its-variants
   (let [{:keys [entries]} (authorities/read-pool :rdfxml mads-person)]
-    (is (= [{:id "http://id.loc.gov/authorities/names/n79021164" :label "Kelsey, Alan" :variants ["A. Kelsey"]}]
+    (is (= [{:id "http://id.loc.gov/authorities/names/n79021164" :label "Kelsey, Alan" :variants ["A. Kelsey"]
+             :entity-type "person"}]
            entries))))
 
 (deftest a-deleted-heading-is-no-entry-but-says-what-replaced-it

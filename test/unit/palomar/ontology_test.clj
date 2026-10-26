@@ -51,7 +51,8 @@
    :marc21       "test/fixtures/documentary/marc21/marcxml/loc_collection.xml"
    :mods         "test/fixtures/documentary/mods/loc_mods_book.xml"
    :iiif         "test/fixtures/documentary/iiif/manifest_book_simple.json"
-   :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"})
+   :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"
+   :eac-cpf      "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml"})
 
 (deftest every-rdf-output-respects-its-vocabularies
   (testing "for each spoke, the LRMoo, CRM, pure-CRM and PROV-O outputs have no domain or range violation"
@@ -61,7 +62,8 @@
                                            :opts (if (= from :dc) {:record-id :dc/x} {})}))
             ts  (for [[s p o] (nt/parse out)] [(nt/term-key s) (:iri p) o])
             vs  (onto/violations @sch ts)]
-        (is (seq ts) (str from " -> " to " wrote triples"))
+        ;; pure CRM has no archival view: EAD and EAC-CPF are RiC-O, reported as loss
+        (is (or (seq ts) (and (#{:ead :eac-cpf} from) (= :crm-only to))) (str from " -> " to " wrote triples"))
         (is (empty? vs) (str from " -> " to ": " (pr-str (take 3 vs))))))))
 
 (deftest the-curation-history-respects-prov-o

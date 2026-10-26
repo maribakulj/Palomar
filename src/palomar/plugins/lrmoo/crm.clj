@@ -17,6 +17,7 @@
    later slice; this one is the lossless additive view."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
             [palomar.plugins.lrmoo.export :as export]))
 
@@ -137,6 +138,10 @@
   (mapcat
    (fn [[s p o :as triple]]
      (cond
+       ;; RiC-O is not CRM: the archival view is left out (`crm-only-losses`)
+       (or (str/starts-with? p export/rico-base) (str/starts-with? (str (:iri o)) export/rico-base))
+       []
+
        (and (= p export/rdf-type) (class-iri->crm (:iri o)))
        (into [[s p {:iri (class-iri->crm (:iri o))}]]
              (for [c (class-iri->also (:iri o))] [s p {:iri c}]))
@@ -202,8 +207,18 @@
                              :source-field p
                              :aspect       :relation
                              :message      (str (name p) " serialised as the generic "
-                                                (replaced-properties p))}))]
-    (vec (concat generic collapse coerced))))
+                                                (replaced-properties p))}))
+        rico     (for [[s p] (distinct (keep #(when (= "rico" (namespace (:predicate %))) [(:subject %) (:predicate %)])
+                                             (:assertions record)))]
+                   (dx/loss {:category     :dropped
+                             :subject      s
+                             :edge         :export
+                             :source-field p
+                             :aspect       (if (some #(and (= s (:subject %)) (= p (:predicate %)) (model/reference-value? (:value %)))
+                                                     (:assertions record))
+                                             :relation :value)
+                             :message      (str (pr-str p) " is RiC-O, which pure CIDOC CRM does not express")}))]
+    (vec (concat generic collapse coerced rico))))
 
 (defn crm-only-exporter
   "ADR 0007 exporter for the *pure* CRM serialisation: only E/P triples, with the

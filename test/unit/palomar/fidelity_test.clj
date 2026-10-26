@@ -15,7 +15,8 @@
    :marc21       "test/fixtures/documentary/marc21/marcxml/loc_collection.xml"
    :mods         "test/fixtures/documentary/mods/loc_mods_book.xml"
    :iiif         "test/fixtures/documentary/iiif/manifest_book_simple.json"
-   :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"})
+   :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"
+   :eac-cpf      "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml"})
 
 (defn- audit [from to]
   (fidelity/audit {:from from :to to :source (slurp (fixtures from))
@@ -60,7 +61,8 @@
     (doseq [from (keys fixtures)
             to   (sort (fidelity/relation-targets))]
       (let [{:keys [checked unaccounted]} (:relations (audit from to))]
-        (is (pos? checked) (str from " -> " to " checked some relation"))
+        ;; an EAC-CPF agent projects no relation yet (ADR 0045): they are reported at import
+        (is (or (pos? checked) (= :eac-cpf from)) (str from " -> " to " checked some relation"))
         (is (empty? unaccounted)
             (str from " -> " to ": silent relation loss " (pr-str (take 3 unaccounted))))))))
 

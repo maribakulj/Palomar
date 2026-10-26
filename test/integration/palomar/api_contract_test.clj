@@ -16,7 +16,8 @@
    :marc21       "test/fixtures/documentary/marc21/marcxml/loc_collection.xml"
    :mods         "test/fixtures/documentary/mods/loc_mods_book.xml"
    :iiif         "test/fixtures/documentary/iiif/manifest_book_simple.json"
-   :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"})
+   :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"
+   :eac-cpf      "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml"})
 
 (defn- opts [from] (if (= from :dc) {:record-id :dc/x} {}))
 

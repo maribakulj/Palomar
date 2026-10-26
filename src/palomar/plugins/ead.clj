@@ -106,10 +106,11 @@
         nat    (fn [p v sub] (when v (model/assertion {:subject rid :predicate p :value v
                                                        :provenance (model/provenance {:pass :ingest :evidence (ev sub)})})))
         did-x  "/*[local-name()='did'][1]"
-        names  (for [o (children did "origination")
+        typed  (for [o (children did "origination")
                      n (let [ns (children o)] (if (seq ns) ns [o]))
                      :let [t (text n)] :when t]
-                 t)
+                 [t (local (:tag n))])
+        names  (map first typed)
         notes  (fn [nm] (keep text (children el nm)))
         as     (remove nil?
                        (concat
@@ -121,6 +122,11 @@
                          (when parent (model/assertion {:subject rid :predicate :ead/parent :value parent
                                                         :provenance (model/provenance {:pass :ingest})}))]
                         (map #(nat :ead/origination % (str did-x "/*[local-name()='origination']")) (distinct names))
+                        ;; the creator with the kind its element states (persname,
+                        ;; corpname, famname), for the RiC-O view (ADR 0045)
+                        (map (fn [[t tag]] (nat :ead/creator (model/structured {:name t :element tag})
+                                                (str did-x "/*[local-name()='origination']")))
+                             (distinct typed))
                         (map #(nat :ead/scopecontent % "/*[local-name()='scopecontent']") (notes "scopecontent"))
                         (map #(nat :ead/dao % did-x) (distinct (dao-hrefs did)))))
         unread (distinct (remove (into described (map (comp local :tag) (filter component? (children el))))
@@ -207,44 +213,84 @@
    :importer            importer
    :doc                 "EAD 2002 / EAD3 finding aids — one record per unit of description."})
 
-;; --- projection (ADR 0039) ----------------------------------------------------
+;; --- projection: RiC-O (ADR 0045) ----------------------------------------------
 
-(defn- manifestation-of [rid] (model/mint-entity-id :lrmoo/F3_Manifestation [(str rid)]))
+(def rico-base "https://www.ica.org/standards/RiC/ontology#")
+(def ^:private rst-base "https://www.ica.org/standards/RiC/vocabularies/recordSetTypes#")
+
+(def record-set-types
+  "EAD `@level` → the RiC-O record set type (`ric-rst:`); `item` is a Record,
+   any other level a RecordSet of no stated type."
+  {"fonds" "Fonds" "subfonds" "Fonds" "recordgrp" "Fonds" "subgrp" "Fonds"
+   "series" "Series" "subseries" "Series" "file" "File" "collection" "Collection"})
+
+(def ^:private agent-kinds
+  {"persname" :rico/Person "corpname" :rico/CorporateBody "famname" :rico/Family})
+
+(defn- unit-of
+  "The RiC-O node of unit record `rid`: a Record for an item, else a RecordSet."
+  [rid level]
+  (let [kind (if (= "item" level) :rico/Record :rico/RecordSet)]
+    [(model/mint-entity-id kind [(str rid)]) kind]))
 
 (defn- runner
-  "A unit's Manifestation, its title (`:asserted`, transcription), the link to
-   its parent's Manifestation (`:asserted`, the finding aid's own structure),
-   and a `:projection` loss for each canonical field the view leaves out."
+  "A unit's RiC-O view (ADR 0045): its Record or RecordSet, with its title,
+   identifier, date and scope as transcribed, its record set type, the agents
+   that created it, and its inclusion in its parent's RecordSet — all
+   `:asserted`, the finding aid's own statements; and a `:projection` loss for
+   each canonical field the view leaves out."
   [record]
   (let [rid    (:id record)
-        manif  (manifestation-of rid)
-        prov   (model/provenance {:pass :infer :rule :rule.ead/project :derivation [rid]})
-        title  (first (filter #(and (= :canon/title (:predicate %)) (string? (:value %))) (:assertions record)))
-        parent (some #(when (= :ead/parent (:predicate %)) (:value %)) (:assertions record))
-        claim  (fn [s p v pv] {:kind :assertion :value (model/assertion {:subject s :predicate p :value v
-                                                                         :status :asserted :provenance pv})})
-        entity (fn [id] {:kind :entity :value (model/entity {:id id :kind :lrmoo/F3_Manifestation :provenance prov})})]
+        as     (:assertions record)
+        firsts (fn [p] (filter #(and (= p (:predicate %)) (not (model/out-of-force? %))) as))
+        level  (some :value (firsts :ead/level))
+        [u k]  (unit-of rid level)
+        parent (some :value (firsts :ead/parent))
+        prov   (fn [a] (cond-> {:pass :infer :rule :rule.ead/project :derivation [rid]}
+                         (seq (model/evidence-of a)) (assoc :evidence (model/evidence-of a))))
+        claim  (fn [s p v a] {:kind :assertion :value (model/assertion {:subject s :predicate p :value v :status :asserted
+                                                                        :provenance (model/provenance (prov a))})})
+        entity (fn [id kind & [iri]] {:kind :entity :value (model/entity (cond-> {:id id :kind kind
+                                                                                  :provenance (model/provenance (prov nil))}
+                                                                           iri (assoc :iri iri)))})
+        copy   (fn [from to] (for [a (firsts from) :when (string? (:value a))] (claim u to (:value a) a)))
+        rst    (get record-set-types level)]
     (concat
-     [(entity manif)]
-     (when title
-       [(claim manif :lrmoo/R33_has_string (:value title)
-               (cond-> prov (seq (model/evidence-of title)) (assoc :evidence (model/evidence-of title))))])
+     [(entity u k)]
+     (copy :ead/unittitle :rico/title)
+     (copy :ead/unitid :rico/identifier)
+     (copy :ead/unitdate :rico/date)
+     (copy :ead/abstract :rico/scopeAndContent)
+     (copy :ead/scopecontent :rico/scopeAndContent)
+     (when (and rst (= k :rico/RecordSet))
+       (let [t (model/mint-entity-id :rico/RecordSetType [rst])]
+         [(entity t :rico/RecordSetType (str rst-base rst))
+          (claim u :rico/hasRecordSetType (model/reference t) nil)]))
      (when parent
-       [(entity (manifestation-of parent))
-        (claim manif :crm/P106i_forms_part_of (model/reference (manifestation-of parent)) prov)])
-     (for [p (distinct (keep #(when (and (= "canon" (namespace (:predicate %))) (not= :canon/title (:predicate %)))
-                                (:predicate %))
-                             (:assertions record)))
-           :when (not (#{:canon/role :canon/note-kind :canon/lang} p))]
+       (let [[pu pk] (unit-of parent nil)]
+         [(entity pu pk)
+          (claim u :rico/isOrWasIncludedIn (model/reference pu) (first (firsts :ead/parent)))]))
+     ;; a creator is named, not identified: scoped to the unit (ADR 0041)
+     (mapcat (fn [a]
+               (let [{:keys [name element]} (:value/fields (:value a))
+                     kind (get agent-kinds element :rico/Agent)
+                     ag   (model/mint-entity-id kind [(str rid) name])]
+                 [(entity ag kind)
+                  (claim ag :rico/name name a)
+                  (claim u :rico/hasCreator (model/reference ag) a)]))
+             (filter #(model/structured-value? (:value %)) (firsts :ead/creator)))
+     (for [p (distinct (keep #(when (= "canon" (namespace (:predicate %))) (:predicate %)) as))
+           :when (not (#{:canon/title :canon/date :canon/identifier :canon/agent :canon/note
+                         :canon/role :canon/note-kind :canon/lang} p))]
        {:kind  :diagnostic
         :value (dx/loss {:category :dropped :subject rid :edge :projection :source-field p
-                         :message (str (name p) " not represented in the archival view (no Work or Expression, ADR 0039)")})}))))
+                         :message (str (name p) " not represented in the RiC-O view (ADR 0045)")})}))))
 
 (def rule
-  "The compiled `:infer` projection of an archival unit (ADR 0039)."
+  "The compiled `:infer` projection of an archival unit (ADR 0045)."
   (rules/compiled-rule {:id :rule.ead/project :phase :infer :runner (comp vec runner)}))
 
 (defn project
-  "`record` with its archival view: a Manifestation part of its parent's."
+  "`record` with its RiC-O view: a Record or RecordSet, included in its parent's."
   [record]
   (:record (runtime/run-phase record [rule] :infer)))

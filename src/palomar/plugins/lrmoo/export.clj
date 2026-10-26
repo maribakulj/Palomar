@@ -80,6 +80,10 @@
 
 (def skos-base "http://www.w3.org/2004/02/skos/core#")
 
+(def rico-base
+  "The RiC-O namespace, for the archival view (ADR 0045)."
+  "https://www.ica.org/standards/RiC/ontology#")
+
 (defn viewable-predicate?
   "Predicates the RDF view expresses: the LRMoo WEMI vocabulary, the CIDOC-CRM
    predicates the rich graph carries (e.g. `:crm/P129_is_about` for a subject),
@@ -87,13 +91,14 @@
    0032). The floor (`:canon/*`) and native (`:intermarc/*`) predicates are
    still export loss."
   [p]
-  (and (keyword? p) (contains? #{"lrmoo" "crm" "skos"} (namespace p))))
+  (and (keyword? p) (contains? #{"lrmoo" "crm" "skos" "rico"} (namespace p))))
 
 (defn term-iri
   "IRI of an `:lrmoo/*`, `:crm/*` or `:skos/*` term (class or property)."
   [k]
   (cond (crm-term? k)               (str crm-base (name k))
         (= "skos" (namespace k))    (str skos-base (name k))
+        (= "rico" (namespace k))    (str rico-base (name k))
         :else                       (lrmoo/iri k)))
 
 (defn- typed-kind?
@@ -101,7 +106,8 @@
    CIDOC-CRM class (so agents `E21_Person`, subjects `E55_Type`/`E53_Place`, … are
    typed, not just F1–F5)."
   [k]
-  (or (lrmoo/entity-kind? k) (= :lrmoo/F30_Manifestation_Creation k) (crm-term? k)))
+  (or (lrmoo/entity-kind? k) (= :lrmoo/F30_Manifestation_Creation k) (crm-term? k)
+      (and (keyword? k) (= "rico" (namespace k)))))
 
 (def appellation-class
   "IRI of `E41_Appellation` (CIDOC CRM), the class of the node an entity's
