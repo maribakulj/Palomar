@@ -56,6 +56,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0040](./0040-tuple-keys.md) | Identity keys are tuples, never joined strings | Accepted |
 | [0041](./0041-resemblance-identity-shared-node.md) | Resemblance is not identity, and identity alone shares a node | Accepted |
 | [0042](./0042-facts-only-by-default.md) | A target that states facts states only facts, by default | Accepted |
+| [0043](./0043-occurrences-and-node-fidelity.md) | Occurrences are kept, deletions reported, values checked on their node | Accepted |
 
 ## Template
 

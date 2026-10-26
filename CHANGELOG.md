@@ -364,6 +364,12 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Changed
 
+- Occurrences and node fidelity (ADR 0043): events keep every place, agent
+  and date of their field; each repeated IIIF painting is reported; `convert`
+  returns an OAI response's `:deleted` identifiers; harvested records carry
+  the metadata document's digest beside the response's; the RDF fidelity
+  audit checks each value on its own node.
+
 - **Facts only by default** (ADR 0042): a stating target (N-Triples, Turtle,
   JSON-LD, CRM, Linked Art, DC, MARC, MODS, IIIF) no longer states pending
   claims; `--with-proposals` / `:with-proposals? true` opts in, the report

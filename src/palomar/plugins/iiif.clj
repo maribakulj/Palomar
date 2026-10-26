@@ -109,20 +109,40 @@
         t (if (map? t) (get t "id") t)]
     (when (string? t) (second (re-find #"#(xywh=[^&]+)" t)))))
 
-(defn- painted-images
-  "`{:id :width :height :canvas :region}` for every Image painted on the
-   manifest's canvases, in canvas order, first occurrence of an id kept.
-   `:width`/`:height` are the Canvas's extent, `:canvas` its id and `:region`
-   the painted `xywh` when the annotation targets part of it."
+(defn- painting-occurrences
+  "`{:id :width :height :canvas :region}` for every painting of an Image on the
+   manifest's canvases, in canvas order, repeats included. `:width`/`:height`
+   are the Canvas's extent, `:canvas` its id and `:region` the painted `xywh`
+   when the annotation targets part of it."
   [m]
-  (->> (for [canvas (canvases m)
-             anno   (annotations canvas)
-             :when  (painting? anno)
-             body   (bodies anno)
-             :when  (and (= "Image" (get body "type")) (string? (get body "id")))]
-         {:id (get body "id") :width (get canvas "width") :height (get canvas "height")
-          :canvas (get canvas "id") :region (target-region anno)})
-       (reduce (fn [acc img] (if (some #(= (:id img) (:id %)) acc) acc (conj acc img))) [])))
+  (for [canvas (canvases m)
+        anno   (annotations canvas)
+        :when  (painting? anno)
+        body   (bodies anno)
+        :when  (and (= "Image" (get body "type")) (string? (get body "id")))]
+    {:id (get body "id") :width (get canvas "width") :height (get canvas "height")
+     :canvas (get canvas "id") :region (target-region anno)}))
+
+(defn- painted-images
+  "The paintings of `painting-occurrences`, first occurrence of an image id
+   kept: the floor carries a digital object once. Each repeat is reported
+   (`repeated-image-losses`)."
+  [m]
+  (reduce (fn [acc img] (if (some #(= (:id img) (:id %)) acc) acc (conj acc img))) [] (painting-occurrences m)))
+
+(defn- repeated-image-losses
+  "One `:dropped` loss per painting of an image already painted earlier in the
+   manifest (post-audit test 05): the floor keeps the image once, with its first
+   canvas, so the later canvas, and its region, is not carried."
+  [rid m]
+  (let [occ (painting-occurrences m)]
+    (for [[i img] (map-indexed vector occ)
+          :let [first-occ (first (filter #(= (:id img) (:id %)) (take i occ)))]
+          :when first-occ]
+      (dx/loss {:category :dropped :subject rid :edge :import :source-field :iiif/image
+                :message (str "image " (:id img) " is painted again on canvas " (:canvas img)
+                              (when (:region img) (str " (" (:region img) ")"))
+                              "; only its first painting, on canvas " (:canvas first-occ) ", is carried")}))))
 
 ;; ---------------------------------------------------------------------------
 ;; Extraction to native :iiif/* assertions
@@ -232,6 +252,7 @@
                     (not (contains? handled-keys k)))]
      (loss rid (keyword "iiif" k) (str k " not modelled by the IIIF floor mapping (ADR 0003)")))
    (canvas-losses rid m)
+   (repeated-image-losses rid m)
    (when (some #(or (several-strings? (get % "label")) (several-strings? (get % "value"))) (get m "metadata"))
      [(dx/loss {:category :coerced :subject rid :edge :import :source-field :iiif/metadata
                 :message "metadata kept one string per label and value; the others are not carried"})])))

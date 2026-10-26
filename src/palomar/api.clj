@@ -48,7 +48,8 @@
 
 (defn pivot
   "Read `source` (a string) of format `from` into pivot records:
-   `{:records [record…] :ingest [loss…]}`. `opts` is threaded to the importer
+   `{:records [record…] :ingest [loss…]}` (plus `:deleted`, an OAI-PMH
+   response's deleted identifiers). `opts` is threaded to the importer
    (`:record-id` for single-record sources)."
   [from opts source]
   (convert/to-wemi from opts source))
@@ -62,7 +63,7 @@
 
 (defn convert
   "Read and write in one call. `request`: `{:from :to :source :opts
-   :with-proposals?}`. Returns `{:output string :records n :loss report}`."
+   :with-proposals?}`. Returns `{:output string :records n :loss report :deleted [id…]}`."
   [request]
   (convert/convert request))
 

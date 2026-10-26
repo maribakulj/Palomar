@@ -99,3 +99,11 @@
       (let [loss (:loss (convert/convert {:from :marc21 :to :linked-art :source xml}))]
         (is (not-any? #{:lrmoo/R24_created :crm/P4_has_time-span :crm/P7_took_place_at :crm/P14_carried_out_by}
                       (:source-fields loss)))))))
+
+(deftest every-place-and-publisher-of-a-field-is-kept
+  (testing "260 $a Paris $b Gallimard $a Lyon $b Seuil names two places and two publishers (post-audit test 06)"
+    (let [r     (pivot (marcxml "7" (field "260" " " "a" "Paris :" "b" "Gallimard ;" "a" "Lyon :" "b" "Seuil," "c" "1928")))
+          names (fn [k] (set (keep #(value r (:id %) :crm/P190_has_symbolic_content) (of-kind r k))))]
+      (is (= 1 (count (of-kind r :lrmoo/F30_Manifestation_Creation))))
+      (is (= #{"Paris" "Lyon"} (names :crm/E53_Place)))
+      (is (= #{"Gallimard" "Seuil"} (names :crm/E39_Actor))))))

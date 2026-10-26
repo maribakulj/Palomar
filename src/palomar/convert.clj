@@ -167,9 +167,10 @@
    metadata format (`:metadata-prefix` in `opts`, default `oai_dc`)."
   [opts source]
   (let [prefix (get opts :metadata-prefix "oai_dc")
-        {:keys [records diagnostics]} (oai/import-response prefix source)]
+        {:keys [records diagnostics deleted]} (oai/import-response prefix source)]
     {:ingest  diagnostics
-     :records (pivot-imported (oai/formats prefix) source records)}))
+     :records (pivot-imported (oai/formats prefix) source records)
+     :deleted deleted}))
 
 (defn to-wemi
   "Import `source` through `spoke`, normalise to the canonical floor, then project
@@ -241,7 +242,8 @@
 
 (defn convert
   "Convert `source` from spoke `from` to serialisation `to`. Returns
-   `{:output String :loss <conversion-report> :records N}`.
+   `{:output String :loss <conversion-report> :records N :deleted [id…]}`,
+   `:deleted` the identifiers an OAI-PMH response marks deleted (else empty).
 
    `opts` is threaded to the importer (e.g. `:record-id` for the single-record
    spokes). A target that states facts gets only facts unless
@@ -254,11 +256,14 @@
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
-  (let [{:keys [records ingest]} (to-wemi from opts source)
+  (let [{:keys [records ingest deleted]} (to-wemi from opts source)
         projection-loss (dx/collect-many records)
         {output :output export-loss :loss withheld :withheld} (export-records to records {:with-proposals? with-proposals?})]
     {:output  output
      :records (count records)
+     ;; an OAI response's deleted records (post-audit test 07): a synchroniser
+     ;; must remove them, so they are part of the result, not dropped
+     :deleted (vec deleted)
      :loss    (assoc (lr/conversion-report (concat ingest projection-loss export-loss)
                                            {:records (count records)})
                      :withheld-proposals withheld)}))

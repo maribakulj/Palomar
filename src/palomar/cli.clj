@@ -182,6 +182,10 @@
             report (str (lr/format-conversion-report (:loss result))
                         "\n(" (:records result) " record"
                         (when (not= 1 (:records result)) "s") " converted)"
+                        (when (seq (:deleted result))
+                          (str "\n(" (count (:deleted result)) " record"
+                               (when (not= 1 (count (:deleted result))) "s")
+                               " deleted at the source: " (str/join " " (:deleted result)) ")"))
                         (zero-records-note (:records result) from input))]
         (if out
           (do (spit out (:output result)) {:exit 0 :out "" :err (str "wrote " out "\n" report)})

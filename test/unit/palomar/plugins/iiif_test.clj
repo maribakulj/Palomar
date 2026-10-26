@@ -129,3 +129,18 @@
                       [iiif/plugin dc/plugin marc21/plugin mods/plugin])]
       (is (some? (mapping/compile-mappings (plug/all-mappings reg)
                                            (plug/effective-transforms reg)))))))
+
+(deftest a-repeated-image-is-reported-per-occurrence
+  (testing "two canvases painting one image: the floor keeps it once and reports the second painting (post-audit test 05)"
+    (let [canvas (fn [n] {"id" (str "https://ex.org/c" n) "type" "Canvas" "width" 10 "height" 10
+                          "items" [{"type" "AnnotationPage"
+                                    "items" [{"type" "Annotation" "motivation" "painting" "target" (str "https://ex.org/c" n)
+                                              "body" {"id" "https://ex.org/img.jpg" "type" "Image"}}]}]})
+          m      {"@context" "http://iiif.io/api/presentation/3/context.json" "id" "https://ex.org/manifest"
+                  "type" "Manifest" "label" {"en" ["Two canvases"]} "items" [(canvas 1) (canvas 2) (canvas 3)]}
+          {:keys [records diagnostics]} ((:importer iiif/plugin) {} (json/write-str m))
+          repeats (filter #(and (= :iiif/image (dx/loss-source-field %)) (str/includes? (:message %) "painted again"))
+                          diagnostics)]
+      (is (= 1 (count (filter #(= "https://ex.org/img.jpg" (:value %)) (:assertions (first records))))))
+      (is (= 2 (count repeats)) "one loss per repeated painting")
+      (is (str/includes? (:message (first repeats)) "https://ex.org/c2")))))
