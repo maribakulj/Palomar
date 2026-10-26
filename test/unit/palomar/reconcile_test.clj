@@ -82,10 +82,11 @@
   (let [a       (record-with-agent :r/a "Gustave Flaubert" nil)
         b       (record-with-agent :r/b "Gustave Flaubert" nil)
         c       (record-with-agent :r/c "Victor Hugo" nil)
-        accept  #(assoc % :status :accepted)
+        ;; a curator's explicit corpus-wide decision: this name is one person
+        accept  #(assoc % :status :accepted :records :all)
         links   (mapv accept (rec/propose-agent-links ["Gustave Flaubert" "Victor Hugo"] pool))
         {:keys [records applied refused]} (rec/apply-agent-links [a b c] links)]
-    (testing "the accepted certifiable link is applied to both Flaubert records, as the same node"
+    (testing "a link accepted for the whole corpus is applied to both Flaubert records, as the same node"
       (is (= #{:r/a :r/b} (set (map :record applied))))
       (is (= 1 (count (distinct (map :id (mapcat :entities (take 2 records))))))))
     (testing "the id-less Victor Hugo match (the metro station) is refused, never applied"
@@ -107,11 +108,11 @@
         (is (= [:not-accepted] (map :reason refused)))))
     (testing "a rejected link is not applied"
       (is (empty? (:applied (rec/apply-agent-links [a] [{:name "Gustave Flaubert" :authority-id "isni:flaubert"
-                                                         :certifiable? true :status :rejected}])))))
+                                                         :certifiable? true :status :rejected :records #{:r/a}}])))))
     (testing "one name accepted for two authority ids is ambiguous: neither is applied"
       (let [{:keys [applied refused]}
-            (rec/apply-agent-links [a] [{:name "Gustave Flaubert" :authority-id "isni:a" :certifiable? true :status :accepted}
-                                        {:name "Gustave Flaubert" :authority-id "isni:b" :certifiable? true :status :accepted}])]
+            (rec/apply-agent-links [a] [{:name "Gustave Flaubert" :authority-id "isni:a" :certifiable? true :status :accepted :records #{:r/a}}
+                                        {:name "Gustave Flaubert" :authority-id "isni:b" :certifiable? true :status :accepted :records #{:r/a}}])]
         (is (empty? applied))
         (is (= [:ambiguous :ambiguous] (map :reason refused)))))))
 
@@ -119,7 +120,7 @@
   (testing "an accepted, certifiable link whose id would corrupt the RDF output is refused, with its reason"
     (let [r    (model/record {:id :rec/one :kind :doc
                               :assertions [(model/assertion {:subject :rec/one :predicate :canon/agent :value "X"})]})
-          link {:name "X" :authority-id "isni 0000 0001" :certifiable? true :status :accepted}
+          link {:name "X" :authority-id "isni 0000 0001" :certifiable? true :status :accepted :records #{:rec/one}}
           {:keys [applied refused]} (rec/apply-agent-links [r] [link])]
       (is (empty? applied))
       (is (= [:invalid-iri] (map :reason refused))))))
@@ -154,3 +155,22 @@
       (let [rej (first (:records (curate/curate [a] curate/reject-all)))
             nq  (dataset/->nquads rej)]
         (is (some #(and (str/includes? % "exactMatch") (str/includes? % "graph:history")) (str/split-lines nq)))))))
+
+(deftest an-accepted-alignment-does-not-identify-a-homonym
+  (testing "accepting \"Gustave Flaubert\" = the authority in one record leaves another record's Gustave Flaubert alone (post-audit test 01)"
+    (let [props [{:name "Gustave Flaubert" :authority-id "https://isni.org/isni/0000000122762442"
+                  :authority-label "Flaubert, Gustave" :score 1.0 :certifiable? true :status :proposed}]
+          [a b] (rec/align-agents [(named :doc/a "Gustave Flaubert") (named :doc/b "Gustave Flaubert")] props)
+          ;; the curator accepts the alignment in :doc/a only
+          a'    (:record (curate/curate-record a curate/accept-all))
+          b'    (:record (curate/curate-record b curate/reject-all))
+          links (rec/accepted-links [a' b'])
+          {:keys [applied]} (rec/apply-agent-links [a' b'] links)]
+      (is (= [#{:doc/a}] (map :records links)))
+      (is (= [:doc/a] (map :record applied)))))
+  (testing "a link that names no record is refused: a name alone identifies no one"
+    (let [{:keys [applied refused]} (rec/apply-agent-links [(record-with-agent :r/a "Gustave Flaubert" nil)]
+                                                           [{:name "Gustave Flaubert" :authority-id "isni:flaubert"
+                                                             :certifiable? true :status :accepted}])]
+      (is (empty? applied))
+      (is (= [:unscoped] (map :reason refused))))))

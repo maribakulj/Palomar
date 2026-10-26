@@ -67,12 +67,12 @@
 
    {:id      :rule.lrmoo.wemi/no-creator
     :phase   :infer
-    :doc     "With no creator, the Expression is keyed by the title alone, and there is no Work."
+    :doc     "With no creator, the Expression is keyed by the record and the title (a title alone identifies nothing, ADR 0041), and there is no Work."
     :match   (into ['[?r :meta/id ?r]]
                    (concat titled [stated-creator
                                    '(not [?r :canon/agent ?a] (string? ?a))]))
-    :produce {:construct [['(mint :lrmoo/F3_Manifestation (str ?r)) :lrmoo/R4_embodies (list 'mint :lrmoo/F2_Expression "" (list 'norm key-title))]
-                          [(list 'mint :lrmoo/F2_Expression "" (list 'norm key-title)) :lrmoo/R33_has_string key-title]]}}])
+    :produce {:construct [['(mint :lrmoo/F3_Manifestation (str ?r)) :lrmoo/R4_embodies (list 'mint :lrmoo/F2_Expression :record '?r (list 'norm key-title))]
+                          [(list 'mint :lrmoo/F2_Expression :record '?r (list 'norm key-title)) :lrmoo/R33_has_string key-title]]}}])
 
 (def compiled
   "`rules`, compiled."

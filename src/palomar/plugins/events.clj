@@ -11,9 +11,12 @@
        —P7_took_place_at→ E53_Place (named)
        —P14_carried_out_by→ E39_Actor (named)
 
-   The Place and the Actor are keyed by the matching form of their name, so the
-   same name in two records is one node; the event and its time-span are keyed
-   by the Manifestation and the field occurrence. A field states the kind of
+   The Place and the Actor are named, not identified: a field gives a name,
+   and two records' \"Paris\" or \"Gallimard\" may be different places or
+   publishers. So each is scoped to the Manifestation (keyed by it and the
+   matching form of the name, ADR 0041); saying two are one is an alignment's
+   job (ADR 0032), not a key's. The event and its time-span are keyed by the
+   Manifestation and the field occurrence. A field states the kind of
    event by its tag, or by its second indicator (MARC 264, UNIMARC 214: 0
    production, 1 publication); a distribution, manufacture or copyright
    statement is not an F30 and makes no event. The claims are `:proposed`, like
@@ -103,12 +106,12 @@
           (claim event :crm/P4_has_time-span (model/reference ts) (:date spec))
           (claim ts :crm/P82_at_some_time_within date (:date spec))]))
      (when-let [k (and place (not-empty (text/norm place)))]
-       (let [pl (model/mint-entity-id :crm/E53_Place [k])]
+       (let [pl (model/mint-entity-id :crm/E53_Place [manif k])]
          [(entity pl :crm/E53_Place)
           (claim event :crm/P7_took_place_at (model/reference pl) (:place spec))
           (claim pl :crm/P190_has_symbolic_content place (:place spec))]))
      (when-let [k (and agent (not-empty (text/norm agent)))]
-       (let [ac (model/mint-entity-id :crm/E39_Actor [k])]
+       (let [ac (model/mint-entity-id :crm/E39_Actor [manif k])]
          [(entity ac :crm/E39_Actor)
           (claim event :crm/P14_carried_out_by (model/reference ac) (:agent spec))
           (claim ac :crm/P190_has_symbolic_content agent (:agent spec))])))))

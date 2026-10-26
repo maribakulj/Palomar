@@ -364,6 +364,11 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Changed
 
+- Resemblance is not identity (ADR 0041): an accepted alignment applies only
+  to the records it was accepted in (`:records`, or a curator's explicit
+  `:all`; an unscoped link is refused); event places and actors are scoped to
+  their Manifestation; a creator-less Expression is scoped to its record.
+
 - Identity keys are tuples (ADR 0040): minted ids hash `model/tuple-key` of
   their parts instead of a `|`-joined string, so `["a|b" "c"]` and `["a"
   "b|c"]` no longer collide; every minted id changes once. OAI record ids are

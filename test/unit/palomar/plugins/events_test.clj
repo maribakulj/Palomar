@@ -58,10 +58,14 @@
     (is (empty? (of-kind (pivot (marcxml "3" (field "264" "2" "a" "Lyon" "b" "Distrib"))) :lrmoo/F30_Manifestation_Creation))
         "a distribution is not a Manifestation Creation")))
 
-(deftest one-place-name-is-one-place
+(deftest a-place-name-is-not-a-place-across-records
+  (testing "two records' \"Paris\" may be two places: each is scoped to its record (ADR 0041)"
+    (let [a (pivot (marcxml "4" (field "260" " " "a" "Paris :" "b" "Gallimard" "c" "1928")))
+          b (pivot (marcxml "5" (field "260" " " "a" "[Paris]" "b" "Gallimard" "c" "1930")))]
+      (is (not= (map :id (of-kind a :crm/E53_Place)) (map :id (of-kind b :crm/E53_Place))))
+      (is (not= (map :id (of-kind a :crm/E39_Actor)) (map :id (of-kind b :crm/E39_Actor))))))
   (let [a (pivot (marcxml "4" (field "260" " " "a" "Paris :" "c" "1928")))
         b (pivot (marcxml "5" (field "260" " " "a" "[Paris]" "c" "1930")))]
-    (is (= (map :id (of-kind a :crm/E53_Place)) (map :id (of-kind b :crm/E53_Place))))
     (is (not= (map :id (of-kind a :lrmoo/F30_Manifestation_Creation))
               (map :id (of-kind b :lrmoo/F30_Manifestation_Creation))))))
 
