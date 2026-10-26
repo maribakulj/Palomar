@@ -296,6 +296,33 @@
   [a]
   (keyword "asr" (str "h" (content-digest [(:subject a) (:predicate a) (:value a)] 16))))
 
+(defn encode-name
+  "`s` as a keyword-name segment that reads back as EDN and decodes back
+   (`decode-name`): letters, digits and `-` stay; every other character, and a
+   first character that is not a letter, is written `_` and its UTF-8 bytes in
+   hex (`:` is `_3A`, `_` itself `_5F`). Injective, so two strings never share a
+   segment; `_` followed by anything but two hex digits never occurs in it,
+   which a caller may use as a separator (ADR 0040)."
+  [s]
+  (apply str
+         (map-indexed
+          (fn [i c]
+            (if (re-matches (if (zero? i) #"[A-Za-z]" #"[A-Za-z0-9-]") c)
+              c
+              (apply str (map #(format "_%02X" (bit-and (int %) 0xff)) (.getBytes ^String c "UTF-8")))))
+          (map #(String. (Character/toChars (int %))) (.toArray (.codePoints (str s)))))))
+
+(defn decode-name
+  "The string `encode-name` made `n` from."
+  [n]
+  (let [out (java.io.ByteArrayOutputStream.)]
+    (loop [i 0]
+      (when (< i (count n))
+        (if (= \_ (.charAt ^String n i))
+          (do (.write out (Integer/parseInt (subs n (inc i) (+ i 3)) 16)) (recur (+ i 3)))
+          (do (.write out (.getBytes (subs n i (inc i)) "UTF-8")) (recur (inc i))))))
+    (String. (.toByteArray out) "UTF-8")))
+
 (defn tuple-key
   "An unambiguous string for the tuple `parts` (strings, keywords, numbers): its
    printed EDN vector, so `[\"a|b\" \"c\"]` and `[\"a\" \"b|c\"]` stay apart, as

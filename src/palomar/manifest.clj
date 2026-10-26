@@ -3,7 +3,8 @@
    results that differ can be explained (plan step 6, ADR 0030).
 
    A manifest is a plain EDN map naming everything a conversion's output
-   depends on: Palomar's version and commit, the spoke and target, each plugin
+   depends on: Palomar's version and commit, a digest of the source of every
+   Palomar namespace that ran (`code-fingerprint`), the spoke and target, each plugin
    with a digest of its mapping and rules (they are data, so a changed mapping
    changes its digest), the ontology files, the SHA-256 of every input and
    output, the options, the compiled rule ids, the loss summary, and the times
@@ -14,6 +15,7 @@
    `convert --manifest <file>` fills them."
   (:require [clojure.java.io :as io]
             [clojure.pprint :as pprint]
+            [clojure.string :as str]
             [palomar.model :as model]
             [palomar.ontology :as ontology]
             [palomar.plugins.canonical :as canonical]
@@ -30,6 +32,27 @@
   (if-let [r (io/resource "palomar/build.edn")]
     (read-string (slurp r))
     {:version "dev"}))
+
+(defn sources-digest
+  "SHA-256 over `sources`, `[[path content]…]`, in path order: one digest for a
+   set of source files."
+  [sources]
+  (model/sha256-hex (apply str (for [[p c] (sort-by first sources)] (str (count p) ":" p (count c) ":" c))) 64))
+
+(defn code-fingerprint
+  "The code that ran (post-audit test 09): the SHA-256 of the source of every
+   loaded `palomar.*` namespace, read from the classpath, with their count. A
+   changed exporter, mapping or engine changes it, which a version string
+   alone (\"dev\") does not."
+  []
+  (let [srcs (for [n (all-ns)
+                   :let [nm (str (ns-name n))]
+                   :when (str/starts-with? nm "palomar.")
+                   :let [path (str (-> nm (str/replace "-" "_") (str/replace "." "/")) ".clj")
+                         r    (io/resource path)]
+                   :when r]
+               [path (slurp r)])]
+    {:sha256 (sources-digest srcs) :namespaces (count srcs)}))
 
 (defn fingerprint
   "`{:sha256 hex :bytes n}` of `content` (a String, a byte array or a File)."
@@ -59,7 +82,7 @@
                 (assoc (fingerprint f) :path p))
         rules (concat (map :mapping/id (:mapping (spokes/plugin from))) (map :id (:rules canonical/plugin)))]
     (cond-> {:manifest/version manifest-version
-             :palomar          (build-info)
+             :palomar          (assoc (build-info) :code (code-fingerprint))
              :from             from
              :to               to
              :plugins          (mapv plugin-entry (keep identity [(spokes/plugin from) canonical/plugin]))

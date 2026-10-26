@@ -23,11 +23,12 @@
    never dropped silently. The namespaces of EAD 2002 and EAD3 are both read,
    and so is a document with none.
 
-   A unit's id is `:ead/d<digest>-<path>`: twelve hex digits of the document's
-   SHA-256 and the unit's position (`0` the archdesc, `0-2-1` its second
-   component's first child). A finding aid's own identifier (`eadid`,
-   `recordid`) is often empty or reused (`1.1` in all three EAD3 samples), so it
-   cannot name the unit alone.
+   A unit's id comes from the source's own identifiers (ADR 0044): the
+   finding aid's maintenance agency and `recordid`/`eadid`, and the unit's
+   `unitid` when it is unique in the document, else its position (`0` the
+   archdesc, `0-2-1` its second component's first child). So editing a note
+   changes no id. A finding aid with no identifier at all is named by its
+   content's digest instead, and the importer reports it.
 
    Archival units are not editions: `project` gives each unit a Manifestation
    that `P106i_forms_part_of` its parent's, and mints no Expression or Work
@@ -97,10 +98,10 @@
           (keep #(attr % "href") (mapcat #(children % "dao") (children did "daoset")))))
 
 (defn- unit-record
-  "The record of unit `el` at `path` (its position) under parent record `parent`."
-  [doc-key el path xpath parent]
-  (let [rid    (keyword "ead" (str "d" doc-key "-" (str/join "-" path)))
-        did    (child el "did")
+  "The record `rid` of unit `el` at `path` (its position) under parent record
+   `parent`."
+  [rid el path xpath parent]
+  (let [did    (child el "did")
         ev     (fn [sub] [{:selector {:type :xpath :value (str xpath sub)}}])
         nat    (fn [p v sub] (when v (model/assertion {:subject rid :predicate p :value v
                                                        :provenance (model/provenance {:pass :ingest :evidence (ev sub)})})))
@@ -131,6 +132,28 @@
                (dx/loss {:category :dropped :subject rid :edge :import :source-field (keyword "ead" u)
                          :message (str u " is not read by the EAD importer (ADR 0039)")}))}))
 
+(defn- finding-aid-id
+  "The finding aid's own identity, `[agency id]`: its maintenance agency code
+   and its `recordid` (EAD3) or `eadid` (EAD 2002), else nil."
+  [root]
+  (let [control (or (child root "control") (child root "eadheader"))
+        eadid   (child control "eadid")
+        id      (or (text (child control "recordid")) (text eadid))
+        agency  (or (text (child (child control "maintenanceagency") "agencycode"))
+                    (attr eadid "mainagencycode") (attr eadid "countrycode") "")]
+    (when id [agency id])))
+
+(defn- unit-id
+  "A unit's record id (ADR 0044): the finding aid's identity and the unit's
+   `unitid` when that is unique in the document, else its position — never a
+   digest of the document, so editing a note changes no id (post-audit test
+   10). Each part is `model/encode-name`d and joined by `_-`, which no encoded
+   part holds."
+  [doc unique-ids el path]
+  (let [uid  (text (child (child el "did") "unitid"))
+        unit (if (and uid (unique-ids uid)) (str "u" (model/encode-name uid)) (str "p" (str/join "-" path)))]
+    (keyword "ead" (str/join "_-" (concat (map model/encode-name doc) [unit])))))
+
 (defn importer
   "ADR 0007 importer: `(fn [opts source] -> {:records [...] :diagnostics [...]})`,
    one record per unit of the finding aid `source` (see the ns doc)."
@@ -139,17 +162,28 @@
         root    (rx/parse-str s)
         _       (when-not (= "ead" (local (:tag root)))
                   (throw (ex-info "ead: not an EAD document" {:root (local (:tag root))})))
-        doc-key (model/sha256-hex s 12)
         arch    (child root "archdesc")
-        units   (fn units [el path xpath parent]
-                  (let [{:keys [record] :as u} (unit-record doc-key el path xpath parent)]
-                    (cons u (apply concat
-                                   (map-indexed (fn [i [c suffix]] (units c (conj path i) (str xpath suffix) (:id record)))
-                                                (components el))))))]
-    (when-not arch (throw (ex-info "ead: no archdesc" {})))
-    (let [us (units arch [0] "/*[local-name()='ead'][1]/*[local-name()='archdesc'][1]" nil)]
-      {:records     (mapv :record us)
-       :diagnostics (vec (mapcat :losses us))})))
+        _       (when-not arch (throw (ex-info "ead: no archdesc" {})))
+        walk    (fn walk [el path xpath parent-path]
+                  (cons {:el el :path path :xpath xpath :parent parent-path}
+                        (apply concat (map-indexed (fn [i [c suffix]] (walk c (conj path i) (str xpath suffix) path))
+                                                   (components el)))))
+        units   (vec (walk arch [0] "/*[local-name()='ead'][1]/*[local-name()='archdesc'][1]" nil))
+        fa-id   (finding-aid-id root)
+        ;; with no identifier of its own, the finding aid is named by its
+        ;; content: its unit ids then change whenever it does, and it says so
+        doc     (or fa-id ["" (str "h" (model/sha256-hex s 12))])
+        uids    (frequencies (keep #(text (child (child (:el %) "did") "unitid")) units))
+        unique  #(= 1 (uids %))
+        ids     (into {} (map (fn [u] [(:path u) (unit-id doc unique (:el u) (:path u))])) units)
+        us      (for [u units] (unit-record (ids (:path u)) (:el u) (:path u) (:xpath u) (some-> (:parent u) ids)))]
+    {:records     (mapv :record us)
+     :diagnostics (cond-> (vec (mapcat :losses us))
+                    (nil? fa-id)
+                    (conj (dx/loss {:category :under-specified :subject (ids [0]) :edge :import
+                                    :source-field :ead/recordid
+                                    :message (str "the finding aid states no recordid or eadid: its units are named by"
+                                                  " the document's digest, and change whenever it does")})))}))
 
 (def mapping
   "EAD natives → the canonical floor (see the ns doc)."

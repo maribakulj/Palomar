@@ -2,7 +2,8 @@
   "EAD finding aids (ADR 0039): one record per unit, read in either EAD
    namespace, with what is not read reported, and an archival view that keeps
    the hierarchy and mints no Work."
-  (:require [clojure.set :as set]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
             [palomar.plugins.ead :as ead]
@@ -34,10 +35,20 @@
     (is (= ["Cité internationale universitaire de Paris (CIUP)"] (canon (first records) :canon/agent)))
     (is (= ["20090013"] (canon (first records) :canon/identifier)))))
 
-(deftest a-unit-id-does-not-depend-on-the-finding-aid-s-own-identifier
-  (testing "the three EAD3 samples all say recordid 1.1, yet their units are distinct"
-    (let [ids (fn [f] (set (map :id (:records (ead/importer {} (slurp f))))))]
-      (is (empty? (set/intersection (ids ead3) (ids "test/fixtures/documentary/ead/ead3/ead3_single_level_optimum.xml")))))))
+(deftest a-unit-is-named-by-the-source-s-own-identifiers
+  (let [ids (fn [x] (mapv :id (:records (ead/importer {} x))))
+        xml (slurp ead3)]
+    (testing "editing a note changes no unit id (post-audit test 10)"
+      (is (= (ids xml) (ids (str/replace xml "Lowell Thomas Papers" "Lowell Thomas Papers (revised)")))))
+    (testing "the same fonds, by agency, recordid and unitid, has one id in two descriptions of it"
+      (is (contains? (set (ids (slurp "test/fixtures/documentary/ead/ead3/ead3_single_level_optimum.xml")))
+                     (first (ids xml)))))
+    (testing "ids read back as EDN"
+      (is (every? #(= % (edn/read-string (str %))) (ids xml)))))
+  (testing "a finding aid with no identifier is named by its digest, and says so"
+    (let [{:keys [records diagnostics]} (ead/importer {} (slurp ead2002))]
+      (is (some #(= :ead/recordid (get-in % [:detail :loss/source-field])) diagnostics))
+      (is (= 32 (count (distinct (map :id records))))))))
 
 (deftest the-archival-view
   (let [{:keys [records]} (convert/to-wemi :ead {} (slurp ead3))

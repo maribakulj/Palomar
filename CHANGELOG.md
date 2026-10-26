@@ -364,6 +364,16 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Changed
 
+- Archives (ADR 0044): the direction is RiC-O, not WEMI, and the EAD spoke is
+  experimental until it lands; EAD unit ids now come from the finding aid's
+  agency and record id and the unit's `unitid` (or position), not from the
+  document's digest, so editing a note renames nothing.
+
+- The manifest names the code that ran (`[:palomar :code]`, a digest of every
+  loaded Palomar namespace's source), not only a version string; and
+  `docs/guarantees.md` is checked by `palomar.guarantees-test` — every cited
+  test exists, and its format lists are the registered ones.
+
 - Occurrences and node fidelity (ADR 0043): events keep every place, agent
   and date of their field; each repeated IIIF painting is reported; `convert`
   returns an OAI response's `:deleted` identifiers; harvested records carry
