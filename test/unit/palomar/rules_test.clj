@@ -718,8 +718,8 @@
                     book)
         ents (filter #(= :entity (:kind %)) ps)
         as   (map :value (filter #(= :assertion (:kind %)) ps))
-        prod (model/mint-entity-id :crm/E12_Production ":rec/b")
-        pers (model/mint-entity-id :crm/E21_Person "Breton, André")]
+        prod (model/mint-entity-id :crm/E12_Production [":rec/b"])
+        pers (model/mint-entity-id :crm/E21_Person ["Breton, André"])]
     (is (= #{[prod :crm/E12_Production] [pers :crm/E21_Person]} (set (map (juxt (comp :id :value) (comp :kind :value)) ents))))
     (is (= 2 (count ents)) "an entity minted twice is declared once")
     (is (some #(= [prod :crm/P14_carried_out_by (model/reference pers) :proposed]
@@ -764,3 +764,11 @@
                         (produce {:id :r/x :phase :infer :match '[[?r :canon/title ?t]]
                                   :produce {:construct '[[?r :a/c (upper ?t)]]}}
                                  book))))
+
+(deftest mint-keys-are-tuples-not-joined-strings
+  (testing "[\"a|b\" \"c\"] and [\"a\" \"b|c\"] mint two entities (post-audit test 08)"
+    (let [rule (fn [parts] {:id :r/k :phase :infer :match '[[?r :canon/title ?t]]
+                            :produce {:construct [[(apply list 'mint :x/K parts) :x/p '?t]]}})
+          id   #(get-in (first (filter (fn [p] (= :entity (:kind p))) (produce (rule %) book))) [:value :id])]
+      (is (not= (id ["a|b" "c"]) (id ["a" "b|c"])))
+      (is (not= (id ["1"]) (id [1])) "a string and a number are different parts"))))

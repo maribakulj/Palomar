@@ -53,6 +53,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0037](./0037-oai-pmh-and-dcmi-terms.md) | OAI-PMH responses and DCMI Terms | Accepted |
 | [0038](./0038-authority-files.md) | Authority files as reconciliation pools | Accepted |
 | [0039](./0039-archival-description.md) | Archival description: EAD units and EAC-CPF authorities | Accepted |
+| [0040](./0040-tuple-keys.md) | Identity keys are tuples, never joined strings | Accepted |
 
 ## Template
 

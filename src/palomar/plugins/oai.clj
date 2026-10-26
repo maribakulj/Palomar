@@ -64,11 +64,33 @@
 
 (defn record-id
   "A record id for OAI identifier `id`, for a spoke that needs one given
-   (Dublin Core): `:oai/<id>`, its characters outside `[A-Za-z0-9-_]` folded to
-   `-`, starting with a letter so it reads back as EDN (ADR 0034)."
+   (Dublin Core): `:oai/<name>`. The name keeps letters, digits and `-`, and
+   writes every other character as `_` and its UTF-8 bytes in hex (`:` is
+   `_3A`, `_` itself `_5F`), as is a first character that is not a letter. So
+   two identifiers never share a record id (`record-identifier` reads it back),
+   and the keyword reads back as EDN (ADR 0034)."
   [id]
-  (let [n (-> (str id) (str/replace #"[^A-Za-z0-9_-]+" "-") (str/replace #"^-+|-+$" ""))]
-    (keyword "oai" (if (re-find #"^[A-Za-z]" n) n (str "r" n)))))
+  (let [chars (map #(String. (Character/toChars (int %))) (.toArray (.codePoints (str id))))]
+    (keyword "oai"
+             (apply str
+                    (map-indexed
+                     (fn [i c]
+                       (if (re-matches (if (zero? i) #"[A-Za-z]" #"[A-Za-z0-9-]") c)
+                         c
+                         (apply str (map #(format "_%02X" (bit-and (int %) 0xff)) (.getBytes ^String c "UTF-8")))))
+                     chars)))))
+
+(defn record-identifier
+  "The OAI identifier `record-id` made `rid` from."
+  [rid]
+  (let [n   (name rid)
+        out (java.io.ByteArrayOutputStream.)]
+    (loop [i 0]
+      (when (< i (count n))
+        (if (= \_ (.charAt n i))
+          (do (.write out (Integer/parseInt (subs n (inc i) (+ i 3)) 16)) (recur (+ i 3)))
+          (do (.write out (.getBytes (subs n i (inc i)) "UTF-8")) (recur (inc i))))))
+    (String. (.toByteArray out) "UTF-8")))
 
 (defn import-response
   "Import every live record of OAI-PMH response `xml`, whose metadata is in

@@ -72,7 +72,7 @@
   [record]
   (let [rid   (:id record)
         prov  (model/provenance {:pass :infer :derivation [rid]})
-        manif (model/mint-entity-id :lrmoo/F3_Manifestation (str rid))
+        manif (model/mint-entity-id :lrmoo/F3_Manifestation [(str rid)])
         miri  (ark-iri record)
         x3    (field record :intermarc/f145_3)
         m245  (field record :intermarc/f245_a)]
@@ -85,7 +85,7 @@
                        wst  (if a3 :asserted :proposed)   ; authority-backed creator?
                        work (when (and auth ttl)
                               (model/mint-entity-id :lrmoo/F1_Work
-                                                    (str auth "|" (text/norm ttl))))]
+                                                    [auth (text/norm ttl)]))]
                    (cond-> [(entity-prod expr :lrmoo/F2_Expression prov)
                             (assert-prod manif :lrmoo/R4_embodies (model/reference expr) prov :asserted)]
                      ttl  (conj (assert-prod expr :lrmoo/R33_has_string ttl prov :asserted))

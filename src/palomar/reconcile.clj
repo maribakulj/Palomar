@@ -158,7 +158,7 @@
    the record names, not yet identified (its id is scoped to the record, as
    two records' homonyms are not the same person by name alone)."
   [rid nm]
-  (model/entity {:id   (model/mint-entity-id :crm/E21_Person (str rid "|" nm))
+  (model/entity {:id   (model/mint-entity-id :crm/E21_Person [rid nm])
                  :kind :crm/E21_Person}))
 
 (defn align-agents

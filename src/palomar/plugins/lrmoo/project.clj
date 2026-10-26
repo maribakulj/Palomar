@@ -120,7 +120,7 @@
   [record]
   (let [rid        (:id record)
         prov       (model/provenance {:pass :infer :derivation [rid]})
-        manif      (model/mint-entity-id :lrmoo/F3_Manifestation (str rid))
+        manif      (model/mint-entity-id :lrmoo/F3_Manifestation [(str rid)])
         title      (title-of record)
         work-title (work-title-of record)
         ;; only a creator keys the Work: an edition credited only to its
@@ -131,13 +131,13 @@
       ;; (D7); the Work/Expression below are string-key inference -> :proposed, and
       ;; key on the uniform title when present.
       title      (conj (assert-prod manif :lrmoo/R33_has_string title (with-evidence-of prov record title) :asserted))
-      work-title (into (let [wkey (str (or agent "") "|" (text/norm work-title))
+      work-title (into (let [wkey [(or agent "") (text/norm work-title)]
                              ;; a single stated language belongs to the Expression's
                              ;; identity, not the Work's: an original and its
                              ;; translation are one Work, two Expressions (audit S19)
                              lang (let [ls (distinct-langs record)] (when (= 1 (count ls)) (first ls)))
                              expr (model/mint-entity-id :lrmoo/F2_Expression
-                                                        (cond-> wkey lang (str "|" lang)))
+                                                        (cond-> wkey lang (conj lang)))
                              work (when agent (model/mint-entity-id :lrmoo/F1_Work wkey))]
                          ;; F1 and F2 minted from the same key are distinct ids: the
                          ;; kind is part of the content hash (`mint-entity-id`).

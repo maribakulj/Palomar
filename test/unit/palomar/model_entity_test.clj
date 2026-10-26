@@ -4,6 +4,9 @@
    consistency contract extension."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
             [palomar.model :as model]))
 
 (deftest mint-entity-id-deterministic-and-content-based
@@ -71,3 +74,14 @@
     (let [r (model/record {:id :record/r1 :kind :book})]
       (is (model/valid-record? r))
       (is (= #{:record/r1} (model/known-subjects r))))))
+
+(deftest a-tuple-key-is-unambiguous
+  (is (not= (model/mint-entity-id :x/K ["a|b" "c"]) (model/mint-entity-id :x/K ["a" "b|c"])))
+  (is (not= (model/mint-entity-id :x/K ["1"]) (model/mint-entity-id :x/K [1])))
+  (is (thrown? clojure.lang.ExceptionInfo (model/mint-entity-id :x/K "[\"a\"]"))
+      "a string key may not pose as a tuple"))
+
+(defspec tuple-keys-are-injective 300
+  (prop/for-all [a (gen/vector (gen/one-of [gen/string gen/small-integer gen/keyword]))
+                 b (gen/vector (gen/one-of [gen/string gen/small-integer gen/keyword]))]
+                (= (= a b) (= (model/tuple-key a) (model/tuple-key b)))))

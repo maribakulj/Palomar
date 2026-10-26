@@ -364,6 +364,13 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Changed
 
+- Identity keys are tuples (ADR 0040): minted ids hash `model/tuple-key` of
+  their parts instead of a `|`-joined string, so `["a|b" "c"]` and `["a"
+  "b|c"]` no longer collide; every minted id changes once. OAI record ids are
+  injective and reversible (`oai/record-identifier`); the RDF/XML reader keeps
+  its blank nodes apart from the document's `nodeID`s and resolves a nested
+  relative `xml:base`.
+
 - Assertion ids are spelled `:asr/h<16 hex>` (ADR 0034, amending ADR 0027):
   a name starting with a digit does not read back as EDN. PROV statement IRIs
   follow (`urn:palomar:stmt:h…`).

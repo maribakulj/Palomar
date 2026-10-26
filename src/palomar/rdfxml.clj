@@ -50,19 +50,23 @@
   [s]
   (let [root    (rx/parse-str s)
         counter (atom 0)
-        bnode   #(hash-map :bnode (str "b" (swap! counter inc)))
+        ;; the document's own node ids and the ones generated here live in
+        ;; separate spaces, so a `rdf:nodeID=\"g1\"` never meets a fresh node
+        bnode   #(hash-map :bnode (str "g" (swap! counter inc)))
+        named   #(hash-map :bnode (str "n" %))
         out     (transient [])
         emit    (fn [t] (conj! out t))]
     (letfn [(ctx [el {:keys [base lang] :as c}]
               (assoc c
-                     :base (or (attr el (str xml-ns "base")) base)
+                     ;; a relative xml:base resolves against the base in scope
+                     :base (if-let [b (attr el (str xml-ns "base"))] (resolve-iri base b) base)
                      :lang (or (attr el (str xml-ns "lang")) lang)))
             (node [el c]
               (let [c    (ctx el c)
                     about (attr el (str rdf "about"))
                     nid   (attr el (str rdf "nodeID"))
                     subj  (cond about {:iri (resolve-iri (:base c) about)}
-                                nid   {:bnode nid}
+                                nid   (named nid)
                                 :else (bnode))
                     tag   (qname-iri (:tag el))]
                 (when (attr el (str rdf "ID"))
@@ -88,7 +92,7 @@
                     pred  {:iri p}]
                 (cond
                   res   (emit [subj pred {:iri (resolve-iri (:base c) res)}])
-                  nid   (emit [subj pred {:bnode nid}])
+                  nid   (emit [subj pred (named nid)])
 
                   (= "Resource" ptype)
                   (let [b (bnode)]

@@ -2,7 +2,7 @@
   "The RDF/XML reader (ADR 0038) on its common productions and on the vendored
    MADS and CIDOC-CRM files."
   (:require [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [palomar.rdfxml :as rdfxml]))
 
 (def ^:private rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
@@ -49,3 +49,18 @@
   (is (some #(str/includes? (str (:lit (nth % 2))) "Film and video adaptations")
             (rdfxml/parse (slurp "test/fixtures/documentary/mads/loc_mads_authority.rdf"))))
   (is (< 4000 (count (rdfxml/parse (str/replace (slurp "test/fixtures/documentary/cidoc-crm/CIDOC_CRM_v7.1.3.rdf") #"^﻿" ""))))))
+
+(deftest a-document-node-id-never-meets-a-generated-node
+  (testing "rdf:nodeID=\"g1\" and the first anonymous node stay two nodes (post-audit test 03)"
+    (let [ts    (rdfxml/parse (doc (str "<rdf:Description rdf:nodeID=\"g1\"><ex:k>named</ex:k></rdf:Description>"
+                                        "<rdf:Description><ex:k>anonymous</ex:k></rdf:Description>"
+                                        "<rdf:Description rdf:nodeID=\"n1\"><ex:k>other</ex:k></rdf:Description>")))
+          subjs (set (map first ts))]
+      (is (= 3 (count subjs))))))
+
+(deftest a-relative-xml-base-resolves-against-the-one-in-scope
+  (testing "nested relative xml:base (post-audit test 12)"
+    (let [ts (rdfxml/parse (str "<rdf:RDF xmlns:rdf=\"" rdf "\" xmlns:ex=\"http://example.org/\" xml:base=\"http://example.org/a/\">"
+                                "<rdf:Description xml:base=\"b/\" rdf:about=\"c\"><ex:p rdf:resource=\"d\"/></rdf:Description>"
+                                "</rdf:RDF>"))]
+      (is (= [[{:iri "http://example.org/a/b/c"} {:iri "http://example.org/p"} {:iri "http://example.org/a/b/d"}]] ts)))))
