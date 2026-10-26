@@ -364,6 +364,13 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Changed
 
+- **Facts only by default** (ADR 0042): a stating target (N-Triples, Turtle,
+  JSON-LD, CRM, Linked Art, DC, MARC, MODS, IIIF) no longer states pending
+  claims; `--with-proposals` / `:with-proposals? true` opts in, the report
+  counts what was withheld (`:withheld-proposals`), and PROV-O, N-Quads, TriG
+  and EDN keep every claim with its status. Publication events are now
+  `:asserted` (transcription, scoped to their record).
+
 - Resemblance is not identity (ADR 0041): an accepted alignment applies only
   to the records it was accepted in (`:records`, or a curator's explicit
   `:all`; an unscoped link is refused); event places and actors are scoped to

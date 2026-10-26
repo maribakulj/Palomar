@@ -19,9 +19,11 @@
    Manifestation and the field occurrence. A field states the kind of
    event by its tag, or by its second indicator (MARC 264, UNIMARC 214: 0
    production, 1 publication); a distribution, manufacture or copyright
-   statement is not an F30 and makes no event. The claims are `:proposed`, like
-   the rest of the projection (ADR 0005), and each carries the source evidence
-   of the subfield it came from (ADR 0031).
+   statement is not an F30 and makes no event. The claims are `:asserted`: the
+   field states the event, and each claim is scoped to its record, so none
+   guesses an identity (ADR 0042, amending ADR 0036, where they were
+   `:proposed`). Each carries the source evidence of the subfield it came
+   from (ADR 0031).
 
    The spoke's own mappings are untouched: the date still becomes `:canon/date`,
    the publisher a `:canon/agent`. The events are a view the projection adds,
@@ -88,7 +90,7 @@
         prov   (fn [code] (cond-> {:pass :infer :rule :rule.events/manifestation-creation :derivation [rid]}
                             (get-in subfields [code 1]) (assoc :evidence [(get-in subfields [code 1])])))
         claim  (fn [s p v code] {:kind  :assertion
-                                 :value (model/assertion {:subject s :predicate p :value v :status :proposed
+                                 :value (model/assertion {:subject s :predicate p :value v :status :asserted
                                                           :provenance (model/provenance (prov code))})})
         entity (fn [id kind] {:kind :entity :value (model/entity {:id id :kind kind
                                                                   :provenance (model/provenance (prov nil))})})

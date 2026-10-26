@@ -130,27 +130,35 @@
   "Human-readable rendering of a `conversion-report` (ADR 0015), for CLI /
    institutional audit. Leads with the deduplicated loss count, then the raw
    event total, then the clean per-edge breakdown (audit R3 — no merged,
-   double-counting field line). Never prints; returns the empty-loss line
+   double-counting field line), and the proposed claims a fact export withheld
+   (`:withheld-proposals`, ADR 0042). Never prints; returns the empty-loss line
    when clean."
-  [{:keys [total distinct-losses by-category by-edge by-aspect records source-fields] :as _report}]
-  (if (zero? total)
-    (str "Loss report: lossless"
-         (when records (str " (" records " records)")))
-    (let [n-fields (count source-fields)
-          head (str "Loss report — "
+  [{:keys [total distinct-losses by-category by-edge by-aspect records source-fields withheld-proposals] :as _report}]
+  (str
+   (if (zero? total)
+     (str "Loss report: lossless"
+          (when records (str " (" records " records)")))
+     (let [n-fields (count source-fields)
+           head (str "Loss report — "
                     ;; :distinct-losses is batch-only; a streamed report omits it
                     ;; (it needs the O(N) [subject field] set), so lead with fields.
-                    (when distinct-losses
-                      (str distinct-losses (if (= 1 distinct-losses) " distinct loss" " distinct losses") " over "))
-                    n-fields (if (= 1 n-fields) " native field" " native fields")
-                    " (" total (if (= 1 total) " field×edge event" " field×edge events")
-                    (when records (str ", " records (if (= 1 records) " record" " records")))
-                    ")"
-                    "\n  by category: " (category-line by-category)
-                    (when (seq by-aspect) (str "\n  by aspect: " (category-line by-aspect))))
-          edge-block (fn [edge]
-                       (when-let [er (get by-edge edge)]
-                         (str "\n  " (name edge) " edge — " (:total er)
-                              " (" (category-line (:by-category er)) ")"
-                              "\n    fields: " (top-fields (:by-source-field er) 8))))]
-      (str head (edge-block :import) (edge-block :projection) (edge-block :export)))))
+                     (when distinct-losses
+                       (str distinct-losses (if (= 1 distinct-losses) " distinct loss" " distinct losses") " over "))
+                     n-fields (if (= 1 n-fields) " native field" " native fields")
+                     " (" total (if (= 1 total) " field×edge event" " field×edge events")
+                     (when records (str ", " records (if (= 1 records) " record" " records")))
+                     ")"
+                     "\n  by category: " (category-line by-category)
+                     (when (seq by-aspect) (str "\n  by aspect: " (category-line by-aspect))))
+           edge-block (fn [edge]
+                        (when-let [er (get by-edge edge)]
+                          (str "\n  " (name edge) " edge — " (:total er)
+                               " (" (category-line (:by-category er)) ")"
+                               "\n    fields: " (top-fields (:by-source-field er) 8))))]
+       (str head (edge-block :import) (edge-block :projection) (edge-block :export))))
+   ;; what the fact export left out is not lost, but it is not in the output
+   ;; either: say so, and how to get it (ADR 0042)
+   (when (and withheld-proposals (pos? withheld-proposals))
+     (str "\n  withheld: " withheld-proposals (if (= 1 withheld-proposals) " proposed claim" " proposed claims")
+          " not stated as facts — curate them (apply-repairs), or export them with"
+          " --with-proposals, or with their status by --to trig / nquads / prov"))))

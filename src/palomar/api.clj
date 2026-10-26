@@ -55,13 +55,14 @@
 
 (defn export
   "Write pivot `records` to target `to`: `{:output string :loss [loss…]}`.
-   `opts`: `:in-force-only? true` writes only the in-force claims."
+   `opts`: `:with-proposals? true` also states the proposed claims; by
+   default a target that states facts gets facts only (ADR 0042)."
   ([to records] (convert/export-records to records))
   ([to records opts] (convert/export-records to records opts)))
 
 (defn convert
   "Read and write in one call. `request`: `{:from :to :source :opts
-   :in-force-only?}`. Returns `{:output string :records n :loss report}`."
+   :with-proposals?}`. Returns `{:output string :records n :loss report}`."
   [request]
   (convert/convert request))
 

@@ -205,56 +205,63 @@
 
 (defn export-records
   "Render WEMI `records` (from `to-wemi`, possibly curated) to target `to`. Returns
-   `{:output String :loss [export-loss…]}`.
+   `{:output String :loss [export-loss…] :withheld n}`.
 
-   The status policy is applied here, once, for every target (audit S08): an
+   The status policy is applied here, once, for every target (audit S08). An
    out-of-force assertion (`:rejected`, `:superseded`, `:retracted`) is never
-   emitted. By default pending claims (`:proposed`, `:needs-review`) are emitted
-   — the floor projection's whole WEMI chain is `:proposed` until curated. With
-   `:in-force-only? true` only `:asserted`/`:accepted` (or status-less) assertions
-   are, so an uncurated inference never reaches the output as a fact. An entity
-   that existed only through dropped claims is dropped with them
-   (`model/filter-assertions`): a rejected Work is not typed in the output either.
+   emitted. A target that states facts emits only facts by default (ADR 0042):
+   `:asserted`/`:accepted` (or status-less) assertions. A pending claim
+   (`:proposed`, `:needs-review`) — the string-keyed Work, an event, an
+   alignment — has no way to say it is one in a plain RDF triple, so it is
+   withheld, and `:withheld` counts them; `:with-proposals? true` emits them
+   too. An entity that existed only through dropped claims is dropped with
+   them (`model/filter-assertions`): an unconfirmed Work is not typed either.
+   (`:in-force-only?`, which once asked for facts only, is now the default.)
 
    A history target (`keeps-history?`, the PROV-O record of provenance) is the
    exception: it states no fact, it records each assertion with its status, so
    it receives them all (ADR 0025)."
   ([to records] (export-records to records {}))
-  ([to records {:keys [in-force-only?]}]
+  ([to records {:keys [with-proposals?]}]
    (when-not (contains? exporters to)
      (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
    (let [{:keys [render losses]} (exporters to)
-         records (mapv (cond
-                         (keeps-history? to) identity
-                         in-force-only?      #(model/filter-assertions % in-force-or-unstated?)
-                         :else               model/without-out-of-force)
-                       records)]
-     {:output (->> records
-                   (into [] (comp (map render) (remove str/blank?)))
-                   (str/join "\n"))
-      :loss   (into [] (mapcat #(concat (losses %) (provenance-losses to %))) records)})))
+         facts?   (not (or (keeps-history? to) with-proposals?))
+         withheld (if facts? (count (filter model/pending? (mapcat :assertions records))) 0)
+         records  (mapv (cond
+                          (keeps-history? to) identity
+                          with-proposals?     model/without-out-of-force
+                          :else               #(model/filter-assertions % in-force-or-unstated?))
+                        records)]
+     {:output   (->> records
+                     (into [] (comp (map render) (remove str/blank?)))
+                     (str/join "\n"))
+      :loss     (into [] (mapcat #(concat (losses %) (provenance-losses to %))) records)
+      :withheld withheld})))
 
 (defn convert
   "Convert `source` from spoke `from` to serialisation `to`. Returns
    `{:output String :loss <conversion-report> :records N}`.
 
    `opts` is threaded to the importer (e.g. `:record-id` for the single-record
-   spokes). `:in-force-only? true` exports only the in-force claims, so no
-   uncurated inference reaches the output as a fact (`export-records`; a dataset
-   target separates them into graphs instead). Throws with the supported sets on
-   an unknown `from`/`to`."
-  [{:keys [from to source opts in-force-only?] :or {opts {}}}]
+   spokes). A target that states facts gets only facts unless
+   `:with-proposals? true` (`export-records`, ADR 0042); the report's
+   `:withheld-proposals` says how many claims that left out. A dataset target
+   keeps them, each status in its graph. Throws with the supported sets on an
+   unknown `from`/`to`."
+  [{:keys [from to source opts with-proposals?] :or {opts {}}}]
   (when-not (contains? (source-formats) from)
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
   (let [{:keys [records ingest]} (to-wemi from opts source)
         projection-loss (dx/collect-many records)
-        {output :output export-loss :loss} (export-records to records {:in-force-only? in-force-only?})]
+        {output :output export-loss :loss withheld :withheld} (export-records to records {:with-proposals? with-proposals?})]
     {:output  output
      :records (count records)
-     :loss    (lr/conversion-report (concat ingest projection-loss export-loss)
-                                    {:records (count records)})}))
+     :loss    (assoc (lr/conversion-report (concat ingest projection-loss export-loss)
+                                           {:records (count records)})
+                     :withheld-proposals withheld)}))
 
 (defn convert-report
   "Convenience: `convert` plus the human-readable loss report appended, for CLI /
@@ -287,7 +294,7 @@
    loss the streamed report would under-count the import edge — fold the importer's
    `:diagnostics` into the same accumulator then. `:distinct-losses` (O(N)) is always
    batch-only. Throws on an unknown `from`/`to`."
-  [{:keys [from to records]} emit]
+  [{:keys [from to records with-proposals?]} emit]
   (when-not (contains? spokes/plugins from)
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
@@ -295,13 +302,15 @@
   (let [to-pivot (to-pivots from)
         compiled (compiled-mappings from)
         result   (reduce
-                  (fn [{:keys [n acc]} raw]
-                    (let [wemi                     (to-pivot (:record (runtime/run-phase raw compiled :normalize)))
-                          {doc :output loss :loss} (export-records to [wemi])]
+                  (fn [{:keys [n acc withheld]} raw]
+                    (let [wemi (to-pivot (:record (runtime/run-phase raw compiled :normalize)))
+                          {doc :output loss :loss w :withheld} (export-records to [wemi] {:with-proposals? with-proposals?})]
                       (when-not (str/blank? doc) (emit doc))
-                      {:n   (inc n)
-                       :acc (lr/accumulate acc (concat (dx/collect wemi) loss))}))
-                  {:n 0 :acc lr/empty-acc}
+                      {:n        (inc n)
+                       :withheld (+ withheld w)
+                       :acc      (lr/accumulate acc (concat (dx/collect wemi) loss))}))
+                  {:n 0 :acc lr/empty-acc :withheld 0}
                   records)]
     {:records (:n result)
-     :loss    (lr/finalize (:acc result) {:records (:n result)})}))
+     :loss    (assoc (lr/finalize (:acc result) {:records (:n result)})
+                     :withheld-proposals (:withheld result))}))

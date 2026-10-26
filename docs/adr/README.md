@@ -55,6 +55,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0039](./0039-archival-description.md) | Archival description: EAD units and EAC-CPF authorities | Accepted |
 | [0040](./0040-tuple-keys.md) | Identity keys are tuples, never joined strings | Accepted |
 | [0041](./0041-resemblance-identity-shared-node.md) | Resemblance is not identity, and identity alone shares a node | Accepted |
+| [0042](./0042-facts-only-by-default.md) | A target that states facts states only facts, by default | Accepted |
 
 ## Template
 

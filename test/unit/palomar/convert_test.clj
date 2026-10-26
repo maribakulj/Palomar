@@ -103,15 +103,22 @@
       (is (str/includes? prov "R4_embodies"))
       (is (not (str/includes? (:output (cv/export-records :ntriples rejected)) "R4_embodies"))))))
 
-(deftest in-force-only-keeps-uncurated-inference-out-of-the-output
-  (testing "by default the :proposed WEMI chain is exported; with :in-force-only? it is not, until accepted"
+(deftest a-fact-export-states-no-uncurated-inference
+  (testing "by default the :proposed WEMI chain is withheld from a fact export until accepted (post-audit test 11, ADR 0042)"
     (let [uncurated (dc-wemi)
-          accepted  (:records (curate/curate (dc-wemi) curate/accept-all))]
-      (is (str/includes? (:output (cv/export-records :ntriples uncurated)) "R4_embodies"))
-      (is (not (str/includes? (:output (cv/export-records :ntriples uncurated {:in-force-only? true}))
-                              "R4_embodies")))
-      (is (str/includes? (:output (cv/export-records :ntriples accepted {:in-force-only? true}))
-                         "R4_embodies")))))
+          accepted  (:records (curate/curate (dc-wemi) curate/accept-all))
+          plain     (cv/export-records :ntriples uncurated)]
+      (is (not (str/includes? (:output plain) "R4_embodies")))
+      (is (pos? (:withheld plain)) "and says how many claims it withheld")
+      (is (str/includes? (:output (cv/export-records :ntriples accepted)) "R4_embodies"))
+      (is (zero? (:withheld (cv/export-records :ntriples accepted))))))
+  (testing ":with-proposals? states them too; a dataset keeps them in their graph"
+    (is (str/includes? (:output (cv/export-records :ntriples (dc-wemi) {:with-proposals? true})) "R4_embodies"))
+    (is (str/includes? (:output (cv/export-records :trig (dc-wemi))) "R4_embodies")))
+  (testing "the report says what was withheld and how to get it"
+    (let [r (cv/convert-report {:from :dc :to :ntriples :source (src :dc) :opts {:record-id :dc/x}})]
+      (is (pos? (get-in r [:loss :withheld-proposals])))
+      (is (str/includes? (:report r) "--with-proposals")))))
 
 (deftest an-entity-that-only-a-rejected-claim-made-is-not-exported
   (testing "after reject-all, the inferred Expression is neither linked nor typed"
