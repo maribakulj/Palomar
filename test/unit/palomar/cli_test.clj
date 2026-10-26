@@ -207,12 +207,12 @@
       (is (= 0 exit))
       (is (str/includes? out "(flag)"))
       (is (str/includes? out "4 needs-review"))))
-  (testing "MARC21 (two records, added entries only — no Work): four WEMI proposals and
-            seven per publication event (R24, P4, P82, P7, P14 and the two names, ADR 0036)"
+  (testing "MARC21 (two records, added entries only — no Work): four WEMI proposals; the
+            publication events are transcription, asserted, nothing to curate (ADR 0042)"
     (let [{:keys [exit out]} (cli/run ["apply-repairs" marc21 "--from" "marc21" "--policy" "reject"])]
       (is (= 0 exit))
-      (is (str/includes? out "18 proposals curated"))
-      (is (str/includes? out "18 rejected")))))
+      (is (str/includes? out "4 proposals curated"))
+      (is (str/includes? out "4 rejected")))))
 
 (deftest apply-repairs-exports-the-curated-records
   (testing "--to exports the curated records; the curation outcome moves to stderr"
@@ -385,10 +385,12 @@
       (is (str/includes? out "wasInvalidatedBy"))
       (is (str/includes? out "\"curator-1\"")))))
 
-(deftest convert-facts-only-states-no-uncurated-inference
-  (testing "--facts-only leaves the :proposed WEMI links out of a flat RDF target"
+(deftest convert-states-facts-only-unless-asked
+  (testing "a flat RDF target holds no :proposed WEMI link by default; --with-proposals states them (ADR 0042)"
     (let [plain (cli/run ["convert" dc "--from" "dc" "--to" "ntriples"])
+          props (cli/run ["convert" dc "--from" "dc" "--to" "ntriples" "--with-proposals"])
           facts (cli/run ["convert" dc "--from" "dc" "--to" "ntriples" "--facts-only"])]
-      (is (str/includes? (:out plain) "R4_embodies"))
-      (is (zero? (:exit facts)))
-      (is (not (str/includes? (:out facts) "R4_embodies"))))))
+      (is (not (str/includes? (:out plain) "R4_embodies")))
+      (is (str/includes? (:err plain) "withheld"))
+      (is (str/includes? (:out props) "R4_embodies"))
+      (is (= (:out plain) (:out facts)) "--facts-only, once the opt-in, is the default"))))

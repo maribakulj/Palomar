@@ -40,7 +40,7 @@
     (is (= "1928." (value r ts :crm/P82_at_some_time_within)) "the date as transcribed")
     (is (= "Paris" (value r pl :crm/P190_has_symbolic_content)) "the place without its ISBD punctuation")
     (is (= "Gallimard" (value r ac :crm/P190_has_symbolic_content)))
-    (is (every? #(= :proposed (:status %))
+    (is (every? #(= :asserted (:status %))
                 (filter #(= (:id ev) (:subject %)) (:assertions r))))
     (testing "each claim keeps where it was read"
       (is (str/includes? (get-in (first (filter #(= :crm/P82_at_some_time_within (:predicate %)) (:assertions r)))

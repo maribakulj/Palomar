@@ -52,7 +52,7 @@
    ["palomar — documentary-metadata conversion through the LRMoo pivot"
     ""
     "Usage:"
-    "  palomar convert       <input-file> --from <fmt> --to <fmt> [--facts-only] [--manifest <file>] [--record-id <id>] [--out <file>]"
+    "  palomar convert       <input-file> --from <fmt> --to <fmt> [--with-proposals] [--manifest <file>] [--record-id <id>] [--out <file>]"
     "  palomar convert       <input-file> --from <marc-fmt> --to <fmt> --stream --out <file>"
     "  palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]"
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
@@ -74,7 +74,8 @@
     "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
     "  --out         write the output to a file instead of stdout (convert)"
     "  --stream      convert in bounded memory, streaming a large flat MARC dump to --out (WP-7)"
-    "  --facts-only  convert: export only in-force claims (no uncurated inference stated as a fact)"
+    "  --with-proposals  convert: also state the proposed claims (uncurated inferences) as facts; by default a"
+    "                plain RDF or record export holds facts only, and trig/nquads/prov keep each claim with its status"
     "  --manifest    convert: write the run manifest (versions, digests, options, loss) as EDN"
     "  --format      report output: text (default), edn or json (the raw loss-report map, ADR 0015)"
     ""
@@ -98,7 +99,8 @@
         (cond
           (#{"--help" "-h"} a)      (recur (rest as) (assoc m :help? true))
           (#{"--stream"} a)         (recur (rest as) (assoc-in m [:flags "stream"] true)) ; boolean
-          (#{"--facts-only"} a)     (recur (rest as) (assoc-in m [:flags "facts-only"] true)) ; boolean
+          (#{"--facts-only"} a)     (recur (rest as) (assoc-in m [:flags "facts-only"] true)) ; boolean, now the default
+          (#{"--with-proposals"} a) (recur (rest as) (assoc-in m [:flags "with-proposals"] true)) ; boolean
           (str/starts-with? a "--") (recur (drop 2 as) (assoc-in m [:flags (subs a 2)] (second as)))
           (:command m)              (recur (rest as) (update m :positional (fnil conj []) a))
           :else                     (recur (rest as) (assoc m :command a)))))))
@@ -151,7 +153,7 @@
                                   :started-at  started-at
                                   :finished-at (java.util.Date.)}))))
 
-(defn- do-convert [{:strs [from to record-id out facts-only] :as flags} input]
+(defn- do-convert [{:strs [from to record-id out with-proposals] :as flags} input]
   (cond
     (not (and from to input))
     {:exit 2 :out "" :err (str "convert needs <input-file> --from <fmt> --to <fmt>\n\n" usage)}
@@ -171,12 +173,12 @@
             result (convert/convert {:from   (keyword from)
                                      :to     (keyword to)
                                      :source (slurp input)
-                                     :in-force-only? (boolean facts-only)
+                                     :with-proposals? (boolean with-proposals)
                                      :opts   opts})
             _      (when-let [mpath (get flags "manifest")]
                      (write-manifest! mpath {:from (keyword from) :to (keyword to) :input input :out out
                                              :result result :started-at started
-                                             :opts (cond-> opts facts-only (assoc :in-force-only? true))}))
+                                             :opts (cond-> opts with-proposals (assoc :with-proposals? true))}))
             report (str (lr/format-conversion-report (:loss result))
                         "\n(" (:records result) " record"
                         (when (not= 1 (:records result)) "s") " converted)"
@@ -280,7 +282,7 @@
    materialised). Requires a streamable spoke (the MARC family) and `--out` (the
    document sink — like the batch `--out`, this writes a file). The loss report is
    returned in `:err`."
-  [{:strs [from to record-id out]} input]
+  [{:strs [from to record-id out] :as flags} input]
   (cond
     (not (and from to input))
     {:exit 2 :out "" :err (str "convert --stream needs <input-file> --from <fmt> --to <fmt> --out <file>\n\n" usage)}
@@ -317,6 +319,7 @@
                               w (io/writer @tmp)]
                     (convert/convert-stream
                      {:from fromk :to (keyword to)
+                      :with-proposals? (boolean (get flags "with-proposals"))
                       :records (convert/stream-source fromk opts r)}
                      (fn [doc] (.write w doc) (.write w "\n"))))]
           (if (replace-file! @tmp outf)

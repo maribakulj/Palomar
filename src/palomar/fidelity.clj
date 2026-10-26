@@ -193,7 +193,10 @@
   ([to record] (audit-record to record []))
   ([to record losses]
    (if-let [decode (decoders to)]
-     (let [{:keys [output loss]} (convert/export-records to [record])
+     ;; the audit judges the exporter, so it observes the fullest stating export,
+     ;; proposals included: withholding them by default (ADR 0042) is policy,
+     ;; counted in the report, not a loss of the exporter's
+     (let [{:keys [output loss]} (convert/export-records to [record] {:with-proposals? true})
            seen    (if (str/blank? output) #{} (into #{} (map norm) (decode output)))
            all     (concat loss losses)
            checked (distinct

@@ -50,7 +50,7 @@
   (testing "a lazy stream far larger than any fixture runs through (held one record at a time)"
     (let [n   (* 20 560)                                            ; 11 200 records, lazily
           cnt (atom 0)
-          res (convert/convert-stream {:from :marc21 :to :ntriples
+          res (convert/convert-stream {:from :marc21 :to :ntriples :with-proposals? true
                                        :records (take n (cycle raw))}
                                       (fn [_] (swap! cnt inc)))]
       (is (= n (:records res) @cnt))
@@ -97,10 +97,10 @@
     (with-open [r (io/reader (java.util.zip.GZIPInputStream.
                               (io/input-stream "test/fixtures/bibr-gold/bibrcat_marc21.xml.gz")))]
       (let [n     (atom 0)
-            res   (convert/convert-stream {:from :marc21 :to :ntriples
+            res   (convert/convert-stream {:from :marc21 :to :ntriples :with-proposals? true
                                            :records (convert/stream-source :marc21 {} r)}
                                           (fn [_] (swap! n inc)))
-            batch (convert/convert {:from :marc21 :to :ntriples :source marc-src})]
+            batch (convert/convert {:from :marc21 :to :ntriples :with-proposals? true :source marc-src})]
         (is (= 560 (:records res) @n))
         (is (= (dissoc (:loss batch) :distinct-losses) (:loss res)))))))   ; same loss via the Reader path
 
@@ -115,7 +115,7 @@
           (.write w "</marc:collection>"))
         (with-open [r (io/reader path)]
           (let [n   (atom 0)
-                res (convert/convert-stream {:from :marc21 :to :ntriples
+                res (convert/convert-stream {:from :marc21 :to :ntriples :with-proposals? true
                                              :records (convert/stream-source :marc21 {} r)}
                                             (fn [_] (swap! n inc)))]
             (is (= 5600 (:records res) @n))))

@@ -96,7 +96,7 @@
     (is (= #{:output :records :loss} (set (keys result))))
     (is (every? (set (keys report))
                 [:total :distinct-losses :by-category :by-edge :by-aspect :source-fields :records]))
-    (is (= #{:output :loss} (set (keys (api/export :ntriples (pivot :marc21))))))
+    (is (= #{:output :loss :withheld} (set (keys (api/export :ntriples (pivot :marc21))))))
     (is (every? (set (keys (api/audit {:from :marc21 :to :ntriples :source src})))
                 [:target :records :checked :present :reported :unaccounted :relations]))
     (is (every? (set (keys (api/curate (pivot :marc21) api/flag-all)))
