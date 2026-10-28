@@ -6,7 +6,7 @@
    | LIDO                                   | MARC21                                     |
    |----------------------------------------|--------------------------------------------|
    | the object                             | Leader/06 `k` (a painting, a drawing, a print, a photograph: a two-dimensional graphic) or `r` (a three-dimensional artefact), /07 `m` |
-   | its stable id                          | `001`                                      |
+   | its stable id                          | `001`, and `003` the ISIL of its source    |
    | the inventory number                   | `099 $a` local call number                 |
    | the production's actors                | `100` 1# / `110` 2# (then `700`/`710`) `$a`, `$d` life dates, `$e` role, `$0` authority URI |
    | the first title, the others            | `245` 10 `$a`, `246` 1# `$a`               |
@@ -67,6 +67,18 @@
     #"id\.loc\.gov/authorities/subjects" ["0" nil]
     #"id\.loc\.gov/authorities/genreForms" ["7" "lcgft"]
     ["4" nil]))
+
+(defn org-code
+  "The MARC organization code (`003`) a lidoRecID's source `src` gives: the
+   source itself when it is an ISIL (\"DE-Mb112\", which MARC accepts for
+   the countries that use it: a two-letter country prefix, a hyphen, at least
+   three characters, sixteen in all), or the ISIL a ZDB organisation URI ends
+   with; else nil. Any other URI, a bare MARC code (\"DLC\") included, is no
+   code this profile vouches for (post-audit 5, G3)."
+  [src]
+  (let [s (str/trim (str src))]
+    (some #(when (and % (<= (count %) 16) (re-matches #"[A-Z]{2}-[A-Za-z0-9:/\-]{3,}" %)) %)
+          [s (second (re-find #"^https?://ld\.zdb-services\.de/resource/organisations/([^/]+)/?$" s))])))
 
 (def written
   "The LIDO natives this profile writes."
@@ -130,10 +142,13 @@
                  (for [v (strings record :lido/repository)] (datafield "852" " " " " [["a" v]]))
                  (for [v (distinct (strings record :lido/resource-url))] (datafield "856" "4" " " [["u" v]]))
                  (for [v (strings record :lido/record-link)] (datafield "856" "4" "2" [["u" v]])))
-        ctrl    (record-id/source-identifier record)]
+        ctrl    (record-id/source-identifier record)
+        org     (some org-code (strings record :lido/rec-id-source))]
     (str "<record xmlns=\"http://www.loc.gov/MARC21/slim\">\n"
          "  <leader>" (leader record) "</leader>\n"
          (when ctrl (str "  <controlfield tag=\"001\">" (xml-escape ctrl) "</controlfield>\n"))
+         ;; whose 001 it is (post-audit 5, G3)
+         (when (and ctrl org) (str "  <controlfield tag=\"003\">" (xml-escape org) "</controlfield>\n"))
          ;; in tag order, as MARC has its fields
          (str/join "\n" (sort-by #(re-find #"tag=\"\d+\"" %) fields*))
          "\n</record>")))
@@ -142,9 +157,20 @@
   "Every LIDO native this profile does not write, and the places of events
    other than the production, which have no field of their own."
   [record]
-  (let [prod (first (filter #(= "production" (:kind %)) (fields record :lido/event)))]
+  (let [prod (first (filter #(= "production" (:kind %)) (fields record :lido/event)))
+        srcs (strings record :lido/rec-id-source)]
     (concat
-     (for [p (distinct (keep #(let [p (:predicate %)] (when (and (= "lido" (namespace p)) (not (written p))) p))
+     ;; whose id the 001 is: an ISIL is written as such, a URI's ISIL only
+     ;; as a code, any other source not at all (post-audit 5, G3)
+     (for [s srcs :let [c (org-code s)] :when (not= c s)]
+       (dx/loss {:category (if c :under-specified :dropped) :subject (:id record) :edge :export :source-field :lido/rec-id-source :value s
+                 :message (if c
+                            (str "the lidoRecID's source " (pr-str s) " is written as its ISIL, " c ", in 003")
+                            (str "the lidoRecID's source " (pr-str s) " is no MARC organization code: no 003 says whose the 001 is, and another institution's record with the same id has the same 001"))}))
+     (when (empty? srcs)
+       [(dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :lido/rec-id-source
+                  :message "the record names no source of its lidoRecID: no 003 says whose the 001 is"})])
+     (for [p (distinct (keep #(let [p (:predicate %)] (when (and (= "lido" (namespace p)) (not (written p)) (not= :lido/rec-id-source p)) p))
                              (:assertions record)))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p
                  :message (str (pr-str p) " has no field in the MARC21 object profile (ADR 0053)")}))

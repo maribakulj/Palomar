@@ -3,7 +3,8 @@
    a two-dimensional graphic or a three-dimensional artefact."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [palomar.convert :as convert]))
+            [palomar.convert :as convert]
+            [palomar.fidelity]))
 
 (def ^:private lido (slurp "test/fixtures/documentary/lido/staedel-oai-lido-sample.xml"))
 
@@ -83,3 +84,33 @@
       (is (some #{"engraver"} (xp doc "//*[local-name()='datafield'][@tag='100'][*[@code='a']='Dürer, Albrecht']/*[@code='e']")))
       (testing "the titles' languages, which MARC has no subfield for, are reported"
         (is (some #(and (= :lido/title-name (get-in % [:detail :loss/source-field])) (str/includes? (:message %) "lang")) loss))))))
+
+(defn- rec42 [src]
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID lido:source=\"" src "\">42</lido:lidoRecID>"
+       "<lido:descriptiveMetadata><lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue>"
+       "</lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>"))
+
+(deftest whose-001-it-is-is-said
+  (testing "the 003 names the organization whose 001 it is, from the lidoRecID's source when it is an ISIL (post-audit 5, G3)"
+    (let [out (fn [src] (:output (convert/convert {:from :lido :to :marc21-object :source (rec42 src)})))
+          lss (fn [src] (let [{:keys [records]} (convert/to-wemi :lido {} (rec42 src))] (:loss (convert/export-records :marc21-object records))))]
+      (is (str/includes? (out "DE-Mb112") "<controlfield tag=\"003\">DE-Mb112</controlfield>"))
+      (is (str/includes? (out "http://ld.zdb-services.de/resource/organisations/DE-MUS-048017") "<controlfield tag=\"003\">DE-MUS-048017</controlfield>")
+          "the ISIL of a ZDB organisation URI")
+      (testing "a source that is no organization code: no 003, and the ambiguity is reported"
+        (is (not (str/includes? (out "http://museum-b.example/") "tag=\"003\"")))
+        (is (some #(and (= :lido/rec-id-source (get-in % [:detail :loss/source-field])) (str/includes? (:message %) "003")) (lss "http://museum-b.example/"))))
+      (testing "two institutions' records with the same local id are told apart"
+        (is (not= (out "DE-Mb112") (out "DE-Mb113"))))
+      (testing "the Städel's records say whose they are"
+        (is (str/includes? (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :marc21-object :source lido}))
+                           "<controlfield tag=\"003\">DE-MUS-048017</controlfield>")))
+      (doseq [src ["DE-Mb112" "http://museum-b.example/" "http://ld.zdb-services.de/resource/organisations/DE-MUS-048017"]]
+        (is (empty? (:unaccounted (palomar.fidelity/audit {:from :lido :to :marc21-object :source (rec42 src)}))) src)))))
+
+(deftest no-false-isil-is-written
+  (testing "only an ISIL is a 003: not a licence, an encoding, a GND id (G3 review)"
+    (doseq [src ["CC-BY" "UTF-8" "ISO-8601" "GND-118540238" "DE-ABCDEFGHIJKLMNOP"]]
+      (is (not (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source (rec42 src)})) "tag=\"003\"")) src))
+    (is (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source (rec42 "https://ld.zdb-services.de/resource/organisations/DE-Mb112/")}))
+                       "<controlfield tag=\"003\">DE-Mb112</controlfield>"))))

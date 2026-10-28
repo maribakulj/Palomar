@@ -24,8 +24,9 @@ an acquisition history.
      F6). This changes the key, and so every IRI minted from it, of a record
      that states a `lido:source`: data converted before F6 must be
      re-converted, not merged. The record's own `lidoRecID`, as written, stays
-     its source identifier (a MARC `001`): two institutions' records with
-     the same `lidoRecID` share that `001`, and no `003` says whose it is. With no `lidoRecID` the record is
+     its source identifier (a MARC `001`); the `lido:source` is read too
+     (`:lido/rec-id-source`), and its ISIL is the MARC `003` (ADR 0053,
+     amended, post-audit 5, G3). With no `lidoRecID` the record is
      named by a digest, and that is reported (ADR 0047).
    - Every value is a native `:lido/*` with its absolute XPath.
    - Each concept (work type, classification, material, technique, role,

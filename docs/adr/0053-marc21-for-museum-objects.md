@@ -22,6 +22,11 @@ LIDO values:
   two-dimensional graphic (painting, drawing, print, photograph, in English,
   German or French, "Fotografie" included: amended, post-audit 4, F7), else `r`. Leader/07 is `m`.
 - **`001`** is the record's stable id. The inventory number goes to `099 $a`.
+- **`003`** names whose `001` it is: the `lido:source` of the `lidoRecID`
+  when it is an ISIL, or the ISIL a ZDB organisation URI ends with. Any other
+  source is no MARC organization code: no `003` is written, and the record is
+  reported as indistinguishable from another institution's with the same
+  local id (amended, post-audit 5, G3).
 - **The production's actors** go to `100`/`110` (then `700`/`710`), with `$d`
   life dates, `$e` role and `$0` authority URI.
 - **Titles:** the first is `245`, the others `246`.

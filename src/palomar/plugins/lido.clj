@@ -254,6 +254,9 @@
         events  (descend dm "eventWrap" "eventSet" "event")]
     (concat
      (strings :lido/rec-id (kids node "lidoRecID"))
+     ;; whose id it is: the institution its lido:source names (post-audit 5, G3)
+     (for [r (take 1 (kids node "lidoRecID")) :let [s (some-> (attr r "source") str/trim not-empty)] :when s]
+       [:lido/rec-id-source s (str (second r) "/@*[local-name()='source']")])
      (strings :lido/object-id (kids node "objectPublishedID"))
      ;; classification
      (mapcat (fn [c] (concat (terms :lido/work-type c) (whole :lido/work-type-concept c)))
