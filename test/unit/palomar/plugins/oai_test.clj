@@ -9,6 +9,8 @@
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
             [palomar.convert :as convert]
+            [palomar.model :as model]
+            [palomar.plugins.lrmoo.prov :as prov]
             [palomar.plugins.oai :as oai]))
 
 (defn- envelope [verb body]
@@ -110,3 +112,36 @@
 (defspec record-ids-are-injective 200
   (prop/for-all [a gen/string b gen/string]
                 (= (= a b) (= (oai/record-id a) (oai/record-id b)))))
+
+(defn- objects-of [ts s p] (for [[s' p' o] ts :when (and (= s s') (= p p'))] o))
+
+(deftest provenance-runs-from-the-response-to-the-xpath
+  (testing "response → OAI record → metadata document → XPath → assertion, in PROV-O (post-audit 2, D2)"
+    (let [xml   (envelope "ListRecords" (dc-record "oai:example.org:1" "Nadja"))
+          md    (:metadata (first (:records (oai/read-response xml))))
+          r     (first (:records (convert/to-wemi :oai {} xml)))
+          ts    (prov/triples r)
+          P     #(str "http://www.w3.org/ns/prov#" %)
+          sha   #(first (objects-of ts % "urn:palomar:vocab#sha256"))
+          a     (first (filter #(and (= "Nadja" (:value %)) (seq (model/evidence-of %))) (:assertions r)))
+          st    (str "urn:palomar:stmt:" (name (model/assertion-id a)))
+          ev    (some #(when (str/starts-with? % "urn:palomar:evidence:") %)
+                      (map :iri (objects-of ts st (P "wasDerivedFrom"))))
+          doc   (:iri (first (objects-of ts ev "http://www.w3.org/ns/oa#hasSource")))
+          sel   (:iri (first (objects-of ts ev "http://www.w3.org/ns/oa#hasSelector")))
+          xpath (:lit (first (objects-of ts sel "http://www.w3.org/1999/02/22-rdf-syntax-ns#value")))
+          item  (:iri (first (objects-of ts doc (P "wasDerivedFrom"))))
+          resp  (:iri (first (objects-of ts item (P "wasDerivedFrom"))))]
+      (testing "the selector's source is the metadata document, named by its digest"
+        (is (= {:lit (model/sha256-hex md 64)} (sha doc))))
+      (testing "the XPath finds the value in that very document"
+        (let [d (.parse (.newDocumentBuilder (doto (javax.xml.parsers.DocumentBuilderFactory/newInstance) (.setNamespaceAware true)))
+                        (java.io.ByteArrayInputStream. (.getBytes ^String md "UTF-8")))]
+          (is (= "Nadja" (.evaluate (.newXPath (javax.xml.xpath.XPathFactory/newInstance)) ^String xpath (.getDocumentElement d)
+                                    javax.xml.xpath.XPathConstants/STRING)))))
+      (testing "which came from the harvested record"
+        (is (= [{:lit "oai:example.org:1"}] (objects-of ts item "http://purl.org/dc/terms/identifier"))))
+      (testing "which came from the response, named by its digest"
+        (is (= {:lit (model/sha256-hex xml 64)} (sha resp))))
+      (testing "and the record is derived from its metadata document"
+        (is (some #{{:iri doc}} (objects-of ts (str "urn:palomar:oai:" (name (:id r))) (P "wasDerivedFrom"))))))))

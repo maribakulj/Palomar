@@ -17,7 +17,12 @@
 
    Where a value is attested in its source (`:provenance :evidence`, ADR 0031)
    the statement `prov:wasDerivedFrom` a W3C Web Annotation `oa:SpecificResource`:
-   the document, the fragment and the selector (XPath, media fragment…).
+   the document, the fragment and the selector (XPath, media fragment…). For a
+   record harvested over OAI-PMH that document is the record's metadata
+   document, named by its SHA-256, which `prov:wasDerivedFrom` the harvested
+   OAI record (its identifier and datestamp), itself derived from the response
+   that carried it: the chain response → OAI record → metadata → XPath →
+   statement (post-audit 2, D2).
 
    Reification keeps the output plain N-Triples (RDF-star is not in RDF 1.1).
    A statement IRI is the assertion's `model/assertion-id` (ADR 0027), so the
@@ -170,17 +175,59 @@
       (decision-triples st (:value/fields value))
       [[st (term-iri predicate) (object idx value)]])))
 
+(defn- document-iri
+  "The IRI of the document whose SHA-256 is `sha`: content-addressed, so the
+   same bytes always name the same node."
+  [sha]
+  (str "urn:palomar:document:sha256:" sha))
+
+(def ^:private dcterms "http://purl.org/dc/terms/")
+
+(defn- oai-triples
+  "The chain an OAI-PMH record was read through (ADR 0037, post-audit 2 D2):
+   the record `rec` —wasDerivedFrom→ its metadata document (by its SHA-256,
+   the source its values' selectors point into) —wasDerivedFrom→ the harvested
+   OAI record (its identifier, datestamp and sets) —wasDerivedFrom→ the
+   response that carried it (by its SHA-256, `sha`)."
+  [rec sha {:keys [identifier datestamp sets metadata-sha256]}]
+  (let [entity  {:iri (str prov "Entity")}
+        md      (when metadata-sha256 (document-iri metadata-sha256))
+        item    (str "urn:palomar:oai-record:" (digest [identifier datestamp]))
+        resp    (when sha (document-iri sha))]
+    (concat
+     [[rec (str rdf "type") entity]
+      [item (str rdf "type") entity]]
+     (when identifier [[item (str dcterms "identifier") {:lit identifier}]])
+     (when datestamp [[item (str dcterms "modified") {:lit datestamp}]])
+     (for [s sets] [item (str pal "oaiSet") {:lit s}])
+     (if md
+       [[rec (str prov "wasDerivedFrom") {:iri md}]
+        [md (str rdf "type") entity]
+        [md (str pal "sha256") {:lit metadata-sha256}]
+        [md (str prov "wasDerivedFrom") {:iri item}]]
+       [[rec (str prov "wasDerivedFrom") {:iri item}]])
+     (when resp
+       [[item (str prov "wasDerivedFrom") {:iri resp}]
+        [resp (str rdf "type") entity]
+        [resp (str pal "sha256") {:lit sha}]]))))
+
 (defn triples
   "The PROV-O graph of `record` as `[s p o]` triples (see the namespace doc)."
   [record]
   (let [idx (into {} (keep (fn [e] (when-let [i (:iri e)] [(:id e) i]))) (:entities record))
         rid (:id record)
-        doc (node-iri idx rid)
-        sha (get-in record [:provenance :source :sha256])]
+        rec (node-iri idx rid)
+        sha (get-in record [:provenance :source :sha256])
+        oai (get-in record [:provenance :source :oai])
+        ;; an OAI-PMH record's values were read in its metadata document, not
+        ;; in the response that carried it: that document is their source
+        doc (if (:metadata-sha256 oai) (document-iri (:metadata-sha256 oai)) rec)]
     (distinct
      (concat
-      (when sha [[doc (str rdf "type") {:iri (str prov "Entity")}]
-                 [doc (str pal "sha256") {:lit sha}]])
+      (if oai
+        (oai-triples rec sha oai)
+        (when sha [[rec (str rdf "type") {:iri (str prov "Entity")}]
+                   [rec (str pal "sha256") {:lit sha}]]))
       (mapcat
        (fn [a]
          (let [st    (statement-iri (model/assertion-id a))
