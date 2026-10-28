@@ -25,7 +25,7 @@
 
 (deftest the-public-surface-is-pinned
   (is (= '#{source-formats target-formats keeps-history?
-            pivot export convert convert-stream
+            pivot export convert convert-stream collection
             accept-all reject-all flag-all accept-when curate supersede history
             validate valid-record? explain-record audit loss-report manifest
             ir-version ->edn read-edn ir-schema}
@@ -105,3 +105,22 @@
     (is (contains? (api/source-formats) :edn))
     (is (contains? (api/target-formats) :edn))
     (is (= 1 api/ir-version))))
+
+(defn- well-formed? [^String s]
+  (try (.parse (.newDocumentBuilder (doto (javax.xml.parsers.DocumentBuilderFactory/newInstance) (.setNamespaceAware true)))
+               (java.io.ByteArrayInputStream. (.getBytes s "UTF-8")))
+       true
+       (catch Exception _ false)))
+
+(deftest every-xml-output-is-one-xml-document
+  (testing "whatever the source and the number of records, an XML target writes one well-formed document (post-audit 3, E1)"
+    (doseq [from (keys fixtures)
+            to   [:marc21 :mods :dc]
+            :let [{:keys [output records]} (api/convert {:from from :to to :source (slurp (fixtures from)) :opts (opts from)})]
+            :when (not (str/blank? output))]
+      (is (well-formed? output) (str from " -> " to " (" records " records)"))))
+  (testing "a control field holds an identifier, never a printed structure"
+    (doseq [from (keys fixtures)
+            :let [out (:output (api/convert {:from from :to :marc21 :source (slurp (fixtures from)) :opts (opts from)}))]
+            cf  (re-seq #"<controlfield tag=\"001\">([^<]*)</controlfield>" out)]
+      (is (not (re-find #"[{}\[\]#]" (second cf))) (str from ": " (second cf))))))

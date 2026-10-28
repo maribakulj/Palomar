@@ -80,9 +80,14 @@
    :crm        {:render crm/->ntriples               :losses export/export-losses}
    :crm-only   {:render crm/->crm-only-ntriples      :losses crm-only-losses}
    :linked-art {:render linked-art/->jsonld          :losses linked-art/export-losses}
-   :dc         {:render dc-export/->dc-xml           :losses dc-export/export-losses}
-   :marc21     {:render marc21-export/->marcxml      :losses marc21-export/export-losses}
-   :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses}
+   :dc         {:render dc-export/->dc-xml           :losses dc-export/export-losses
+                ;; DC has no collection element of its own: one record stays a
+                ;; DC document, several are wrapped to stay one XML document
+                :collection ["<collection>" "</collection>"] :wrap-one? false}
+   :marc21     {:render marc21-export/->marcxml      :losses marc21-export/export-losses
+                :collection ["<collection xmlns=\"http://www.loc.gov/MARC21/slim\">" "</collection>"]}
+   :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses
+                :collection ["<modsCollection xmlns=\"http://www.loc.gov/mods/v3\">" "</modsCollection>"]}
    :iiif       {:render iiif-export/->json           :losses iiif-export/export-losses}
    :prov       {:render prov/->ntriples              :losses prov/export-losses :history? true}
    ;; datasets: every claim, each status class in its own named graph (ADR 0029)
@@ -90,6 +95,24 @@
    :trig       {:render dataset/->trig               :losses export/export-losses :history? true}
    ;; the pivot itself, as EDN (ADR 0034): every record whole, nothing lost
    :edn        {:render ir/->edn-line                :losses (constantly [])      :history? true}})
+
+(defn collection
+  "`[open close]`, the element that makes several of target `to`'s XML
+   documents one document (MARCXML `<collection>`, `<modsCollection>`), or nil
+   for a target whose records are lines (N-Triples, JSON lines) or none
+   (post-audit 3, E1: concatenated XML roots are no XML document)."
+  [to]
+  (get-in exporters [to :collection]))
+
+(defn- wrap
+  "`docs` (rendered, non-blank) as target `to`'s output: one XML document,
+   in its collection element when it has one (a single DC record stays bare,
+   `:wrap-one? false`), else one document per line."
+  [to docs]
+  (let [[open close] (collection to)]
+    (if (and open (seq docs) (or (< 1 (count docs)) (get-in exporters [to :wrap-one?] true)))
+      (str open "\n" (str/join "\n" docs) "\n" close)
+      (str/join "\n" docs))))
 
 (defn keeps-history?
   "True when target `to` receives every assertion whatever its status: it
@@ -225,7 +248,7 @@
    exception: it states no fact, it records each assertion with its status, so
    it receives them all (ADR 0025)."
   ([to records] (export-records to records {}))
-  ([to records {:keys [with-proposals?]}]
+  ([to records {:keys [with-proposals? bare?]}]
    (when-not (contains? exporters to)
      (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
    (let [{:keys [render losses]} (exporters to)
@@ -236,9 +259,9 @@
                           with-proposals?     model/without-out-of-force
                           :else               #(model/filter-assertions % in-force-or-unstated?))
                         records)]
-     {:output   (->> records
-                     (into [] (comp (map render) (remove str/blank?)))
-                     (str/join "\n"))
+     {:output   (let [docs (into [] (comp (map render) (remove str/blank?)) records)]
+                  ;; a stream wraps once, around all its records (`collection`)
+                  (if bare? (str/join "\n" docs) (wrap to docs)))
       :loss     (into [] (mapcat #(concat (losses %) (provenance-losses to %))) records)
       :withheld withheld})))
 
@@ -292,6 +315,9 @@
    cross-record state (roadmap §10, 'converter → store': Palomar streams the triples,
    a store deduplicates by id).
 
+   Each document is emitted bare: for an XML target with a collection element,
+   the caller writes `(collection to)` around the stream, once (post-audit 3, E1).
+
    Edge scope: folds the per-record **projection** and **export** edges. Import-edge
    (report-at-ingest) loss is the importer's separate output, which a record stream
    does not carry; so the streamed report's per-edge / per-category / per-field
@@ -311,7 +337,7 @@
         result   (reduce
                   (fn [{:keys [n acc withheld]} raw]
                     (let [wemi (to-pivot (:record (runtime/run-phase raw compiled :normalize)))
-                          {doc :output loss :loss w :withheld} (export-records to [wemi] {:with-proposals? with-proposals?})]
+                          {doc :output loss :loss w :withheld} (export-records to [wemi] {:with-proposals? with-proposals? :bare? true})]
                       (when-not (str/blank? doc) (emit doc))
                       {:n        (inc n)
                        :withheld (+ withheld w)

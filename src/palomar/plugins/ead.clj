@@ -113,9 +113,9 @@
                                      (children did "daoset")))))
 
 (defn- unit-record
-  "The record `rid` of unit `el` at `path` (its position) under parent record
-   `parent`."
-  [rid el path xpath parent]
+  "The record `rid` of unit `el`, at `xpath` in the document, under parent
+   record `parent`."
+  [rid el xpath parent]
   (let [did    (child el "did")
         ev     (fn [sub] [{:selector {:type :xpath :value (str xpath sub)}}])
         nat    (fn [p v sub] (when v (model/assertion {:subject rid :predicate p :value v
@@ -155,7 +155,7 @@
         unread (distinct (remove (into described (map (comp local :tag) (filter component? (children el))))
                                  (concat (map (comp local :tag) (children el))
                                          (map (comp local :tag) (children did)))))]
-    {:record (model/record {:id rid :kind :archival-unit :source {:ead/path path}
+    {:record (model/record {:id rid :kind :archival-unit :source (name rid)
                             :assertions (vec as)})
      :losses (for [u (sort unread)]
                (dx/loss {:category :dropped :subject rid :edge :import :source-field (keyword "ead" u)
@@ -226,7 +226,7 @@
                                      (conj out (assoc u :uid uid :rank rank :id (unit-id doc uid rank (:path u))))]))
                                 [{} []] units))
         ids     (into {} (map (juxt :path :id)) ranked)
-        us      (for [u units] (unit-record (ids (:path u)) (:el u) (:path u) (:xpath u) (some-> (:parent u) ids)))]
+        us      (for [u units] (unit-record (ids (:path u)) (:el u) (:xpath u) (some-> (:parent u) ids)))]
     {:records     (mapv :record us)
      :diagnostics (cond-> (into (vec (mapcat :losses us)) (unit-id-losses ranked))
                     (nil? fa-id)

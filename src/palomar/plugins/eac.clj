@@ -118,7 +118,7 @@
                               rels rel-nth)))
         unread  (distinct (concat (remove read-elements (map (comp local :tag) (children cpf)))
                                   (remove read-description (map (comp local :tag) (children desc)))))]
-    {:records     [(model/record {:id rid :kind :archival-authority :assertions (vec as)})]
+    {:records     [(model/record {:id rid :kind :archival-authority :source (name rid) :assertions (vec as)})]
      :diagnostics (vec (concat
                         ;; named by its content, the record's id changes with any edit (ADR 0047)
                         (when-not rec-id
