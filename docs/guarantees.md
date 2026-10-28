@@ -34,6 +34,7 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | Two institutions' LIDO records with the same local id are distinguishable in MARC21: the `003` names the ISIL of each source; a source that is no organization code is reported. | `palomar.plugins.marc21.object-test/whose-001-it-is-is-said` |
 | A museum object is an `E22_Human-Made_Object` only when its record says it was made (a production, an artefact's work type in English, French or German), and no type names a natural object; a fossil is an `E19_Physical_Object`, depicts nothing, is not called a `HumanMadeObject` in Linked Art, and all of it is reported. An object merely unattested stays a `HumanMadeObject` in Linked Art, its class reported. | `palomar.plugins.lido-test/only-what-was-made-is-human-made`, `palomar.plugins.lido-test/what-is-made-is-told-in-many-tongues` |
 | A MARC21 object record's Leader/06 is `k` or `r` by a type that says so; a type that says neither is reported, not silently `r`. | `palomar.plugins.marc21.object-test/an-unknown-type-is-not-said-three-dimensional-silently` |
+| A value of an event put on the wrong node or in the wrong event is caught: in N-Triples an actor's name off its actor, a date off its event's time-span; in Linked Art the production's actor or date anywhere but in `produced_by`, an acquisition's anywhere but in its `changed_ownership_through`. | `palomar.fidelity-test/a-value-on-the-wrong-event-is-caught` |
 | A loss accounts only for the fields, or the value, it names: a reported role URI does not hide an unreported seller or acquisition date. | `palomar.fidelity-test/one-field-lost-does-not-account-for-another` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
 | In the N-Triples family a value counts as preserved only on its own node: the right text on the wrong resource is caught. | `palomar.fidelity-test/the-right-text-on-the-wrong-node-is-caught` |
@@ -95,7 +96,9 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
   structured value (an actor's life dates, a dimension's unit) is checked as
   a word of any decoded string, on any node, since exporters print some
   fields joined ("1634-1693"): a short field (a unit, a year) can still be
-  found by chance on another node. A field an exporter writes translated (a
+  found by chance on another node. An event's actors and dates are looked
+  for in their own event in Linked Art, but anywhere in the record in MARC,
+  DC and the other non-RDF outputs. A field an exporter writes translated (a
   title's language as an AAT term, a type as a class) is reported as
   under-specified, not checked. A loss naming no field and no value accounts
   for every field of its predicate.

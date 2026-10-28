@@ -84,7 +84,7 @@
    :jsonld     {:render export/->jsonld              :losses export/export-losses}
    :crm        {:render crm/->ntriples               :losses export/export-losses}
    :crm-only   {:render crm/->crm-only-ntriples      :losses crm-only-losses}
-   :linked-art {:render linked-art/->jsonld          :losses linked-art/export-losses
+   :linked-art {:render linked-art/->jsonld          :losses linked-art/export-losses :scopes linked-art/event-scopes
                 :accepts #{:bibliographic :digital :object}}
    :dc         {:render dc-export/->dc-xml           :losses dc-export/export-losses
                 :accepts #{:bibliographic :digital :archival-unit :object}
@@ -305,6 +305,13 @@
                :source-field :palomar/evidence
                :message      (str "where each value was read in the source is not written by the "
                                   (name to) " export (see --to prov, nquads or trig)")})]))
+
+(defn scopes-of
+  "The `:scopes` function of exporter `to` (`(fn [record output] …)`: where,
+   in its output, each event of a record is written), or nil (post-audit 5,
+   G5)."
+  [to]
+  (get-in exporters [to :scopes]))
 
 (defn export-records
   "Render WEMI `records` (from `to-wemi`, possibly curated) to target `to`. Returns
