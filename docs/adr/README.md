@@ -59,6 +59,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0043](./0043-occurrences-and-node-fidelity.md) | Occurrences are kept, deletions reported, values checked on their node | Accepted |
 | [0044](./0044-archives-toward-ric-o.md) | Archives project to RiC-O, not to WEMI; EAD ids come from the source | Accepted (direction) |
 | [0045](./0045-ric-o-projection.md) | The archival view is RiC-O | Accepted |
+| [0046](./0046-an-identified-agent-names-its-occurrence.md) | An identified agent names the occurrence it identifies | Accepted |
 
 ## Template
 

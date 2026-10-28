@@ -77,20 +77,13 @@
   (cond-> {"type" "Person" "_label" label}
     iri (assoc "id" iri)))
 
-(defn- agent-iri
-  "The authority IRI of the record's identified agent entity (`:crm/E21_Person`,
-   V1: the INTERMARC ISNI Person), or nil."
-  [record]
-  (some #(when (and (= :crm/E21_Person (:kind %)) (:iri %)) (:iri %)) (:entities record)))
-
 (defn- persons
-  "Linked Art Person objects for the record's `names`. When there is exactly one
-   agent and an identified agent entity, that one Person carries the authority id."
+  "Linked Art Person objects for the record's `names`, each carrying the
+   authority id of the identified agent that names it (`agents/identified`):
+   two identified creators keep two ids (post-audit 2, D1)."
   [record names]
-  (let [iri (agent-iri record)]
-    (if (and iri (= 1 (count names)))
-      [(person-obj (first names) iri)]
-      (mapv #(person-obj % nil) names))))
+  (let [iris (into {} (keep (fn [{:keys [name iri]}] (when name [name iri]))) (agents/identified record))]
+    (mapv #(person-obj % (iris %)) names)))
 (defn- publishing
   "A Publishing `Activity` carried out by the publishers (Groups) — the Linked Art
    pattern for an edition's publication (model/document, Creation and Publication)."

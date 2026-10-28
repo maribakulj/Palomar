@@ -33,7 +33,7 @@
 (def agent-kinds
   "The CRM classes of an identified agent: a Person, or a Group — a corporate
    body or a family (C7, the post-audit plan)."
-  #{:crm/E21_Person :crm/E74_Group})
+  agents/identified-kinds)
 
 (defn agent-kind
   "The CRM class for an authority's `entity-type` (EAC-CPF `entityType`, the
@@ -43,20 +43,13 @@
 
 (defn- entity-type-of [kind] (when (= :crm/E74_Group kind) "corporateBody"))
 
-(defn- agent-label
-  "The record's controlled creator name (`:canon/agent` with role `:creator`, or
-   with no stated role), used as the reconciled agent's display label. A
-   contributor or publisher never labels the identified creator."
-  [record]
-  (first (agents/creators record)))
-
 (defn- record-agents
-  "`{:iri :id :label :record}` for each identified agent entity of `record`."
+  "`{:iri :id :label :record}` for each identified agent entity of `record`,
+   labelled with the name it identifies (`agents/identified`): two identified
+   creators of one record keep two names (post-audit 2, D1)."
   [record]
-  (let [label (agent-label record)]
-    (for [e (:entities record)
-          :when (and (agent-kinds (:kind e)) (:iri e))]
-      {:iri (:iri e) :id (:id e) :label label :record (:id record)})))
+  (for [{:keys [id iri name]} (agents/identified record)]
+    {:iri iri :id id :label name :record (:id record)}))
 
 (defn reconcile-agents
   "Reconcile identified agents across `records` by authority id (ISNI). Returns:
@@ -243,11 +236,14 @@
 (defn apply-agent-links
   "Rewrite `records` onto shared agent nodes from `links`: `propose-agent-links`
    proposals that a curator has accepted (`:status :accepted`, or `:asserted`).
-   For each record whose creator is a link's `:name` and that has no identified
-   agent yet, add the agent entity of the authority id — a `:crm/E21_Person`,
-   or a `:crm/E74_Group` when the link's `:entity-type` is a corporate body or
-   a family (`agent-kind`) — (its id minted
-   from the id, as the INTERMARC spoke does, so every record names the same node).
+   Links apply name by name, not record by record (post-audit 2, D1): for each
+   agent a record names (a creator, a contributor, a publisher…) that is not
+   identified yet, the link for that name adds the agent entity of the
+   authority id — a `:crm/E21_Person`, or a `:crm/E74_Group` when the link's
+   `:entity-type` is a corporate body or a family (`agent-kind`), its id minted
+   from the id, as the INTERMARC spoke does, so every record names the same
+   node — and writes the name on it (`:crm/P190_has_symbolic_content`), so each
+   identified agent says which of the record's names it is.
 
    A link applies only to the records it is scoped to (ADR 0041): its
    `:records`, a set of record ids (`accepted-links` scopes each link to the
@@ -255,13 +251,16 @@
    the name is one person across the corpus. A same name in another record is
    a homonym until shown otherwise.
 
-   Nothing else is applied, and every link left out is returned under `:refused`
-   with a `:reason`: `:unscoped` (a link that names no records: a name alone
-   identifies no one), `:not-accepted` (a bare proposal is never applied, D7),
-   `:not-certifiable` (no determinate authority id: the metro-station guard),
-   `:invalid-iri` (an authority id that is no IRI, which would corrupt every RDF
-   output) or `:ambiguous` (one name accepted for several authority ids). Returns
-   `{:records [..] :applied [{:record :name :iri}] :refused [link…]}`."
+   Nothing is left out silently. A link that cannot apply at all is returned
+   under `:refused` with a `:reason`: `:unscoped` (a link that names no
+   records: a name alone identifies no one), `:not-accepted` (a bare proposal
+   is never applied, D7), `:not-certifiable` (no determinate authority id: the
+   metro-station guard), `:invalid-iri` (an authority id that is no IRI, which
+   would corrupt every RDF output) or `:ambiguous` (one name accepted for
+   several authority ids). A usable link a record does not take because the
+   record already identifies that name is listed under `:skipped`, `{:record
+   :name :iri :reason :already-identified}`. Returns `{:records [..] :applied
+   [{:record :name :iri}] :skipped [..] :refused [link…]}`."
   [records links]
   (let [accepted?   #(contains? #{:accepted :asserted} (:status %))
         certifiable #(boolean (and (:certifiable? %) (:authority-id %)))
@@ -283,21 +282,29 @@
                                              (ambiguous? l)           :ambiguous)]
                                :when r]
                            (assoc l :reason r)))
-        link-of     (fn [record]
-                      (when-not (some #(and (agent-kinds (:kind %)) (:iri %)) (:entities record))
-                        (let [names (set (agents/creators record))]
-                          (first (filter #(and (names (:name %)) (in-scope? % (:id record))) usable)))))
-        results     (for [r records]
-                      (if-let [{:keys [name authority-id entity-type]} (link-of r)]
-                        (let [kind (agent-kind entity-type)
-                              e    (model/entity {:id         (model/mint-entity-id kind authority-id)
-                                                  :kind       kind
-                                                  :iri        authority-id
-                                                  :provenance (model/provenance {:pass       :repair
-                                                                                 :rule       :reconcile/apply-agent-link
-                                                                                 :derivation [(:id r)]})})]
-                          [(update r :entities (fnil conj []) e) {:record (:id r) :name name :iri authority-id}])
-                        [r nil]))]
-    {:records (mapv first results)
-     :applied (vec (keep second results))
+        rewrite     (fn [r]
+                      (let [rid   (:id r)
+                            known (set (keep :name (agents/identified r)))
+                            hits  (for [nm (distinct (map :name (agents/occurrences r)))
+                                        l  usable
+                                        :when (and (= nm (:name l)) (in-scope? l rid))]
+                                    l)
+                            [skip take] ((juxt filter remove) #(known (:name %)) hits)
+                            prov  (model/provenance {:pass :repair :rule :reconcile/apply-agent-link :derivation [rid]})
+                            add   (fn [r {:keys [name authority-id entity-type]}]
+                                    (let [kind (agent-kind entity-type)
+                                          e    (model/entity {:id (model/mint-entity-id kind authority-id) :kind kind
+                                                              :iri authority-id :provenance prov})]
+                                      (-> r
+                                          (update :entities (fnil (fn [es] (if (some #(= (:id e) (:id %)) es) es (conj es e))) []))
+                                          (update :assertions (fnil conj [])
+                                                  (model/assertion {:subject (:id e) :predicate :crm/P190_has_symbolic_content
+                                                                    :value name :provenance prov})))))]
+                        {:record  (reduce add r take)
+                         :applied (for [l take] {:record rid :name (:name l) :iri (:authority-id l)})
+                         :skipped (for [l skip] {:record rid :name (:name l) :iri (:authority-id l) :reason :already-identified})}))
+        results     (map rewrite records)]
+    {:records (mapv :record results)
+     :applied (vec (mapcat :applied results))
+     :skipped (vec (mapcat :skipped results))
      :refused refused}))
