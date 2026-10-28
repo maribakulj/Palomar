@@ -116,7 +116,7 @@
                   (and (or (nil? field) (nil? fs) (contains? fs field))
                        ;; a loss about one value (a string, or a structured
                        ;; value's fields) accounts for that value only
-                       (or (nil? v) (= v (if field whole value))))))
+                       (or (nil? v) (and (nil? field) (nil? value)) (= v (if field whole value))))))
           losses)))
 
 (defn- present?

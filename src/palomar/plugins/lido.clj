@@ -116,7 +116,7 @@
   "Event type terms, in the languages LIDO records use, when no URI says it."
   {"production" :production "herstellung" :production "entstehung" :production "création" :production
    "creation" :production "acquisition" :acquisition "erwerb" :acquisition "erwerbung" :acquisition
-   "zugang" :acquisition "restoration" :modification "restauration" :modification "restaurierung" :modification
+   "zugang" :acquisition "produktion" :production "fabrication" :production "restoration" :modification "restauration" :modification "restaurierung" :modification
    "conservation" :modification "konservierung" :modification "modification" :modification
    "veränderung" :modification})
 
@@ -519,6 +519,19 @@
 ;; --- projection: a CIDOC CRM object (ADR 0052) ---------------------------------
 
 (defn- fields [a] (when (model/structured-value? (:value a)) (:value/fields (:value a))))
+
+(defn production-keys
+  "The keys of the events, among the structured `events`, that make the
+   object (a production, a designing, a creation…): their materials are the
+   object's (post-audit 5, G1 review)."
+  [events]
+  (set (keep #(when (= "production" (:kind %)) (:index %)) events)))
+
+(defn of-production?
+  "True when a native read at event key `k` (nil: in no event) is said of the
+   object itself: it is in no event, or in one of the `production-keys` `ks`."
+  [ks k]
+  (or (nil? k) (contains? ks k)))
 
 (defn- production-event?
   "True when the event of key `n` among `events` is a production, or when no

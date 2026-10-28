@@ -372,3 +372,17 @@
       (is (not (str/includes? mrc ">cleaned with white spirit<")) "nor its 340")
       (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
         (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source restored}))) (str to))))))
+
+(deftest every-production-s-materials-are-the-object-s
+  (testing "a record with no production converts; with a designing before its production, the production's bronze stays the object's (G1 review)"
+    (let [noprod (str/replace restored #"<lido:conceptID>http://terminology.lido-schema.org/lido00007</lido:conceptID><lido:term>production</lido:term>" "<lido:term>Produktion?</lido:term>")
+          design (str/replace restored "<lido:eventWrap>"
+                              (str "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/lido00224</lido:conceptID></lido:eventType>"
+                                   "</lido:event></lido:eventSet>"))]
+      (doseq [to [:linked-art :marc21-object :ntriples]]
+        (is (string? (:output (convert/convert {:from :lido :to to :source noprod}))) (str to))
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source noprod}))) (str to)))
+      (let [la (json/read-str (first (str/split-lines (:output (convert/convert {:from :lido :to :linked-art :source design})))))]
+        (is (= ["http://vocab.getty.edu/aat/300010957"] (map #(get % "id") (get la "made_of"))))
+        (is (some #(= "bronze, cast" (get % "content")) (get la "referred_to_by"))))
+      (is (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source design})) ">bronze, cast<")))))

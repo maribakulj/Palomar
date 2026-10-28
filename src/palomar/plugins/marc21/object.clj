@@ -114,7 +114,7 @@
                  ;; the production's materials, or those of no event: never a
                  ;; restoration's (post-audit 5, G1)
                  (for [a (in-force record :lido/materials)
-                       :when (and (string? (:value a)) (#{nil (:index prod)} (lido/event-key a)))]
+                       :when (and (string? (:value a)) (lido/of-production? (lido/production-keys events) (lido/event-key a)))]
                    (datafield "340" " " " " [["a" (:value a)]]))
                  (for [v (strings record :lido/inscription)] (datafield "500" " " " " [["a" v]]))
                  (for [v (strings record :lido/description)] (datafield "520" " " " " [["a" v]]))
@@ -154,7 +154,7 @@
                             :lido/title-name #{:content}}
                            "in the MARC21 object profile")
      (for [a (in-force record :lido/materials)
-           :when (and (string? (:value a)) (lido/event-key a) (not= (:index prod) (lido/event-key a)))]
+           :when (and (string? (:value a)) (not (lido/of-production? (lido/production-keys (fields record :lido/event)) (lido/event-key a))))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
                  :message (str "materials " (pr-str (:value a)) " of another event than the production are not the object's: no field")}))
      ;; only the production's actors and date have a field (F5 review)
