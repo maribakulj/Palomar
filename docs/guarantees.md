@@ -13,7 +13,7 @@ the formats below are exactly those the code registers.
 
 Source formats: dc, eac-cpf, ead, edn, iiif, intermarc, intermarc-ng, lido, marc21, mods, oai, unimarc
 
-Target formats: crm, crm-only, dc, edn, iiif, jsonld, linked-art, marc21, marc21-archival, marc21-authority, marc21-fonds, mods, nquads, ntriples, prov, trig, turtle
+Target formats: crm, crm-only, dc, edn, iiif, jsonld, linked-art, marc21, marc21-archival, marc21-authority, marc21-fonds, marc21-object, mods, nquads, ntriples, prov, trig, turtle
 
 `edn` is the pivot itself (ADR 0034); `oai` an OAI-PMH response read through
 the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
@@ -46,6 +46,7 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | An EAD unit in MARC21 is an archival-control record whose fields mean what the EAD values mean: the cote in `099`, inclusive dates in `245 $f`, the level in `351 $c`, the parent in `773 $w`; the fonds mode writes the fonds alone and reports its components (ADR 0050). | `palomar.plugins.marc21.archival-test/a-unit-is-an-archival-record`, `palomar.plugins.marc21.archival-test/a-fonds-summary-is-one-record` |
 | An EAC-CPF record in MARC21 is an authority record (Leader/06 `z`): its authorized name heads it as `100` 1#, `100` 3# or `110` 2# by its entity type, its other names are `4XX` tracings, its IRI `024`, its dates `046`, its history `678` (ADR 0051). | `palomar.plugins.marc21.authority-test/a-corporate-body-is-a-110-authority`, `palomar.plugins.marc21.authority-test/a-person-and-a-family-take-100` |
 | A LIDO record (Städel, real, CC0) is a CIDOC CRM `E22_Human-Made_Object` with its production, acquisition, dimensions, materials, types, keeper, subjects and images; in Linked Art a `HumanMadeObject` and the `VisualItem` it shows, both validating strictly against the official schemas (ADR 0052). | `palomar.eval.linked-art-conformance-test/a-museum-object-is-a-human-made-object` |
+| A LIDO object in MARC21 is a record of a two-dimensional graphic (Leader/06 `k`) or an artefact (`r`): its production in `264` #0, not a publication, its creators with their GND URI, its materials, acquisition, provenance, subjects and work types in their own fields (ADR 0053). | `palomar.plugins.marc21.object-test/a-painting-is-a-two-dimensional-graphic` |
 | A IIIF manifest is exported to Linked Art as the `DigitalObject` it is, validating against `digital.json`; what it presents is not asserted (ADR 0049). | `palomar.eval.linked-art-conformance-test/a-iiif-manifest-is-a-digital-object` |
 | A Manifestation is exported to Linked Art as a text (`LinguisticObject`), only an F5 Item as a physical object; one document per Manifestation and per Item. | `palomar.plugins.lrmoo.linked-art-test/every-manifestation-and-item-gets-its-own-document` |
 | Linked Art output for the MARC21 sample validates against the official `text.json` schema with zero errors. | `palomar.eval.linked-art-conformance-test/our-marc-output-validates-strictly` |
