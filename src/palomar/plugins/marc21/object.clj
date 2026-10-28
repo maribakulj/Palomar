@@ -49,11 +49,26 @@
        "</datafield>"))
 
 (def ^:private two-dimensional
-  #"(?i)paint|drawing|print|photograph|Fotografie|Photographie|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|Gemälde|Zeichnung|Druck|peinture|dessin|estampe")
+  #"(?i)(?<!\p{L})(?:paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|peinture|dessin|estampe|gravure|tableau|affiche)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|druck|stich|radierung|holzschnitt|lithographie|lithografie|fotografie|photographie|plakat)")
+
+(def ^:private three-dimensional
+  "Types of a three-dimensional artefact, or a naturally occurring object:
+   Leader/06 `r` (post-audit 5, G4)."
+  #"(?i)(?<!\p{L})(?:sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|book|tool|weapon|armou?r|clock|instrument|model|installation|object|objet|meuble|céramique|monnaie)|(?:skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|buch|werkzeug|waffe|uhr|modell|objekt)")
+
+(defn- graphic
+  "Leader/06 of `record`: `k` when a type names a two-dimensional graphic,
+   `r` when one names a three-dimensional artefact or the record does not say
+   the object was made; nil when no type says which."
+  [record]
+  (let [types (concat (strings record :lido/work-type) (strings record :lido/classification))]
+    (cond (lido/natural? record)                      "r"
+          (some #(re-find two-dimensional %) types)   "k"
+          (some #(re-find three-dimensional %) types) "r")))
 
 (defn- leader [record]
-  (let [types (concat (strings record :lido/work-type) (strings record :lido/classification))]
-    (str "00000n" (if (some #(re-find two-dimensional %) types) "k" "r") "m a2200000   4500")))
+  ;; a type it cannot tell is r, and that is reported (`export-losses`)
+  (str "00000n" (or (graphic record) "r") "m a2200000   4500"))
 
 (defn- source
   "The MARC second indicator and source code (`$2`) of a concept URI, by its
@@ -167,6 +182,9 @@
                  :message (if c
                             (str "the lidoRecID's source " (pr-str s) " is written as its ISIL, " c ", in 003")
                             (str "the lidoRecID's source " (pr-str s) " is no MARC organization code: no 003 says whose the 001 is, and another institution's record with the same id has the same 001"))}))
+     (when-not (graphic record)
+       [(dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :lido/object :aspect :class
+                  :message "no work type says whether the object is a two-dimensional graphic or a three-dimensional artefact: Leader/06 r is assumed"})])
      (when (empty? srcs)
        [(dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :lido/rec-id-source
                   :message "the record names no source of its lidoRecID: no 003 says whose the 001 is"})])
