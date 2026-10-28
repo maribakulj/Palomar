@@ -125,3 +125,40 @@
     (is (= 1 (:records (convert/convert {:from :lido :to :ntriples :source (one-event "lido00007" nil "Maes")}))))
     (is (str/includes? (:output (convert/convert {:from :lido :to :dc :source (one-event "lido00007" nil "Maes")}))
                        "<dc:creator>Maes</dc:creator>"))))
+
+(defn- production-with
+  "A LIDO record whose production has actors `[name role-en]` (nil role: none)."
+  [& actors]
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>R-1</lido:lidoRecID><lido:descriptiveMetadata>"
+       "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>Bronze</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+       "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/lido00007</lido:conceptID></lido:eventType>"
+       (apply str (for [[nm role] actors]
+                    (str "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>" nm
+                         "</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                         (when role (str "<lido:roleActor><lido:term xml:lang=\"en\">" role "</lido:term></lido:roleActor>"))
+                         "</lido:actorInRole></lido:eventActor>")))
+       "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>"))
+
+(deftest only-a-creator-is-a-creator
+  (let [xml (production-with ["Rodin" "sculptor"] ["Rudier" "founder"] ["Musée" "commissioner"] ["Anonyme" nil])]
+    (testing "a sculptor, and an actor whose role the record does not state, create the object; a founder or a commissioner take part (post-audit 4, F2)"
+      (let [dc (:output (convert/convert {:from :lido :to :dc :source xml}))]
+        (is (str/includes? dc "<dc:creator>Rodin</dc:creator>"))
+        (is (str/includes? dc "<dc:creator>Anonyme</dc:creator>"))
+        (is (not (str/includes? dc "<dc:creator>Rudier")))
+        (is (not (str/includes? dc "<dc:creator>Musée")))))
+    (testing "in MARC21 the creator is the 100, the participants are 700 with their role"
+      (let [m (:output (convert/convert {:from :lido :to :marc21-object :source xml}))]
+        (is (re-find #"tag=\"100\"[^\n]*>Rodin<" m))
+        (is (re-find #"tag=\"700\"[^\n]*>Rudier</subfield><subfield code=\"e\">founder<" m))
+        (is (re-find #"tag=\"700\"[^\n]*>Musée</subfield><subfield code=\"e\">commissioner<" m))
+        (is (not (re-find #"tag=\"100\"[^\n]*>(Rudier|Musée)<" m)))))
+    (testing "in Linked Art the creators carry out the production, each other participant a part of it in its role"
+      (let [hmo (first (map json/read-str (str/split-lines (:output (convert/convert {:from :lido :to :linked-art :source xml})))))]
+        (is (= #{"Rodin" "Anonyme"} (set (map #(get % "_label") (get-in hmo ["produced_by" "carried_out_by"])))))
+        (is (= #{"Rudier" "Musée"} (set (for [p (get-in hmo ["produced_by" "part"]) a (get p "carried_out_by")] (get a "_label")))))))))
+
+(deftest a-production-without-a-creator-has-no-main-entry
+  (let [m (:output (convert/convert {:from :lido :to :marc21-object :source (production-with ["Rudier" "founder"])}))]
+    (is (not (str/includes? m "tag=\"100\"")))
+    (is (str/includes? m "tag=\"245\" ind1=\"0\""))))

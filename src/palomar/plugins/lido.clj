@@ -122,6 +122,21 @@
     "publication" "move_of_object" "transfer_of_custody" "planning" "modification" "part_addition"
     "part_removal" "type_assignment" "attribute_assignment" "type_creation"})
 
+(def ^:private creator-role
+  "A role that creates the object, in the languages LIDO records use: the
+   artist, author or maker, not a commissioner, a founder, a printer or a
+   publisher who took part in its production."
+  #"(?i)\b(paint|draughts|drafts|draw|sculpt|artist|author|engrav|etch|lithograph|printmaker|photograph|architect|maker|potter|goldsmith|silversmith|carv|weav|illuminat|creator|designer|maler|zeichner|bildhauer|künstler|kunstler|stecher|radierer|fotograf|urheber|schöpfer|peintre|dessinat|sculpteur|artiste|auteur|graveur|photographe|créat|orfèvre)")
+
+(defn creator?
+  "True when an actor of a production, in role `terms` (its role's terms in
+   every language), created the object: its role is a creator's, or the
+   record states none — an actor named alone in a production is its maker
+   (ADR 0054)."
+  [terms]
+  (or (empty? (remove str/blank? terms))
+      (boolean (some #(re-find creator-role %) terms))))
+
 (def group-types
   "The LIDO actor types that are a group (CIDOC CRM `E74_Group`), not a person."
   #{"organization" "corporation" "group" "group_of_persons" "family"})
@@ -265,11 +280,14 @@
                                   names (when a (descend a "nameActorSet" "appellationValue"))
                                   id    (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (when a (kids a "actorID")))
                                   role  (some-> (kid air "roleActor") concept)
+                                  rterms (keep text (descend air "roleActor" "term"))
                                   vd    (fn [nm] (some-> a (kid "vitalDatesActor") (kid nm) text))
                                   nm    (some text names)]
                             :when nm]
                         [:lido/actor (model/structured (cond-> {:event n :name nm
-                                                                :type (or (term-name (attr a "type")) "")}
+                                                                :type (or (term-name (attr a "type")) "")
+                                                                :responsibility (if (and (= :production kind) (creator? rterms))
+                                                                                  "creator" "participant")}
                                                          id (assoc :uri id)
                                                          (:label role) (assoc :role (:label role))
                                                          (:uri role) (assoc :role-uri (:uri role))
@@ -283,8 +301,9 @@
                                           (strings :lido/actor-dates (when a (concat (descend a "vitalDatesActor" "earliestDate")
                                                                                      (descend a "vitalDatesActor" "latestDate"))))
                                           (when-let [r (kid air "roleActor")] (terms :lido/actor-role r))
-                                          ;; the production's actors are the object's creators
-                                          (when (= :production kind)
+                                          ;; a production's actor in a creator's role (or in none
+                                          ;; stated) is the object's creator; any other took part
+                                          (when (and (= :production kind) (creator? (keep text (descend air "roleActor" "term"))))
                                             (strings :lido/creator (take 1 (when a (descend a "nameActorSet" "appellationValue"))))))))
                               (kids ea "actorInRole"))))
                    (kids ev "eventActor"))
