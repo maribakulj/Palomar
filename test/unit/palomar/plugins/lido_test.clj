@@ -7,6 +7,7 @@
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
             [palomar.fidelity :as fidelity]
+            [palomar.plugins.lido :as lido]
             [palomar.ontology :as onto]
             [palomar.plugins.lrmoo.ntriples :as nt]))
 
@@ -162,3 +163,38 @@
   (let [m (:output (convert/convert {:from :lido :to :marc21-object :source (production-with ["Rudier" "founder"])}))]
     (is (not (str/includes? m "tag=\"100\"")))
     (is (str/includes? m "tag=\"245\" ind1=\"0\""))))
+
+(deftest a-creator-s-role-is-told-by-its-head
+  (testing "a role names a creator by what the actor is, not by a word it contains (post-audit 4, F2 review)"
+    (doseq [r ["painter" "Maler" "Kupferstecher" "Hofmaler" "Glasmaler" "KÜNSTLER" "cabinetmaker" "illustrator"
+               "woodcutter" "Holzschneider" "Formschneider" "Goldschmied" "Töpfer" "Entwerfer" "manufacturer"
+               "Hersteller" "sculptor" "peintre" "photographer"]]
+      (is (lido/creator? [r] nil) r))
+    (doseq [r ["lithographic printer" "Lithographische Anstalt" "Engraving printer" "Etching publisher"
+               "photographic studio" "Photograph collector" "Artist's estate" "authorized by"
+               "after a painting by" "author of the original" "printer" "Drucker" "publisher" "Verleger"
+               "commissioner" "founder" "Werkstatt"]]
+      (is (not (lido/creator? [r] nil)) r)))
+  (testing "a role given by its URI alone is a stated role: a creator only when it is a creator's"
+    (is (not (lido/creator? [] "http://vocab.getty.edu/aat/300025574")) "printers")
+    (is (lido/creator? [] "http://vocab.getty.edu/aat/300025136") "painters")
+    (is (lido/creator? [] nil) "no role at all")))
+
+(deftest every-role-of-an-actor-is-read
+  (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>R-3</lido:lidoRecID><lido:descriptiveMetadata>"
+                 "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                 "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/lido00007</lido:conceptID></lido:eventType>"
+                 "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Pub C</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                 "<lido:roleActor><lido:term>publisher</lido:term></lido:roleActor><lido:roleActor><lido:term>painter</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"
+                 "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Printer B</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                 "<lido:roleActor><lido:conceptID>http://vocab.getty.edu/aat/300025574</lido:conceptID></lido:roleActor></lido:actorInRole></lido:eventActor>"
+                 "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")
+        m   (:output (convert/convert {:from :lido :to :marc21-object :source xml}))
+        dc  (:output (convert/convert {:from :lido :to :dc :source xml}))
+        {:keys [ingest]} (convert/to-wemi :lido {} xml)]
+    (testing "an actor who is publisher and painter is a creator, with both roles"
+      (is (re-find #"tag=\"100\"[^\n]*>Pub C</subfield><subfield code=\"e\">publisher</subfield><subfield code=\"e\">painter<" m))
+      (is (not-any? #(= :lido/term (get-in % [:detail :loss/source-field])) ingest) "the second role is read"))
+    (testing "an actor whose role is a printers' URI is not a creator"
+      (is (not (str/includes? dc "<dc:creator>Printer B")))
+      (is (re-find #"tag=\"700\"[^\n]*>Printer B<" m)))))

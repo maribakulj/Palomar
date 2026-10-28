@@ -16,17 +16,24 @@ That is an attribution the source does not make.
 ## Decision
 
 1. **An actor of a production is a creator when its role is a creator's.**
-   The role terms of `roleActor`, in any language, are matched against a
-   creator's roles: painter, draughtsman, sculptor, artist, author, engraver,
-   photographer, architect, maker and the like, in English, German and French.
-2. **An actor whose role the record does not state is a creator.** An actor
-   named alone in a production, as most records give the artist, is its
+   Each of its roles counts, not only the first. A role term qualifies when its
+   last word is a creator's (painter, draughtsman, sculptor, artist, author,
+   engraver, photographer, architect, maker, illustrator…, in English, German
+   and French). German compounds such as Kupferstecher, Hofmaler and
+   Holzschneider end with one too. The term must also say nothing that makes
+   it another role ("lithographic printer", "Etching publisher", "photographic
+   studio", "after a painting by", "Artist's estate"). A role URI qualifies
+   when it is a creator's: AAT artists, painters, sculptors, photographers,
+   and the GND Maler.
+2. **An actor with no role stated, neither term nor URI, is a creator.** An
+   actor named alone in a production, as most records give the artist, is its
    maker. That is what the source means (this choice was put to the project
-   owner and accepted).
+   owner and accepted). A role given only by a URI is stated: an actor whose
+   URI names a printer is not a creator.
 3. **Any other actor takes part.** It is never a creator.
    - **CIDOC CRM:** `P14` as before. Being carried out by is participation,
      whatever the role.
-   - **MARC21:** a `700`/`710` with its role in `$e`, never the `100`/`110`
+   - **MARC21:** a `700`/`710` with each of its roles in an `$e`, never the `100`/`110`
      main entry. A production with no creator has no main entry, and `245`
      takes indicator 0.
    - **Linked Art:** a `part` of the Production that it carries out, labelled

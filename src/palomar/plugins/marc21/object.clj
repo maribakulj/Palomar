@@ -86,7 +86,10 @@
                   (let [group? (lido/group-types type)
                         tag    (if group? (if main? "110" "710") (if main? "100" "700"))]
                     (datafield tag (if group? "2" "1") " "
-                               [["a" name] ["d" (when (or birth death) (str birth "-" death))] ["e" role] ["0" uri]])))
+                               (concat [["a" name] ["d" (when (or birth death) (str birth "-" death))]]
+                                       ;; each role its own $e
+                                       (for [r (when role (str/split role #"; "))] ["e" r])
+                                       [["0" uri]]))))
         concept (fn [tag {:keys [uri label]}] (datafield tag " " "7" [["a" label] ["0" uri] ["2" (source-code uri)]]))
         fields* (concat
                  (for [v (strings record :lido/inventory-number)] (datafield "099" " " "9" [["a" v]]))
