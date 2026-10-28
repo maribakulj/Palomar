@@ -46,7 +46,9 @@
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
+            [palomar.plugins.lido :as lido]
             [palomar.plugins.lrmoo.export :as export]
+            [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.plugins.lrmoo.view :as view]))
 
 (def context "https://linked.art/ns/v1/linked-art.json")
@@ -264,6 +266,197 @@
       (seq notes)     (assoc "referred_to_by" (mapv note-obj notes))
       (seq digis)     (assoc "representation" (mapv digital-obj digis)))))
 
+;; --- a museum object (LIDO, ADR 0052) -----------------------------------------
+
+(def ^:private aat-accession   "http://vocab.getty.edu/aat/300312355")
+(def ^:private aat-materials   "http://vocab.getty.edu/aat/300435429")
+(def ^:private aat-dimensions  "http://vocab.getty.edu/aat/300435430")
+(def ^:private aat-provenance  "http://vocab.getty.edu/aat/300444174")
+(def ^:private aat-inscription "http://vocab.getty.edu/aat/300028702")
+(def ^:private aat-credit      "http://vocab.getty.edu/aat/300026687")
+
+(def ^:private dimension-types
+  "A LIDO measurement type → its AAT dimension type."
+  {"height" ["http://vocab.getty.edu/aat/300055644" "Height"]
+   "width"  ["http://vocab.getty.edu/aat/300055647" "Width"]
+   "depth"  ["http://vocab.getty.edu/aat/300072633" "Depth"]
+   "weight" ["http://vocab.getty.edu/aat/300056240" "Weight"]
+   "diameter" ["http://vocab.getty.edu/aat/300055624" "Diameter"]})
+
+(def ^:private units
+  "A LIDO measurement unit → its AAT unit."
+  {"cm" ["http://vocab.getty.edu/aat/300379098" "centimeters"]
+   "mm" ["http://vocab.getty.edu/aat/300379097" "millimeters"]
+   "m"  ["http://vocab.getty.edu/aat/300379099" "meters"]
+   "in" ["http://vocab.getty.edu/aat/300379100" "inches"]
+   "kg" ["http://vocab.getty.edu/aat/300379226" "kilograms"]
+   "g"  ["http://vocab.getty.edu/aat/300379225" "grams"]})
+
+(defn- object? [record] (= :lido/object (:kind record)))
+
+(defn- native-strings [record p]
+  (keep #(when (and (= p (:predicate %)) (string? (:value %))) (:value %)) (:assertions record)))
+
+(defn- native-fields [record p]
+  (keep #(when (and (= p (:predicate %)) (model/structured-value? (:value %))) (:value/fields (:value %)))
+        (:assertions record)))
+
+(defn- event-strings
+  "The `p` strings of `record` read in its LIDO event `k` (`lido/event-key`)."
+  [record p k]
+  (keep #(when (and (= p (:predicate %)) (string? (:value %)) (= k (lido/event-key %))) (:value %))
+        (:assertions record)))
+
+(defn- event-descriptions [record n] (event-strings record :lido/event-description n))
+
+(defn- provenance-event?
+  "True for a LIDO provenance event (`lido00227`, or so termed)."
+  [{:keys [type label]}]
+  (boolean (or (some-> type (str/ends-with? "lido00227"))
+               (#{"provenance" "provenienz"} (some-> label str/lower-case)))))
+
+(defn- statement [content aat label]
+  {"type" "LinguisticObject" "content" content "classified_as" [(type-obj aat label)]})
+
+(defn- type-ref [{:keys [uri label]} kind]
+  (cond-> {"id" uri "type" kind} label (assoc "_label" label)))
+
+(defn- instant
+  "A LIDO year or date as an `xsd:dateTime`, the start (`end?` false) or the end
+   of the period it names, or nil when it is neither. A year has at least four
+   digits in `xsd:dateTime`: 800 is `0800`, 50 BCE `-0050`."
+  [s end?]
+  (when s
+    (let [t (str/trim s)]
+      (if-let [[_ sign y] (re-matches #"(-?)(\d{1,4})" t)]
+        (format (if end? "%s%04d-12-31T23:59:59Z" "%s%04d-01-01T00:00:00Z") sign (parse-long y))
+        (when (re-matches #"\d{4}-\d{2}-\d{2}" t)
+          (str t (if end? "T23:59:59Z" "T00:00:00Z")))))))
+
+(defn- dimension-obj
+  "The Linked Art `Dimension` of a LIDO measurement, or nil when its value is
+   no number (\"ca. 5\", \"NaN\") or its unit has no AAT term (`object-losses`)."
+  [{:keys [type value unit]}]
+  (let [v (when (re-matches #"-?\d+([.,]\d+)?" (str/trim (str value))) (parse-double (str/replace (str/trim value) "," ".")))
+        [uid ulabel] (get units (some-> unit str/lower-case))
+        [tid tlabel] (get dimension-types (some-> type str/lower-case))]
+    (when (and v uid)
+      (cond-> {"type" "Dimension" "value" v "unit" {"id" uid "type" "MeasurementUnit" "_label" ulabel}}
+        tid (assoc "classified_as" [(type-obj tid tlabel)])))))
+
+(defn- object-id [record]
+  (export/entity-iri (or (some #(when (= :crm/E22_Human-Made_Object (:kind %)) (:id %)) (:entities record))
+                         (:id record))))
+
+(defn- visual-iri [record] (str (object-id record) "/visual"))
+
+(defn- object-docs
+  "The Linked Art documents of a museum object (ADR 0052): its
+   `HumanMadeObject` and, when its record names subjects or rights for the
+   work's image content, the `VisualItem` it shows. They are read from the
+   LIDO values: titles as names, the inventory number as an accession number,
+   work types and classifications, dimensions (with their AAT type and unit),
+   materials, its production (actors, time-span, place, techniques), its
+   acquisitions, its keeper, its images, and statements for what Linked Art
+   carries only as text (materials and measurements as displayed, the
+   description, inscriptions, provenance)."
+  [record]
+  (let [strs     #(native-strings record %)
+        flds     #(native-fields record %)
+        titles   (distinct (strs :lido/title))
+        events   (sort-by (comp lido/event-order :index) (flds :lido/event))
+        actors   (flds :lido/actor)
+        mats     (flds :lido/material)
+        prod     (first (filter #(= "production" (:kind %)) events))
+        acqs     (filter #(= "acquisition" (:kind %)) events)
+        in-event (fn [n xs] (filter #(= n (:event %)) xs))
+        ;; an actor with no authority id is the record's own node, as in the
+        ;; CRM view (scoped to the record, ADR 0041): a reference, not an identity
+        actor    (fn [{:keys [name uri type]}]
+                   (let [group? (lido/group-types type)
+                         kind   (if group? :crm/E74_Group :crm/E21_Person)]
+                     {"id"     (or uri (export/entity-iri (model/mint-entity-id kind [(str (:id record)) name])))
+                      "type"   (if group? "Group" "Person")
+                      "_label" name}))
+        timespan (fn [{:keys [date earliest latest]}]
+                   (let [b (instant earliest false) e (instant latest true)]
+                     (when (or date b e)
+                       (cond-> {"type" "TimeSpan"}
+                         date (assoc "identified_by" [(dissoc (name-obj date) "classified_as")])
+                         b    (assoc "begin_of_the_begin" b)
+                         e    (assoc "end_of_the_end" e)))))
+        place-ids (fn [ev] (filter #(nil? (nt/iri-problem %)) (event-strings record :lido/event-place-id (:index ev))))
+        subjects (flds :lido/subject-concept)
+        rights   (flds :lido/rights-work-type)
+        keepers  (flds :lido/keeper)
+        notes    (concat (map #(statement % aat-materials "Material Statement") (strs :lido/materials))
+                         (map #(statement % aat-dimensions "Dimension Statement") (strs :lido/measurements))
+                         (map #(note-obj %) (strs :lido/description))
+                         (map #(statement % aat-inscription "Inscription") (strs :lido/inscription))
+                         (map #(statement % aat-credit "Credit Line") (strs :lido/credit-line)))
+        ;; another event's description: a provenance statement for a
+        ;; provenance event, else a description of the event
+        prov     (for [ev events :when (not (#{"production" "acquisition"} (:kind ev)))
+                       d  (event-descriptions record (:index ev))]
+                   (if (provenance-event? ev)
+                     (statement d aat-provenance "Provenance Statement")
+                     (cond-> (note-obj d) (:label ev) (assoc "_label" (:label ev)))))
+        visual?  (or (seq subjects) (seq rights))
+        hmo      (cond-> {"@context" context
+                          "id"       (object-id record)
+                          "type"     "HumanMadeObject"
+                          "_label"   (or (first titles) (first (strs :lido/inventory-number)) (str (:id record)))}
+                   (or (seq titles) (seq (strs :lido/inventory-number)))
+                   (assoc "identified_by" (vec (concat (when (seq titles) [(name-obj (first titles))])
+                                                       (map #(dissoc (name-obj %) "classified_as") (rest titles))
+                                                       (map (fn [n] {"type" "Identifier" "content" n
+                                                                     "classified_as" [(type-obj aat-accession "Accession Number")]})
+                                                            (strs :lido/inventory-number)))))
+                   (some :uri (concat (flds :lido/work-type-concept) (flds :lido/classification-concept)))
+                   (assoc "classified_as" (vec (keep #(when (:uri %) (type-ref % "Type"))
+                                                     (concat (flds :lido/work-type-concept) (flds :lido/classification-concept)))))
+                   (seq (keep dimension-obj (flds :lido/dimension)))
+                   (assoc "dimension" (vec (keep dimension-obj (flds :lido/dimension))))
+                   (seq (filter #(and (:uri %) (not= "technique" (:role %))) mats))
+                   (assoc "made_of" (vec (for [m mats :when (and (:uri m) (not= "technique" (:role m)))] (type-ref m "Material"))))
+                   prod
+                   (assoc "produced_by"
+                          (let [n  (:index prod)
+                                as (in-event n actors)
+                                ts (timespan prod)
+                                ps (place-ids prod)
+                                tq (filter #(and (:uri %) (= "technique" (:role %))) (in-event n mats))]
+                            (cond-> {"type" "Production"}
+                              (seq as) (assoc "carried_out_by" (mapv actor as))
+                              ts       (assoc "timespan" ts)
+                              (seq ps) (assoc "took_place_at" (mapv (fn [u] {"id" u "type" "Place"}) ps))
+                              (seq tq) (assoc "technique" (mapv #(type-ref % "Type") tq)))))
+                   (seq acqs)
+                   (assoc "changed_ownership_through"
+                          (vec (for [ev acqs
+                                     :let [ts (timespan ev)
+                                           ds (event-descriptions record (:index ev))]]
+                                 (cond-> {"type" "Acquisition"}
+                                   (:label ev) (assoc "_label" (:label ev))
+                                   ts          (assoc "timespan" ts)
+                                   (seq ds)    (assoc "referred_to_by" (mapv #(statement % aat-provenance "Provenance Statement") ds))))))
+                   (seq (filter :uri keepers))
+                   (assoc "current_custodian" (vec (for [{n :name i :uri} keepers :when i] {"id" i "type" "Group" "_label" n})))
+                   (seq (concat notes prov)) (assoc "referred_to_by" (vec (concat notes prov)))
+                   (seq (flds :lido/resource))
+                   (assoc "representation" (vec (distinct (map #(digital-obj (:url %)) (filter #(re-find #"(?i)image" (str (:format %))) (flds :lido/resource))))))
+                   visual? (assoc "shows" [{"id" (visual-iri record) "type" "VisualItem"}]))
+        vi       (when visual?
+                   (cond-> {"@context" context "id" (visual-iri record) "type" "VisualItem"
+                            "_label" (str "Visual content of " (get hmo "_label"))}
+                     (seq (filter :uri subjects)) (assoc "about" (vec (for [c subjects :when (:uri c)] (type-ref c "Type"))))
+                     (seq rights) (assoc "subject_to" (vec (for [r rights]
+                                                             (cond-> {"type" "Right"}
+                                                               (:label r) (assoc "_label" (:label r))
+                                                               (:uri r) (assoc "classified_as" [(type-ref r "Type")])))))))]
+    (cond-> [(cond-> hmo (empty? (get hmo "representation")) (dissoc "representation"))]
+      vi (conj vi))))
+
 (defn documents
   "The Linked Art JSON-LD documents for `record`'s WEMI view: one
    `LinguisticObject` per Manifestation (a Manifestation is an edition, not a
@@ -272,8 +465,10 @@
    Manifestation; with none or several they cannot be attributed and are
    reported as loss (`export-losses`). Empty for a record with neither."
   [record]
-  (if (manifest? record)
-    [(manifest-doc record)]
+  (cond
+    (manifest? record) [(manifest-doc record)]
+    (object? record)   (object-docs record)
+    :else
     (let [ts (texts record)]
       (into (mapv #(text-doc record % (= 1 (count ts))) ts)
             (map #(item-doc record %) (view/items record))))))
@@ -346,11 +541,49 @@
      (dx/loss {:category :dropped :subject (:id e) :edge :export :source-field (:kind e) :aspect :class
                :message (str (name (:kind e)) ": a IIIF manifest is a digital presentation; what it presents is not asserted")}))))
 
+(def ^:private object-written
+  "The LIDO natives a museum object's documents write (ADR 0052)."
+  #{:lido/title :lido/inventory-number :lido/work-type-concept :lido/classification-concept :lido/dimension
+    :lido/material :lido/event :lido/actor :lido/event-description :lido/event-place-id :lido/subject-concept
+    :lido/rights-work-type :lido/keeper :lido/repository :lido/repository-id :lido/materials :lido/measurements
+    :lido/description :lido/inscription :lido/credit-line :lido/resource})
+
+(defn- object-losses
+  "What a museum object's documents leave out: each LIDO native they do not
+   write, each measurement that makes no `Dimension` (its value is no number,
+   or its unit has no AAT term), and each keeper with no IRI, which a Linked
+   Art reference cannot name."
+  [record]
+  (let [ps    (distinct (map :predicate (:assertions record)))
+        lido? #(= "lido" (namespace %))
+        loss  (fn [cat p msg] (dx/loss {:category cat :subject (:id record) :edge :export :source-field p :message msg}))]
+    (concat
+     (for [p ps :when (and (lido? p) (not (object-written p)))]
+       (loss :dropped p (str (pr-str p) " is not expressed in the Linked Art object profile (ADR 0052)")))
+     (for [d (native-fields record :lido/dimension) :when (nil? (dimension-obj d))]
+       (loss :under-specified :lido/dimension
+             (str "measurement " (pr-str (:value d)) " " (:unit d) " is no number in a known unit: written only in the measurements statement")))
+     (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
+       (loss :dropped :lido/repository (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")))
+     ;; only the production says where it took place in this profile
+     (let [prod (:index (first (filter #(= "production" (:kind %)) (native-fields record :lido/event))))]
+       (when (some #(and (= :lido/event-place-id (:predicate %)) (not= prod (lido/event-key %))) (:assertions record))
+         [(loss :dropped :lido/event-place-id "the place of an event other than the production is not written in the Linked Art object profile")])))))
+
+(declare non-object-losses)
+
 (defn export-losses
   "Export-edge loss (ADR 0015): every predicate the Linked Art profile does not
    express (dates, relations, native source predicates), one per distinct
    [subject predicate]; one per agent left out (`non-creator-losses`); and the
    structural losses (`structure-losses`)."
+  [record]
+  (if (object? record)
+    (object-losses record)
+    (non-object-losses record)))
+
+(defn- non-object-losses
+  "The losses of a bibliographic record or a IIIF manifest (see `export-losses`)."
   [record]
   (-> (->> (:assertions record)
            (remove #(contains? expressed (:predicate %)))

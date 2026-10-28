@@ -84,7 +84,7 @@
                         (oai/import-response "oai_dc" (str "<OAI-PMH xmlns=\"http://www.openarchives.org/OAI/2.0/\">"
                                                            "<error code=\"badArgument\">bad</error></OAI-PMH>"))))
   (is (thrown-with-msg? clojure.lang.ExceptionInfo #"no spoke reads"
-                        (oai/import-response "lido" (envelope "ListRecords" "")))))
+                        (oai/import-response "ese" (envelope "ListRecords" "")))))
 
 (deftest a-harvest-follows-the-resumption-tokens
   (let [pages {"https://example.org/oai?verb=ListRecords&metadataPrefix=oai_dc&set=books"

@@ -18,6 +18,7 @@
             [palomar.diagnostics :as dx]
             [palomar.plugins.eac :as eac]
             [palomar.plugins.ead :as ead]
+            [palomar.plugins.lido :as lido]
             [palomar.plugins.events :as events]
             [palomar.plugins.oai :as oai]
             [palomar.ir :as ir]
@@ -63,7 +64,8 @@
    :mods         project/project
    :iiif         project/project
    :ead          ead/project
-   :eac-cpf      eac/project})       ; an authority record: a RiC-O agent (ADR 0045)       ; archival units: no edition, so no Work (ADR 0039)
+   :eac-cpf      eac/project
+   :lido         lido/project})       ; a museum object: a CIDOC CRM E22 (ADR 0052)       ; an authority record: a RiC-O agent (ADR 0045)       ; archival units: no edition, so no Work (ADR 0039)
 
 (defn- crm-only-losses [record]
   (concat (crm/crm-only-losses record) (export/export-losses record)))
@@ -82,9 +84,9 @@
    :crm        {:render crm/->ntriples               :losses export/export-losses}
    :crm-only   {:render crm/->crm-only-ntriples      :losses crm-only-losses}
    :linked-art {:render linked-art/->jsonld          :losses linked-art/export-losses
-                :accepts #{:bibliographic :digital}}
+                :accepts #{:bibliographic :digital :object}}
    :dc         {:render dc-export/->dc-xml           :losses dc-export/export-losses
-                :accepts #{:bibliographic :digital :archival-unit}
+                :accepts #{:bibliographic :digital :archival-unit :object}
                 ;; DC has no collection element of its own: one record stays a
                 ;; DC document, several are wrapped to stay one XML document
                 :collection ["<collection>" "</collection>"] :wrap-one? false}
@@ -124,6 +126,7 @@
     :archival-unit      :archival-unit
     :archival-authority :authority
     :iiif/manifest      :digital
+    :lido/object        :object
     :bibliographic))
 
 (defn source-resource-type
@@ -134,12 +137,14 @@
     :ead     :archival-unit
     :eac-cpf :authority
     :iiif    :digital
+    :lido    :object
     (:oai :edn) nil
     :bibliographic))
 
 (def ^:private resource-names
   {:archival-unit "archival units (EAD)" :authority "authority records (EAC-CPF)"
-   :digital "digital presentations (IIIF)" :bibliographic "bibliographic records"})
+   :digital "digital presentations (IIIF)" :object "museum objects (LIDO)"
+   :bibliographic "bibliographic records"})
 
 (defn accepts?
   "True when target `to` describes resources of `type` (`resource-type`). A

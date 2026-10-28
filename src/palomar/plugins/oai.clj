@@ -29,7 +29,8 @@
   {"oai_dc"  :dc
    "marcxml" :marc21
    "marc21"  :marc21
-   "mods"    :mods})
+   "mods"    :mods
+   "lido"    :lido})
 
 (defn- local [tag] (when tag (name tag)))
 

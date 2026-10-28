@@ -13,6 +13,7 @@
             [palomar.plugins.iiif :as iiif]
             [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.intermarc-ng :as intermarc-ng]
+            [palomar.plugins.lido :as lido]
             [palomar.plugins.marc21 :as marc21]
             [palomar.plugins.mods :as mods]
             [palomar.plugins.unimarc :as unimarc]))
@@ -27,7 +28,8 @@
    :mods         mods/plugin
    :iiif         iiif/plugin
    :ead          ead/plugin
-   :eac-cpf      eac/plugin})
+   :eac-cpf      eac/plugin
+   :lido         lido/plugin})
 
 (defn source-formats
   "The set of supported source format keywords."
