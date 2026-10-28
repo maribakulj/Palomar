@@ -79,3 +79,44 @@
     (is (some #(= {:iri (str oa "XPathSelector")} (nth % 2)) ts))
     (is (some #(= (str oa "hasSource") (:iri (second %))) ts))
     (is (some #(= "urn:palomar:vocab#sha256" (:iri (second %))) ts))))
+
+(def ^:private eac-1x
+  "An EAC-CPF 1.x record (root `eac-cpf`), two names in two entries and a
+   parallel pair."
+  (str "<eac-cpf xmlns=\"urn:isbn:1-931666-33-4\"><control><recordId>FRAN_NP_1</recordId>"
+       "<maintenanceAgency><agencyCode>FR-AN</agencyCode></maintenanceAgency></control>"
+       "<cpfDescription><identity><entityType>person</entityType>"
+       "<nameEntry><part>Hugo, Victor</part><authorizedForm>AFNOR</authorizedForm></nameEntry>"
+       "<nameEntry><part>Hugo</part><part>Victor-Marie</part></nameEntry>"
+       "<nameEntryParallel><nameEntry><part>Gugo, Viktor</part></nameEntry><nameEntry><part>雨果</part></nameEntry></nameEntryParallel>"
+       "</identity><description><existDates><dateRange><fromDate>1802</fromDate><toDate>1885</toDate></dateRange></existDates>"
+       "</description></cpfDescription></eac-cpf>"))
+
+(defn- dom-str [^String s]
+  (let [f (doto (DocumentBuilderFactory/newInstance)
+            (.setNamespaceAware true)
+            (.setFeature "http://apache.org/xml/features/nonvalidating/load-external-dtd" false))]
+    (.parse (.newDocumentBuilder f) (java.io.ByteArrayInputStream. (.getBytes s "UTF-8")))))
+
+(deftest every-archival-xpath-finds-the-value-it-attests
+  (testing "EAD and EAC-CPF selectors are absolute, start at the root read, and point at each occurrence (post-audit 2, D3)"
+    (doseq [[from label src] [[:ead "ead3" (slurp "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml")]
+                              [:ead "ead2002" (slurp "test/fixtures/documentary/ead/ead2002/tnah_ead_devoir_genero.xml")]
+                              [:eac-cpf "eac 2.0" (slurp "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml")]
+                              [:eac-cpf "eac-cpf 1.x" eac-1x]]]
+      (testing label
+        (let [{:keys [records]} (convert/to-wemi from {} src)
+              doc   (dom-str src)
+              ws    #(str/replace (str/trim %) #"\s+" " ")
+              pairs (mapcat #(checked-natives % (if (= :ead from) "ead" "eac")) records)]
+          (is (seq pairs))
+          (doseq [[v xp] pairs
+                  :let [found (ws (select-text (.getDocumentElement doc) xp))]]
+            (is (str/starts-with? xp "/") (str label " " xp " is absolute"))
+            ;; a value read from several nodes (a name's parts, a date range)
+            ;; joins their texts: each of its words is in the node selected
+            (is (every? #(str/includes? found %) (remove str/blank? (str/split v #"[\s,/]+"))) (str label " " xp " → " (pr-str v)))))
+        (when (= "eac-cpf 1.x" label)
+          (let [xps (set (map second (checked-natives (first (:records (convert/to-wemi from {} src))) "eac")))]
+            (is (contains? xps "/*[local-name()='eac-cpf'][1]/*[local-name()='cpfDescription'][1]/*[local-name()='identity'][1]/*[local-name()='nameEntryParallel'][1]/*[local-name()='nameEntry'][2]")
+                "a parallel name is found inside its group, by its rank")))))))

@@ -65,18 +65,37 @@
         cpf     (child root "cpfDescription")
         ident   (child cpf "identity")
         desc    (child cpf "description")
-        x       (fn [& steps] [{:selector {:type :xpath
-                                           :value (str/join "/" (map #(str "*[local-name()='" % "'][1]") steps))}}])
+        ;; an absolute XPath from the root element read (`eac` in 2.0,
+        ;; `eac-cpf` in 1.x); a step is a name (its first occurrence) or
+        ;; [name n] (its n-th, 1-based)
+        x       (fn [& steps] [{:selector {:type  :xpath
+                                           :value (apply str (for [st (cons (local (:tag root)) steps)
+                                                                   :let [[nm i] (if (vector? st) st [st 1])]]
+                                                               (str "/*[local-name()='" nm "'][" i "]")))}}])
         nat     (fn [p v ev] (when v (model/assertion {:subject rid :predicate p :value v
                                                        :provenance (model/provenance {:pass :ingest :evidence ev})})))
-        entries (concat (children ident "nameEntry") (mapcat #(children % "nameEntry") (children ident "nameEntryParallel")))
-        named   (for [n entries
+        ;; each name entry with the path to it, a parallel one's inside its group
+        entries (concat (map-indexed (fn [i n] [n ["cpfDescription" "identity" ["nameEntry" (inc i)]]])
+                                     (children ident "nameEntry"))
+                        (apply concat (map-indexed (fn [j par]
+                                                     (map-indexed (fn [k n] [n ["cpfDescription" "identity" ["nameEntryParallel" (inc j)]
+                                                                                ["nameEntry" (inc k)]]])
+                                                                  (children par "nameEntry")))
+                                                   (children ident "nameEntryParallel"))))
+        named   (for [[n path] entries
                       :let [parts (children n "part")
                             t     (if (seq parts) (str/join ", " (keep text parts)) (text n))]
                       :when t]
-                  [t (or (= "authorized" (attr n "status")) (seq (children n "authorizedForm")))])
-        names   (distinct (map first (concat (filter second named) (remove second named))))
-        rels    (for [r (children (child cpf "relations"))
+                  {:name t :path path :authorized (or (= "authorized" (attr n "status")) (seq (children n "authorizedForm")))})
+        ;; the authorized names first; a name given twice is attested where it first is
+        names   (let [ordered (concat (filter :authorized named) (remove :authorized named))
+                      firsts  (reduce (fn [m e] (if (contains? m (:name e)) m (assoc m (:name e) e))) {} ordered)]
+                  (map firsts (distinct (map :name ordered))))
+        rel-els (children (child cpf "relations"))
+        ;; each relation element's rank among its same-named siblings, for its XPath
+        rel-nth (map (fn [i r] (inc (count (filter #(= (local (:tag r)) (local (:tag %))) (take i rel-els)))))
+                     (range) rel-els)
+        rels    (for [r rel-els
                       :let [target (or (child r "targetEntity") r)]]
                   (model/structured (cond-> {:element (local (:tag r))}
                                       (attr target "valueURI")            (assoc :target (attr target "valueURI"))
@@ -84,16 +103,19 @@
                                       (attr (child r "relationType") "valueURI") (assoc :type (attr (child r "relationType") "valueURI")))))
         as      (remove nil?
                         (concat
-                         [(nat :eac/record-id rec-id (x "eac" "control" "recordId"))
-                          (nat :eac/entity-type (or (attr (child ident "entityType") "value") (text (child ident "entityType")))
-                               (x "eac" "cpfDescription" "identity" "entityType"))
-                          (nat :eac/entity-id (text (child ident "entityId")) (x "eac" "cpfDescription" "identity" "entityId"))
-                          (nat :eac/exist-dates (text (child desc "existDates")) (x "eac" "cpfDescription" "description" "existDates"))
-                          (nat :eac/biog-hist (text (child desc "biogHist")) (x "eac" "cpfDescription" "description" "biogHist"))]
-                         (map-indexed (fn [i n] (nat (if (zero? i) :eac/authorized-name :eac/name) n
-                                                     (x "eac" "cpfDescription" "identity")))
+                         [(nat :eac/record-id rec-id (x "control" "recordId"))
+                          (let [et (child ident "entityType")]
+                            (if-let [v (attr et "value")]
+                              (nat :eac/entity-type v (update-in (x "cpfDescription" "identity" "entityType") [0 :selector :value] str "/@value"))
+                              (nat :eac/entity-type (text et) (x "cpfDescription" "identity" "entityType"))))
+                          (nat :eac/entity-id (text (child ident "entityId")) (x "cpfDescription" "identity" "entityId"))
+                          (nat :eac/exist-dates (text (child desc "existDates")) (x "cpfDescription" "description" "existDates"))
+                          (nat :eac/biog-hist (text (child desc "biogHist")) (x "cpfDescription" "description" "biogHist"))]
+                         (map-indexed (fn [i {n :name path :path}]
+                                        (nat (if (zero? i) :eac/authorized-name :eac/name) n (apply x path)))
                                       names)
-                         (map #(nat :eac/relation % (x "eac" "cpfDescription" "relations")) rels)))
+                         (map (fn [rel n] (nat :eac/relation rel (x "cpfDescription" "relations" [(:element (:value/fields rel)) n])))
+                              rels rel-nth)))
         unread  (distinct (concat (remove read-elements (map (comp local :tag) (children cpf)))
                                   (remove read-description (map (comp local :tag) (children desc)))))]
     {:records     [(model/record {:id rid :kind :archival-authority :assertions (vec as)})]
