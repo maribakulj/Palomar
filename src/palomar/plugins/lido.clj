@@ -17,7 +17,9 @@
    - subjects, rights (of the work, the record, each resource), the record's
      own id, type, source and link, and each digital resource;
    - the object's description and inscriptions.
-   Whatever it does not read (related works, for one) is reported.
+   Whatever it does not read is reported, occurrence by occurrence: every
+   element holding text whose value no native was read from (related works,
+   for one), not a list of names it knows (post-audit 4, F3).
 
    Terms come in several languages; each is a native string, and each concept
    is also kept whole (`{:uri :label}`, the English label else the first) for
@@ -181,33 +183,26 @@
   [k]
   (mapv parse-long (str/split (str k) #"\.")))
 
-(def read-elements
-  "The elements of a `lido:lido` the importer reads, at any depth."
-  #{"lido" "lidoRecID" "objectPublishedID" "descriptiveMetadata" "administrativeMetadata"
-    "objectClassificationWrap" "objectWorkTypeWrap" "objectWorkType" "classificationWrap" "classification"
-    "conceptID" "term" "objectIdentificationWrap" "titleWrap" "titleSet" "appellationValue"
-    "repositoryWrap" "repositorySet" "repositoryName" "legalBodyID" "legalBodyName" "legalBodyWeblink"
-    "workID" "repositoryLocation" "placeID" "namePlaceSet" "placeClassification"
-    "objectMeasurementsWrap" "objectMeasurementsSet" "displayObjectMeasurements" "objectMeasurements"
-    "measurementsSet" "measurementType" "measurementUnit" "measurementValue" "extentMeasurements"
-    "objectDescriptionWrap" "objectDescriptionSet" "descriptiveNoteValue" "descriptiveNoteID"
-    "inscriptionsWrap" "inscriptions" "inscriptionDescription"
-    "eventWrap" "eventSet" "event" "eventType" "eventActor" "displayActorInRole" "actorInRole" "actor"
-    "actorID" "nameActorSet" "vitalDatesActor" "earliestDate" "latestDate" "roleActor"
-    "eventDate" "displayDate" "date" "eventPlace" "displayPlace" "place"
-    "eventMaterialsTech" "displayMaterialsTech" "materialsTech" "termMaterialsTech" "eventDescriptionSet"
-    "objectRelationWrap" "subjectWrap" "subjectSet" "subject" "subjectConcept"
-    "rightsWorkWrap" "rightsWorkSet" "rightsType" "creditLine" "rightsHolder"
-    "recordWrap" "recordID" "recordType" "recordSource" "recordRights" "recordInfoSet" "recordInfoLink"
-    "resourceWrap" "resourceSet" "resourceID" "resourceRepresentation" "linkResource" "rightsResource"})
+(defn- text-leaves
+  "`[[local-name path] …]` for every element under `node` that holds text of
+   its own, with its absolute path (the same ranks `kids` gives)."
+  [[el path]]
+  (let [own (some->> (filter string? (:content el)) (map str/trim) (remove str/blank?) seq)]
+    ;; an element with text of its own is one value, its markup included
+    ;; (mixed content: `text` reads it whole), so its children are not leaves
+    (if own
+      [[(local (:tag el)) path]]
+      (mapcat (fn [nm] (mapcat text-leaves (kids [el path] nm)))
+              (distinct (keep (comp local :tag) (filter map? (:content el))))))))
 
 (defn- unread
-  "The element names under `el` the importer does not read (each reported once)."
-  [el]
-  (->> (tree-seq map? #(filter map? (:content %)) el)
-       (map (comp local :tag))
-       (remove read-elements)
-       distinct sort))
+  "`{local-name count}` of the text elements under `node` whose value no
+   native was read from (post-audit 4, F3): the check is on the occurrences
+   the importer consumed, by their path, not on a list of element names it
+   knows, so a known element it skips (a `rightsHolder`) is reported too."
+  [node natives]
+  (let [read (set (map #(nth % 2) natives))]
+    (frequencies (keep (fn [[nm path]] (when-not (read path) nm)) (text-leaves node)))))
 
 (defn- inventory? [n] (re-find #"(?i)invent|accession" (or (attr n "type") "")))
 
@@ -218,7 +213,9 @@
         am      (kid node "administrativeMetadata")
         ident   (some-> dm (kid "objectIdentificationWrap"))
         strings (fn [p nodes] (keep #(when-let [t (text %)] [p t (second %)]) nodes))
-        terms   (fn [p cnode] (strings p (descend cnode "term")))
+        ;; a concept's terms, and its identifiers (`p`-id), each as read
+        terms   (fn [p cnode] (concat (strings p (descend cnode "term"))
+                                      (strings (keyword "lido" (str (name p) "-id")) (descend cnode "conceptID"))))
         whole   (fn [p cnode] (when-let [c (concept cnode)] [[p (model/structured c) (second cnode)]]))
         cnodes  (fn [& steps] (apply descend dm steps))
         events  (descend dm "eventWrap" "eventSet" "event")]
@@ -249,8 +246,7 @@
              [(if (inventory? w) :lido/inventory-number :lido/work-id) t (second w)])
            (strings :lido/location (mapcat #(descend % "repositoryLocation" "namePlaceSet" "appellationValue") repos))
            (strings :lido/location-id (mapcat #(descend % "repositoryLocation" "placeID") repos))
-           (mapcat #(terms :lido/location-note %) (mapcat #(descend % "repositoryLocation" "placeClassification") repos))
-           (strings :lido/location-code (mapcat #(descend % "repositoryLocation" "placeClassification" "conceptID") repos))))
+           (mapcat #(terms :lido/location-note %) (mapcat #(descend % "repositoryLocation" "placeClassification") repos))))
         (let [ms (descend ident "objectMeasurementsWrap" "objectMeasurementsSet")]
           (concat
            (strings :lido/measurements (mapcat #(kids % "displayObjectMeasurements") ms))
@@ -342,6 +338,20 @@
      ;; subjects
      (mapcat (fn [c] (concat (terms :lido/subject c) (whole :lido/subject-concept c)))
              (cnodes "objectRelationWrap" "subjectWrap" "subjectSet" "subject" "subjectConcept"))
+     ;; the people a work depicts
+     (mapcat (fn [sa]
+               (let [a  (kid sa "actor")
+                     nm (some-> a (descend "nameActorSet" "appellationValue") first text)
+                     id (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (when a (kids a "actorID")))]
+                 (concat (strings :lido/subject-actor-display (kids sa "displayActor"))
+                         (strings :lido/subject-actor (when a (descend a "nameActorSet" "appellationValue")))
+                         (strings :lido/subject-actor-id (when a (kids a "actorID")))
+                         (strings :lido/subject-actor-dates (when a (concat (descend a "vitalDatesActor" "earliestDate")
+                                                                            (descend a "vitalDatesActor" "latestDate"))))
+                         (when nm [[:lido/subject-person (model/structured (cond-> {:name nm :type (or (term-name (attr a "type")) "")}
+                                                                             id (assoc :uri id)))
+                                    (second sa)]]))))
+             (cnodes "objectRelationWrap" "subjectWrap" "subjectSet" "subject" "subjectActor"))
      ;; administrative metadata
      (when am
        (concat
@@ -351,9 +361,18 @@
         (strings :lido/record-id (descend am "recordWrap" "recordID"))
         (mapcat #(terms :lido/record-type %) (descend am "recordWrap" "recordType"))
         (strings :lido/record-source (descend am "recordWrap" "recordSource" "legalBodyName" "appellationValue"))
+        (strings :lido/record-source-id (descend am "recordWrap" "recordSource" "legalBodyID"))
+        (mapcat (fn [r] (concat (whole :lido/resource-rights-type r) (terms :lido/resource-rights r)))
+                (descend am "resourceWrap" "resourceSet" "rightsResource" "rightsType"))
         (mapcat (fn [r] (concat (whole :lido/record-rights-type r) (terms :lido/record-rights r)))
                 (descend am "recordWrap" "recordRights" "rightsType"))
         (strings :lido/record-link (descend am "recordWrap" "recordInfoSet" "recordInfoLink"))
+        ;; who holds the rights, of the work, the record and each resource
+        (let [holders (concat (descend am "rightsWorkWrap" "rightsWorkSet" "rightsHolder")
+                              (descend am "recordWrap" "recordRights" "rightsHolder")
+                              (descend am "resourceWrap" "resourceSet" "rightsResource" "rightsHolder"))]
+          (concat (strings :lido/rights-holder (mapcat #(descend % "legalBodyName" "appellationValue") holders))
+                  (strings :lido/rights-holder-id (mapcat #(descend % "legalBodyID") holders))))
         (for [rs (descend am "resourceWrap" "resourceSet")
               rr (kids rs "resourceRepresentation")
               lr (kids rr "linkResource")
@@ -377,11 +396,12 @@
         top   [root (str "/*[local-name()='" rn "'][1]")]
         lidos (if (= "lido" rn) [top] (kids top "lido"))
         out   (for [node lidos
-                    :let [rec-id (some-> (kid node "lidoRecID") text)
+                    :let [natives (vec (object-natives node))
+                          rec-id (some-> (kid node "lidoRecID") text)
                           rid    (keyword "lido" (if rec-id
                                                    (model/encode-name rec-id)
                                                    (str "h" (model/sha256-hex (pr-str (first node)) 12))))
-                          as     (for [[p v path] (object-natives node)]
+                          as     (for [[p v path] natives]
                                    (model/assertion {:subject rid :predicate p :value v
                                                      :provenance (model/provenance {:pass :ingest
                                                                                     :evidence [{:selector {:type :xpath :value path}}]})}))]]
@@ -390,9 +410,9 @@
                           (when-not rec-id
                             [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :lido/lidoRecID
                                        :message "the record states no lidoRecID: it is named by its content's digest, and changes whenever it does"})])
-                          (for [u (unread (first node))]
+                          (for [[u n] (sort (unread node natives))]
                             (dx/loss {:category :dropped :subject rid :edge :import :source-field (keyword "lido" u)
-                                      :message (str u " is not read by the LIDO importer (ADR 0052)")})))})]
+                                      :message (str n " " u " value(s) not read by the LIDO importer (ADR 0052)")})))})]
     {:records     (mapv :record out)
      :diagnostics (vec (mapcat :losses out))}))
 
@@ -515,6 +535,12 @@
                         (claim g :crm/P190_has_symbolic_content name a)]))
              (of :lido/keeper))
      (mapcat #(typed obj :crm/P62_depicts :crm/E55_Type % (fields %)) (of :lido/subject-concept))
+     (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
+                           kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
+                           pe   (model/mint-entity-id kind (or uri [(str rid) name]))]
+                       [(entity pe kind uri) (claim obj :crm/P62_depicts (model/reference pe) a)
+                        (claim pe :crm/P190_has_symbolic_content name a)]))
+             (of :lido/subject-person))
      (mapcat (fn [a] (let [{:keys [url]} (fields a)
                            v (model/mint-entity-id :crm/E36_Visual_Item url)]
                        [(entity v :crm/E36_Visual_Item url) (claim obj :crm/P138i_has_representation (model/reference v) a)]))

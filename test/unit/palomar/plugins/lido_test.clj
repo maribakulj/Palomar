@@ -198,3 +198,43 @@
     (testing "an actor whose role is a printers' URI is not a creator"
       (is (not (str/includes? dc "<dc:creator>Printer B")))
       (is (re-find #"tag=\"700\"[^\n]*>Printer B<" m)))))
+
+(deftest no-value-is-skipped-silently
+  (testing "every text a real record holds is read, or its element is reported (post-audit 4, F3)"
+    (let [xml   (slurp "test/fixtures/documentary/lido/staedel-oai-lido-sample.xml")
+          {:keys [ingest records]} (convert/to-wemi :oai {:metadata-prefix "lido"} xml)
+          lost  (set (keep #(get-in % [:detail :loss/source-field]) ingest))
+          vals  (set (mapcat (fn [r] (keep #(when (string? (:value %)) (:value %)) (:assertions r))) records))
+          ;; every element's own text, as served (an entity left aside)
+          texts (for [[_ nm t] (re-seq #"<lido:(\w+)[^>]*>([^<]+)</lido:\1>" xml)
+                      :let [t (str/replace (str/trim t) #"\s+" " ")] :when (and (seq t) (not (str/includes? t "&")))]
+                  [nm t])
+          norm  #(str/replace % #"\s+" " ")
+          vals  (set (map norm vals))]
+      (is (= 5 (count records)))
+      (testing "the rights holder, which was skipped, is read"
+        (is (contains? vals "Städel Museum"))
+        (is (some #(= :lido/rights-holder (:predicate %)) (mapcat :assertions records))))
+      (testing "related works, which are not read, are reported"
+        (is (contains? lost :lido/objectNote)))
+      (testing "every text is a value, or its element is reported"
+        (is (empty? (remove (fn [[nm t]] (or (vals t) (lost (keyword "lido" nm)))) texts)))))))
+
+(deftest mixed-content-is-one-value
+  (testing "a note with markup inside is read whole, and none of its parts is reported (post-audit 4, F3 review)"
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>M-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                   "<lido:objectIdentificationWrap><lido:objectDescriptionWrap><lido:objectDescriptionSet>"
+                   "<lido:descriptiveNoteValue>A <lido:b>bold</lido:b> note</lido:descriptiveNoteValue>"
+                   "</lido:objectDescriptionSet></lido:objectDescriptionWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>")
+          {:keys [records ingest]} (convert/to-wemi :lido {} xml)]
+      (is (some #(= "A bold note" (:value %)) (:assertions (first records))))
+      (is (empty? (filter #(= :lido/b (get-in % [:detail :loss/source-field])) ingest))))))
+
+(deftest a-depicted-group-is-a-group
+  (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>G-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                 "<lido:objectRelationWrap><lido:subjectWrap><lido:subjectSet><lido:subject><lido:subjectActor>"
+                 "<lido:actor lido:type=\"organization\"><lido:nameActorSet><lido:appellationValue>Guild of St Luke</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                 "</lido:subjectActor></lido:subject></lido:subjectSet></lido:subjectWrap></lido:objectRelationWrap></lido:descriptiveMetadata></lido:lido>")
+        out (:output (convert/convert {:from :lido :to :ntriples :source xml}))]
+    (is (str/includes? out "E74_Group"))
+    (is (not (str/includes? out "E21_Person")))))
