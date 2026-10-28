@@ -120,6 +120,11 @@
                                   (remove read-description (map (comp local :tag) (children desc)))))]
     {:records     [(model/record {:id rid :kind :archival-authority :assertions (vec as)})]
      :diagnostics (vec (concat
+                        ;; named by its content, the record's id changes with any edit (ADR 0047)
+                        (when-not rec-id
+                          [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :eac/recordId
+                                     :message (str "the record states no recordId: it is named by the document's digest,"
+                                                   " and changes whenever the document does")})])
                         (for [u (sort unread)]
                           (dx/loss {:category :dropped :subject rid :edge :import :source-field (keyword "eac" u)
                                     :message (str u " is not read by the EAC-CPF importer (ADR 0045)")}))

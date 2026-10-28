@@ -25,10 +25,11 @@
 
    A unit's id comes from the source's own identifiers (ADR 0044): the
    finding aid's maintenance agency and `recordid`/`eadid`, and the unit's
-   `unitid` when it is unique in the document, else its position (`0` the
-   archdesc, `0-2-1` its second component's first child). So editing a note
-   changes no id. A finding aid with no identifier at all is named by its
-   content's digest instead, and the importer reports it.
+   `unitid` — with its rank from the second unit sharing it on, so adding a
+   duplicate moves no existing id — else its position (`0` the archdesc,
+   `0-2-1` its second component's first child). So editing a note changes no
+   id. A finding aid with no identifier at all is named by its content's
+   digest instead. Every id that is not durable is reported (ADR 0047).
 
    Archival units are not editions: `project` gives each unit a Manifestation
    that `P106i_forms_part_of` its parent's, and mints no Expression or Work
@@ -172,15 +173,32 @@
     (when id [agency id])))
 
 (defn- unit-id
-  "A unit's record id (ADR 0044): the finding aid's identity and the unit's
-   `unitid` when that is unique in the document, else its position — never a
-   digest of the document, so editing a note changes no id (post-audit test
-   10). Each part is `model/encode-name`d and joined by `_-`, which no encoded
-   part holds."
-  [doc unique-ids el path]
-  (let [uid  (text (child (child el "did") "unitid"))
-        unit (if (and uid (unique-ids uid)) (str "u" (model/encode-name uid)) (str "p" (str/join "-" path)))]
-    (keyword "ead" (str/join "_-" (concat (map model/encode-name doc) [unit])))))
+  "A unit's record id (ADR 0044, ADR 0047): the finding aid's identity and the
+   unit's `unitid` — never a digest of the document, so editing a note changes
+   no id (post-audit test 10). A `unitid` the document gives `rank` (1-based,
+   in document order) units carries that rank from the second on, so the
+   first keeps the id it had before a duplicate was added. A unit with no
+   `unitid` is named by its position. Each part is `model/encode-name`d and
+   joined by `_-`, which no encoded part holds."
+  [doc uid rank path]
+  (let [unit (cond (nil? uid) [(str "p" (str/join "-" path))]
+                   (= 1 rank) [(str "u" (model/encode-name uid))]
+                   :else      [(str "u" (model/encode-name uid)) (str rank)])]
+    (keyword "ead" (str/join "_-" (concat (map model/encode-name doc) unit)))))
+
+(defn- unit-id-losses
+  "An `:under-specified` loss for each unit whose id is not durable (ADR 0047):
+   one with no `unitid`, named by its position, and one whose `unitid` an
+   earlier unit already has, named by its rank. Either id changes when the
+   document is reordered."
+  [units]
+  (for [{:keys [id uid rank]} units
+        :when (or (nil? uid) (< 1 rank))]
+    (dx/loss {:category :under-specified :subject id :edge :import :source-field :ead/unitid
+              :message (if uid
+                         (str "unitid " (pr-str uid) " is not unique in the finding aid: this unit is named by its rank ("
+                              rank ") among the units sharing it, and changes if they are reordered")
+                         "the unit states no unitid: it is named by its position and changes if the units are reordered")})))
 
 (defn importer
   "ADR 0007 importer: `(fn [opts source] -> {:records [...] :diagnostics [...]})`,
@@ -201,12 +219,16 @@
         ;; with no identifier of its own, the finding aid is named by its
         ;; content: its unit ids then change whenever it does, and it says so
         doc     (or fa-id ["" (str "h" (model/sha256-hex s 12))])
-        uids    (frequencies (keep #(text (child (child (:el %) "did") "unitid")) units))
-        unique  #(= 1 (uids %))
-        ids     (into {} (map (fn [u] [(:path u) (unit-id doc unique (:el u) (:path u))])) units)
+        ranked  (second (reduce (fn [[seen out] u]
+                                  (let [uid  (text (child (child (:el u) "did") "unitid"))
+                                        rank (inc (get seen uid 0))]
+                                    [(if uid (assoc seen uid rank) seen)
+                                     (conj out (assoc u :uid uid :rank rank :id (unit-id doc uid rank (:path u))))]))
+                                [{} []] units))
+        ids     (into {} (map (juxt :path :id)) ranked)
         us      (for [u units] (unit-record (ids (:path u)) (:el u) (:path u) (:xpath u) (some-> (:parent u) ids)))]
     {:records     (mapv :record us)
-     :diagnostics (cond-> (vec (mapcat :losses us))
+     :diagnostics (cond-> (into (vec (mapcat :losses us)) (unit-id-losses ranked))
                     (nil? fa-id)
                     (conj (dx/loss {:category :under-specified :subject (ids [0]) :edge :import
                                     :source-field :ead/recordid

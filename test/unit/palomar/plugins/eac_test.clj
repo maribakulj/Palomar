@@ -38,3 +38,12 @@
 
 (deftest not-an-eac-document-is-refused
   (is (thrown? clojure.lang.ExceptionInfo (eac/importer {} "<ead/>"))))
+
+(deftest a-record-without-a-record-id-says-its-id-is-not-durable
+  (testing "with no recordId, the record is named by its digest, and the importer says so (post-audit 2, D4)"
+    (let [xml (str/replace (slurp "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml") #"<recordId>001</recordId>" "")
+          {:keys [records diagnostics]} (eac/importer {} xml)]
+      (is (= 1 (count records)))
+      (is (some #(and (= :eac/recordId (get-in % [:detail :loss/source-field]))
+                      (= (:id (first records)) (:subject %)))
+                diagnostics)))))
