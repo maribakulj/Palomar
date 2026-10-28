@@ -18,8 +18,8 @@
    | the work's rights                      | `540 $a`, `$u`                             |
    | the acquisitions                       | `541 $a`                                   |
    | the provenance and other events        | `561 $a`                                   |
-   | the subjects                           | `650` #7 `$a`, `$0`, `$2`                   |
-   | the work types and classifications     | `655` #7 `$a`, `$0`, `$2`                   |
+   | the subjects                           | `650` #7 `$a`, `$0`, `$2` (#0 for LCSH, #4 for a vocabulary with no MARC code) |
+   | the work types and classifications     | `655` #7 `$a`, `$0`, `$2` (likewise #4)     |
    | the repository                         | `852 $a`                                   |
    | the images, the record's web page      | `856` 4# `$u`, `856` 42 `$u`               |
 
@@ -54,15 +54,18 @@
   (let [types (concat (strings record :lido/work-type) (strings record :lido/classification))]
     (str "00000n" (if (some #(re-find two-dimensional %) types) "k" "r") "m a2200000   4500")))
 
-(defn- source-code
-  "The MARC source code (`$2`) of a concept URI, by its vocabulary."
+(defn- source
+  "The MARC second indicator and source code (`$2`) of a concept URI, by its
+   vocabulary: `0` for LCSH, which needs no code, `7` with the code of any
+   other vocabulary MARC lists, else `4`, source not specified."
   [uri]
   (condp re-find (str uri)
-    #"d-nb\.info/gnd" "gnd"
-    #"iconclass\.org" "iconclass"
-    #"vocab\.getty\.edu/aat" "aat"
-    #"id\.loc\.gov" "lcsh"
-    nil))
+    #"d-nb\.info/gnd"                    ["7" "gnd"]
+    #"iconclass\.org"                    ["7" "iconclass"]
+    #"vocab\.getty\.edu/aat"             ["7" "aat"]
+    #"id\.loc\.gov/authorities/subjects" ["0" nil]
+    #"id\.loc\.gov/authorities/genreForms" ["7" "lcgft"]
+    ["4" nil]))
 
 (def written
   "The LIDO natives this profile writes."
@@ -90,7 +93,12 @@
                                        ;; each role its own $e
                                        (for [r (when role (str/split role #"; "))] ["e" r])
                                        [["0" uri]]))))
-        concept (fn [tag {:keys [uri label]}] (datafield tag " " "7" [["a" label] ["0" uri] ["2" (source-code uri)]]))
+        ;; #7 says the source is in $2: only for a vocabulary MARC has a code
+        ;; for; LCSH is #0; any other concept is #4, source not specified,
+        ;; its URI in $0
+        concept (fn [tag {:keys [uri label]}]
+                  (let [[ind2 code] (source uri)]
+                    (datafield tag " " ind2 [["a" label] ["0" uri] ["2" code]])))
         fields* (concat
                  (for [v (strings record :lido/inventory-number)] (datafield "099" " " "9" [["a" v]]))
                  (map-indexed (fn [i a] (name-f (zero? i) a)) creators)
