@@ -19,8 +19,13 @@ an acquisition history.
 1. **A LIDO spoke** (`:lido`) reads LIDO 1.0 and 1.1 by local name, and so
    LIDO-MC, which is LIDO 1.1.
    - It takes one record per `lido:lido`, bare or in a `lidoWrap`, named by
-     its `lidoRecID`. With no `lidoRecID` the record is named by a digest, and
-     that is reported (ADR 0047).
+     its `lidoRecID` and the source (`lido:source`) that issued it, since a
+     local id is unique only within its institution (amended, post-audit 4,
+     F6). This changes the key, and so every IRI minted from it, of a record
+     that states a `lido:source`: data converted before F6 must be
+     re-converted, not merged. The record's own `lidoRecID`, as written, stays
+     its source identifier (a MARC `001`). With no `lidoRecID` the record is
+     named by a digest, and that is reported (ADR 0047).
    - Every value is a native `:lido/*` with its absolute XPath.
    - Each concept (work type, classification, material, technique, role,
      subject, rights) is kept whole, as `{:uri :label}`, beside its terms in
@@ -38,7 +43,9 @@ an acquisition history.
    - its titles;
    - its types (`P2` → `E55_Type`, named by the concept URI);
    - its inventory number (`E42_Identifier`);
-   - its dimensions (`E54_Dimension`, `P90` value, `P91` unit);
+   - its dimensions (`E54_Dimension`, `P90` value, `P91` unit), when the
+     value is a number; a value that is none ("ca. 5") is a `P3` note
+     (amended, post-audit 4, F6);
    - its materials (`P45` → `E57_Material`);
    - its keeper (`P50` → the repository's `E74_Group`);
    - its subjects (`P62_depicts`), its images (`P138i` → `E36_Visual_Item`)

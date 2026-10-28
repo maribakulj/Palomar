@@ -210,17 +210,20 @@
 
 (defn- unit-id-losses
   "An `:under-specified` loss for each unit whose id is not durable (ADR 0047):
-   one with no `unitid`, named by its position, and one whose `unitid` an
-   earlier unit already has, named by its rank. Either id changes when the
-   document is reordered."
+   one with no `unitid`, named by its position, and every unit of a `unitid`
+   several share, the first included: its id holds only while no unit with the
+   same `unitid` is inserted before it (post-audit 4, F6)."
   [units]
-  (for [{:keys [id uid rank]} units
-        :when (or (nil? uid) (< 1 rank))]
-    (dx/loss {:category :under-specified :subject id :edge :import :source-field :ead/unitid
-              :message (if uid
-                         (str "unitid " (pr-str uid) " is not unique in the finding aid: this unit is named by its rank ("
-                              rank ") among the units sharing it, and changes if they are reordered")
-                         "the unit states no unitid: it is named by its position and changes if the units are reordered")})))
+  (let [shared (set (keep #(when (< 1 (:rank %)) (:uid %)) units))]
+    (for [{:keys [id uid rank]} units
+          :when (or (nil? uid) (shared uid))]
+      (dx/loss {:category :under-specified :subject id :edge :import :source-field :ead/unitid
+                :message (cond
+                           (nil? uid) "the unit states no unitid: it is named by its position and changes if the units are reordered"
+                           (= 1 rank) (str "unitid " (pr-str uid) " is not unique in the finding aid: this unit, the first with it,"
+                                           " keeps its id only while no unit with the same unitid is inserted before it")
+                           :else (str "unitid " (pr-str uid) " is not unique in the finding aid: this unit is named by its rank ("
+                                      rank ") among the units sharing it, and changes if they are reordered"))}))))
 
 (defn importer
   "ADR 0007 importer: `(fn [opts source] -> {:records [...] :diagnostics [...]})`,

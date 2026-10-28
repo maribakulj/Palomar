@@ -238,3 +238,37 @@
         out (:output (convert/convert {:from :lido :to :ntriples :source xml}))]
     (is (str/includes? out "E74_Group"))
     (is (not (str/includes? out "E21_Person")))))
+
+(deftest a-record-id-is-scoped-by-its-source
+  (testing "two institutions' records with the same local lidoRecID are two records (post-audit 4, F6)"
+    (let [rec (fn [src] (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID lido:source=\"" src "\">42</lido:lidoRecID></lido:lido>"))
+          id  #(:id (first (:records (convert/to-wemi :lido {} (rec %)))))]
+      (is (not= (id "http://museum-a.example/") (id "http://museum-b.example/"))))))
+
+(deftest a-dimension-that-is-no-number-is-no-p90
+  (testing "P90_has_value takes a number; a value that is none is a note on the object (post-audit 4, F6)"
+    (let [out (:output (convert/convert {:from :lido :to :ntriples :source lido-1-1}))]
+      (is (not (re-find #"P90_has_value> \"(NaN|ca\. 5)\"" out)))
+      (is (str/includes? out "ca. 5")))))
+
+(deftest a-record-keeps-its-id-as-written
+  (testing "the source identifier (a MARC 001) is the lidoRecID as written, not the scoped key (F6 review)"
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID lido:source=\"DE-Mb112\">obj-42</lido:lidoRecID>"
+                   "<lido:descriptiveMetadata><lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue>"
+                   "</lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>")]
+      (is (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source xml}))
+                         "<controlfield tag=\"001\">obj-42</controlfield>")))))
+
+(deftest a-thousands-separator-is-no-decimal-mark
+  (testing "\"1,234\" may be a thousand: no number; \"12,5\" is twelve and a half (F6 review)"
+    (is (= "12.5" (lido/number-value "12,5")))
+    (is (= "85.6" (lido/number-value " 85.6 ")))
+    (is (nil? (lido/number-value "1,234")))
+    (is (nil? (lido/number-value "ca. 5")))
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>D-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                   "<lido:objectIdentificationWrap><lido:objectMeasurementsWrap><lido:objectMeasurementsSet><lido:objectMeasurements>"
+                   "<lido:measurementsSet><lido:measurementType>height</lido:measurementType><lido:measurementUnit>mm</lido:measurementUnit>"
+                   "<lido:measurementValue>1,234</lido:measurementValue></lido:measurementsSet>"
+                   "</lido:objectMeasurements></lido:objectMeasurementsSet></lido:objectMeasurementsWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>")]
+      (is (not (str/includes? (:output (convert/convert {:from :lido :to :ntriples :source xml})) "P90_has_value")))
+      (is (not (str/includes? (:output (convert/convert {:from :lido :to :linked-art :source xml})) "\"dimension\""))))))
