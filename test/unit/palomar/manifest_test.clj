@@ -26,7 +26,7 @@
     (is (= (:sha256 (manifest/fingerprint (io/file input))) (get-in m [:inputs 0 :sha256])))
     (is (some #(= :palomar/marc21 (:id %)) (:plugins m)))
     (is (every? :mapping-digest (filter #(= :palomar/marc21 (:id %)) (:plugins m))))
-    (is (= 2 (count (:ontologies m))))
+    (is (= 3 (count (:ontologies m))))
     (is (some #{:map/marc21-title} (:rules m)))
     (is (pos? (get-in m [:loss :total])))))
 

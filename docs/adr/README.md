@@ -58,6 +58,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0042](./0042-facts-only-by-default.md) | A target that states facts states only facts, by default | Accepted |
 | [0043](./0043-occurrences-and-node-fidelity.md) | Occurrences are kept, deletions reported, values checked on their node | Accepted |
 | [0044](./0044-archives-toward-ric-o.md) | Archives project to RiC-O, not to WEMI; EAD ids come from the source | Accepted (direction) |
+| [0045](./0045-ric-o-projection.md) | The archival view is RiC-O | Accepted |
 
 ## Template
 

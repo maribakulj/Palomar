@@ -174,3 +174,20 @@
                                                              :certifiable? true :status :accepted}])]
       (is (empty? applied))
       (is (= [:unscoped] (map :reason refused))))))
+
+(deftest a-corporate-body-is-reconciled-as-a-group
+  (testing "a corporate authority makes an E74 Group, not a Person (post-audit C7)"
+    (let [r     (record-with-agent :r/c "Cité internationale universitaire de Paris" nil)
+          link  {:name "Cité internationale universitaire de Paris" :authority-id "http://id.loc.gov/authorities/names/n80000001"
+                 :certifiable? true :status :accepted :records #{:r/c} :entity-type "corporateBody"}
+          {:keys [records applied]} (rec/apply-agent-links [r] [link])]
+      (is (= 1 (count applied)))
+      (is (= [:crm/E74_Group] (map :kind (filter :iri (:entities (first records))))))
+      (is (= 1 (:distinct (rec/reconcile-agents records))) "and reconcile-agents sees it")))
+  (testing "a proposal carries the authority's entity type to the alignment and back"
+    (let [props (rec/propose-agent-links ["Marist College"] [{:id "http://ex.org/mc" :label "Marist College" :entity-type "corporateBody"}])
+          [a]   (rec/align-agents [(named :doc/m "Marist College")] props)
+          acc   (:records (curate/curate [a] curate/accept-all))]
+      (is (= "corporateBody" (:entity-type (first props))))
+      (is (some #(= :crm/E74_Group (:kind %)) (:entities a)) "the local agent is a Group")
+      (is (= ["corporateBody"] (map :entity-type (rec/accepted-links acc)))))))

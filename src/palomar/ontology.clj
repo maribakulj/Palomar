@@ -46,6 +46,9 @@
   [path]
   (let [root (rx/parse-str (str/replace (slurp path) #"^\uFEFF" ""))   ; the CRM RDFS starts with a BOM
         base (attr root "base")
+        ;; a file declares the terms of its own namespace: RiC-O also states
+        ;; a few SKOS ones, which must not make SKOS a namespace it closes
+        own? (fn [iri] (or (nil? base) (str/starts-with? iri (str/replace base #"[#/]$" ""))))
         refs (fn [e tag] (set (keep #(when (= tag (local (:tag %)))
                                        (resolve-iri base (attr % "resource")))
                                     (filter map? (:content e)))))
@@ -54,10 +57,10 @@
               (let [tag (local (:tag e))
                     iri (resolve-iri base (attr e "about"))]
                 (cond
-                  (and iri (class-tags tag))
+                  (and iri (class-tags tag) (own? iri))
                   (update-in acc [:classes iri] (fnil into #{}) (refs e "subClassOf"))
 
-                  (and iri (property-tags tag))
+                  (and iri (property-tags tag) (own? iri))
                   (assoc-in acc [:properties iri] {:domain (one e "domain")
                                                    :range  (one e "range")
                                                    :super  (refs e "subPropertyOf")})
@@ -76,7 +79,9 @@
 (def vendored
   "The vocabularies Palomar's RDF outputs use, as vendored in the repository."
   ["test/fixtures/documentary/cidoc-crm/CIDOC_CRM_v7.1.3.rdf"
-   "test/fixtures/documentary/lrm/lrmoo/LRMoo_v1.0.owl"])
+   "test/fixtures/documentary/lrm/lrmoo/LRMoo_v1.0.owl"
+   ;; RiC-O 1.1 (ICA, CC BY 4.0), for the archival view (ADR 0045)
+   "test/fixtures/documentary/rico/RiC-O_1-1.rdf"])
 
 (def ^:private prov "http://www.w3.org/ns/prov#")
 

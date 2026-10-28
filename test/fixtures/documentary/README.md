@@ -45,6 +45,9 @@ re-fetchable from `MANIFEST.tsv`.
 - **IIIF cookbook**, **CIDOC-CRM**, **LRMoo** — open (specification examples).
 - **EAD / EAC-CPF / METS / OCR-D** — under their respective upstream
   repositories' licences (see `MANIFEST.tsv` URLs).
+- **RiC-O 1.1** (`rico/`) — © International Council on Archives, Expert
+  Group on Archival Description (EGAD); Creative Commons Attribution 4.0
+  (CC BY 4.0). Vendored unmodified for the ontology check (ADR 0045).
 
 ## Notes
 

@@ -249,7 +249,7 @@ Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as
   and the full CLI (`convert · validate · report · inspect · reconcile ·
   apply-repairs · conformance · formats · ir-schema`), and `palomar.api`, the
   stable library surface (ADR 0034).
-- **WP-4 spokes** — eight importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF + EAD), plus OAI-PMH responses
+- **WP-4 spokes** — nine importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF + EAD/EAC-CPF, the archives in RiC-O), plus OAI-PMH responses
   reach the pivot and project to fourteen targets (RDF · CIDOC-CRM · Linked Art ·
   the floor formats · PROV-O · N-Quads/TriG datasets with facts, proposals, history
   and provenance in named graphs · the pivot itself as EDN, readable back with

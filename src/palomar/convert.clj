@@ -16,6 +16,7 @@
    account is exactly `palomar.loss-report`'s artifact."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.plugins.eac :as eac]
             [palomar.plugins.ead :as ead]
             [palomar.plugins.events :as events]
             [palomar.plugins.oai :as oai]
@@ -59,7 +60,8 @@
    :marc21       (comp events/add-events project/project)
    :mods         project/project
    :iiif         project/project
-   :ead          ead/project})       ; archival units: no edition, so no Work (ADR 0039)
+   :ead          ead/project
+   :eac-cpf      eac/project})       ; an authority record: a RiC-O agent (ADR 0045)       ; archival units: no edition, so no Work (ADR 0039)
 
 (defn- crm-only-losses [record]
   (concat (crm/crm-only-losses record) (export/export-losses record)))

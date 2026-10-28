@@ -72,13 +72,17 @@
                  :when (typed? idx s authority)
                  :let [label (pick-label (filter :lit (objs idx s label-p)) lang)]
                  :when label]
-             {:id       s
-              :label    label
-              :variants (vec (remove #{label}
-                                     (distinct (concat (lits idx s label-p)
-                                                       (lits idx s variant-p)
-                                                       (mapcat #(lits idx (nt/term-key %) (mads "variantLabel"))
-                                                               (objs idx s via-p))))))}))
+             (cond-> {:id       s
+                      :label    label
+                      :variants (vec (remove #{label}
+                                             (distinct (concat (lits idx s label-p)
+                                                               (lits idx s variant-p)
+                                                               (mapcat #(lits idx (nt/term-key %) (mads "variantLabel"))
+                                                                       (objs idx s via-p))))))}
+               ;; the MADS name class says what kind of agent it is (C7)
+               (typed? idx s (into (mads "CorporateName") (mads "ConferenceName"))) (assoc :entity-type "corporateBody")
+               (typed? idx s (mads "FamilyName"))                                  (assoc :entity-type "family")
+               (typed? idx s (mads "PersonalName"))                                (assoc :entity-type "person"))))
       :deprecated
       (vec (for [s iri-subj
                  :when (and (typed? idx s (mads "Variant")) (not (typed? idx s authority)))]

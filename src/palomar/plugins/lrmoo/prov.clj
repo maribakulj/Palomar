@@ -23,7 +23,8 @@
    A statement IRI is the assertion's `model/assertion-id` (ADR 0027), so the
    same assertion always names the same statement, before and after a curator
    changes its status."
-  (:require [palomar.model :as model]
+  (:require [clojure.walk :as walk]
+            [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.ntriples :as nt]))
@@ -50,13 +51,19 @@
 
 (defn- node-iri [idx id] (or (get idx id) (export/entity-iri id)))
 
+(defn- stable-str
+  "`v` printed with its maps' keys in order, so equal values print alike
+   whatever their construction (a value read back from EDN, ADR 0034)."
+  [v]
+  (pr-str (walk/postwalk #(if (and (map? %) (every? keyword? (keys %))) (into (sorted-map) %) %) v)))
+
 (defn- object [idx v]
   (cond
     (model/reference-value? v) {:iri (node-iri idx (:value/target v))}
     (string? v)                {:lit v}
     (int? v)                   {:lit (str v) :datatype (str xsd "integer")}
     (keyword? v)               {:lit (str v)}
-    :else                      {:lit (pr-str v)}))
+    :else                      {:lit (stable-str v)}))
 
 (defn- activity-iri [rid {:keys [pass rule]}]
   (str "urn:palomar:activity:" (digest [rid pass rule])))
