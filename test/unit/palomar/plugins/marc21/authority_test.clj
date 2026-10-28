@@ -21,6 +21,7 @@
 
 (deftest a-corporate-body-is-a-110-authority
   (let [doc (out sample)]
+    (is (every? #(= 24 (count %)) (xp doc "//*[local-name()='leader']")) "a leader is 24 characters")
     (testing "an authority record (Leader/06 z) with its control number and agency"
       (is (= \z (nth (first (xp doc "//*[local-name()='leader']")) 6)))
       (is (= ["US-TSEAS"] (xp doc "//*[local-name()='controlfield'][@tag='003']")))

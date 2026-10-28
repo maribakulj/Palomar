@@ -84,5 +84,5 @@
       (is (not (contains? hmo "classified_as"))))))
 
 (deftest every-value-is-written-or-reported
-  (doseq [to [:linked-art :ntriples :crm :dc]]
+  (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
     (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source lido-1-1}))) (str to))))

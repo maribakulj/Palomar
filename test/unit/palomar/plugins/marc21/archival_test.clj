@@ -23,6 +23,7 @@
     (testing "every unit is a record, in one collection, under archival control"
       (is (= records (count (xp doc "//*[local-name()='record']"))))
       (is (every? #(= \a (nth % 8)) (xp doc "//*[local-name()='leader']"))))
+    (is (every? #(= 24 (count %)) (xp doc "//*[local-name()='leader']")) "a leader is 24 characters")
     (testing "the fonds is a collection, a component a subunit (Leader/07)"
       (is (= \c (nth (first (xp doc "//*[local-name()='leader']")) 7)))
       (is (= \d (nth (second (xp doc "//*[local-name()='leader']")) 7))))

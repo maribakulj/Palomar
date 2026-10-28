@@ -37,6 +37,7 @@
             [palomar.plugins.mapping :as mapping]
             [palomar.plugins.marc21.archival :as marc21-archival]
             [palomar.plugins.marc21.authority :as marc21-authority]
+            [palomar.plugins.marc21.object :as marc21-object]
             [palomar.plugins.marc21.export :as marc21-export]
             [palomar.plugins.mods.export :as mods-export]
             [palomar.runtime :as runtime]
@@ -104,6 +105,10 @@
    :marc21-authority {:render marc21-authority/->marcxml :losses marc21-authority/export-losses
                       :accepts #{:authority}
                       :collection ["<collection xmlns=\"http://www.loc.gov/MARC21/slim\">" "</collection>"]}
+   ;; museum objects (ADR 0053): a discovery record of the object
+   :marc21-object {:render marc21-object/->marcxml :losses marc21-object/export-losses
+                   :accepts #{:object}
+                   :collection ["<collection xmlns=\"http://www.loc.gov/MARC21/slim\">" "</collection>"]}
    :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses
                 :accepts #{:bibliographic :digital}
                 :collection ["<modsCollection xmlns=\"http://www.loc.gov/mods/v3\">" "</modsCollection>"]}
