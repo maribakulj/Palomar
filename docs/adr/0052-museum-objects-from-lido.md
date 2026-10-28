@@ -74,11 +74,15 @@ an acquisition history.
    **Each event:**
    - It is a production (`P108i` → `E12_Production`), an acquisition (`P24i`
      → `E8_Acquisition`) or another event the object was present at (`P12i`). That
-     event is an `E7_Activity` when someone carried it out, it used a technique,
-     or its type is an activity (an exhibition, a restoration…), since `P14` and
-     `P32` take an E7; otherwise an `E5_Event` (amended, post-audit 4, F1).
-   - It has its type, time-span (`P82`, `P82a`, `P82b`), place (`P7`), actors
-     (`P14`), description (`P3`) and, for a production, its techniques (`P32`).
+     event is an `E7_Activity` when its type, by its LIDO URI or code or else
+     its term, is an activity (an exhibition, a commission, an excavation…) or
+     it used a technique; otherwise an `E5_Event` (amended, post-audit 4, F1).
+   - An activity's actors carried it out (`P14`); an `E5_Event`'s took part in
+     it (`P11_had_participant`): an actor named in a loss, a find or an event
+     of no stated type is not said to have done it. Naming an actor no longer
+     makes an event an activity (amended, post-audit 5, G2).
+   - It has its type, time-span (`P82`, `P82a`, `P82b`), place (`P7`), actors,
+     description (`P3`) and, for a production, its techniques (`P32`).
    - An actor or a place with an authority URI (GND) is that node.
    - Without one, the actor or place is scoped to the record (ADR 0041).
 4. **The Linked Art view.** The object becomes a `HumanMadeObject`, plus the

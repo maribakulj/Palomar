@@ -97,7 +97,8 @@
   [code term actor]
   (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>E-" code "</lido:lidoRecID><lido:descriptiveMetadata>"
        "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
-       "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/" code "</lido:conceptID>"
+       "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType>"
+       (when code (str "<lido:conceptID>http://terminology.lido-schema.org/" code "</lido:conceptID>"))
        (when term (str "<lido:term>" term "</lido:term>")) "</lido:eventType>"
        (when actor (str "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>" actor
                         "</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"))
@@ -110,7 +111,7 @@
     (onto/violations @sch (for [[s p o] (nt/parse out)] [(nt/term-key s) (:iri p) o]))))
 
 (deftest every-event-respects-cidoc-crm
-  (testing "an event carried out by someone is an activity, whatever its type (post-audit 4, F1)"
+  (testing "every event, with or without an actor, respects CIDOC CRM's domains (post-audit 4, F1)"
     (doseq [[code term] [["lido00225" "Ausstellung"] ["lido00003" nil] ["lido00034" "Restaurierung"] ["lido00226" nil]
                          ["lido00007" nil] ["lido00001" nil] ["lido00009" "Verlust"]]
             actor       [nil "Kurator"]]
@@ -386,3 +387,19 @@
         (is (= ["http://vocab.getty.edu/aat/300010957"] (map #(get % "id") (get la "made_of"))))
         (is (some #(= "bronze, cast" (get % "content")) (get la "referred_to_by"))))
       (is (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source design})) ">bronze, cast<")))))
+
+(deftest taking-part-is-not-carrying-out
+  (testing "an actor of an event that is no activity took part in it (P11); only an activity is carried out (P14) (post-audit 5, G2)"
+    (doseq [[code term] [["lido00009" "Verlust"] ["lido00002" nil] ["lido00026" nil] ["lido00003" nil] [nil "Ereignis"]]]
+      (let [xml (one-event code term "Zeuge")
+            out (:output (convert/convert {:from :lido :to :ntriples :source xml}))]
+        (is (str/includes? out "cidoc-crm/E5_Event") (str code " " term))
+        (is (str/includes? out "P11_had_participant") (str code " " term))
+        (is (not (str/includes? out "P14_carried_out_by")) (str code " " term))
+        (is (not (str/includes? out "cidoc-crm/E7_Activity")) (str code " " term))
+        (is (empty? (violations xml)) (str code " " term))))
+    (testing "an exhibition, by its code or its term alone, is carried out by its curator"
+      (doseq [[code term] [["lido00225" nil] [nil "Ausstellung"] [nil "exhibition"] [nil "Gebrauch"] [nil "Sammeln"]]]
+        (let [out (:output (convert/convert {:from :lido :to :ntriples :source (one-event code term "Kurator")}))]
+          (is (str/includes? out "cidoc-crm/E7_Activity") (str code " " term))
+          (is (str/includes? out "P14_carried_out_by") (str code " " term)))))))

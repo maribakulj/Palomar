@@ -130,7 +130,22 @@
    `E7_Activity`), even when the record names no actor."
   #{"exhibition" "commissioning" "restoration" "excavation" "collecting" "use" "performance"
     "publication" "move_of_object" "transfer_of_custody" "planning" "modification" "part_addition"
-    "part_removal" "type_assignment" "attribute_assignment" "type_creation"})
+    "part_removal" "type_assignment" "attribute_assignment" "type_creation" "designing"
+    "execution_of_design" "creation" "carrier_production" "work_conception" "expression_creation"})
+
+(def ^:private activity-labels
+  "Event type terms that name an activity, when no URI says it (post-audit 5, G2)."
+  #{"exhibition" "ausstellung" "exposition" "commissioning" "auftrag" "commande" "excavation"
+    "ausgrabung" "fouille" "publication" "publikation" "collecting" "performance" "aufführung"
+    "use" "nutzung" "gebrauch" "verwendung" "utilisation" "planning" "planung" "designing" "entwurf"
+    "sammeln" "sammlung" "collecte" "grabung" "transfer" "überführung" "transport"})
+
+(defn- activity-type?
+  "True when an event's type, by its LIDO URI or code, or else its term, names
+   an activity: something someone does, not something that befalls the object."
+  [{:keys [type label]} terms]
+  (boolean (or (activity-types (term-name type))
+               (some #(some-> % str/trim str/lower-case activity-labels) (cons label terms)))))
 
 (def ^:private creator-heads
   "The words a creator's role ends with, in the languages LIDO records use:
@@ -596,12 +611,14 @@
       (fn [[n [f a]]]
         (let [f* f
               in (fn [p] (filter #(= n (:event (fields %))) (of p)))
-              ;; P14 and P32 have E7 as domain: an event someone carried out,
-              ;; or one with a technique, or of an activity type, is an
-              ;; E7_Activity; any other stays an E5_Event (post-audit 4, F1)
-              activity? (or (seq (in :lido/actor))
+              ;; an event of an activity type, or one that used a technique, is
+              ;; an E7_Activity, carried out (P14) by its actors; any other is an
+              ;; E5_Event, which its actors took part in (P11): an actor named in
+              ;; a loss or a find did not carry it out (post-audit 5, G2)
+              activity? (or (#{"production" "acquisition" "modification"} (:kind f))
                             (some #(= "technique" (:role (fields %))) (in :lido/material))
-                            (activity-types (term-name (:type f))))
+                            ;; by its type, or any of its terms in any language
+                            (activity-type? f (for [t (of :lido/event-type) :when (= n (event-key t))] (:value t))))
               [kind via] (case (:kind f)
                            "production"  [:crm/E12_Production :crm/P108i_was_produced_by]
                            "acquisition" [:crm/E8_Acquisition :crm/P24i_changed_ownership_through]
@@ -622,7 +639,7 @@
            (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
                                  kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
                                  ag   (model/mint-entity-id kind (if uri uri [(str rid) name]))]
-                             [(entity ag kind uri) (claim e :crm/P14_carried_out_by (model/reference ag) a)
+                             [(entity ag kind uri) (claim e (if activity? :crm/P14_carried_out_by :crm/P11_had_participant) (model/reference ag) a)
                               (claim ag :crm/P190_has_symbolic_content name a)]))
                    (in :lido/actor))
            ;; a material is what the object consists of only when its
