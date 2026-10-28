@@ -112,8 +112,15 @@
 
 (defn- event-kind [c terms]
   (or (some-> (:uri c) term-name event-kinds)
-      (some #(get kind-labels (str/lower-case (str/trim %))) (cons (:label c) terms))
+      (some #(get kind-labels (str/lower-case (str/trim %))) (remove nil? (cons (:label c) terms)))
       :event))
+
+(def ^:private activity-types
+  "LIDO event types that are activities, carried out by someone (CIDOC CRM
+   `E7_Activity`), even when the record names no actor."
+  #{"exhibition" "commissioning" "restoration" "excavation" "collecting" "use" "performance"
+    "publication" "move_of_object" "transfer_of_custody" "planning" "modification" "part_addition"
+    "part_removal" "type_assignment" "attribute_assignment" "type_creation"})
 
 (def group-types
   "The LIDO actor types that are a group (CIDOC CRM `E74_Group`), not a person."
@@ -414,13 +421,21 @@
      ;; and the object's materials
      (mapcat
       (fn [[n [f a]]]
-        (let [[kind via] (case (:kind f)
+        (let [in (fn [p] (filter #(= n (:event (fields %))) (of p)))
+              ;; P14 and P32 have E7 as domain: an event someone carried out,
+              ;; or one with a technique, or of an activity type, is an
+              ;; E7_Activity; any other stays an E5_Event (post-audit 4, F1)
+              activity? (or (seq (in :lido/actor))
+                            (some #(= "technique" (:role (fields %))) (in :lido/material))
+                            (activity-types (term-name (:type f))))
+              [kind via] (case (:kind f)
                            "production"  [:crm/E12_Production :crm/P108i_was_produced_by]
                            "acquisition" [:crm/E8_Acquisition :crm/P24i_changed_ownership_through]
-                           [:crm/E5_Event :crm/P12i_was_present_at])
+                           (if activity?
+                             [:crm/E7_Activity :crm/P12i_was_present_at]
+                             [:crm/E5_Event :crm/P12i_was_present_at]))
               e  (model/mint-entity-id kind [(str rid) n])
-              ts (model/mint-entity-id :crm/E52_Time-Span [(str rid) n])
-              in (fn [p] (filter #(= n (:event (fields %))) (of p)))]
+              ts (model/mint-entity-id :crm/E52_Time-Span [(str rid) n])]
           (concat
            [(entity e kind) (claim obj via (model/reference e) a)]
            (when (:type f) (typed e :crm/P2_has_type :crm/E55_Type a {:uri (:type f) :label (:label f)}))
