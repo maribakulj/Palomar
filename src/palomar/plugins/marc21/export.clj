@@ -36,7 +36,8 @@
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.marc21 :as marc21]
-            [palomar.plugins.qualified :as qualified]))
+            [palomar.plugins.qualified :as qualified]
+            [palomar.plugins.record-id :as record-id]))
 
 (def canon->marc
   "Ordered canonical→MARC `[predicate tag subfield]`. Several MARC fields
@@ -117,7 +118,7 @@
    indicators, so every datafield has blank indicators (`ind1`/`ind2` \" \"),
    which MARC reads as undefined, not as a stated value."
   [record]
-  (let [ctrl  (:source record)
+  (let [ctrl  (record-id/source-identifier record)
         lines (cond-> []
                 ctrl    (conj (str "  <controlfield tag=\"001\">"
                                    (xml-escape ctrl) "</controlfield>"))

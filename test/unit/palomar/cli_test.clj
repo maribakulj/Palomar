@@ -301,6 +301,19 @@
           (is (str/includes? written "The Great Ray Charles")))
         (finally (.delete (java.io.File. path)))))))
 
+(deftest a-streamed-marcxml-is-one-document
+  (testing "the stream writes its collection element once, around every record (post-audit 3, E1)"
+    (let [path (str (System/getProperty "java.io.tmpdir") "/palomar-stream-" (System/nanoTime) ".xml")]
+      (try
+        (let [{:keys [exit]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "marc21" "--stream" "--out" path])
+              written (slurp path)]
+          (is (= 0 exit))
+          (is (= 1 (count (re-seq #"<collection" written))))
+          (is (< 1 (count (re-seq #"<record" written))))
+          (is (some? (.parse (.newDocumentBuilder (javax.xml.parsers.DocumentBuilderFactory/newInstance))
+                             (java.io.File. ^String path)))))
+        (finally (.delete (java.io.File. path)))))))
+
 (deftest convert-stream-guards-its-inputs
   (testing "--stream requires --out"
     (let [{:keys [exit err]} (cli/run ["convert" marc21 "--from" "marc21" "--to" "ntriples" "--stream"])]

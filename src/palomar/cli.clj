@@ -319,13 +319,17 @@
           tmp   (atom nil)]
       (try
         (reset! tmp (java.io.File/createTempFile "palomar-stream-" ".part" (.getParentFile outf)))
-        (let [res (with-open [r (io/reader input)
+        (let [[open close] (convert/collection (keyword to))
+              res (with-open [r (io/reader input)
                               w (io/writer @tmp)]
-                    (convert/convert-stream
-                     {:from fromk :to (keyword to)
-                      :with-proposals? (boolean (get flags "with-proposals"))
-                      :records (convert/stream-source fromk opts r)}
-                     (fn [doc] (.write w doc) (.write w "\n"))))]
+                    (when open (.write w open) (.write w "\n"))
+                    (let [res (convert/convert-stream
+                               {:from fromk :to (keyword to)
+                                :with-proposals? (boolean (get flags "with-proposals"))
+                                :records (convert/stream-source fromk opts r)}
+                               (fn [doc] (.write w doc) (.write w "\n")))]
+                      (when close (.write w close) (.write w "\n"))
+                      res))]
           (if (replace-file! @tmp outf)
             {:exit 0 :out ""
              :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")

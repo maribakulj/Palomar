@@ -34,7 +34,8 @@
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.mods :as mods]
-            [palomar.plugins.qualified :as qualified]))
+            [palomar.plugins.qualified :as qualified]
+            [palomar.plugins.record-id :as record-id]))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -96,7 +97,7 @@
    it carries nothing exportable. `recordInfo/recordIdentifier` comes from `:source`
    (the original record id) for an id-stable round-trip."
   [record]
-  (let [rid   (:source record)
+  (let [rid   (record-id/source-identifier record)
         body  (for [[p open close] canon->mods
                     [open close v] (case p
                                      :canon/agent (agent-elements record open close)

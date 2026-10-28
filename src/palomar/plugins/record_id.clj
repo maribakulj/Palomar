@@ -41,3 +41,13 @@
    and the rest of the path, so it alone is never injective."
   [ns prefix label uri]
   (keyword ns (str prefix (slug label) "-h" (digest (str/trim (str uri))))))
+
+(defn source-identifier
+  "The identifier `record`'s source gave it, as text for a control field (a
+   MARC `001`, a MODS `recordIdentifier`): its `:source` when that is a string,
+   the name of a keyword source, else nil. A structure is never printed into a
+   control field (post-audit 3, E1)."
+  [record]
+  (let [s (:source record)]
+    (cond (and (string? s) (not (str/blank? s))) s
+          (keyword? s)                           (name s))))

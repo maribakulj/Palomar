@@ -69,9 +69,16 @@
 
 (defn convert-stream
   "Convert a stream of raw `records` of a streamable spoke, calling `(emit doc)`
-   per document, in bounded memory. Returns `{:records n :loss report}`."
+   per document, in bounded memory. Each document is bare: write
+   `(collection to)` around the stream for an XML target. Returns `{:records n :loss report}`."
   [request emit]
   (convert/convert-stream request emit))
+
+(defn collection
+  "`[open close]`, the element that makes target `to`'s documents one XML
+   document (MARCXML `<collection>`, MODS `<modsCollection>`), or nil."
+  [to]
+  (convert/collection to))
 
 ;; --- curation ----------------------------------------------------------------
 
