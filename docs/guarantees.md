@@ -23,9 +23,11 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 
 | Guarantee | Pinned by |
 |-----------|-----------|
-| For the source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O, N-Quads) that describes the source's kind of resource, every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
+| For the source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, the MARC21 profiles, MODS, IIIF, PROV-O, N-Quads) that describes the source's kind of resource, every string value of every record, and every source field of a structured value (an actor's name, role and life dates, an event's type and dates, a dimension's unit), is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
 | An exporter that omits a value without reporting it is caught. | `palomar.fidelity-test/a-silent-omission-is-caught` |
 | For the source spokes and the N-Triples, CRM, CRM-only and N-Quads targets, every relation the RDF view expresses (a WEMI link, a CRM or SKOS reference) is written — by its predicate or, in pure CRM, its super-property — or named by a loss. | `palomar.fidelity-test/every-relation-survives-in-the-rdf-outputs` |
+| An export that writes a structured value but silently drops one of its fields is caught. | `palomar.fidelity-test/a-silent-loss-inside-a-structured-value-is-caught` |
+| A loss accounts only for the fields, or the value, it names: a reported role URI does not hide an unreported seller or acquisition date. | `palomar.fidelity-test/one-field-lost-does-not-account-for-another` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
 | In the N-Triples family a value counts as preserved only on its own node: the right text on the wrong resource is caught. | `palomar.fidelity-test/the-right-text-on-the-wrong-node-is-caught` |
 | Minted ids are injective in their parts: no two distinct tuples share a key (ADR 0040). | `palomar.model-entity-test/tuple-keys-are-injective`, `palomar.rules-test/mint-keys-are-tuples-not-joined-strings` |
@@ -81,7 +83,12 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
   that also occurs elsewhere in the output counts as present. The audit can
   miss a loss, never invent one. Turtle output is not decoded; relations are
   checked only for the N-Triples family. A loss on another predicate of the
-  same subject can stand for a value it does not concern.
+  same subject can stand for a value it does not concern. A field of a
+  structured value (an actor's life dates, a dimension's unit) is checked by
+  containment in any decoded string, on any node, since exporters print some
+  fields joined ("1634-1693"): a short field (a unit, a year) can be found by
+  chance. A loss naming no field and no value accounts for every field of its
+  predicate.
 - **Semantic correctness beyond the tests.** The mappings are checked against
   the published standards they cite (LRMoo 1.0/1.1.1, Linked Art, IIIF 3.0, the
   LoC crosswalks) where a test says so, not exhaustively.

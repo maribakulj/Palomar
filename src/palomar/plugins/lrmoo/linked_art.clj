@@ -46,6 +46,7 @@
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
+            [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.lido :as lido]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.ntriples :as nt]
@@ -569,8 +570,37 @@
      (for [p ps :when (and (lido? p) (not (object-written p)))]
        (loss :dropped p (str (pr-str p) " is not expressed in the Linked Art object profile (ADR 0052)")))
      (for [d (native-fields record :lido/dimension) :when (nil? (dimension-obj d))]
-       (loss :under-specified :lido/dimension
-             (str "measurement " (pr-str (:value d)) " " (:unit d) " is no number in a known unit: written only in the measurements statement")))
+       (dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :lido/dimension :value d
+                 :message (str "measurement " (pr-str (:value d)) " " (:unit d) " is no number in a known unit: written only in the measurements statement")}))
+     ;; only the production has actors in this profile, and only it and the
+     ;; acquisitions a time-span (F5 review)
+     (let [evs  (native-fields record :lido/event)
+           prod (:index (first (filter #(= "production" (:kind %)) evs)))]
+       (concat
+        (for [a (native-fields record :lido/actor) :when (not= prod (:event a))]
+          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
+                    :message (str "actor " (pr-str (:name a)) " of an event other than the production is not written in the Linked Art object profile")}))
+        (for [ev evs :when (and (not (#{"production" "acquisition"} (:kind ev))) (some ev [:date :earliest :latest]))]
+          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/event :value ev :fields [:date :earliest :latest]
+                    :message (str "the date of the " (:kind ev) " event is not written in the Linked Art object profile")}))))
+     ;; what the documents write of each structured value, and what they do not
+     (cov/unwritten-fields record
+                           {:lido/actor            #(if (= "creator" (:responsibility %)) #{:name :uri} #{:name :uri :role :role-uri})
+                            :lido/event            #{:date :earliest :latest}
+                            :lido/dimension        #{:value}
+                            :lido/resource         #{:url}
+                            :lido/subject-concept  #{:uri :label}
+                            :lido/material         #{:uri :label}
+                            :lido/rights-work-type #{:uri :label}
+                            :lido/keeper           #{:name :uri}}
+                           "in the Linked Art object profile (types and units are AAT terms there)")
+     (for [p [:lido/work-type-concept :lido/classification-concept]
+           c (native-fields record p) :when (nil? (:uri c))]
+       (loss :dropped p (str "type " (pr-str (:label c)) " has no URI: classified_as cannot name it")))
+     (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
+       (loss :dropped :lido/keeper (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")))
+     (for [c (native-fields record :lido/subject-concept) :when (nil? (:uri c))]
+       (loss :dropped :lido/subject-concept (str "subject " (pr-str (:label c)) " has no URI: a VisualItem cannot be about it")))
      (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
        (loss :dropped :lido/repository (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")))
      ;; only the production says where it took place in this profile

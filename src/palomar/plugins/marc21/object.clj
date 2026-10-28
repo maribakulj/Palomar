@@ -27,6 +27,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
+            [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.lido :as lido]
             [palomar.plugins.record-id :as record-id]))
 
@@ -143,6 +144,17 @@
                              (:assertions record)))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p
                  :message (str (pr-str p) " has no field in the MARC21 object profile (ADR 0053)")}))
+     (cov/unwritten-fields record
+                           {:lido/actor #{:name :uri :role :birth :death}
+                            :lido/event #{:date}}
+                           "in the MARC21 object profile")
+     ;; only the production's actors and date have a field (F5 review)
+     (for [a (fields record :lido/actor) :when (not= (:index prod) (:event a))]
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
+                 :message (str "actor " (pr-str (:name a)) " of an event other than the production has no field in the MARC21 object profile")}))
+     (for [ev (fields record :lido/event) :when (and (not= (:index prod) (:index ev)) (some ev [:date :earliest :latest]))]
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/event :value ev :fields [:date :earliest :latest]
+                 :message (str "the date of the " (:kind ev) " event, other than the production, has no field in the MARC21 object profile")}))
      (when (some #(not= (:index prod) (lido/event-key %)) (in-force record :lido/event-place))
        [(dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/event-place
                   :message "the place of an event other than the production has no field in the MARC21 object profile"})]))))

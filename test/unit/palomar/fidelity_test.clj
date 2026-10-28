@@ -5,6 +5,7 @@
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
             [palomar.fidelity :as fidelity]
+            [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.lrmoo.export :as export]))
 
 (def ^:private fixtures
@@ -100,3 +101,35 @@
           {:keys [unaccounted]} (with-redefs-fn {#'convert/exporters broken} #(audit :intermarc :ntriples))]
       (is (seq unaccounted) "the title still appears in the file, but not on its Work")
       (is (every? #(= :lrmoo/R33_has_string (:predicate %)) unaccounted)))))
+
+(deftest a-silent-loss-inside-a-structured-value-is-caught
+  (testing "an exporter that writes an actor's name but not its life dates, and says nothing, fails the audit (post-audit 4, F5)"
+    (let [src (slurp (fixtures :lido))
+          ok  (fidelity/audit {:from :lido :to :linked-art :source src})
+          bad (with-redefs [cov/unwritten-fields (constantly [])]
+                (fidelity/audit {:from :lido :to :linked-art :source src}))]
+      (is (empty? (:unaccounted ok)))
+      (is (some #(and (= :lido/actor (:predicate %)) (= "1634" (:value %))) (:unaccounted bad))
+          "the life date inside the structured actor is looked for"))))
+
+(deftest one-field-lost-does-not-account-for-another
+  (testing "a seller's name and an acquisition date no exporter writes are caught, even beside a reported role URI (F5 review)"
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>A-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                   "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                   "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:term>production</lido:term></lido:eventType>"
+                   "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Rembrandt</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                   "<lido:roleActor><lido:conceptID>http://vocab.getty.edu/aat/300025136</lido:conceptID><lido:term>painter</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"
+                   "</lido:event></lido:eventSet><lido:eventSet><lido:event><lido:eventType><lido:term>acquisition</lido:term></lido:eventType>"
+                   "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Zyxwvut Seller</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"
+                   "<lido:eventDate><lido:displayDate>1899</lido:displayDate></lido:eventDate>"
+                   "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")]
+      (doseq [to [:marc21-object :linked-art]]
+        (let [{:keys [unaccounted reported]} (fidelity/audit {:from :lido :to to :source xml})]
+          (is (empty? unaccounted) (str to ": " (pr-str unaccounted)))
+          (is (pos? reported) (str to)))
+        (testing "and an exporter that stops reporting them is caught"
+          (let [real   @#'convert/exporters
+                broken (update real to update :losses
+                               (fn [f] (fn [r] (remove #(re-find #"Seller|1899|other than the production" (str (:message %))) (f r)))))
+                {:keys [unaccounted]} (with-redefs-fn {#'convert/exporters broken} #(fidelity/audit {:from :lido :to to :source xml}))]
+            (is (some #(= "Zyxwvut Seller" (:value %)) unaccounted) (str to))))))))
