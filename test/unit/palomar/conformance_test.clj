@@ -66,7 +66,13 @@
       (let [with-id (update base :entities conj
                             (model/entity {:id :p/a :kind :crm/E21_Person :iri "https://isni.org/x"}))]
         (is (not (contains? (codes (conf/check-record conf/linked-art-profile (model/record with-id)))
-                            "creator-identified")))))))
+                            "creator-identified")))))
+    (testing "one identified creator of two leaves the other a bare name (post-audit 2, D1)"
+      (let [two (-> base
+                    (update :entities conj (model/entity {:id :p/a :kind :crm/E21_Person :iri "https://isni.org/x"}))
+                    (update :assertions conj (model/assertion {:subject :rec/c :predicate :canon/agent :value "Another"})))]
+        (is (contains? (codes (conf/check-record conf/linked-art-profile (model/record two)))
+                       "creator-identified"))))))
 
 (deftest for-profile-filters-to-the-profile
   (let [conf-diags (conf/check-record conf/linked-art-profile

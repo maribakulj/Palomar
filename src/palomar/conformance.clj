@@ -85,10 +85,13 @@
   (boolean (seq (agents/creators record))))
 
 (defn- identified-agent?
-  "An authority-identified creator entity (`:crm/E21_Person` with an `:iri`) — the
-   D7-certified, reconcilable creator (ADR 0018)."
+  "Every creator is authority-identified (`agents/identified`: an agent entity
+   with an `:iri` that names it) — the D7-certified, reconcilable creator (ADR
+   0018). One identified creator of two leaves the other a bare name (post-audit
+   2, D1)."
   [record]
-  (boolean (some #(and (= :crm/E21_Person (:kind %)) (:iri %)) (:entities record))))
+  (let [known (set (keep :name (agents/identified record)))]
+    (every? known (agents/creators record))))
 
 (defn- has-identifier?
   "A stable identifier: a Manifestation authority IRI, or a `:canon/identifier` —
@@ -126,7 +129,7 @@
      :conformant? #(seq (view/works %))}
     {:id :creator-identified
      :severity :warning
-     :message "creator is a bare name, not an authority-identified Person (not reconcilable, ADR 0018)"
+     :message "a creator is a bare name, not an authority-identified agent (not reconcilable, ADR 0018)"
      :conformant? #(or (not (has-creator? %)) (identified-agent? %))}
     {:id :has-identifier
      :severity :info

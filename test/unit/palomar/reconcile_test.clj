@@ -7,6 +7,7 @@
             [palomar.model :as model]
             [palomar.plugins.lrmoo.dataset :as dataset]
             [palomar.plugins.lrmoo.export :as export]
+            [palomar.plugins.lrmoo.linked-art :as linked-art]
             [palomar.reconcile :as rec]))
 
 (defn- record-with-agent [rid label iri]
@@ -191,3 +192,63 @@
       (is (= "corporateBody" (:entity-type (first props))))
       (is (some #(= :crm/E74_Group (:kind %)) (:entities a)) "the local agent is a Group")
       (is (= ["corporateBody"] (map :entity-type (rec/accepted-links acc)))))))
+
+(defn- record-with-agents [rid & names]
+  (model/record {:id rid :kind :book
+                 :assertions (mapv #(model/assertion {:subject rid :predicate :canon/agent :value %}) names)}))
+
+(defn- link [nm iri rid] {:name nm :authority-id iri :certifiable? true :status :accepted :records #{rid}})
+
+(def ^:private marx   "https://isni.org/isni/0000000121232615")
+(def ^:private engels "https://isni.org/isni/0000000121358464")
+
+(deftest every-creator-of-a-record-is-reconciled
+  (testing "two accepted links in one record make two identified agents (post-audit 2, D1)"
+    (let [r (record-with-agents :r/m "Marx, Karl" "Engels, Friedrich")
+          {:keys [records applied refused]} (rec/apply-agent-links [r] [(link "Marx, Karl" marx :r/m)
+                                                                        (link "Engels, Friedrich" engels :r/m)])]
+      (is (= #{["Marx, Karl" marx] ["Engels, Friedrich" engels]} (set (map (juxt :name :iri) applied))))
+      (is (empty? refused))
+      (is (= #{marx engels} (set (keep :iri (:entities (first records))))))
+      (testing "and each agent keeps its own name"
+        (is (= {marx "Marx, Karl" engels "Engels, Friedrich"}
+               (into {} (map (juxt :iri :label)) (:agents (rec/reconcile-agents records)))))))))
+
+(deftest a-record-already-identified-in-part-takes-the-rest
+  (testing "a native ISNI identifies the main entry; the second creator can still be linked"
+    (let [r (update (record-with-agents :r/n "Gustave Flaubert" "Louis Bouilhet") :entities (fnil conj [])
+                    (model/entity {:id (model/mint-entity-id :crm/E21_Person flau) :kind :crm/E21_Person :iri flau}))
+          bouilhet "https://isni.org/isni/0000000080809191"
+          {:keys [records applied skipped]} (rec/apply-agent-links [r] [(link "Louis Bouilhet" bouilhet :r/n)
+                                                                        (link "Gustave Flaubert" "https://isni.org/isni/0000000000000001" :r/n)])]
+      (is (= [["Louis Bouilhet" bouilhet]] (map (juxt :name :iri) applied)))
+      (is (= #{flau bouilhet} (set (keep :iri (:entities (first records))))))
+      (testing "a link for a name the record already identifies is not applied, and says so"
+        (is (= [[:r/n "Gustave Flaubert" :already-identified]] (map (juxt :record :name :reason) skipped))))
+      (is (= {flau "Gustave Flaubert" bouilhet "Louis Bouilhet"}
+             (into {} (map (juxt :iri :label)) (:agents (rec/reconcile-agents records))))))))
+
+(deftest a-contributor-is-reconciled-too
+  (testing "an accepted alignment of any agent the record names is applied, not only of a creator"
+    (let [fid    :frag/t.contributor
+          r      (model/record {:id :r/t :kind :book
+                                :fragments [(model/fragment {:id fid :source [:test]})]
+                                :assertions [(model/assertion {:subject :r/t :predicate :canon/agent :value "Nerval"})
+                                             (model/assertion {:subject :r/t :predicate :canon/agent :value (model/reference fid)})
+                                             (model/assertion {:subject fid :predicate :canon/agent :value "Goethe"})
+                                             (model/assertion {:subject fid :predicate :canon/role :value :contributor})]})
+          goethe "https://isni.org/isni/0000000121222924"
+          {:keys [applied skipped refused]} (rec/apply-agent-links [r] [(link "Goethe" goethe :r/t)])]
+      (is (= [goethe] (map :iri applied)))
+      (is (empty? skipped))
+      (is (empty? refused)))))
+
+(deftest linked-art-names-each-identified-creator
+  (testing "with two identified creators, each Linked Art Person carries its own authority id"
+    (let [r    (-> (record-with-agents :r/m "Marx, Karl" "Engels, Friedrich")
+                   (update :entities (fnil conj []) (model/entity {:id :m/m :kind :lrmoo/F3_Manifestation}))
+                   (update :assertions conj (model/assertion {:subject :m/m :predicate :lrmoo/R33_has_string :value "Manifest"})))
+          out  (first (:records (rec/apply-agent-links [r] [(link "Marx, Karl" marx :r/m) (link "Engels, Friedrich" engels :r/m)])))
+          doc  (first (linked-art/documents out))]
+      (is (= {"Marx, Karl" marx "Engels, Friedrich" engels}
+             (into {} (map (juxt #(get % "_label") #(get % "id"))) (get-in doc ["created_by" "carried_out_by"])))))))
