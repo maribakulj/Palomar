@@ -64,3 +64,32 @@
                                 "<rdf:Description xml:base=\"b/\" rdf:about=\"c\"><ex:p rdf:resource=\"d\"/></rdf:Description>"
                                 "</rdf:RDF>"))]
       (is (= [[{:iri "http://example.org/a/b/c"} {:iri "http://example.org/p"} {:iri "http://example.org/a/b/d"}]] ts)))))
+
+(defn- literal-of [inner]
+  (let [ts (rdfxml/parse (doc (str "<rdf:Description rdf:about=\"http://example.org/x\">"
+                                   "<ex:d rdf:parseType=\"Literal\">" inner "</ex:d></rdf:Description>")))]
+    (nth (first ts) 2)))
+
+(deftest an-xml-literal-keeps-its-markup
+  (testing "parseType Literal keeps the elements, their text and the text around them (post-audit 2, D5)"
+    (is (= {:lit "avant <b xmlns=\"http://www.w3.org/1999/xhtml\">Important</b> après" :datatype (str rdf "XMLLiteral")}
+           (literal-of "avant <b xmlns=\"http://www.w3.org/1999/xhtml\">Important</b> après"))))
+  (testing "in exclusive canonical form: the namespaces it uses declared on the element using them, attributes sorted, empty elements written open and closed"
+    (is (= (str "<ex:p xmlns:ex=\"http://example.org/\" a=\"1\" b=\"2 &amp; &quot;3&quot;\">x &lt; y<ex:br></ex:br></ex:p>")
+           (:lit (literal-of "<ex:p b='2 &amp; \"3\"' a=\"1\">x &lt; y<ex:br/></ex:p>")))))
+  (testing "a namespace an ancestor in the literal declares is not declared again"
+    (is (= "<ex:a xmlns:ex=\"http://example.org/\"><ex:b>t</ex:b></ex:a>"
+           (:lit (literal-of "<ex:a><ex:b>t</ex:b></ex:a>")))))
+  (testing "a text-only literal is its text"
+    (is (= "plain" (:lit (literal-of "plain"))))))
+
+(deftest an-xml-literal-keeps-the-prefix-its-element-declares
+  (testing "a namespace bound to two prefixes is written with the one the element declares (post-audit 2, D5 review)"
+    (let [lit (fn [inner] (:lit (nth (first (rdfxml/parse (str "<rdf:RDF xmlns:rdf=\"" rdf "\" xmlns:ex=\"http://example.org/\" xmlns:h=\"http://h/\">"
+                                                               "<rdf:Description rdf:about=\"http://example.org/x\"><ex:d rdf:parseType=\"Literal\">"
+                                                               inner "</ex:d></rdf:Description></rdf:RDF>")))
+                                     2)))]
+      (is (= "<b xmlns=\"http://h/\">t</b>" (lit "<b xmlns=\"http://h/\">t</b>")) "the default it declares, not the root's h:")
+      (is (= "<b><z:c xmlns:z=\"http://h/\"></z:c></b>" (lit "<b xmlns:z=\"http://h/\"><z:c/></b>")) "an inherited prefix it declared")
+      (is (= "<b xmlns=\"http://q/\" xmlns:p=\"http://q/\" p:a=\"1\">t</b>" (lit "<b xmlns=\"http://q/\" xmlns:p=\"http://q/\" p:a=\"1\">t</b>"))
+          "an attribute in a namespace keeps a prefix: unprefixed it would be in none"))))
