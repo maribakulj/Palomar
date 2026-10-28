@@ -65,6 +65,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0049](./0049-a-target-says-what-it-can-describe.md) | A target says what it can describe | Accepted |
 | [0050](./0050-marc21-for-archives.md) | MARC21 for archives is a profile of its own | Accepted |
 | [0051](./0051-marc21-authority-for-eac-cpf.md) | An EAC-CPF record is a MARC21 authority record | Accepted |
+| [0052](./0052-museum-objects-from-lido.md) | A museum object is a CIDOC CRM object, read from LIDO | Accepted |
 
 ## Template
 

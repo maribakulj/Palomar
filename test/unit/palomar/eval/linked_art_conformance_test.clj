@@ -196,3 +196,27 @@
       (testing "and nothing is said of what it presents"
         (is (not (contains? doc "created_by")))
         (is (some #{:lrmoo/F3_Manifestation} (:source-fields loss)) "the projected Manifestation is reported, not written")))))
+
+(def ^:private image-schema
+  (delay (.getSchema @registry (SchemaLocation/of (str iri-base "image.json")))))
+
+(deftest a-museum-object-is-a-human-made-object
+  (testing "every Städel LIDO record (real, CC0) is a HumanMadeObject and its VisualItem, validating strictly (post-audit 3, E5)"
+    (let [{:keys [output records]} (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :linked-art
+                                                     :source (slurp "test/fixtures/documentary/lido/staedel-oai-lido-sample.xml")})
+          docs (map json/read-str (str/split-lines output))
+          hmos (filter #(= "HumanMadeObject" (get % "type")) docs)
+          vis  (filter #(= "VisualItem" (get % "type")) docs)]
+      (is (= 5 records (count hmos)))
+      (doseq [d hmos] (is (= [] (errors-against object-schema (json/write-str d))) (get d "_label")))
+      (doseq [d vis] (is (= [] (errors-against image-schema (json/write-str d))) (get d "_label")))
+      (testing "what the record says, in Linked Art's own terms"
+        (let [d (first hmos)]
+          (is (= "Bildnis einer Dame in einem schwarzen Kleid" (get-in d ["identified_by" 0 "content"])))
+          (is (some #(= "13" (get % "content")) (get d "identified_by")) "the inventory number is an accession number")
+          (is (= "http://d-nb.info/gnd/4122164-3" (get-in d ["classified_as" 0 "id"])) "a painting, by its GND concept")
+          (is (= "http://d-nb.info/gnd/122131924" (get-in d ["produced_by" "carried_out_by" 0 "id"])) "Nicolaes Maes, by his GND id")
+          (is (= "1668-01-01T00:00:00Z" (get-in d ["produced_by" "timespan" "begin_of_the_begin"])))
+          (is (= 85.6 (get-in d ["dimension" 0 "value"])))
+          (is (= "Acquisition" (get-in d ["changed_ownership_through" 0 "type"])))
+          (is (= (get-in d ["shows" 0 "id"]) (get (first vis) "id")) "it shows its VisualItem, which is about the subjects"))))))

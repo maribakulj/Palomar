@@ -99,16 +99,17 @@
     (.parse (.newDocumentBuilder f) (java.io.ByteArrayInputStream. (.getBytes s "UTF-8")))))
 
 (deftest every-archival-xpath-finds-the-value-it-attests
-  (testing "EAD and EAC-CPF selectors are absolute, start at the root read, and point at each occurrence (post-audit 2, D3)"
+  (testing "EAD, EAC-CPF and LIDO selectors are absolute, start at the root read, and point at each occurrence (post-audit 2, D3)"
     (doseq [[from label src] [[:ead "ead3" (slurp "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml")]
                               [:ead "ead2002" (slurp "test/fixtures/documentary/ead/ead2002/tnah_ead_devoir_genero.xml")]
                               [:eac-cpf "eac 2.0" (slurp "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml")]
-                              [:eac-cpf "eac-cpf 1.x" eac-1x]]]
+                              [:eac-cpf "eac-cpf 1.x" eac-1x]
+                              [:lido "lido" (slurp "test/fixtures/documentary/lido/staedel-lido-wrap.xml")]]]
       (testing label
         (let [{:keys [records]} (convert/to-wemi from {} src)
               doc   (dom-str src)
               ws    #(str/replace (str/trim %) #"\s+" " ")
-              pairs (mapcat #(checked-natives % (if (= :ead from) "ead" "eac")) records)]
+              pairs (mapcat #(checked-natives % (case from :ead "ead" :lido "lido" "eac")) records)]
           (is (seq pairs))
           (doseq [[v xp] pairs
                   :let [found (ws (select-text (.getDocumentElement doc) xp))]]

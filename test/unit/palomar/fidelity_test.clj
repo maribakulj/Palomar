@@ -16,7 +16,8 @@
    :mods         "test/fixtures/documentary/mods/loc_mods_book.xml"
    :iiif         "test/fixtures/documentary/iiif/manifest_book_simple.json"
    :ead          "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml"
-   :eac-cpf      "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml"})
+   :eac-cpf      "test/fixtures/documentary/eac-cpf/example_eac_cpf.xml"
+   :lido         "test/fixtures/documentary/lido/staedel-lido-wrap.xml"})
 
 (defn- audit [from to]
   (fidelity/audit {:from from :to to :source (slurp (fixtures from))
