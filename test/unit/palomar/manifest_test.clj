@@ -58,10 +58,18 @@
   (is (string? (:version (manifest/build-info)))))
 
 (deftest the-manifest-names-the-code-that-ran
-  (testing "the source of every loaded Palomar namespace is digested (post-audit test 09)"
-    (let [{:keys [sha256 namespaces]} (get-in (manifest/manifest {:from :dc :to :ntriples}) [:palomar :code])]
+  (testing "the source of every Palomar file is digested (post-audit test 09)"
+    (let [{:keys [sha256 files]} (get-in (manifest/manifest {:from :dc :to :ntriples}) [:palomar :code])]
       (is (re-matches #"[0-9a-f]{64}" sha256))
-      (is (< 20 namespaces))))
+      (is (< 20 files))))
+  (testing "whatever is loaded: the digest is of the engine's source tree, not of the namespaces loaded so far (post-audit 2, D6)"
+    (let [tree (for [f (file-seq (java.io.File. "src"))
+                     :when (and (.isFile f) (re-find #"\.(clj|cljc|edn)$" (.getName f)))]
+                 [(subs (str/replace (.getPath f) java.io.File/separator "/") 4) (slurp f)])]
+      (is (= {:sha256 (manifest/sources-digest tree) :files (count tree)} (manifest/code-fingerprint)))
+      (let [before (manifest/code-fingerprint)]
+        (require 'palomar.cli)
+        (is (= before (manifest/code-fingerprint)) "loading a namespace changes nothing"))))
   (testing "a changed source file changes the digest, a reordering does not"
     (let [srcs [["palomar/a.clj" "(ns a)"] ["palomar/plugins/lrmoo/export.clj" "(ns export)"]]]
       (is (= (manifest/sources-digest srcs) (manifest/sources-digest (reverse srcs))))
@@ -69,3 +77,11 @@
                 (manifest/sources-digest (assoc-in srcs [1 1] "(ns export) ;; changed"))))
       (is (not= (manifest/sources-digest [["ab" "c"]]) (manifest/sources-digest [["a" "bc"]]))
           "path and content are delimited"))))
+
+(deftest the-manifest-names-the-runtime-and-the-dependencies
+  (testing "the JVM, Clojure and the resolved libraries are named (post-audit 2, D6)"
+    (let [{:keys [runtime dependencies]} (:palomar (manifest/manifest {:from :dc :to :ntriples}))]
+      (is (= (System/getProperty "java.version") (:java runtime)))
+      (is (= (clojure-version) (:clojure runtime)))
+      (is (= {:mvn/version "0.2.0-alpha9"} (get dependencies 'org.clojure/data.xml)))
+      (is (every? #(or (:mvn/version %) (:git/sha %) (:local/root %)) (vals dependencies))))))
