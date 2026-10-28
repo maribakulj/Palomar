@@ -19,7 +19,8 @@
 
    Assertions an inference or repair pass derived (the WEMI view's strings) are
    not source content and are not reported here: the projection accounts for them."
-  (:require [palomar.diagnostics :as dx]
+  (:require [clojure.string :as str]
+            [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.spokes :as spokes]))
 
@@ -48,6 +49,50 @@
    :canon/note-kind #{:canon/note}
    :canon/width     #{:canon/digital-object}
    :canon/height    #{:canon/digital-object}})
+
+(def structured-derived
+  "Fields of a structured native that its importer computed rather than read
+   from the source: a rank, an event's kind, an actor's responsibility, the
+   element a name was read in. They are bookkeeping, not values, so the
+   fidelity audit does not look for them in the output; every other string
+   field of a structured value it does (post-audit 4, F5)."
+  {:ead/creator   #{:element}
+   :eac/relation  #{:element}
+   :lido/event    #{:index :kind}
+   :lido/actor    #{:event :responsibility :type}
+   :lido/material #{:event :role}
+   :lido/subject-person #{:type}})
+
+(defn structured-values
+  "The source values a structured native `a` holds, as `[field value]`: each
+   string field of its value but those `structured-derived` names."
+  [{:keys [predicate value]}]
+  (when (model/structured-value? value)
+    (for [[k v] (:value/fields value)
+          :when (and (string? v) (not (str/blank? v)) (not (contains? (get structured-derived predicate) k)))]
+      [k v])))
+
+(defn unwritten-fields
+  "The losses of an exporter that writes only the fields `written`
+   (`{predicate #{field…}}`, or a function of a value's fields to the set it
+   writes of them) of the structured natives of `record`: one
+   `:under-specified` loss per predicate whose in-force values hold another
+   source field (a type, a role, life dates…), naming them, and for those
+   fields only (post-audit 4, F5)."
+  [record written edge-note]
+  (for [[p fields] written
+        :let [extra (->> (:assertions record)
+                         (filter #(and (= p (:predicate %)) (model/structured-value? (:value %)) (model/in-force? %)))
+                         (mapcat #(let [fs (:value/fields (:value %))
+                                        w  (if (set? fields) fields (fields fs))]
+                                    (for [[k v] fs
+                                          :when (and (string? v) (not (str/blank? v)) (not (contains? (get structured-derived p) k))
+                                                     (not (contains? w k)))]
+                                      k)))
+                         distinct sort)]
+        :when (seq extra)]
+    (dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field p :fields extra
+              :message (str (pr-str p) ": " (str/join ", " (map name extra)) " not written " edge-note)})))
 
 (defn derived?
   "True when assertion `a` was derived by an inference or repair pass rather

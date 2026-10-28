@@ -103,11 +103,18 @@
 (defn- reported?
   "True when a loss in `losses` names `predicate` for `subject` or for the record
    — or, for a qualifier coord, names a field it qualifies (a dropped title takes
-   its language with it, `export-coverage/coord-bases`)."
-  [losses rid {:keys [subject predicate]}]
+   its language with it, `export-coverage/coord-bases`). A part of a
+   structured value (`field` of `whole`) is reported only by a loss that names
+   that field or that value, or names neither (post-audit 4, F5 review): one
+   field lost does not account for the others."
+  [losses rid {:keys [subject predicate field whole]}]
   (let [fields (into #{predicate} (cov/coord-bases predicate))]
     (some #(and (contains? fields (dx/loss-source-field %))
-                (or (= subject (:subject %)) (= rid (:subject %))))
+                (or (= subject (:subject %)) (= rid (:subject %)))
+                (or (nil? field)
+                    (let [{fs :loss/fields v :loss/value} (:detail %)]
+                      (and (or (nil? fs) (contains? fs field))
+                           (or (nil? v) (= v whole))))))
           losses)))
 
 (defn- present?
@@ -231,14 +238,21 @@
            here?   (fn [{:keys [subject value]}]
                      (contains? (get on (or (get idx subject) (export/entity-iri subject)) #{}) (norm value)))
            all     (concat loss losses)
+           ;; a structured native's source values are checked as its predicate's
+           ;; values, as a string native's are (post-audit 4, F5)
            checked (distinct
                     (for [a (:assertions record)
-                          :when (and (string? (:value a))
-                                     (or (convert/keeps-history? to) (not (model/out-of-force? a)))
+                          :when (and (or (convert/keeps-history? to) (not (model/out-of-force? a)))
                                      (or (not (cov/derived? a))
-                                         (and rdf? (export/viewable-predicate? (:predicate a)))))]
-                      (select-keys a [:subject :predicate :value])))
-           klass   (group-by #(cond (if rdf? (here? %) (present? seen (:predicate %) (:value %))) :present
+                                         (and rdf? (export/viewable-predicate? (:predicate a)))))
+                          [k v] (if (string? (:value a)) [[nil (:value a)]] (cov/structured-values a))]
+                      (cond-> {:subject (:subject a) :predicate (:predicate a) :value v}
+                        k (assoc :part? true :field k :whole (:value/fields (:value a))))))
+           ;; a part of a structured value may be written inside a larger
+           ;; string (life dates in \"1634-1693\", the value printed whole in
+           ;; PROV-O), so it is present when a decoded string contains it
+           part-in (fn [{:keys [value]}] (let [v (norm value)] (some #(str/includes? % v) seen)))
+           klass   (group-by #(cond (if (:part? %) (part-in %) (if rdf? (here? %) (present? seen (:predicate %) (:value %)))) :present
                                     (reported? all (:id record) %)                               :reported
                                     :else                                                        :unaccounted)
                              checked)]
@@ -246,7 +260,7 @@
                 :checked     (count checked)
                 :present     (count (:present klass))
                 :reported    (count (:reported klass))
-                :unaccounted (vec (:unaccounted klass))}
+                :unaccounted (mapv #(dissoc % :part? :whole) (:unaccounted klass))}
          (relation-parsers to) (assoc :relations (relation-audit to record output all))))
      {:target to :unchecked true})))
 

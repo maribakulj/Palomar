@@ -199,10 +199,13 @@
   "Construct a loss Diagnostic (ADR 0015). `category` ∈ `loss-categories`;
    `edge` ∈ `loss-edges`; `source-field` names the lost native field (opaque
    to the core); `aspect` (optional) ∈ `loss-aspects` says what it touched.
+   For a structured native, `fields` (optional) names the fields of its values
+   the loss is about, and `value` (optional) the one value (its fields) it is
+   about: the fidelity audit then counts it for those parts only.
    The code is `:loss/<category>`. Severity defaults to :info —
    loss is reported, not a failure — raise it per call when a loss is serious.
    Returns a model Diagnostic; throws on an unknown category, edge or aspect."
-  [{:keys [category subject edge source-field message severity provenance aspect]
+  [{:keys [category subject edge source-field message severity provenance aspect fields value]
     :or   {severity :info}}]
   (when-not (contains? loss-categories category)
     (throw (ex-info "Unknown loss category"
@@ -219,7 +222,9 @@
     :provenance provenance
     :detail     (cond-> {:loss/edge edge}
                   source-field (assoc :loss/source-field source-field)
-                  aspect       (assoc :loss/aspect aspect))}))
+                  aspect       (assoc :loss/aspect aspect)
+                  (seq fields) (assoc :loss/fields (set fields))
+                  value        (assoc :loss/value value))}))
 
 (defn loss?
   "True if `d` is a loss diagnostic (its code lives in the `loss` namespace)."
