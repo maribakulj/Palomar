@@ -235,3 +235,29 @@
           hmo (first (str/split-lines out))]
       (is (= [] (errors-against object-schema hmo)))
       (is (= "http://vocab.getty.edu/aat/300025249" (get-in (json/read-str hmo) ["produced_by" "part" 0 "classified_as" 0 "id"]))))))
+
+(deftest prints-drawings-and-photographs-validate
+  (testing "the Städel's graphic arts (real, CC0) are valid HumanMadeObjects, their titles in their languages (post-audit 4, F7)"
+    (let [{:keys [output records]} (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :linked-art
+                                                     :source (slurp "test/fixtures/documentary/lido/staedel-oai-lido-graphics.xml")})
+          docs (map json/read-str (str/split-lines output))
+          hmos (filter #(= "HumanMadeObject" (get % "type")) docs)]
+      (is (= 6 records (count hmos)))
+      (doseq [d hmos] (is (= [] (errors-against object-schema (json/write-str d))) (get d "_label")))
+      (doseq [d docs :when (= "VisualItem" (get d "type"))] (is (= [] (errors-against image-schema (json/write-str d))) (get d "_label")))
+      (let [names (mapcat #(filter (fn [n] (= "Name" (get n "type"))) (get % "identified_by")) hmos)]
+        (is (some #(= [{"id" "http://vocab.getty.edu/aat/300388344" "type" "Language" "_label" "German"}] (get % "language")) names))
+        (is (some #(= [{"id" "http://vocab.getty.edu/aat/300388277" "type" "Language" "_label" "English"}] (get % "language")) names)))
+      (testing "Dürer, inventor and engraver, carries out the production of his print"
+        (is (some (fn [d] (some #(= "http://d-nb.info/gnd/11852786X" (get % "id")) (get-in d ["produced_by" "carried_out_by"]))) hmos))))))
+
+(deftest a-language-with-no-aat-term-is-reported
+  (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>L-2</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"la\">"
+                 "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>Melencolia</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                 "</lido:descriptiveMetadata></lido:lido>")
+        {:keys [records]} (convert/to-wemi :lido {} xml)
+        {:keys [output loss]} (convert/export-records :linked-art records)
+        d (json/read-str (first (str/split-lines output)))]
+    (is (nil? (get-in d ["identified_by" 0 "language"])))
+    (is (some #(and (= :lido/title-name (get-in % [:detail :loss/source-field])) (str/includes? (:message %) "\"la\"")) loss))
+    (is (= [] (errors-against object-schema (json/write-str d))))))

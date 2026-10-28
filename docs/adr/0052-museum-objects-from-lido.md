@@ -24,7 +24,8 @@ an acquisition history.
      F6). This changes the key, and so every IRI minted from it, of a record
      that states a `lido:source`: data converted before F6 must be
      re-converted, not merged. The record's own `lidoRecID`, as written, stays
-     its source identifier (a MARC `001`). With no `lidoRecID` the record is
+     its source identifier (a MARC `001`): two institutions' records with
+     the same `lidoRecID` share that `001`, and no `003` says whose it is. With no `lidoRecID` the record is
      named by a digest, and that is reported (ADR 0047).
    - Every value is a native `:lido/*` with its absolute XPath.
    - Each concept (work type, classification, material, technique, role,
@@ -33,6 +34,19 @@ an acquisition history.
    - What it does not read is reported, for instance related works and
      subject actors.
    - OAI-PMH reads the `lido` metadata prefix through it.
+   - Each title keeps its language (`:lido/title-name {:content :lang}`): its
+     own `xml:lang`, else its set's, else the descriptive metadata's
+     (amended, post-audit 4, F7).
+   - What the LIDO schema (1.0 and 1.1) requires and a record lacks is a
+     warning on the record (`:lido/missing-required`, which `validate`
+     reports): the `lidoRecID`, the descriptive and administrative metadata
+     and the `xml:lang` of each, an object work type, a title set and its
+     name, each event's type, each actor in a role and its name, each
+     measurement's type, unit and value, and the record's id, type and source
+     (amended, post-audit 4, F7). This is no schema
+     validation: the rest of the schema is not checked, and neither are
+     LIDO-MC's own rules (its further required elements and its
+     vocabularies).
 2. **Resource type: object** (ADR 0049).
    - Linked Art, Dublin Core and the RDF targets accept an object.
    - MARC21, MODS and IIIF do not.
@@ -71,10 +85,16 @@ an acquisition history.
      inscriptions, the credit line and the provenance become statements.
    - An actor with no authority id is referenced by its record-scoped node, as
      in the CRM view. It is a reference, not an identity.
+   - A title's names carry its `language`, an AAT term, for English, German,
+     French, Dutch, Italian and Spanish; a title in any other language is
+     written with none, and that is reported (amended, post-audit 4, F7).
    - Both documents validate against the official `object.json` and
      `image.json`.
-5. **A real corpus.** The tests run on five Städel Museum records harvested
-   over OAI-PMH (CC0 metadata), not on hand-made fixtures.
+5. **A real corpus.** The tests run on Städel Museum records harvested over
+   OAI-PMH (CC0 metadata), not on hand-made fixtures: five paintings and
+   drawings, and six of the graphic arts (drawings, prints with an inventor
+   and an engraver, a photograph, two draughtsmen; amended, post-audit 4,
+   F7).
 
 Rejected: projecting objects through LRMoo. An object is not the
 manifestation of an expression, and Linked Art would make it a text.

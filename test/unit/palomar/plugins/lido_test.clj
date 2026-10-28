@@ -9,7 +9,8 @@
             [palomar.fidelity :as fidelity]
             [palomar.plugins.lido :as lido]
             [palomar.ontology :as onto]
-            [palomar.plugins.lrmoo.ntriples :as nt]))
+            [palomar.plugins.lrmoo.ntriples :as nt]
+            [palomar.validate :as validate]))
 
 (def ^:private lido-1-1
   "A LIDO 1.1 record: an eventSet with no event, a production typed by its
@@ -272,3 +273,70 @@
                    "</lido:objectMeasurements></lido:objectMeasurementsSet></lido:objectMeasurementsWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>")]
       (is (not (str/includes? (:output (convert/convert {:from :lido :to :ntriples :source xml})) "P90_has_value")))
       (is (not (str/includes? (:output (convert/convert {:from :lido :to :linked-art :source xml})) "\"dimension\""))))))
+(def ^:private graphics
+  "Real prints, drawings and a photograph of the Städel (CC0), in an OAI-PMH response."
+  "test/fixtures/documentary/lido/staedel-oai-lido-graphics.xml")
+
+(deftest the-prints-and-drawings-are-read-whole
+  (testing "every text of the graphic arts is read, or its element is reported; nothing is lost silently (post-audit 4, F7)"
+    (let [xml  (slurp graphics)
+          {:keys [ingest records]} (convert/to-wemi :oai {:metadata-prefix "lido"} xml)
+          lost (set (keep #(get-in % [:detail :loss/source-field]) ingest))
+          norm #(str/replace % #"\s+" " ")
+          vals (set (map norm (mapcat (fn [r] (keep #(when (string? (:value %)) (:value %)) (:assertions r))) records)))
+          texts (for [[_ nm t] (re-seq #"<lido:(\w+)[^>]*>([^<]+)</lido:\1>" xml)
+                      :let [t (norm (str/trim t))] :when (and (seq t) (not (str/includes? t "&")))]
+                  [nm t])
+          actors (mapcat (fn [r] (keep #(when (= :lido/actor (:predicate %)) (:value/fields (:value %))) (:assertions r))) records)]
+      (is (= 6 (count records)))
+      (is (empty? (remove (fn [[nm t]] (or (vals t) (lost (keyword "lido" nm)))) texts)))
+      (testing "an inventor and engraver is a creator, with both roles; so is each of two draughtsmen"
+        (is (some #(and (= "Dürer, Albrecht" (:name %)) (= "inventor; engraver" (:role %)) (= "creator" (:responsibility %))) actors))
+        (is (= #{"Anonym" "Rodin, Auguste" "Roche, Odilon"}
+               (set (keep #(when (and (= "draughtsman" (:role %)) (= "creator" (:responsibility %))) (:name %)) actors)))))
+      (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
+        (is (empty? (:unaccounted (fidelity/audit {:from :oai :opts {:metadata-prefix "lido"} :to to :source xml}))) (str to))))))
+
+(deftest a-title-keeps-its-language
+  (testing "each title with the language its record states, its own or the descriptive metadata's (post-audit 4, F7)"
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>L-1</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"de\">"
+                   "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet>"
+                   "<lido:appellationValue>Ein Fisch</lido:appellationValue><lido:appellationValue xml:lang=\"en\">A Fish</lido:appellationValue>"
+                   "</lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>")
+          {:keys [records]} (convert/to-wemi :lido {} xml)]
+      (is (= #{{:content "Ein Fisch" :lang "de"} {:content "A Fish" :lang "en"}}
+             (set (keep #(when (= :lido/title-name (:predicate %)) (:value/fields (:value %))) (:assertions (first records)))))))))
+
+(defn- missing [xml]
+  (set (keep #(when (= :lido/missing-required (:code %)) (get-in % [:detail :lido/element]))
+             (:diagnostics (validate/validate {:from :lido :source xml :policy :errors-and-warnings})))))
+
+(deftest what-lido-requires-is-checked
+  (testing "a record that lacks what the LIDO schema requires says so, element by element (post-audit 4, F7)"
+    (is (= #{"descriptiveMetadata" "administrativeMetadata"}
+           (missing "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>V-1</lido:lidoRecID></lido:lido>")))
+    (is (= #{"lidoRecID" "descriptiveMetadata/@xml:lang" "descriptiveMetadata/objectClassificationWrap/objectWorkTypeWrap/objectWorkType"
+             "administrativeMetadata/@xml:lang" "administrativeMetadata/recordWrap/recordType"
+             "administrativeMetadata/recordWrap/recordSource"}
+           (missing (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:descriptiveMetadata>"
+                         "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                         "</lido:descriptiveMetadata><lido:administrativeMetadata><lido:recordWrap><lido:recordID>r</lido:recordID></lido:recordWrap></lido:administrativeMetadata></lido:lido>")))))
+  (testing "the Städel's records, valid LIDO, are said to lack nothing"
+    (doseq [f ["test/fixtures/documentary/lido/staedel-oai-lido-sample.xml" graphics]]
+      (is (empty? (filter #(= :lido/missing-required (:code %)) (mapcat :diagnostics (:records (convert/to-wemi :oai {:metadata-prefix "lido"} (slurp f)))))) f))))
+
+(deftest what-lido-requires-is-checked-everywhere
+  (testing "every descriptive metadata needs its language, every event its type, every actor its name (F7 review)"
+    (is (= #{"descriptiveMetadata/@xml:lang" "descriptiveMetadata/eventWrap/eventSet/event/eventType"
+             "descriptiveMetadata/eventWrap/eventSet/event/eventActor/actorInRole/actor/nameActorSet"}
+           (set (filter #(re-find #"lang|event" %)
+                        (missing (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>V-2</lido:lidoRecID>"
+                                      "<lido:descriptiveMetadata xml:lang=\"de\"><lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata>"
+                                      "<lido:descriptiveMetadata><lido:eventWrap><lido:eventSet><lido:event>"
+                                      "<lido:eventActor><lido:actorInRole><lido:actor><lido:actorID>x</lido:actorID></lido:actor></lido:actorInRole></lido:eventActor>"
+                                      "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")))))))
+  (testing "an empty xml:lang says no language"
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>L-3</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"de\">"
+                   "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue xml:lang=\"\">X</lido:appellationValue>"
+                   "</lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>")]
+      (is (empty? (filter #(= :lido/title-name (:predicate %)) (:assertions (first (:records (convert/to-wemi :lido {} xml))))))))))

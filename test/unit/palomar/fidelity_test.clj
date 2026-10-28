@@ -133,3 +133,28 @@
                                (fn [f] (fn [r] (remove #(re-find #"Seller|1899|other than the production" (str (:message %))) (f r)))))
                 {:keys [unaccounted]} (with-redefs-fn {#'convert/exporters broken} #(fidelity/audit {:from :lido :to to :source xml}))]
             (is (some #(= "Zyxwvut Seller" (:value %)) unaccounted) (str to))))))))
+
+(deftest a-loss-about-one-value-does-not-cover-its-siblings
+  (testing "subjects with no URI, reported, do not hide a subject with one whose label is dropped (F7 review)"
+    (let [real   @#'convert/exporters
+          broken (update real :linked-art assoc :render
+                         (fn [r] (str/replace ((get-in real [:linked-art :render]) r) "\"_label\":\"widow\"" "\"_label\":\"\"")))
+          {:keys [unaccounted]} (with-redefs-fn {#'convert/exporters broken} #(audit :lido :linked-art))]
+      (is (some #(and (= :lido/subject-concept (:predicate %)) (= "widow" (:value %))) unaccounted)))))
+
+(deftest a-short-field-is-not-found-by-chance
+  (testing "a part is found as a word of the output, not inside another word (F7 review)"
+    (let [xml    (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>B-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                      "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap>"
+                      "<lido:repositoryWrap><lido:repositorySet><lido:workID lido:type=\"inventory number\">16345</lido:workID></lido:repositorySet></lido:repositoryWrap></lido:objectIdentificationWrap>"
+                      "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:term>production</lido:term></lido:eventType>"
+                      "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Maes</lido:appellationValue></lido:nameActorSet>"
+                      "<lido:vitalDatesActor><lido:earliestDate>1634</lido:earliestDate></lido:vitalDatesActor></lido:actor></lido:actorInRole></lido:eventActor>"
+                      "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")
+          real   @#'convert/exporters
+          broken (update real :marc21-object assoc :render
+                         (fn [r] (str/replace ((get-in real [:marc21-object :render]) r) #"<subfield code=\"d\">[^<]*</subfield>" "")))
+          {:keys [unaccounted]} (with-redefs-fn {#'convert/exporters broken} #(fidelity/audit {:from :lido :to :marc21-object :source xml}))]
+      (is (empty? (:unaccounted (fidelity/audit {:from :lido :to :marc21-object :source xml}))))
+      (is (some #(and (= :lido/actor (:predicate %)) (= "1634" (:value %))) unaccounted)
+          "a birth year dropped from 100 $d is not found inside the inventory number 16345"))))

@@ -59,18 +59,26 @@
   {:ead/creator   #{:element}
    :eac/relation  #{:element}
    :lido/event    #{:index :kind}
-   :lido/actor    #{:event :responsibility :type}
+   :lido/actor    #{:event :responsibility}
    :lido/material #{:event :role}
-   :lido/subject-person #{:type}})
+   :lido/subject-person #{}})
+
+(def joined-fields
+  "Fields of a structured native its importer joined from several source
+   values with \"; \" (an actor's roles): each is a source value of its own,
+   which an exporter may write apart (one MARC `$e` per role)."
+  {:lido/actor #{:role}})
 
 (defn structured-values
   "The source values a structured native `a` holds, as `[field value]`: each
-   string field of its value but those `structured-derived` names."
+   string field of its value but those `structured-derived` names, a joined
+   field once per value it joins."
   [{:keys [predicate value]}]
   (when (model/structured-value? value)
     (for [[k v] (:value/fields value)
-          :when (and (string? v) (not (str/blank? v)) (not (contains? (get structured-derived predicate) k)))]
-      [k v])))
+          :when (and (string? v) (not (str/blank? v)) (not (contains? (get structured-derived predicate) k)))
+          v'    (if (contains? (get joined-fields predicate) k) (str/split v #"; ") [v])]
+      [k v'])))
 
 (defn unwritten-fields
   "The losses of an exporter that writes only the fields `written`

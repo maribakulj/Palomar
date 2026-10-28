@@ -71,3 +71,15 @@
       (is (= ["4"] (ind "Twain")) "an LC name is no subject heading: no lcsh code")
       (testing "no #7 field lacks its $2"
         (is (empty? (xp doc "//*[local-name()='datafield'][@ind2='7'][not(*[@code='2'])]")))))))
+
+(deftest prints-drawings-and-photographs-are-graphics
+  (testing "the Städel's graphic arts (real, CC0) are two-dimensional graphics, their creators main entries (post-audit 4, F7)"
+    (let [{:keys [records]} (convert/to-wemi :oai {:metadata-prefix "lido"} (slurp "test/fixtures/documentary/lido/staedel-oai-lido-graphics.xml"))
+          {:keys [output loss]} (convert/export-records :marc21-object records)
+          doc (dom output)]
+      (is (= 6 (count (xp doc "//*[local-name()='leader']"))))
+      (is (every? #(= \k (nth % 6)) (xp doc "//*[local-name()='leader']")) "a drawing, a print, a photograph")
+      (is (some #{"inventor"} (xp doc "//*[local-name()='datafield'][@tag='100'][*[@code='a']='Dürer, Albrecht']/*[@code='e']")))
+      (is (some #{"engraver"} (xp doc "//*[local-name()='datafield'][@tag='100'][*[@code='a']='Dürer, Albrecht']/*[@code='e']")))
+      (testing "the titles' languages, which MARC has no subfield for, are reported"
+        (is (some #(and (= :lido/title-name (get-in % [:detail :loss/source-field])) (str/includes? (:message %) "lang")) loss))))))

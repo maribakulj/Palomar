@@ -250,8 +250,14 @@
                         k (assoc :part? true :field k :whole (:value/fields (:value a))))))
            ;; a part of a structured value may be written inside a larger
            ;; string (life dates in \"1634-1693\", the value printed whole in
-           ;; PROV-O), so it is present when a decoded string contains it
-           part-in (fn [{:keys [value]}] (let [v (norm value)] (some #(str/includes? % v) seen)))
+           ;; PROV-O), so it is present when a decoded string holds it as a
+           ;; word of its own: \"1634\" in \"1634-1693\", not in \"16345\"; a
+           ;; number padded or not (\"850\" in \"0850-12-31\", F7 review)
+           part-in (fn [{:keys [value]}]
+                     (let [v  (norm value)
+                           re (re-pattern (str "(?<![\\p{L}\\p{N}])" (when (re-matches #"\d+" v) "0*")
+                                               (java.util.regex.Pattern/quote v) "(?![\\p{L}\\p{N}])"))]
+                       (some #(re-find re %) seen)))
            klass   (group-by #(cond (if (:part? %) (part-in %) (if rdf? (here? %) (present? seen (:predicate %) (:value %)))) :present
                                     (reported? all (:id record) %)                               :reported
                                     :else                                                        :unaccounted)

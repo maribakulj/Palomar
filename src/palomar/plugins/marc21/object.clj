@@ -49,7 +49,7 @@
        "</datafield>"))
 
 (def ^:private two-dimensional
-  #"(?i)paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|Gemälde|Zeichnung|Druck|peinture|dessin|estampe")
+  #"(?i)paint|drawing|print|photograph|Fotografie|Photographie|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|Gemälde|Zeichnung|Druck|peinture|dessin|estampe")
 
 (defn- leader [record]
   (let [types (concat (strings record :lido/work-type) (strings record :lido/classification))]
@@ -73,7 +73,7 @@
   #{:lido/inventory-number :lido/actor :lido/title :lido/event :lido/event-place :lido/measurements
     :lido/materials :lido/inscription :lido/description :lido/rights-work-type :lido/event-description
     :lido/subject-concept :lido/work-type-concept :lido/classification-concept :lido/repository
-    :lido/resource-url :lido/record-link})
+    :lido/resource-url :lido/record-link :lido/title-name})
 
 (defn ->marcxml
   "`record`, a LIDO object, as a MARC21slim `<record>` describing it."
@@ -146,7 +146,8 @@
                  :message (str (pr-str p) " has no field in the MARC21 object profile (ADR 0053)")}))
      (cov/unwritten-fields record
                            {:lido/actor #{:name :uri :role :birth :death}
-                            :lido/event #{:date}}
+                            :lido/event #{:date}
+                            :lido/title-name #{:content}}
                            "in the MARC21 object profile")
      ;; only the production's actors and date have a field (F5 review)
      (for [a (fields record :lido/actor) :when (not= (:index prod) (:event a))]

@@ -66,6 +66,23 @@
 (defn- name-obj [content] {"type" "Name"
                            "classified_as" [(type-obj aat-primary-name "Primary Name")]
                            "content" content})
+(def ^:private aat-languages
+  "The AAT terms of the languages museum records are written in, by their
+   ISO 639-1 code (post-audit 4, F7)."
+  {"en" ["http://vocab.getty.edu/aat/300388277" "English"]
+   "de" ["http://vocab.getty.edu/aat/300388344" "German"]
+   "fr" ["http://vocab.getty.edu/aat/300388306" "French"]
+   "nl" ["http://vocab.getty.edu/aat/300388256" "Dutch"]
+   "it" ["http://vocab.getty.edu/aat/300388474" "Italian"]
+   "es" ["http://vocab.getty.edu/aat/300389311" "Spanish"]})
+
+(defn- language-obj
+  "The Linked Art `Language` of an `xml:lang` tag, by its primary subtag;
+   nil when it has no AAT term here."
+  [tag]
+  (when-let [[aat label] (aat-languages (str/lower-case (first (str/split (str tag) #"[-_]"))))]
+    {"id" aat "type" "Language" "_label" label}))
+
 (defn- identifier-obj [content] {"type" "Identifier"
                                  "classified_as" [(type-obj aat-system-number "System-Assigned Number")]
                                  "content" content})
@@ -365,6 +382,9 @@
   (let [strs     #(native-strings record %)
         flds     #(native-fields record %)
         titles   (distinct (strs :lido/title))
+        ;; a title's languages, each a Linked Art Language
+        in-langs (fn [nm t] (let [ls (distinct (keep #(when (= t (:content %)) (language-obj (:lang %))) (flds :lido/title-name)))]
+                              (cond-> nm (seq ls) (assoc "language" (vec ls)))))
         events   (sort-by (comp lido/event-order :index) (flds :lido/event))
         actors   (flds :lido/actor)
         mats     (flds :lido/material)
@@ -408,8 +428,8 @@
                           "type"     "HumanMadeObject"
                           "_label"   (or (first titles) (first (strs :lido/inventory-number)) (str (:id record)))}
                    (or (seq titles) (seq (strs :lido/inventory-number)))
-                   (assoc "identified_by" (vec (concat (when (seq titles) [(name-obj (first titles))])
-                                                       (map #(dissoc (name-obj %) "classified_as") (rest titles))
+                   (assoc "identified_by" (vec (concat (when (seq titles) [(in-langs (name-obj (first titles)) (first titles))])
+                                                       (map #(in-langs (dissoc (name-obj %) "classified_as") %) (rest titles))
                                                        (map (fn [n] {"type" "Identifier" "content" n
                                                                      "classified_as" [(type-obj aat-accession "Accession Number")]})
                                                             (strs :lido/inventory-number)))))
@@ -555,7 +575,7 @@
   #{:lido/title :lido/inventory-number :lido/work-type-concept :lido/classification-concept :lido/dimension
     :lido/material :lido/event :lido/actor :lido/event-description :lido/event-place-id :lido/subject-concept
     :lido/rights-work-type :lido/keeper :lido/repository :lido/repository-id :lido/materials :lido/measurements
-    :lido/description :lido/inscription :lido/credit-line :lido/resource})
+    :lido/description :lido/inscription :lido/credit-line :lido/resource :lido/title-name})
 
 (defn- object-losses
   "What a museum object's documents leave out: each LIDO native they do not
@@ -592,15 +612,32 @@
                             :lido/subject-concept  #{:uri :label}
                             :lido/material         #{:uri :label}
                             :lido/rights-work-type #{:uri :label}
-                            :lido/keeper           #{:name :uri}}
+                            :lido/keeper           #{:name :uri}
+                            :lido/title-name       #{:content}}
                            "in the Linked Art object profile (types and units are AAT terms there)")
      (for [p [:lido/work-type-concept :lido/classification-concept]
            c (native-fields record p) :when (nil? (:uri c))]
-       (loss :dropped p (str "type " (pr-str (:label c)) " has no URI: classified_as cannot name it")))
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p :value c
+                 :message (str "type " (pr-str (:label c)) " has no URI: classified_as cannot name it")}))
+     ;; each loss names its own value, so it accounts for no other (F7 review)
+     (for [t (native-fields record :lido/title-name) :when (nil? (language-obj (:lang t)))]
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/title-name :aspect :qualifier :value t :fields [:lang]
+                 :message (str "title language " (pr-str (:lang t)) " has no AAT term here: " (pr-str (:content t)) " is written with no language")}))
+     ;; a material is made_of, a technique the production's, only by a URI
+     (let [prod (:index (first (filter #(= "production" (:kind %)) (native-fields record :lido/event))))]
+       (for [m (native-fields record :lido/material)
+             :let [tq? (= "technique" (:role m))]
+             :when (or (nil? (:uri m)) (and tq? (not= prod (:event m))))]
+         (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/material :value m
+                   :message (str (if tq? "technique " "material ") (pr-str (:label m))
+                                 (if (:uri m) " is not the production's: no event of this profile has a technique"
+                                     (str " has no URI: " (if tq? "technique" "made_of") " cannot name it")))})))
      (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
-       (loss :dropped :lido/keeper (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")))
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/keeper :value k
+                 :message (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")}))
      (for [c (native-fields record :lido/subject-concept) :when (nil? (:uri c))]
-       (loss :dropped :lido/subject-concept (str "subject " (pr-str (:label c)) " has no URI: a VisualItem cannot be about it")))
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/subject-concept :value c
+                 :message (str "subject " (pr-str (:label c)) " has no URI: a VisualItem cannot be about it")}))
      (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
        (loss :dropped :lido/repository (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")))
      ;; only the production says where it took place in this profile
