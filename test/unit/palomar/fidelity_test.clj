@@ -25,7 +25,8 @@
 (deftest every-conversion-accounts-for-every-value
   (testing "for each spoke and each decodable target, every absent value is reported"
     (doseq [from (keys fixtures)
-            to   (sort (fidelity/decodable-targets))]
+            to   (sort (fidelity/decodable-targets))
+            :when (convert/accepts? to (convert/source-resource-type from))]
       (let [{:keys [checked present unaccounted]} (audit from to)]
         (is (pos? checked) (str from " -> " to " checked something"))
         (is (empty? unaccounted)

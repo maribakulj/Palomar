@@ -5,6 +5,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.api :as api]
+            [palomar.convert :as convert]
             [palomar.ir :as ir]
             [palomar.model :as model]))
 
@@ -49,7 +50,8 @@
 (deftest a-conversion-can-resume-from-the-pivot
   (testing "source → edn → target writes what source → target writes"
     (doseq [from (keys fixtures)
-            to   [:ntriples :marc21 :linked-art :trig]]
+            to   [:ntriples :marc21 :linked-art :trig]
+            :when (convert/accepts? to (convert/source-resource-type from))]
       (let [direct  (api/convert {:from from :to to :source (slurp (fixtures from)) :opts (opts from)})
             edn     (:output (api/convert {:from from :to :edn :source (slurp (fixtures from)) :opts (opts from)}))
             resumed (api/convert {:from :edn :to to :source edn})]
@@ -116,11 +118,13 @@
   (testing "whatever the source and the number of records, an XML target writes one well-formed document (post-audit 3, E1)"
     (doseq [from (keys fixtures)
             to   [:marc21 :mods :dc]
+            :when (convert/accepts? to (convert/source-resource-type from))
             :let [{:keys [output records]} (api/convert {:from from :to to :source (slurp (fixtures from)) :opts (opts from)})]
             :when (not (str/blank? output))]
       (is (well-formed? output) (str from " -> " to " (" records " records)"))))
   (testing "a control field holds an identifier, never a printed structure"
     (doseq [from (keys fixtures)
+            :when (convert/accepts? :marc21 (convert/source-resource-type from))
             :let [out (:output (api/convert {:from from :to :marc21 :source (slurp (fixtures from)) :opts (opts from)}))]
             cf  (re-seq #"<controlfield tag=\"001\">([^<]*)</controlfield>" out)]
       (is (not (re-find #"[{}\[\]#]" (second cf))) (str from ": " (second cf))))))

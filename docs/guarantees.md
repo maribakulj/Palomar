@@ -23,7 +23,7 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 
 | Guarantee | Pinned by |
 |-----------|-----------|
-| For the source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O, N-Quads), every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
+| For the source spokes and every decodable target (N-Triples, CRM, CRM-only, JSON-LD, Linked Art, DC, MARC21, MODS, IIIF, PROV-O, N-Quads) that describes the source's kind of resource, every string value of every record is either present in the output or named by a loss diagnostic. No silent loss on the fixture corpus. | `palomar.fidelity-test/every-conversion-accounts-for-every-value` |
 | An exporter that omits a value without reporting it is caught. | `palomar.fidelity-test/a-silent-omission-is-caught` |
 | For the source spokes and the N-Triples, CRM, CRM-only and N-Quads targets, every relation the RDF view expresses (a WEMI link, a CRM or SKOS reference) is written — by its predicate or, in pure CRM, its super-property — or named by a loss. | `palomar.fidelity-test/every-relation-survives-in-the-rdf-outputs` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
@@ -42,6 +42,8 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | A manifest names the code that ran: a changed source file changes its digest, and loading another namespace does not; it names the JVM, Clojure and the resolved dependencies (ADR 0048). | `palomar.manifest-test/the-manifest-names-the-code-that-ran`, `palomar.manifest-test/the-manifest-names-the-runtime-and-the-dependencies` |
 | A publisher or contributor never keys a Work; only a creator (or an agent of unstated role) does. | `palomar.plugins.lrmoo.project-test/a-publisher-alone-does-not-key-a-work` |
 | An original and its translation are one Work and two Expressions. | `palomar.plugins.lrmoo.project-test/an-original-and-its-translation-are-one-work-two-expressions` |
+| A record target refuses a kind of resource it cannot describe (an archival unit or an authority in MARC21, MODS or Linked Art), naming the targets that can; it never writes a field the source's value does not mean (ADR 0049). | `palomar.plugins.ead-test/a-finding-aid-converts-to-every-format-that-describes-it` |
+| A IIIF manifest is exported to Linked Art as the `DigitalObject` it is, validating against `digital.json`; what it presents is not asserted (ADR 0049). | `palomar.eval.linked-art-conformance-test/a-iiif-manifest-is-a-digital-object` |
 | A Manifestation is exported to Linked Art as a text (`LinguisticObject`), only an F5 Item as a physical object; one document per Manifestation and per Item. | `palomar.plugins.lrmoo.linked-art-test/every-manifestation-and-item-gets-its-own-document` |
 | Linked Art output for the MARC21 sample validates against the official `text.json` schema with zero errors. | `palomar.eval.linked-art-conformance-test/our-marc-output-validates-strictly` |
 | A CRM super-class alone (`E89`, `E24`, `E73`) is never downcast to a WEMI entity; it is reported. | `palomar.plugins.lrmoo.crm-import-test/external-crm-super-classes-are-not-downcast` |

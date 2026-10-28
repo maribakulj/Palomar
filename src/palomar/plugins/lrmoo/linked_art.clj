@@ -232,6 +232,38 @@
       m     (assoc "carries" [(cond-> {"id" (text-iri m) "type" "LinguisticObject"}
                                 title (assoc "_label" title))]))))
 
+(def ^:private iiif-presentation "http://iiif.io/api/presentation/3/context.json")
+
+(defn- manifest? [record] (= :iiif/manifest (:kind record)))
+
+(defn- manifest-doc
+  "The Linked Art `DigitalObject` for a IIIF manifest (post-audit 3, E2): the
+   manifest is a digital presentation, which conforms to the IIIF Presentation
+   API and is retrieved at its own URL. What it presents — a book, a painting,
+   a sculpture — the manifest does not say, so no `LinguisticObject` or
+   `HumanMadeObject` is asserted; its labels are the presentation's names, its
+   summary a statement about it, its images its representations. Its
+   metadata's agents are the presented thing's, not the manifest's, and are
+   reported as loss (`export-losses`)."
+  [record]
+  (let [ms     (view/manifestations record)
+        names  (distinct (mapcat #(titles-of record (:id %)) ms))
+        url    (let [s (:source record)] (when (and (string? s) (re-find #"^https?://" s)) s))
+        notes  (canon-vals record :canon/note)
+        digis  (canon-vals record :canon/digital-object)
+        idents (canon-vals record :canon/identifier)]
+    (cond-> {"@context"    context
+             "id"          (or url (some-> (first ms) text-iri) (export/entity-iri (:id record)))
+             "type"        "DigitalObject"
+             "_label"      (or (first names) url "IIIF manifest")
+             "conforms_to" [{"id" iiif-presentation "type" "InformationObject" "_label" "IIIF Presentation API 3"}]}
+      (or (seq names) (seq idents)) (assoc "identified_by" (-> (if (seq names) [(name-obj (first names))] [])
+                                                               (into (map #(dissoc (name-obj %) "classified_as") (rest names)))
+                                                               (into (map identifier-obj idents))))
+      url             (assoc "access_point" [{"id" url "type" "DigitalObject"}])
+      (seq notes)     (assoc "referred_to_by" (mapv note-obj notes))
+      (seq digis)     (assoc "representation" (mapv digital-obj digis)))))
+
 (defn documents
   "The Linked Art JSON-LD documents for `record`'s WEMI view: one
    `LinguisticObject` per Manifestation (a Manifestation is an edition, not a
@@ -240,9 +272,11 @@
    Manifestation; with none or several they cannot be attributed and are
    reported as loss (`export-losses`). Empty for a record with neither."
   [record]
-  (let [ts (texts record)]
-    (into (mapv #(text-doc record % (= 1 (count ts))) ts)
-          (map #(item-doc record %) (view/items record)))))
+  (if (manifest? record)
+    [(manifest-doc record)]
+    (let [ts (texts record)]
+      (into (mapv #(text-doc record % (= 1 (count ts))) ts)
+            (map #(item-doc record %) (view/items record))))))
 
 (defn ->jsonld
   "Render `record`'s WEMI view as Linked Art JSON-LD, one document per line
@@ -296,6 +330,22 @@
                (str (name p) " is record-level but the record has " (count ts)
                     " Manifestations; not attributed to any of them")))))))
 
+(defn- manifest-losses
+  "What a IIIF manifest's `DigitalObject` leaves out: each agent of its
+   metadata (the presented thing's creator or publisher, not the
+   manifest's), and the WEMI entities the projection made, which the
+   presentation is not."
+  [record]
+  (concat
+   (for [nm (distinct (map :name (agents/occurrences record)))]
+     (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/agent
+               :message (str "agent " (pr-str nm) " is the presented thing's, not the IIIF manifest's;"
+                             " not attributed to the DigitalObject")}))
+   (for [e (:entities record)
+         :when (#{:lrmoo/F1_Work :lrmoo/F2_Expression :lrmoo/F3_Manifestation :lrmoo/F5_Item} (:kind e))]
+     (dx/loss {:category :dropped :subject (:id e) :edge :export :source-field (:kind e) :aspect :class
+               :message (str (name (:kind e)) ": a IIIF manifest is a digital presentation; what it presents is not asserted")}))))
+
 (defn export-losses
   "Export-edge loss (ADR 0015): every predicate the Linked Art profile does not
    express (dates, relations, native source predicates), one per distinct
@@ -317,8 +367,8 @@
                              :edge         :export
                              :source-field p
                              :message      (str (pr-str p) " not expressed in the Linked Art profile (V1)")}))))
-      (into (non-creator-losses record))
-      (into (structure-losses record))))
+      (into (if (manifest? record) (manifest-losses record) (non-creator-losses record)))
+      (into (when-not (manifest? record) (structure-losses record)))))
 
 (defn exporter
   "ADR 0007 exporter: render the Linked Art view of `records` (JSON-LD documents,

@@ -44,7 +44,8 @@
    files are byte-for-byte upstream; the normalization lives here, in code, and the
    affected branch is not exercised by our output or the Mona Lisa (both use the
    string `@context`) anyway."
-  (:require [clojure.java.io :as io]
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
@@ -179,3 +180,19 @@
           item (last (str/split-lines (:output (linked-art/exporter {} [rec]))))]
       (is (str/includes? item "\"type\":\"HumanMadeObject\""))
       (is (empty? (errors item)) (str "unexpected error: " (errors item))))))
+
+(def ^:private digital-schema
+  (delay (.getSchema @registry (SchemaLocation/of (str iri-base "digital.json")))))
+
+(deftest a-iiif-manifest-is-a-digital-object
+  (testing "a IIIF manifest is exported as the digital presentation it is, not as a text (post-audit 3, E2)"
+    (let [{:keys [output loss]} (convert/convert {:from :iiif :to :linked-art
+                                                  :source (slurp "test/fixtures/documentary/iiif/manifest_book_simple.json")})
+          doc (json/read-str output)]
+      (is (= "DigitalObject" (get doc "type")))
+      (is (= [] (errors-against digital-schema output)) "it validates strictly against digital.json")
+      (is (= "http://iiif.io/api/presentation/3/context.json" (get-in doc ["conforms_to" 0 "id"])))
+      (is (str/starts-with? (get-in doc ["access_point" 0 "id"]) "https://"))
+      (testing "and nothing is said of what it presents"
+        (is (not (contains? doc "created_by")))
+        (is (some #{:lrmoo/F3_Manifestation} (:source-fields loss)) "the projected Manifestation is reported, not written")))))
