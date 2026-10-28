@@ -84,3 +84,33 @@
 (deftest a-finding-aid-converts-to-every-format
   (doseq [to [:ntriples :crm-only :linked-art :dc :marc21 :mods :trig]]
     (is (string? (:output (convert/convert {:from :ead :to to :source (slurp ead3)}))) (str to))))
+
+(defn- mini-ead
+  "A small EAD3 finding aid with a fonds `F` and one `c01` per unitid of `uids`
+   (nil: a component with no unitid)."
+  [& uids]
+  (str "<ead xmlns=\"http://ead3.archivists.org/schema/\"><control><recordid>FA1</recordid>"
+       "<maintenanceagency><agencycode>FR-X</agencycode></maintenanceagency></control>"
+       "<archdesc level=\"fonds\"><did><unitid>F</unitid><unittitle>Fonds</unittitle></did><dsc>"
+       (apply str (map-indexed (fn [i u] (str "<c01><did>" (when u (str "<unitid>" u "</unitid>"))
+                                              "<unittitle>c" i "</unittitle></did></c01>"))
+                               uids))
+       "</dsc></archdesc></ead>"))
+
+(deftest a-duplicated-unitid-moves-only-its-duplicate
+  (testing "a revision adding a second unit with unitid A leaves every existing id alone (post-audit 2, D4)"
+    (let [before (mapv :id (:records (ead/importer {} (mini-ead "A" "B"))))
+          {:keys [records diagnostics]} (ead/importer {} (mini-ead "A" "B" "A"))
+          after  (mapv :id records)]
+      (is (= before (take 3 after)) "the fonds, the first A and B keep their ids")
+      (is (= 4 (count (distinct after))) "the new A has an id of its own")
+      (testing "and the importer says which id is not durable, and why"
+        (is (some #(and (= :ead/unitid (get-in % [:detail :loss/source-field]))
+                        (= (nth after 3) (:subject %))
+                        (str/includes? (:message %) "\"A\""))
+                  diagnostics)))))
+  (testing "a unit with no unitid is named by its position, and the importer says so"
+    (let [{:keys [records diagnostics]} (ead/importer {} (mini-ead "A" nil))
+          unnamed (:id (last records))]
+      (is (some #(and (= :ead/unitid (get-in % [:detail :loss/source-field])) (= unnamed (:subject %))) diagnostics))
+      (is (not-any? #(= (:id (second records)) (:subject %)) diagnostics) "a unit named by its unitid is durable"))))
