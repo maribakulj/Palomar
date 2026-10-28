@@ -122,3 +122,9 @@
           unnamed (:id (last records))]
       (is (some #(and (= :ead/unitid (get-in % [:detail :loss/source-field])) (= unnamed (:subject %))) diagnostics))
       (is (not-any? #(= (:id (second records)) (:subject %)) diagnostics) "a unit named by its unitid is durable"))))
+
+(deftest the-first-of-duplicates-is-not-said-durable
+  (testing "the first unit of a duplicated unitid keeps its id only while none is inserted before it, and the importer says so (post-audit 4, F6)"
+    (let [{:keys [records diagnostics]} (ead/importer {} (mini-ead "A" "B" "A"))
+          first-a (:id (second records))]
+      (is (some #(and (= first-a (:subject %)) (= :ead/unitid (get-in % [:detail :loss/source-field]))) diagnostics)))))

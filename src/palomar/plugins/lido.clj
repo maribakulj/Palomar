@@ -204,6 +204,16 @@
   (let [read (set (map #(nth % 2) natives))]
     (frequencies (keep (fn [[nm path]] (when-not (read path) nm)) (text-leaves node)))))
 
+(defn number-value
+  "The measurement `s` as a decimal number with a dot, or nil when it is none:
+   a comma is a decimal mark only before one or two digits (\"12,5\"); before
+   three it may separate thousands (\"1,234\"), so such a value is no number
+   (F6 review)."
+  [s]
+  (let [t (str/trim (str s))]
+    (cond (re-matches #"-?\d+(\.\d+)?" t)  t
+          (re-matches #"-?\d+,\d{1,2}" t)  (str/replace t "," "."))))
+
 (defn- inventory? [n] (re-find #"(?i)invent|accession" (or (attr n "type") "")))
 
 (defn- object-natives
@@ -398,14 +408,20 @@
         out   (for [node lidos
                     :let [natives (vec (object-natives node))
                           rec-id (some-> (kid node "lidoRecID") text)
-                          rid    (keyword "lido" (if rec-id
-                                                   (model/encode-name rec-id)
-                                                   (str "h" (model/sha256-hex (pr-str (first node)) 12))))
+                          ;; a local id is unique only within its source: the
+                          ;; institution the lidoRecID's lido:source names is part
+                          ;; of the key (post-audit 4, F6)
+                          src    (some-> (kid node "lidoRecID") (attr "source") str/trim not-empty)
+                          rid    (keyword "lido" (cond
+                                                   (and rec-id src) (str (model/encode-name src) "_-" (model/encode-name rec-id))
+                                                   rec-id           (model/encode-name rec-id)
+                                                   :else            (str "h" (model/sha256-hex (pr-str (first node)) 12))))
                           as     (for [[p v path] natives]
                                    (model/assertion {:subject rid :predicate p :value v
                                                      :provenance (model/provenance {:pass :ingest
                                                                                     :evidence [{:selector {:type :xpath :value path}}]})}))]]
-                {:record (model/record {:id rid :kind :lido/object :source (name rid) :assertions (vec as)})
+                ;; its source identifier is the lidoRecID as written (F6 review)
+                {:record (model/record {:id rid :kind :lido/object :source (or rec-id (name rid)) :assertions (vec as)})
                  :losses (concat
                           (when-not rec-id
                             [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :lido/lidoRecID
@@ -476,10 +492,13 @@
      (mapcat (fn [a]
                (let [{:keys [type value unit]} (fields a)
                      d (model/mint-entity-id :crm/E54_Dimension [(str rid) (str (some-> (model/evidence-of a) first :selector :value))])]
-                 (concat [(entity d :crm/E54_Dimension) (claim obj :crm/P43_has_dimension (model/reference d) a)
-                          (claim d :crm/P90_has_value value a)]
-                         (when unit (typed d :crm/P91_has_unit :crm/E58_Measurement_Unit a {:label unit}))
-                         (when type (typed d :crm/P2_has_type :crm/E55_Type a {:label type})))))
+                 ;; P90 takes a number (E60); a value that is none is said as text
+                 (if-let [n (number-value value)]
+                   (concat [(entity d :crm/E54_Dimension) (claim obj :crm/P43_has_dimension (model/reference d) a)
+                            (claim d :crm/P90_has_value n a)]
+                           (when unit (typed d :crm/P91_has_unit :crm/E58_Measurement_Unit a {:label unit}))
+                           (when type (typed d :crm/P2_has_type :crm/E55_Type a {:label type})))
+                   [(claim obj :crm/P3_has_note (str/join " " (remove nil? [(some-> type (str ":")) value unit])) a)])))
              (of :lido/dimension))
      (for [a (of :lido/measurements)] (claim obj :crm/P3_has_note (:value a) a))
      (for [a (of :lido/description)] (claim obj :crm/P3_has_note (:value a) a))

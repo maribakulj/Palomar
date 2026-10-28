@@ -22,7 +22,9 @@ their EAC-CPF values:
   other name is a see-from tracing (`400`/`410`).
 - **`024` 7# `$2 uri`** for an `entityId` that is an IRI. An `entityId` that
   is no IRI is reported, not written.
-- **`046` for existence dates when they name years.** A person's are birth
+- **`046` for existence dates when they are plain years** (`1802`, `1802-1885`;
+  a qualified date such as "vers 1800, après 1850" stays as written, in `678`,
+  amended post-audit 4, F6). A person's are birth
   and death (`$f`/`$g`); a body's or a family's are start and end (`$s`/`$t`).
   Otherwise the dates go to `678`.
 - **`678` for `biogHist`.** Indicator 0 for a biography, 1 for an

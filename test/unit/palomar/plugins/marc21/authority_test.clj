@@ -56,3 +56,10 @@
   (is (thrown-with-msg? clojure.lang.ExceptionInfo #"cannot describe archival units"
                         (convert/convert {:from :ead :to :marc21-authority
                                           :source (slurp "test/fixtures/documentary/ead/ead3/ead3_multi_level_optimum.xml")}))))
+
+(deftest qualified-dates-are-not-coded
+  (testing "046 takes plain years only; a qualified date stays as written, in 678 (post-audit 4, F6)"
+    (let [xml (str/replace sample "<description>" "<description><existDates><date>vers 1800, après 1850</date></existDates>")
+          doc (out xml)]
+      (is (empty? (xp doc (sf "046" "s"))))
+      (is (= ["vers 1800, après 1850"] (xp doc (sf "678" "a")))))))

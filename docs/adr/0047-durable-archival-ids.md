@@ -30,7 +30,9 @@ review found two gaps:
    leave the user with nothing to curate.
 3. **Every id that is not durable says so.** An `:under-specified` import
    loss is reported on the record itself:
-   - an EAD unit named by its rank, with the duplicated `unitid`;
+   - an EAD unit named by its rank, with the duplicated `unitid`, and the
+     first unit of such a `unitid` too: its id holds only while no unit with
+     the same `unitid` is inserted before it (amended, post-audit 4, F6);
    - an EAD unit named by its position (no `unitid`);
    - a finding aid named by its digest (no `recordid`/`eadid`), as before;
    - an EAC-CPF record named by its digest (no `recordId`).

@@ -62,7 +62,9 @@
         agency (first (strings record :eac/agency-code))
         eid    (first (filter #(nil? (nt/iri-problem %)) (strings record :eac/entity-id)))
         dates  (first (strings record :eac/exist-dates))
-        d046   (when dates (dates-046 t dates))
+        ;; 046 codes plain years: a qualified date (\"vers 1800, après 1850\")
+        ;; would lose what qualifies it, so it stays as written, in 678
+        d046   (when (and dates (re-matches #"\s*\d{4}([\s\-–/]+\d{4})?\s*" dates)) (dates-046 t dates))
         fields (concat
                 (when eid [(datafield "024" "7" " " [["a" eid] ["2" "uri"]])])
                 (when d046 [(datafield "046" " " " " d046)])

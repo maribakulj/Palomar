@@ -338,7 +338,7 @@
   "The Linked Art `Dimension` of a LIDO measurement, or nil when its value is
    no number (\"ca. 5\", \"NaN\") or its unit has no AAT term (`object-losses`)."
   [{:keys [type value unit]}]
-  (let [v (when (re-matches #"-?\d+([.,]\d+)?" (str/trim (str value))) (parse-double (str/replace (str/trim value) "," ".")))
+  (let [v (some-> (lido/number-value value) parse-double)
         [uid ulabel] (get units (some-> unit str/lower-case))
         [tid tlabel] (get dimension-types (some-> type str/lower-case))]
     (when (and v uid)
