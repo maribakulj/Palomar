@@ -107,13 +107,18 @@
   "A LIDO event type → the event's kind: the events that make the object are
    its production; an acquisition changes its ownership."
   {"production" :production "creation" :production "designing" :production "execution_of_design" :production
-   "carrier_production" :production "acquisition" :acquisition})
+   "carrier_production" :production "acquisition" :acquisition
+   ;; what changes the object without making it (post-audit 5, G1)
+   "restoration" :modification "modification" :modification "part_addition" :modification
+   "part_removal" :modification})
 
 (def ^:private kind-labels
   "Event type terms, in the languages LIDO records use, when no URI says it."
   {"production" :production "herstellung" :production "entstehung" :production "création" :production
    "creation" :production "acquisition" :acquisition "erwerb" :acquisition "erwerbung" :acquisition
-   "zugang" :acquisition})
+   "zugang" :acquisition "produktion" :production "fabrication" :production "restoration" :modification "restauration" :modification "restaurierung" :modification
+   "conservation" :modification "konservierung" :modification "modification" :modification
+   "veränderung" :modification})
 
 (defn- event-kind [c terms]
   (or (some-> (:uri c) term-name event-kinds)
@@ -515,13 +520,34 @@
 
 (defn- fields [a] (when (model/structured-value? (:value a)) (:value/fields (:value a))))
 
+(defn production-keys
+  "The keys of the events, among the structured `events`, that make the
+   object (a production, a designing, a creation…): their materials are the
+   object's (post-audit 5, G1 review)."
+  [events]
+  (set (keep #(when (= "production" (:kind %)) (:index %)) events)))
+
+(defn of-production?
+  "True when a native read at event key `k` (nil: in no event) is said of the
+   object itself: it is in no event, or in one of the `production-keys` `ks`."
+  [ks k]
+  (or (nil? k) (contains? ks k)))
+
+(defn- production-event?
+  "True when the event of key `n` among `events` is a production, or when no
+   event is known for it (a value read outside any event)."
+  [events n]
+  (let [[f] (get events n)] (or (nil? f) (= "production" (:kind f)))))
+
 (defn- runner
   "An object's CIDOC CRM view: an `E22_Human-Made_Object` with its titles,
    types (`P2_has_type`, an `E55_Type` named by its concept URI), inventory
    number, dimensions (`P43` → `E54_Dimension`, `P90` value, `P91` unit),
    production (`P108i` → `E12_Production`, `P14` its actors, `P4` its
    time-span, `P32` its techniques, and `P45` the object's materials), keeper
-   (`P50` → the repository's `E74_Group`), subjects (`P62_depicts`), images
+   (`P50` → the repository's `E74_Group`), a restoration or other
+   modification (`P31i` → `E11_Modification`, `P126` the materials it
+   employed: never the object's, post-audit 5, G1), subjects (`P62_depicts`), images
    (`P138i_has_representation` → `E36_Visual_Item`) and rights (`P104`), all
    `:asserted`: the record's own statements."
   [record]
@@ -568,7 +594,8 @@
      ;; and the object's materials
      (mapcat
       (fn [[n [f a]]]
-        (let [in (fn [p] (filter #(= n (:event (fields %))) (of p)))
+        (let [f* f
+              in (fn [p] (filter #(= n (:event (fields %))) (of p)))
               ;; P14 and P32 have E7 as domain: an event someone carried out,
               ;; or one with a technique, or of an activity type, is an
               ;; E7_Activity; any other stays an E5_Event (post-audit 4, F1)
@@ -578,6 +605,7 @@
               [kind via] (case (:kind f)
                            "production"  [:crm/E12_Production :crm/P108i_was_produced_by]
                            "acquisition" [:crm/E8_Acquisition :crm/P24i_changed_ownership_through]
+                           "modification" [:crm/E11_Modification :crm/P31i_was_modified_by]
                            (if activity?
                              [:crm/E7_Activity :crm/P12i_was_present_at]
                              [:crm/E5_Event :crm/P12i_was_present_at]))
@@ -597,16 +625,28 @@
                              [(entity ag kind uri) (claim e :crm/P14_carried_out_by (model/reference ag) a)
                               (claim ag :crm/P190_has_symbolic_content name a)]))
                    (in :lido/actor))
+           ;; a material is what the object consists of only when its
+           ;; production used it; a modification employed it; of any other
+           ;; event, nothing is said of it (post-audit 5, G1)
            (mapcat (fn [a] (let [f (fields a)]
-                             (if (= "technique" (:role f))
-                               (typed e :crm/P32_used_general_technique :crm/E55_Type a f)
-                               (typed obj :crm/P45_consists_of :crm/E57_Material a f))))
+                             (cond
+                               (= "technique" (:role f))      (typed e :crm/P32_used_general_technique :crm/E55_Type a f)
+                               (= "production" (:kind f*))    (typed obj :crm/P45_consists_of :crm/E57_Material a f)
+                               (= "modification" (:kind f*))  (typed e :crm/P126_employed :crm/E57_Material a f)
+                               :else [{:kind :diagnostic
+                                       :value (dx/loss {:category :dropped :subject rid :edge :projection :source-field :lido/material :value f
+                                                        :message (str "material " (pr-str (:label f)) " of a " (:kind f*)
+                                                                      " event: neither the object's nor employed by a modification, not projected")})}])))
                    (in :lido/material))
+           ;; the materials as displayed, of the production, are the object's;
+           ;; any other event's are a note on that event
+           (when-not (= "production" (:kind f*))
+             (for [a (of :lido/materials) :when (= n (event-key a))] (claim e :crm/P3_has_note (:value a) a)))
            (for [a (of :lido/event-description) :when (= n (event-key a))] (claim e :crm/P3_has_note (:value a) a))
            (mapcat (fn [a] (typed e :crm/P7_took_place_at :crm/E53_Place a {:uri (:value a)}))
                    (filter #(= n (event-key %)) (of :lido/event-place-id))))))
       (sort-by (comp event-order key) events))
-     (for [a (of :lido/materials)] (claim obj :crm/P3_has_note (:value a) a))
+     (for [a (of :lido/materials) :when (production-event? events (event-key a))] (claim obj :crm/P3_has_note (:value a) a))
      (mapcat (fn [a] (let [{:keys [name uri]} (fields a)
                            g (model/mint-entity-id :crm/E74_Group (or uri [(str rid) name]))]
                        [(entity g :crm/E74_Group uri)

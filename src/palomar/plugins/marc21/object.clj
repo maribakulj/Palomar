@@ -111,7 +111,11 @@
                      (when (or (seq places) (:date prod))
                        [(datafield "264" " " "0" (concat (for [pl places] ["a" pl]) [["c" (:date prod)]]))])))
                  (for [v (strings record :lido/measurements)] (datafield "300" " " " " [["c" v]]))
-                 (for [v (strings record :lido/materials)] (datafield "340" " " " " [["a" v]]))
+                 ;; the production's materials, or those of no event: never a
+                 ;; restoration's (post-audit 5, G1)
+                 (for [a (in-force record :lido/materials)
+                       :when (and (string? (:value a)) (lido/of-production? (lido/production-keys events) (lido/event-key a)))]
+                   (datafield "340" " " " " [["a" (:value a)]]))
                  (for [v (strings record :lido/inscription)] (datafield "500" " " " " [["a" v]]))
                  (for [v (strings record :lido/description)] (datafield "520" " " " " [["a" v]]))
                  (for [{:keys [uri label]} (fields record :lido/rights-work-type)] (datafield "540" " " " " [["a" label] ["u" uri]]))
@@ -149,6 +153,10 @@
                             :lido/event #{:date}
                             :lido/title-name #{:content}}
                            "in the MARC21 object profile")
+     (for [a (in-force record :lido/materials)
+           :when (and (string? (:value a)) (not (lido/of-production? (lido/production-keys (fields record :lido/event)) (lido/event-key a))))]
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
+                 :message (str "materials " (pr-str (:value a)) " of another event than the production are not the object's: no field")}))
      ;; only the production's actors and date have a field (F5 review)
      (for [a (fields record :lido/actor) :when (not= (:index prod) (:event a))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
