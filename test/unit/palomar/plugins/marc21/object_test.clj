@@ -114,3 +114,19 @@
       (is (not (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source (rec42 src)})) "tag=\"003\"")) src))
     (is (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source (rec42 "https://ld.zdb-services.de/resource/organisations/DE-Mb112/")}))
                        "<controlfield tag=\"003\">DE-Mb112</controlfield>"))))
+
+(deftest an-unknown-type-is-not-said-three-dimensional-silently
+  (testing "Leader/06 r for a three-dimensional artefact or a natural object; a type it cannot tell is reported (post-audit 5, G4)"
+    (let [rec (fn [t] (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>K-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                           "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>" t "</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                           "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                           "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:term>production</lido:term></lido:eventType></lido:event></lido:eventSet></lido:eventWrap>"
+                           "</lido:descriptiveMetadata></lido:lido>"))
+          ldr (fn [t] (nth (second (re-find #"<leader>([^<]+)</leader>" (:output (convert/convert {:from :lido :to :marc21-object :source (rec t)})))) 6))
+          undetermined? (fn [t] (let [{:keys [records]} (convert/to-wemi :lido {} (rec t))]
+                                  (some #(str/includes? (str (:message %)) "Leader/06") (:loss (convert/export-records :marc21-object records)))))]
+      (is (= \k (ldr "Zeichnung")))
+      (is (= \r (ldr "Skulptur")))
+      (is (not (undetermined? "Skulptur")))
+      (is (= \r (ldr "Ding")))
+      (is (undetermined? "Ding") "a type it cannot tell is reported, not silently three-dimensional"))))

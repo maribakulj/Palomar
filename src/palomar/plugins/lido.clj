@@ -551,6 +551,41 @@
   [ks k]
   (or (nil? k) (contains? ks k)))
 
+(def artefact-terms
+  "Work type and classification terms that say an object was made: a
+   painting, a drawing, a print, a sculpture, a vessel… English and French
+   words from their start, German stems anywhere in a compound
+   (\"Ölgemälde\", \"Farbholzschnitt\") (post-audit 5, G4)."
+  #"(?i)(?<!\p{L})(?:paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|installation|sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|manuscript|book|tool|weapon|armou?r|clock|instrument|model|peinture|dessin|estampe|gravure|tableau|objet d'art|affiche|meuble|céramique|tissu|vêtement|monnaie)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|druck|stich|radierung|schnitt|lithographie|lithografie|fotografie|photographie|plakat|skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|handschrift|buch|werkzeug|waffe|uhr|instrument|modell)")
+
+(def natural-terms
+  "Work type and classification terms that name a natural object: a fossil, a
+   mineral, a specimen. They veto any artefact term (post-audit 5, G4 review)."
+  #"(?i)fossil|mineral|specimen|spécimen|minéral|naturalia|herbar|präparat|praeparat|gestein|meteorit|(?<!\p{L})(?:rock|shell|sample|skeleton|insect|taxiderm|roche|coquillage|échantillon)|muschel|skelett|insekt|probe(?!\p{L})")
+
+(defn- type-terms [record]
+  (keep #(when (and (#{:lido/work-type :lido/classification} (:predicate %)) (string? (:value %))
+                    (not (model/out-of-force? %)))
+           (:value %))
+        (:assertions record)))
+
+(defn natural?
+  "True when a work type or classification of `record` names a natural object."
+  [record]
+  (boolean (some #(re-find natural-terms %) (type-terms record))))
+
+(defn human-made?
+  "True when `record` says its object was made: it has a production (or a
+   designing, a creation), or a work type or classification that names an
+   artefact, and none names a natural object. A record that says neither (a
+   fossil, a mineral, a specimen) is not said to be human-made (post-audit 5,
+   G4)."
+  [record]
+  (and (not (natural? record))
+       (boolean (or (some #(and (= :lido/event (:predicate %)) (not (model/out-of-force? %)) (= "production" (:kind (fields %))))
+                          (:assertions record))
+                    (some #(re-find artefact-terms %) (type-terms record))))))
+
 (defn- production-event?
   "True when the event of key `n` among `events` is a production, or when no
    event is known for it (a value read outside any event)."
@@ -578,14 +613,26 @@
                                                                         :provenance (model/provenance (prov a))})})
         entity (fn [id kind & [iri]] {:kind :entity :value (model/entity (cond-> {:id id :kind kind :provenance (model/provenance (prov nil))}
                                                                            iri (assoc :iri iri)))})
-        obj    (model/mint-entity-id :crm/E22_Human-Made_Object [(str rid)])
+        ;; a human-made object only when the record says it was made; else
+        ;; a physical object, and that is reported (post-audit 5, G4)
+        made?  (human-made? record)
+        okind  (if made? :crm/E22_Human-Made_Object :crm/E19_Physical_Object)
+        obj    (model/mint-entity-id okind [(str rid)])
+        unsaid (fn [p msg] (for [a (of p)]
+                             {:kind :diagnostic
+                              :value (dx/loss (cond-> {:category :dropped :subject rid :edge :projection :source-field p :message msg}
+                                                (fields a) (assoc :value (fields a))))}))
         typed  (fn [s p kind a {:keys [uri label]}]
                  (let [t (model/mint-entity-id kind (if uri uri [(str rid) label]))]
                    (concat [(entity t kind uri) (claim s p (model/reference t) a)]
                            (when label [(claim t :crm/P190_has_symbolic_content label a)]))))
         events (into {} (for [a (of :lido/event) :let [f (fields a)]] [(:index f) [f a]]))]
     (concat
-     [(entity obj :crm/E22_Human-Made_Object)]
+     [(entity obj okind)]
+     (when-not made?
+       [{:kind :diagnostic
+         :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/object :aspect :class
+                          :message "the record says of no production nor work type that the object was made: an E19_Physical_Object, not an E22_Human-Made_Object"})}])
      (for [a (of :lido/title)] (claim obj :crm/P190_has_symbolic_content (:value a) a))
      (mapcat #(typed obj :crm/P2_has_type :crm/E55_Type % (fields %)) (of :lido/work-type-concept))
      (mapcat #(typed obj :crm/P2_has_type :crm/E55_Type % (fields %)) (of :lido/classification-concept))
@@ -673,13 +720,18 @@
                         (claim obj :crm/P50_has_current_keeper (model/reference g) a)
                         (claim g :crm/P190_has_symbolic_content name a)]))
              (of :lido/keeper))
-     (mapcat #(typed obj :crm/P62_depicts :crm/E55_Type % (fields %)) (of :lido/subject-concept))
-     (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
-                           kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
-                           pe   (model/mint-entity-id kind (or uri [(str rid) name]))]
-                       [(entity pe kind uri) (claim obj :crm/P62_depicts (model/reference pe) a)
-                        (claim pe :crm/P190_has_symbolic_content name a)]))
-             (of :lido/subject-person))
+     ;; only a human-made thing depicts (P62's domain is E24)
+     (if made?
+       (concat
+        (mapcat #(typed obj :crm/P62_depicts :crm/E55_Type % (fields %)) (of :lido/subject-concept))
+        (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
+                              kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
+                              pe   (model/mint-entity-id kind (or uri [(str rid) name]))]
+                          [(entity pe kind uri) (claim obj :crm/P62_depicts (model/reference pe) a)
+                           (claim pe :crm/P190_has_symbolic_content name a)]))
+                (of :lido/subject-person)))
+       (concat (unsaid :lido/subject-concept "a subject of an object not said to be human-made: P62_depicts takes an E24, not projected")
+               (unsaid :lido/subject-person "a person depicted by an object not said to be human-made: P62_depicts takes an E24, not projected")))
      (mapcat (fn [a] (let [{:keys [url]} (fields a)
                            v (model/mint-entity-id :crm/E36_Visual_Item url)]
                        [(entity v :crm/E36_Visual_Item url) (claim obj :crm/P138i_has_representation (model/reference v) a)]))

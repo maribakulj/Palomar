@@ -253,6 +253,7 @@
 
 (deftest a-language-with-no-aat-term-is-reported
   (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>L-2</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"la\">"
+                 "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>engraving</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
                  "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>Melencolia</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
                  "</lido:descriptiveMetadata></lido:lido>")
         {:keys [records]} (convert/to-wemi :lido {} xml)

@@ -54,7 +54,16 @@ an acquisition history.
    - The canonical floor gets only what a generic description says of an
      object: titles, the production's actors as creators, its date, the
      inventory number, the description and the images.
-3. **The CIDOC CRM view.** The projection makes an `E22_Human-Made_Object` with:
+3. **The CIDOC CRM view.** The projection makes an `E22_Human-Made_Object`
+   only when the record says the object was made: it has a production (or a
+   designing, a creation), or a work type or classification that names an
+   artefact (a painting, a print, a sculpture…, in English, French or German,
+   compounds included), and none names a natural object (a fossil, a mineral,
+   a specimen), which vetoes it. Otherwise it is an `E19_Physical_Object`,
+   and that is reported. A type given only by a URI does not attest it: the
+   lists of terms are the profile's limit. Such an object depicts nothing (`P62`'s domain is
+   `E24`): its subjects are reported, not projected (amended, post-audit 5,
+   G4). The object has:
    - its titles;
    - its types (`P2` → `E55_Type`, named by the concept URI);
    - its inventory number (`E42_Identifier`);
@@ -86,7 +95,12 @@ an acquisition history.
      description (`P3`) and, for a production, its techniques (`P32`).
    - An actor or a place with an authority URI (GND) is that node.
    - Without one, the actor or place is scoped to the record (ADR 0041).
-4. **The Linked Art view.** The object becomes a `HumanMadeObject`, plus the
+4. **The Linked Art view.** Linked Art has no class but `HumanMadeObject`
+   for a physical object. An object its record names a natural one is not
+   exported, and every value of it is reported; one its record merely does
+   not say was made is written as a `HumanMadeObject`, and that its class is
+   unattested is reported (amended, post-audit 5, G4).
+   The object becomes a `HumanMadeObject`, plus the
    `VisualItem` it `shows`, which is `about` the subjects and `subject_to` the
    work's rights. Linked Art places those there, not on the object.
    - The inventory number becomes an Accession Number.

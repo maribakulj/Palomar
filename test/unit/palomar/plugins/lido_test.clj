@@ -234,6 +234,7 @@
 
 (deftest a-depicted-group-is-a-group
   (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>G-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                 "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>painting</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
                  "<lido:objectRelationWrap><lido:subjectWrap><lido:subjectSet><lido:subject><lido:subjectActor>"
                  "<lido:actor lido:type=\"organization\"><lido:nameActorSet><lido:appellationValue>Guild of St Luke</lido:appellationValue></lido:nameActorSet></lido:actor>"
                  "</lido:subjectActor></lido:subject></lido:subjectSet></lido:subjectWrap></lido:objectRelationWrap></lido:descriptiveMetadata></lido:lido>")
@@ -403,3 +404,53 @@
         (let [out (:output (convert/convert {:from :lido :to :ntriples :source (one-event code term "Kurator")}))]
           (is (str/includes? out "cidoc-crm/E7_Activity") (str code " " term))
           (is (str/includes? out "P14_carried_out_by") (str code " " term)))))))
+
+(def ^:private fossil
+  "A fossil, found by a collector: nothing says anyone made it."
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>N-1</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"en\">"
+       "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>fossil</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+       "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>Ammonite</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+       "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/lido00002</lido:conceptID></lido:eventType>"
+       "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Mary Anning</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"
+       "</lido:event></lido:eventSet></lido:eventWrap>"
+       "<lido:objectRelationWrap><lido:subjectWrap><lido:subjectSet><lido:subject><lido:subjectConcept><lido:conceptID>http://vocab.getty.edu/aat/300011074</lido:conceptID><lido:term>shell</lido:term></lido:subjectConcept></lido:subject></lido:subjectSet></lido:subjectWrap></lido:objectRelationWrap>"
+       "</lido:descriptiveMetadata></lido:lido>"))
+
+(deftest only-what-was-made-is-human-made
+  (testing "an object is an E22_Human-Made_Object only when its record says it was made; else an E19_Physical_Object (post-audit 5, G4)"
+    (let [nt  (:output (convert/convert {:from :lido :to :ntriples :source fossil}))
+          {:keys [records]} (convert/to-wemi :lido {} fossil)
+          prj (mapcat :diagnostics records)
+          la  (convert/export-records :linked-art records)]
+      (is (str/includes? nt "cidoc-crm/E19_Physical_Object"))
+      (is (not (str/includes? nt "E22_Human-Made_Object")))
+      (is (not (str/includes? nt "P62_depicts")) "only a human-made thing depicts (P62's domain is E24)")
+      (is (empty? (violations fossil)))
+      (is (some #(= :class (get-in % [:detail :loss/aspect])) prj) "that it is not said to be human-made is reported")
+      (testing "Linked Art, which has only HumanMadeObject, does not call it one"
+        (is (str/blank? (:output la)))
+        (is (some #(= :class (get-in % [:detail :loss/aspect])) (:loss la))))
+      (doseq [to [:ntriples :crm :dc :marc21-object :linked-art]]
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source fossil}))) (str to)))))
+  (testing "a painting with no production event is human-made by its work type"
+    (let [xml (str/replace fossil #"<lido:term>fossil</lido:term>" "<lido:term>Gemälde</lido:term>")]
+      (is (str/includes? (:output (convert/convert {:from :lido :to :ntriples :source xml})) "E22_Human-Made_Object"))))
+  (testing "every Städel record is human-made"
+    (is (not (str/includes? (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :ntriples :source (slurp graphics)}))
+                            "E19_Physical_Object")))))
+
+(deftest what-is-made-is-told-in-many-tongues
+  (testing "German compounds and other artefacts are human-made; a natural term vetoes; an object of no stated kind stays in Linked Art (G4 review)"
+    (let [rec  (fn [t] (str/replace (str/replace fossil #"<lido:term>fossil</lido:term>" (str "<lido:term>" t "</lido:term>"))
+                                    #"lido00002" "lido00001"))
+          crm  (fn [t] (:output (convert/convert {:from :lido :to :ntriples :source (rec t)})))]
+      (doseq [t ["Kupferstich" "Ölgemälde" "Keramik" "Handschrift" "poster" "Farbholzschnitt"]]
+        (is (str/includes? (crm t) "E22_Human-Made_Object") t))
+      (doseq [t ["porcelain crab specimen" "Mineral" "fossil shell"]]
+        (is (str/includes? (crm t) "E19_Physical_Object") t))
+      (testing "a type no list knows: an E19 in CIDOC CRM, but still a HumanMadeObject in Linked Art, its class reported"
+        (let [{:keys [records]} (convert/to-wemi :lido {} (rec "Ding"))
+              {:keys [output loss]} (convert/export-records :linked-art records)]
+          (is (str/includes? (crm "Ding") "E19_Physical_Object"))
+          (is (str/includes? output "HumanMadeObject"))
+          (is (some #(and (= :class (get-in % [:detail :loss/aspect])) (= :lido/object (get-in % [:detail :loss/source-field]))) loss)))))))

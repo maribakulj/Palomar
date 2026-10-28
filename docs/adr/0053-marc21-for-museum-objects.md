@@ -20,7 +20,11 @@ because its fields would say "published".
 LIDO values:
 - **Leader/06** is `k` when a work type or classification names a
   two-dimensional graphic (painting, drawing, print, photograph, in English,
-  German or French, "Fotografie" included: amended, post-audit 4, F7), else `r`. Leader/07 is `m`.
+  German or French, "Fotografie" included: amended, post-audit 4, F7); `r`
+  when one names a three-dimensional artefact (a sculpture, a vessel…) or a
+  natural object (a fossil, a mineral). When no type
+  says which, `r` is assumed and that is reported (amended, post-audit 5,
+  G4). Leader/07 is `m`.
 - **`001`** is the record's stable id. The inventory number goes to `099 $a`.
 - **`003`** names whose `001` it is: the `lido:source` of the `lidoRecID`
   when it is an ISIL, or the ISIL a ZDB organisation URI ends with. Any other

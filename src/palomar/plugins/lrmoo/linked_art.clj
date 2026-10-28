@@ -371,7 +371,7 @@
         tid (assoc "classified_as" [(type-obj tid tlabel)])))))
 
 (defn- object-id [record]
-  (export/entity-iri (or (some #(when (= :crm/E22_Human-Made_Object (:kind %)) (:id %)) (:entities record))
+  (export/entity-iri (or (some #(when (#{:crm/E22_Human-Made_Object :crm/E19_Physical_Object} (:kind %)) (:id %)) (:entities record))
                          (:id record))))
 
 (defn- visual-iri [record] (str (object-id record) "/visual"))
@@ -507,7 +507,9 @@
   [record]
   (cond
     (manifest? record) [(manifest-doc record)]
-    (object? record)   (object-docs record)
+    ;; Linked Art has no class but HumanMadeObject: an object its record names
+    ;; a natural one (a fossil, a mineral) is not called one (post-audit 5, G4)
+    (object? record)   (if (lido/natural? record) [] (object-docs record))
     :else
     (let [ts (texts record)]
       (into (mapv #(text-doc record % (= 1 (count ts))) ts)
@@ -672,9 +674,17 @@
    [subject predicate]; one per agent left out (`non-creator-losses`); and the
    structural losses (`structure-losses`)."
   [record]
-  (if (object? record)
-    (object-losses record)
-    (non-object-losses record)))
+  (cond
+    (and (object? record) (lido/natural? record))
+    (for [p (distinct (map :predicate (:assertions record)))]
+      (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p :aspect :class
+                :message (str (pr-str p) ": the record names a natural object, and Linked Art has no class but HumanMadeObject: not exported")}))
+    (object? record)
+    (cond-> (vec (object-losses record))
+      (not (lido/human-made? record))
+      (conj (dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :lido/object :aspect :class
+                      :message "the record does not say the object was made: written as a HumanMadeObject, Linked Art's only class for a physical object"})))
+    :else            (non-object-losses record)))
 
 (defn- non-object-losses
   "The losses of a bibliographic record or a IIIF manifest (see `export-losses`)."
