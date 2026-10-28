@@ -36,7 +36,13 @@ LIDO values:
 - **Concepts:**
   - subjects `650` #7, work types then classifications `655` #7;
   - each with `$0` its URI and `$2` its vocabulary (gnd, iconclass, aat,
-    lcsh).
+    lcgft for an LC genre or form);
+  - an LCSH heading (`id.loc.gov/authorities/subjects`) is `#0`, which needs
+    no `$2`; any other LC URI (a name, say) is no subject heading and is `#4`
+    (amended, F4 review);
+  - a concept of a vocabulary with no MARC source code, or with no URI, is
+    `#4` (source not specified), never `#7` without its `$2` (amended,
+    post-audit 4, F4).
 - **Location and links:**
   - the repository `852 $a`;
   - the images `856` 4# and the record's web page `856` 42.

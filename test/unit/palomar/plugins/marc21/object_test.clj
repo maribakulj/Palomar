@@ -45,3 +45,29 @@
   (is (thrown-with-msg? clojure.lang.ExceptionInfo #"cannot describe bibliographic"
                         (convert/convert {:from :marc21 :to :marc21-object
                                           :source (slurp "test/fixtures/documentary/marc21/marcxml/loc_collection.xml")}))))
+
+(deftest a-concept-of-no-known-vocabulary-is-not-said-to-have-one
+  (testing "650/655 #7 only with the vocabulary in $2; otherwise #4, the URI kept in $0 (post-audit 4, F4)"
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>S-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                   "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>Gemälde</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                   "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                   "<lido:objectRelationWrap><lido:subjectWrap><lido:subjectSet><lido:subject>"
+                   "<lido:subjectConcept><lido:term>Hund</lido:term></lido:subjectConcept>"
+                   "<lido:subjectConcept><lido:conceptID>http://vocab.example.org/c/42</lido:conceptID><lido:term>Katze</lido:term></lido:subjectConcept>"
+                   "<lido:subjectConcept><lido:conceptID>http://iconclass.org/34B11</lido:conceptID><lido:term>dog</lido:term></lido:subjectConcept>"
+                   "<lido:subjectConcept><lido:conceptID>http://id.loc.gov/authorities/subjects/sh85038796</lido:conceptID><lido:term>Dogs</lido:term></lido:subjectConcept>"
+                   "<lido:subjectConcept><lido:conceptID>http://id.loc.gov/authorities/names/n79021164</lido:conceptID><lido:term>Twain</lido:term></lido:subjectConcept>"
+                   "</lido:subject></lido:subjectSet></lido:subjectWrap></lido:objectRelationWrap></lido:descriptiveMetadata></lido:lido>")
+          doc (dom (:output (convert/convert {:from :lido :to :marc21-object :source xml})))
+          ind (fn [label] (xp doc (str "//*[local-name()='datafield'][*[@code='a']='" label "']/@ind2")))]
+      (is (= ["4"] (ind "Hund")) "a term with no URI: source not specified")
+      (is (= ["4"] (ind "Katze")) "a URI of no known vocabulary: source not specified")
+      (is (= ["http://vocab.example.org/c/42"] (xp doc "//*[local-name()='datafield'][*[@code='a']='Katze']/*[@code='0']")))
+      (is (= ["7"] (ind "dog")))
+      (is (= ["iconclass"] (xp doc "//*[local-name()='datafield'][*[@code='a']='dog']/*[@code='2']")))
+      (is (= ["4"] (ind "Gemälde")) "the work type with no URI")
+      (is (= ["0"] (ind "Dogs")) "LCSH is ind2 0, with no $2 (F4 review)")
+      (is (empty? (xp doc "//*[local-name()='datafield'][*[@code='a']='Dogs']/*[@code='2']")))
+      (is (= ["4"] (ind "Twain")) "an LC name is no subject heading: no lcsh code")
+      (testing "no #7 field lacks its $2"
+        (is (empty? (xp doc "//*[local-name()='datafield'][@ind2='7'][not(*[@code='2'])]")))))))
