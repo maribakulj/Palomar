@@ -16,7 +16,10 @@
      their role, identifier and life dates;
    - subjects, rights (of the work, the record, each resource), the record's
      own id, type, source and link, and each digital resource;
-   - the object's description and inscriptions.
+   - the object's description and inscriptions;
+   - each title in its language (`:lido/title-name`).
+   What the LIDO schema requires and a record lacks is a warning on the
+   record (`missing-required`); LIDO-MC's own rules are not checked.
    Whatever it does not read is reported, occurrence by occurrence: every
    element holding text whose value no native was read from (related works,
    for one), not a list of names it knows (post-audit 4, F3).
@@ -241,6 +244,14 @@
      (when ident
        (concat
         (strings :lido/title (descend ident "titleWrap" "titleSet" "appellationValue"))
+        ;; each title in its language: its own, else its set's, else the
+        ;; descriptive metadata's (post-audit 4, F7)
+        (for [ts (descend ident "titleWrap" "titleSet")
+              t  (kids ts "appellationValue")
+              ;; an empty xml:lang says no language (F7 review)
+              :let [v (text t) l (some-> (some lang [t ts dm]) str/trim not-empty)]
+              :when (and v l)]
+          [:lido/title-name (model/structured {:content v :lang l}) (second t)])
         (let [repos (descend ident "repositoryWrap" "repositorySet")]
           (concat
            (strings :lido/repository (mapcat #(descend % "repositoryName" "legalBodyName" "appellationValue") repos))
@@ -395,6 +406,49 @@
         (strings :lido/resource-id (descend am "resourceWrap" "resourceSet" "resourceID"))
         (strings :lido/resource-credit (descend am "resourceWrap" "resourceSet" "rightsResource" "creditLine")))))))
 
+(def ^:private required
+  "Elements the LIDO schema (1.0 and 1.1) requires, as `[context child]`:
+   every node reached by the element names `context` from `lido:lido` must
+   have `child` (a path of element names, or `@xml:lang`). These are the
+   schema's main requirements, not all of it."
+  (let [dm  ["descriptiveMetadata"]
+        am  ["administrativeMetadata"]
+        ev  (conj dm "eventWrap" "eventSet" "event")
+        air (conj ev "eventActor" "actorInRole")
+        ms  (conj dm "objectIdentificationWrap" "objectMeasurementsWrap" "objectMeasurementsSet" "objectMeasurements" "measurementsSet")]
+    [[[] ["lidoRecID"]]
+     [[] dm]
+     [dm ["@xml:lang"]]
+     [dm ["objectClassificationWrap" "objectWorkTypeWrap" "objectWorkType"]]
+     [dm ["objectIdentificationWrap" "titleWrap" "titleSet"]]
+     [(conj dm "objectIdentificationWrap" "titleWrap" "titleSet") ["appellationValue"]]
+     [ev ["eventType"]]
+     [air ["actor"]]
+     [(conj air "actor") ["nameActorSet"]]
+     [ms ["measurementType"]]
+     [ms ["measurementUnit"]]
+     [ms ["measurementValue"]]
+     [[] am]
+     [am ["@xml:lang"]]
+     [am ["recordWrap" "recordID"]]
+     [am ["recordWrap" "recordType"]]
+     [am ["recordWrap" "recordSource"]]]))
+
+(defn missing-required
+  "The paths (`context/child`) of `required` that the `lido:lido` `node`
+   lacks, each once: a child is required of every node of its context (each
+   descriptive metadata, each event), and checked only where that context is
+   there. The rest of the schema, and LIDO-MC's own rules (its required
+   elements and vocabularies), are not checked."
+  [node]
+  (distinct
+   (for [[ctx child] required
+         c (apply descend node ctx)
+         :when (if (= ["@xml:lang"] child)
+                 (str/blank? (lang c))
+                 (empty? (apply descend c child)))]
+     (str/join "/" (concat ctx child)))))
+
 (defn importer
   "ADR 0007 importer: one record per `lido:lido` of `source` (see the ns doc)."
   [_opts source]
@@ -420,8 +474,14 @@
                                    (model/assertion {:subject rid :predicate p :value v
                                                      :provenance (model/provenance {:pass :ingest
                                                                                     :evidence [{:selector {:type :xpath :value path}}]})}))]]
-                ;; its source identifier is the lidoRecID as written (F6 review)
-                {:record (model/record {:id rid :kind :lido/object :source (or rec-id (name rid)) :assertions (vec as)})
+                ;; its source identifier is the lidoRecID as written (F6 review);
+                ;; what the LIDO schema requires and the record lacks is a
+                ;; warning on the record, which `validate` reports (post-audit 4, F7)
+                {:record (model/record {:id rid :kind :lido/object :source (or rec-id (name rid)) :assertions (vec as)
+                                        :diagnostics (for [m (missing-required node)]
+                                                       (model/diagnostic {:severity :warning :code :lido/missing-required :subject rid
+                                                                          :message (str "the record lacks " m ", which the LIDO schema requires")
+                                                                          :detail {:lido/element m}}))})
                  :losses (concat
                           (when-not rec-id
                             [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :lido/lidoRecID

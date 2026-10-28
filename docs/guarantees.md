@@ -27,6 +27,9 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | An exporter that omits a value without reporting it is caught. | `palomar.fidelity-test/a-silent-omission-is-caught` |
 | For the source spokes and the N-Triples, CRM, CRM-only and N-Quads targets, every relation the RDF view expresses (a WEMI link, a CRM or SKOS reference) is written — by its predicate or, in pure CRM, its super-property — or named by a loss. | `palomar.fidelity-test/every-relation-survives-in-the-rdf-outputs` |
 | An export that writes a structured value but silently drops one of its fields is caught. | `palomar.fidelity-test/a-silent-loss-inside-a-structured-value-is-caught` |
+| Every value of real LIDO prints, drawings and a photograph (Städel, CC0) is read or reported, and every conversion of them accounts for every value. | `palomar.plugins.lido-test/the-prints-and-drawings-are-read-whole` |
+| A LIDO record that lacks what the LIDO schema requires gets a warning, element by element; a valid one gets none. | `palomar.plugins.lido-test/what-lido-requires-is-checked` |
+| A LIDO title keeps its language; in Linked Art its name carries it as an AAT `Language`, and a language with no AAT term is reported. | `palomar.eval.linked-art-conformance-test/prints-drawings-and-photographs-validate`, `palomar.eval.linked-art-conformance-test/a-language-with-no-aat-term-is-reported` |
 | A loss accounts only for the fields, or the value, it names: a reported role URI does not hide an unreported seller or acquisition date. | `palomar.fidelity-test/one-field-lost-does-not-account-for-another` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
 | In the N-Triples family a value counts as preserved only on its own node: the right text on the wrong resource is caught. | `palomar.fidelity-test/the-right-text-on-the-wrong-node-is-caught` |
@@ -84,11 +87,13 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
   miss a loss, never invent one. Turtle output is not decoded; relations are
   checked only for the N-Triples family. A loss on another predicate of the
   same subject can stand for a value it does not concern. A field of a
-  structured value (an actor's life dates, a dimension's unit) is checked by
-  containment in any decoded string, on any node, since exporters print some
-  fields joined ("1634-1693"): a short field (a unit, a year) can be found by
-  chance. A loss naming no field and no value accounts for every field of its
-  predicate.
+  structured value (an actor's life dates, a dimension's unit) is checked as
+  a word of any decoded string, on any node, since exporters print some
+  fields joined ("1634-1693"): a short field (a unit, a year) can still be
+  found by chance on another node. A field an exporter writes translated (a
+  title's language as an AAT term, a type as a class) is reported as
+  under-specified, not checked. A loss naming no field and no value accounts
+  for every field of its predicate.
 - **Semantic correctness beyond the tests.** The mappings are checked against
   the published standards they cite (LRMoo 1.0/1.1.1, Linked Art, IIIF 3.0, the
   LoC crosswalks) where a test says so, not exhaustively.
@@ -97,8 +102,10 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
   `docs/eval/entity-resolution.md`).
 - **Archival and museum domains.** EAD units project to RiC-O (ADR 0045),
   checked against RiC-O 1.1 on the fixtures only: the spoke stays
-  experimental until validated on a real corpus. There is no LIDO spoke; the
-  only CRM events are publication and production (ADR 0036).
+  experimental until validated on a real corpus. The LIDO spoke (ADR 0052)
+  is tested on eleven Städel records, one museum's practice: it checks only
+  the elements the LIDO schema requires, not the rest of the schema nor
+  LIDO-MC's own rules, and writes a title's language only for six languages.
 - **Institutional validation of INTERMARC-NG.** Its spoke is tested on
   synthetic data only.
 - **Entity id collisions.** Ids carry a 64-bit hash; the policy and its limits

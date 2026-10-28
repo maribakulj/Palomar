@@ -20,7 +20,7 @@ because its fields would say "published".
 LIDO values:
 - **Leader/06** is `k` when a work type or classification names a
   two-dimensional graphic (painting, drawing, print, photograph, in English,
-  German or French), else `r`. Leader/07 is `m`.
+  German or French, "Fotografie" included: amended, post-audit 4, F7), else `r`. Leader/07 is `m`.
 - **`001`** is the record's stable id. The inventory number goes to `099 $a`.
 - **The production's actors** go to `100`/`110` (then `700`/`710`), with `$d`
   life dates, `$e` role and `$0` authority URI.
@@ -46,8 +46,10 @@ LIDO values:
 - **Location and links:**
   - the repository `852 $a`;
   - the images `856` 4# and the record's web page `856` 42.
-- **Losses.** Anything else is reported, including the place of an event
-  other than the production.
+- **Losses.** Anything else is reported, including the place, the actors
+  and the date of an event other than the production, and the language of
+  each title, which MARC has no subfield for (amended, post-audit 4, F5
+  review and F7).
 
 ## Consequences
 
