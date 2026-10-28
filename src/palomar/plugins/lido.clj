@@ -122,6 +122,47 @@
     "publication" "move_of_object" "transfer_of_custody" "planning" "modification" "part_addition"
     "part_removal" "type_assignment" "attribute_assignment" "type_creation"})
 
+(def ^:private creator-heads
+  "The words a creator's role ends with, in the languages LIDO records use:
+   the artist, author or maker. German compounds end with them too
+   (Kupferstecher, Hofmaler, Holzschneider)."
+  #"(painter|painters|maler|malerin|peintre|draughtsman|draftsman|zeichner|zeichnerin|dessinateur|dessinatrice|sculptor|sculptress|bildhauer|bildhauerin|sculpteur|artist|artists|künstler|künstlerin|artiste|author|autor|autorin|auteur|engraver|stecher|graveur|etcher|radierer|lithographer|printmaker|photographer|fotograf|fotografin|photographe|architect|architekt|architecte|maker|potter|töpfer|keramiker|ceramist|céramiste|goldsmith|silversmith|goldschmied|silberschmied|orfèvre|carver|schnitzer|weaver|weber|illuminator|illustrator|illustrateur|illustratorin|designer|entwerfer|woodcutter|schneider|creator|urheber|schöpfer|créateur|manufacturer|hersteller|fabricant)$")
+
+(def ^:private not-creator
+  "Words that make a role something else than the creator's, whatever word
+   it ends with: who printed, published, sold, owned or kept it, a copy, a
+   circle, an estate (\"lithographic printer\", \"after a painting by\")."
+  #"\b(print(er|ing)?|drucker|druckerei|publish(er|ing)?|verleger|verlag|éditeur|imprimeur|studio|atelier|anstalt|estate|nachlass|collector|sammler|dealer|händler|owner|besitzer|after|nach|by|of|von|workshop|werkstatt|circle|kreis|school|schule|follower|copy|kopie|copie|attributed|zugeschrieben)\b")
+
+(def ^:private creator-role-uris
+  "Role URIs that name a creator: AAT artists, painters, sculptors and
+   photographers, and the GND Maler the Städel records use."
+  #{"http://vocab.getty.edu/aat/300025103" "http://vocab.getty.edu/aat/300025136"
+    "http://vocab.getty.edu/aat/300025181" "http://vocab.getty.edu/aat/300025687"
+    "http://d-nb.info/gnd/4037215-7"})
+
+(defn creator?
+  "True when an actor of a production, in role `terms` (the terms of all its
+   roles, in every language) and role URIs `uris`, created the object
+   (ADR 0054):
+   - no role stated at all (neither term nor URI): an actor named alone in a
+     production is its maker;
+   - else, a term whose last word is a creator's (`creator-heads`, German
+     compounds included) and which says nothing else (`not-creator`), or a
+     creator's role URI."
+  [terms uris]
+  (let [terms (remove str/blank? terms)
+        uris  (remove str/blank? (if (string? uris) [uris] uris))
+        lower #(.toLowerCase (str/trim ^String %) java.util.Locale/ROOT)]
+    (if (and (empty? terms) (empty? uris))
+      true
+      (boolean
+       (or (some creator-role-uris uris)
+           (some #(let [t (lower %)]
+                    (and (not (re-find not-creator t))
+                         (re-find creator-heads (last (str/split t #"[\s\-/]+")))))
+                 terms))))))
+
 (def group-types
   "The LIDO actor types that are a group (CIDOC CRM `E74_Group`), not a person."
   #{"organization" "corporation" "group" "group_of_persons" "family"})
@@ -264,15 +305,20 @@
                             :let [a     (kid air "actor")
                                   names (when a (descend a "nameActorSet" "appellationValue"))
                                   id    (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (when a (kids a "actorID")))
-                                  role  (some-> (kid air "roleActor") concept)
+                                  ;; every role it has, not only the first
+                                  roles  (keep concept (kids air "roleActor"))
+                                  rterms (keep text (descend air "roleActor" "term"))
+                                  ruris  (keep :uri roles)
                                   vd    (fn [nm] (some-> a (kid "vitalDatesActor") (kid nm) text))
                                   nm    (some text names)]
                             :when nm]
                         [:lido/actor (model/structured (cond-> {:event n :name nm
-                                                                :type (or (term-name (attr a "type")) "")}
+                                                                :type (or (term-name (attr a "type")) "")
+                                                                :responsibility (if (and (= :production kind) (creator? rterms ruris))
+                                                                                  "creator" "participant")}
                                                          id (assoc :uri id)
-                                                         (:label role) (assoc :role (:label role))
-                                                         (:uri role) (assoc :role-uri (:uri role))
+                                                         (seq (keep :label roles)) (assoc :role (str/join "; " (keep :label roles)))
+                                                         (seq ruris) (assoc :role-uri (first ruris))
                                                          (vd "earliestDate") (assoc :birth (vd "earliestDate"))
                                                          (vd "latestDate") (assoc :death (vd "latestDate"))))
                          (second air)])
@@ -282,9 +328,11 @@
                                           (strings :lido/actor-id (when a (kids a "actorID")))
                                           (strings :lido/actor-dates (when a (concat (descend a "vitalDatesActor" "earliestDate")
                                                                                      (descend a "vitalDatesActor" "latestDate"))))
-                                          (when-let [r (kid air "roleActor")] (terms :lido/actor-role r))
-                                          ;; the production's actors are the object's creators
-                                          (when (= :production kind)
+                                          (mapcat #(terms :lido/actor-role %) (kids air "roleActor"))
+                                          ;; a production's actor in a creator's role (or in none
+                                          ;; stated) is the object's creator; any other took part
+                                          (when (and (= :production kind) (creator? (keep text (descend air "roleActor" "term"))
+                                                                                    (keep #(:uri (concept %)) (kids air "roleActor"))))
                                             (strings :lido/creator (take 1 (when a (descend a "nameActorSet" "appellationValue"))))))))
                               (kids ea "actorInRole"))))
                    (kids ev "eventActor"))

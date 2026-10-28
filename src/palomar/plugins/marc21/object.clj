@@ -76,18 +76,26 @@
   [record]
   (let [events  (sort-by (comp lido/event-order :index) (fields record :lido/event))
         prod    (first (filter #(= "production" (:kind %)) events))
-        actors  (if prod (filter #(= (:index prod) (:event %)) (fields record :lido/actor)) [])
+        in-prod (if prod (filter #(= (:index prod) (:event %)) (fields record :lido/actor)) [])
+        ;; the creators first (the first is the main entry), then whoever
+        ;; else took part, never as a main entry (ADR 0054)
+        creators (filter #(= "creator" (:responsibility %)) in-prod)
+        others   (remove #(= "creator" (:responsibility %)) in-prod)
         titles  (distinct (strings record :lido/title))
-        name-f  (fn [i {:keys [name uri type role birth death]}]
+        name-f  (fn [main? {:keys [name uri type role birth death]}]
                   (let [group? (lido/group-types type)
-                        tag    (if group? (if (zero? i) "110" "710") (if (zero? i) "100" "700"))]
+                        tag    (if group? (if main? "110" "710") (if main? "100" "700"))]
                     (datafield tag (if group? "2" "1") " "
-                               [["a" name] ["d" (when (or birth death) (str birth "-" death))] ["e" role] ["0" uri]])))
+                               (concat [["a" name] ["d" (when (or birth death) (str birth "-" death))]]
+                                       ;; each role its own $e
+                                       (for [r (when role (str/split role #"; "))] ["e" r])
+                                       [["0" uri]]))))
         concept (fn [tag {:keys [uri label]}] (datafield tag " " "7" [["a" label] ["0" uri] ["2" (source-code uri)]]))
         fields* (concat
                  (for [v (strings record :lido/inventory-number)] (datafield "099" " " "9" [["a" v]]))
-                 (map-indexed name-f actors)
-                 (when (seq titles) [(datafield "245" (if (seq actors) "1" "0") "0" [["a" (first titles)]])])
+                 (map-indexed (fn [i a] (name-f (zero? i) a)) creators)
+                 (map #(name-f false %) others)
+                 (when (seq titles) [(datafield "245" (if (seq creators) "1" "0") "0" [["a" (first titles)]])])
                  (for [t (rest titles)] (datafield "246" "1" " " [["a" t]]))
                  (when prod
                    (let [places (distinct (event-strings record :lido/event-place (:index prod)))]
@@ -113,7 +121,8 @@
     (str "<record xmlns=\"http://www.loc.gov/MARC21/slim\">\n"
          "  <leader>" (leader record) "</leader>\n"
          (when ctrl (str "  <controlfield tag=\"001\">" (xml-escape ctrl) "</controlfield>\n"))
-         (str/join "\n" fields*)
+         ;; in tag order, as MARC has its fields
+         (str/join "\n" (sort-by #(re-find #"tag=\"\d+\"" %) fields*))
          "\n</record>")))
 
 (defn export-losses

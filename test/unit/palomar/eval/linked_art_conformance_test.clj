@@ -220,3 +220,18 @@
           (is (= 85.6 (get-in d ["dimension" 0 "value"])))
           (is (= "Acquisition" (get-in d ["changed_ownership_through" 0 "type"])))
           (is (= (get-in d ["shows" 0 "id"]) (get (first vis) "id")) "it shows its VisualItem, which is about the subjects"))))))
+
+(deftest a-production-with-participants-validates
+  (testing "creators carry out the production, participants a part of it: still a valid HumanMadeObject (post-audit 4, F2)"
+    (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>R-2</lido:lidoRecID><lido:descriptiveMetadata>"
+                   "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>Bronze</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                   "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/lido00007</lido:conceptID></lido:eventType>"
+                   "<lido:eventActor><lido:actorInRole><lido:actor><lido:actorID>http://d-nb.info/gnd/118603353</lido:actorID><lido:nameActorSet><lido:appellationValue>Rodin</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                   "<lido:roleActor><lido:term xml:lang=\"en\">sculptor</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"
+                   "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Rudier</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                   "<lido:roleActor><lido:conceptID>http://vocab.getty.edu/aat/300025249</lido:conceptID><lido:term xml:lang=\"en\">founder</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"
+                   "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")
+          out (:output (convert/convert {:from :lido :to :linked-art :source xml}))
+          hmo (first (str/split-lines out))]
+      (is (= [] (errors-against object-schema hmo)))
+      (is (= "http://vocab.getty.edu/aat/300025249" (get-in (json/read-str hmo) ["produced_by" "part" 0 "classified_as" 0 "id"]))))))

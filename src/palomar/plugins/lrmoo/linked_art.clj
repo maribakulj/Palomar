@@ -423,11 +423,19 @@
                    (assoc "produced_by"
                           (let [n  (:index prod)
                                 as (in-event n actors)
+                                ;; the creators carry out the production; anyone else
+                                ;; takes part in it, in a part classified by its role
+                                cs (filter #(= "creator" (:responsibility %)) as)
+                                os (remove #(= "creator" (:responsibility %)) as)
                                 ts (timespan prod)
                                 ps (place-ids prod)
                                 tq (filter #(and (:uri %) (= "technique" (:role %))) (in-event n mats))]
                             (cond-> {"type" "Production"}
-                              (seq as) (assoc "carried_out_by" (mapv actor as))
+                              (seq cs) (assoc "carried_out_by" (mapv actor cs))
+                              (seq os) (assoc "part" (mapv (fn [a] (cond-> {"type" "Production" "carried_out_by" [(actor a)]}
+                                                                     (:role a) (assoc "_label" (:role a))
+                                                                     (:role-uri a) (assoc "classified_as" [(type-ref {:uri (:role-uri a) :label (:role a)} "Type")])))
+                                                           os))
                               ts       (assoc "timespan" ts)
                               (seq ps) (assoc "took_place_at" (mapv (fn [u] {"id" u "type" "Place"}) ps))
                               (seq tq) (assoc "technique" (mapv #(type-ref % "Type") tq)))))
