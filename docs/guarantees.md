@@ -13,7 +13,7 @@ the formats below are exactly those the code registers.
 
 Source formats: dc, eac-cpf, ead, edn, iiif, intermarc, intermarc-ng, marc21, mods, oai, unimarc
 
-Target formats: crm, crm-only, dc, edn, iiif, jsonld, linked-art, marc21, mods, nquads, ntriples, prov, trig, turtle
+Target formats: crm, crm-only, dc, edn, iiif, jsonld, linked-art, marc21, marc21-archival, marc21-fonds, mods, nquads, ntriples, prov, trig, turtle
 
 `edn` is the pivot itself (ADR 0034); `oai` an OAI-PMH response read through
 the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
@@ -43,6 +43,7 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | A publisher or contributor never keys a Work; only a creator (or an agent of unstated role) does. | `palomar.plugins.lrmoo.project-test/a-publisher-alone-does-not-key-a-work` |
 | An original and its translation are one Work and two Expressions. | `palomar.plugins.lrmoo.project-test/an-original-and-its-translation-are-one-work-two-expressions` |
 | A record target refuses a kind of resource it cannot describe (an archival unit or an authority in MARC21, MODS or Linked Art), naming the targets that can; it never writes a field the source's value does not mean (ADR 0049). | `palomar.plugins.ead-test/a-finding-aid-converts-to-every-format-that-describes-it` |
+| An EAD unit in MARC21 is an archival-control record whose fields mean what the EAD values mean: the cote in `099`, inclusive dates in `245 $f`, the level in `351 $c`, the parent in `773 $w`; the fonds mode writes the fonds alone and reports its components (ADR 0050). | `palomar.plugins.marc21.archival-test/a-unit-is-an-archival-record`, `palomar.plugins.marc21.archival-test/a-fonds-summary-is-one-record` |
 | A IIIF manifest is exported to Linked Art as the `DigitalObject` it is, validating against `digital.json`; what it presents is not asserted (ADR 0049). | `palomar.eval.linked-art-conformance-test/a-iiif-manifest-is-a-digital-object` |
 | A Manifestation is exported to Linked Art as a text (`LinguisticObject`), only an F5 Item as a physical object; one document per Manifestation and per Item. | `palomar.plugins.lrmoo.linked-art-test/every-manifestation-and-item-gets-its-own-document` |
 | Linked Art output for the MARC21 sample validates against the official `text.json` schema with zero errors. | `palomar.eval.linked-art-conformance-test/our-marc-output-validates-strictly` |

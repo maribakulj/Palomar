@@ -63,6 +63,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0047](./0047-durable-archival-ids.md) | An archival id moves only when the source gives no better | Accepted |
 | [0048](./0048-a-manifest-independent-of-what-is-loaded.md) | A manifest names the source tree and the runtime, not what is loaded | Accepted |
 | [0049](./0049-a-target-says-what-it-can-describe.md) | A target says what it can describe | Accepted |
+| [0050](./0050-marc21-for-archives.md) | MARC21 for archives is a profile of its own | Accepted |
 
 ## Template
 

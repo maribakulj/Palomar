@@ -84,7 +84,7 @@
 (def described
   "The elements of a unit the importer reads (`did` children and the unit's own)."
   #{"unittitle" "unitdate" "unitdatestructured" "unitid" "origination" "abstract" "dao" "daoset"
-    "scopecontent" "dsc" "did" "head"})
+    "scopecontent" "dsc" "did" "head" "bioghist" "accessrestrict" "physdesc" "physdescset" "physdescstructured"})
 
 (defn- step [nm i] (str "/*[local-name()='" nm "'][" (inc i) "]"))
 
@@ -111,6 +111,21 @@
                                                                  [h (str (step "daoset" j) (step "dao" i) "/@href")]))
                                                      (children set "dao")))
                                      (children did "daoset")))))
+
+(defn- physdesc
+  "`[text path]` for each physical description of `did`: an EAD 2002 or EAD3
+   `physdesc`, or an EAD3 `physdescstructured` (its quantity and unit type),
+   alone or in a `physdescset`."
+  [did]
+  (let [structured (fn [el] (some->> (keep #(text (child el %)) ["quantity" "unittype"]) seq (str/join " ")))]
+    (concat
+     (keep-indexed (fn [i el] (when-let [t (text el)] [t (step "physdesc" i)])) (children did "physdesc"))
+     (keep-indexed (fn [i el] (when-let [t (structured el)] [t (step "physdescstructured" i)])) (children did "physdescstructured"))
+     (apply concat (map-indexed (fn [j set]
+                                  (keep-indexed (fn [i el] (when-let [t (structured el)]
+                                                             [t (str (step "physdescset" j) (step "physdescstructured" i))]))
+                                                (children set "physdescstructured")))
+                                (children did "physdescset"))))))
 
 (defn- unit-record
   "The record `rid` of unit `el`, at `xpath` in the document, under parent
@@ -151,7 +166,14 @@
                              (first-at (juxt first second) typed))
                         (keep-indexed (fn [i n] (when-let [t (text n)] (nat :ead/scopecontent t (step "scopecontent" i))))
                                       (children el "scopecontent"))
-                        (map (fn [[h x]] (nat :ead/dao h (str did-x x))) (first-at first (dao-hrefs did)))))
+                        (map (fn [[h x]] (nat :ead/dao h (str did-x x))) (first-at first (dao-hrefs did)))
+                        ;; notes on the unit, without their heading (post-audit 3, E3)
+                        (for [nm ["bioghist" "accessrestrict"]
+                              [i n] (map-indexed vector (children el nm))
+                              :let [t (some->> (remove #(= "head" (local (:tag %))) (children n)) (keep text) seq (str/join " "))]
+                              :when t]
+                          (nat (keyword "ead" nm) t (step nm i)))
+                        (for [[v x] (physdesc did)] (nat :ead/physdesc v (str did-x x)))))
         unread (distinct (remove (into described (map (comp local :tag) (filter component? (children el))))
                                  (concat (map (comp local :tag) (children el))
                                          (map (comp local :tag) (children did)))))]
@@ -306,6 +328,9 @@
      (copy :ead/unitdate :rico/date)
      (copy :ead/abstract :rico/scopeAndContent)
      (copy :ead/scopecontent :rico/scopeAndContent)
+     (copy :ead/bioghist :rico/history)
+     (copy :ead/accessrestrict :rico/conditionsOfAccess)
+     (copy :ead/physdesc :rico/recordResourceExtent)
      (when (and rst (= k :rico/RecordSet))
        (let [t (model/mint-entity-id :rico/RecordSetType [rst])]
          [(entity t :rico/RecordSetType (str rst-base rst))
