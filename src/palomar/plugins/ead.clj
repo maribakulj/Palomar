@@ -85,17 +85,31 @@
   #{"unittitle" "unitdate" "unitdatestructured" "unitid" "origination" "abstract" "dao" "daoset"
     "scopecontent" "dsc" "did" "head"})
 
-(defn- unit-date [did]
-  (or (text (child did "unitdate"))
-      (when-let [s (child did "unitdatestructured")]
-        (let [r (child s "daterange")]
-          (or (when r (not-empty (str/join "/" (keep #(text (child r %)) ["fromdate" "todate"]))))
-              (text (child s "datesingle"))
-              (text s))))))
+(defn- step [nm i] (str "/*[local-name()='" nm "'][" (inc i) "]"))
 
-(defn- dao-hrefs [did]
-  (concat (keep #(attr % "href") (children did "dao"))
-          (keep #(attr % "href") (mapcat #(children % "dao") (children did "daoset")))))
+(defn- unit-date
+  "The unit's date and the path, under its `did`, to the element it was read
+   from: `unitdate`, or a `unitdatestructured` range (`from/to`) or single date."
+  [did]
+  (if-let [t (text (child did "unitdate"))]
+    [t (step "unitdate" 0)]
+    (when-let [s (child did "unitdatestructured")]
+      (let [r  (child s "daterange")
+            sx (step "unitdatestructured" 0)]
+        (or (when-let [v (when r (not-empty (str/join "/" (keep #(text (child r %)) ["fromdate" "todate"]))))]
+              [v (str sx (step "daterange" 0))])
+            (when-let [v (text (child s "datesingle"))] [v (str sx (step "datesingle" 0))])
+            (when-let [v (text s)] [v sx]))))))
+
+(defn- dao-hrefs
+  "`[href path]` for each digital object of `did`, the path to its `@href`."
+  [did]
+  (concat (keep-indexed (fn [i d] (when-let [h (attr d "href")] [h (str (step "dao" i) "/@href")])) (children did "dao"))
+          (apply concat (map-indexed (fn [j set]
+                                       (keep-indexed (fn [i d] (when-let [h (attr d "href")]
+                                                                 [h (str (step "daoset" j) (step "dao" i) "/@href")]))
+                                                     (children set "dao")))
+                                     (children did "daoset")))))
 
 (defn- unit-record
   "The record `rid` of unit `el` at `path` (its position) under parent record
@@ -106,29 +120,37 @@
         nat    (fn [p v sub] (when v (model/assertion {:subject rid :predicate p :value v
                                                        :provenance (model/provenance {:pass :ingest :evidence (ev sub)})})))
         did-x  "/*[local-name()='did'][1]"
-        typed  (for [o (children did "origination")
-                     n (let [ns (children o)] (if (seq ns) ns [o]))
-                     :let [t (text n)] :when t]
-                 [t (local (:tag n))])
-        names  (map first typed)
-        notes  (fn [nm] (keep text (children el nm)))
+        ;; each creator name with its element and the path to it
+        typed  (apply concat
+                      (map-indexed (fn [i o]
+                                     (let [ns (children o)]
+                                       (if (seq ns)
+                                         (keep-indexed (fn [k n] (when-let [t (text n)]
+                                                                   [t (local (:tag n)) (str did-x (step "origination" i) "/*[" (inc k) "]")]))
+                                                       ns)
+                                         (when-let [t (text o)] [[t "origination" (str did-x (step "origination" i))]]))))
+                                   (children did "origination")))
+        ;; the first occurrence of each distinct value, in document order
+        first-at (fn [k xs] (let [seen (volatile! #{})]
+                              (filter #(let [v (k %)] (when-not (@seen v) (vswap! seen conj v))) xs)))
+        names  (first-at first typed)
         as     (remove nil?
                        (concat
                         [(nat :ead/unittitle (text (child did "unittitle")) (str did-x "/*[local-name()='unittitle'][1]"))
-                         (nat :ead/unitdate (unit-date did) did-x)
+                         (let [[v sub] (unit-date did)] (nat :ead/unitdate v (str did-x sub)))
                          (nat :ead/unitid (text (child did "unitid")) (str did-x "/*[local-name()='unitid'][1]"))
                          (nat :ead/abstract (text (child did "abstract")) (str did-x "/*[local-name()='abstract'][1]"))
                          (nat :ead/level (attr el "level") "/@level")
                          (when parent (model/assertion {:subject rid :predicate :ead/parent :value parent
                                                         :provenance (model/provenance {:pass :ingest})}))]
-                        (map #(nat :ead/origination % (str did-x "/*[local-name()='origination']")) (distinct names))
+                        (map (fn [[t _ x]] (nat :ead/origination t x)) names)
                         ;; the creator with the kind its element states (persname,
                         ;; corpname, famname), for the RiC-O view (ADR 0045)
-                        (map (fn [[t tag]] (nat :ead/creator (model/structured {:name t :element tag})
-                                                (str did-x "/*[local-name()='origination']")))
-                             (distinct typed))
-                        (map #(nat :ead/scopecontent % "/*[local-name()='scopecontent']") (notes "scopecontent"))
-                        (map #(nat :ead/dao % did-x) (distinct (dao-hrefs did)))))
+                        (map (fn [[t tag x]] (nat :ead/creator (model/structured {:name t :element tag}) x))
+                             (first-at (juxt first second) typed))
+                        (keep-indexed (fn [i n] (when-let [t (text n)] (nat :ead/scopecontent t (step "scopecontent" i))))
+                                      (children el "scopecontent"))
+                        (map (fn [[h x]] (nat :ead/dao h (str did-x x))) (first-at first (dao-hrefs did)))))
         unread (distinct (remove (into described (map (comp local :tag) (filter component? (children el))))
                                  (concat (map (comp local :tag) (children el))
                                          (map (comp local :tag) (children did)))))]
