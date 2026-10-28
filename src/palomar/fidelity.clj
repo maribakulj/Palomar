@@ -81,6 +81,7 @@
    :marc21     xml-strings
    :marc21-archival xml-strings
    :marc21-fonds    xml-strings
+   :marc21-authority xml-strings
    :mods       xml-strings
    :prov       nt-strings
    :nquads     nq-strings})
