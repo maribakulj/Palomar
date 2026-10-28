@@ -106,15 +106,17 @@
    its language with it, `export-coverage/coord-bases`). A part of a
    structured value (`field` of `whole`) is reported only by a loss that names
    that field or that value, or names neither (post-audit 4, F5 review): one
-   field lost does not account for the others."
-  [losses rid {:keys [subject predicate field whole]}]
+   field lost does not account for the others; a loss naming one string
+   value accounts for that value only (post-audit 5, G1)."
+  [losses rid {:keys [subject predicate value field whole]}]
   (let [fields (into #{predicate} (cov/coord-bases predicate))]
     (some #(and (contains? fields (dx/loss-source-field %))
                 (or (= subject (:subject %)) (= rid (:subject %)))
-                (or (nil? field)
-                    (let [{fs :loss/fields v :loss/value} (:detail %)]
-                      (and (or (nil? fs) (contains? fs field))
-                           (or (nil? v) (= v whole))))))
+                (let [{fs :loss/fields v :loss/value} (:detail %)]
+                  (and (or (nil? field) (nil? fs) (contains? fs field))
+                       ;; a loss about one value (a string, or a structured
+                       ;; value's fields) accounts for that value only
+                       (or (nil? v) (= v (if field whole value))))))
           losses)))
 
 (defn- present?

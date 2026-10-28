@@ -325,6 +325,13 @@
   (keep #(when (and (= p (:predicate %)) (string? (:value %)) (= k (lido/event-key %))) (:value %))
         (:assertions record)))
 
+(defn- production-strings
+  "The `p` strings of `record` read in its production `prod` (an event's
+   fields) or in no event: what is said of the object itself (post-audit 5, G1)."
+  [record p prod]
+  (keep #(when (and (= p (:predicate %)) (string? (:value %)) (#{nil (:index prod)} (lido/event-key %))) (:value %))
+        (:assertions record)))
+
 (defn- event-descriptions [record n] (event-strings record :lido/event-description n))
 
 (defn- provenance-event?
@@ -410,7 +417,7 @@
         subjects (flds :lido/subject-concept)
         rights   (flds :lido/rights-work-type)
         keepers  (flds :lido/keeper)
-        notes    (concat (map #(statement % aat-materials "Material Statement") (strs :lido/materials))
+        notes    (concat (map #(statement % aat-materials "Material Statement") (production-strings record :lido/materials prod))
                          (map #(statement % aat-dimensions "Dimension Statement") (strs :lido/measurements))
                          (map #(note-obj %) (strs :lido/description))
                          (map #(statement % aat-inscription "Inscription") (strs :lido/inscription))
@@ -438,8 +445,10 @@
                                                      (concat (flds :lido/work-type-concept) (flds :lido/classification-concept)))))
                    (seq (keep dimension-obj (flds :lido/dimension)))
                    (assoc "dimension" (vec (keep dimension-obj (flds :lido/dimension))))
-                   (seq (filter #(and (:uri %) (not= "technique" (:role %))) mats))
-                   (assoc "made_of" (vec (for [m mats :when (and (:uri m) (not= "technique" (:role m)))] (type-ref m "Material"))))
+                   (seq (filter #(and (:uri %) (not= "technique" (:role %)) (= (:index prod) (:event %))) mats))
+                   ;; what it is made of is what its production used (post-audit 5, G1)
+                   (assoc "made_of" (vec (for [m mats :when (and (:uri m) (not= "technique" (:role m)) (= (:index prod) (:event m)))]
+                                           (type-ref m "Material"))))
                    prod
                    (assoc "produced_by"
                           (let [n  (:index prod)
@@ -627,11 +636,19 @@
      (let [prod (:index (first (filter #(= "production" (:kind %)) (native-fields record :lido/event))))]
        (for [m (native-fields record :lido/material)
              :let [tq? (= "technique" (:role m))]
-             :when (or (nil? (:uri m)) (and tq? (not= prod (:event m))))]
+             :when (or (nil? (:uri m)) (not= prod (:event m)))]
          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/material :value m
                    :message (str (if tq? "technique " "material ") (pr-str (:label m))
-                                 (if (:uri m) " is not the production's: no event of this profile has a technique"
-                                     (str " has no URI: " (if tq? "technique" "made_of") " cannot name it")))})))
+                                 (if (:uri m)
+                                   (if tq? " is not the production's: no event of this profile has a technique"
+                                       " is not the production's: not what the object is made of, not written")
+                                   (str " has no URI: " (if tq? "technique" "made_of") " cannot name it")))})))
+     (let [evs  (native-fields record :lido/event)
+           prod (first (filter #(= "production" (:kind %)) evs))]
+       (for [a (:assertions record)
+             :when (and (= :lido/materials (:predicate a)) (string? (:value a)) (lido/event-key a) (not= (:index prod) (lido/event-key a)))]
+         (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
+                   :message (str "materials " (pr-str (:value a)) " of another event than the production are not the object's: not written")})))
      (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/keeper :value k
                  :message (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")}))

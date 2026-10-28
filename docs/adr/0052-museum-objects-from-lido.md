@@ -60,7 +60,13 @@ an acquisition history.
    - its dimensions (`E54_Dimension`, `P90` value, `P91` unit), when the
      value is a number; a value that is none ("ca. 5") is a `P3` note
      (amended, post-audit 4, F6);
-   - its materials (`P45` → `E57_Material`);
+   - its materials (`P45` → `E57_Material`): only those its production
+     used. A restoration or other modification is an `E11_Modification`
+     (`P31i_was_modified_by`) that `P126_employed` its own materials; the
+     materials of any other event are not projected, and that is reported.
+     The materials as displayed follow their event the same way: the
+     production's are the object's, another event's a note on that event
+     (amended, post-audit 5, G1);
    - its keeper (`P50` → the repository's `E74_Group`);
    - its subjects (`P62_depicts`), its images (`P138i` → `E36_Visual_Item`)
      and its rights (`P104` → `E30_Right`).

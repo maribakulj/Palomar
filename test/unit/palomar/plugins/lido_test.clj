@@ -340,3 +340,35 @@
                    "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue xml:lang=\"\">X</lido:appellationValue>"
                    "</lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>")]
       (is (empty? (filter #(= :lido/title-name (:predicate %)) (:assertions (first (:records (convert/to-wemi :lido {} xml))))))))))
+
+(def ^:private restored
+  "A bronze, restored with a solvent: the bronze is what it is made of, the
+   solvent only what its restoration employed."
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>R-9</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"en\">"
+       "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>Bust</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+       "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/lido00007</lido:conceptID><lido:term>production</lido:term></lido:eventType>"
+       "<lido:eventMaterialsTech><lido:displayMaterialsTech>bronze, cast</lido:displayMaterialsTech><lido:materialsTech><lido:termMaterialsTech lido:type=\"http://terminology.lido-schema.org/lido00132\">"
+       "<lido:conceptID>http://vocab.getty.edu/aat/300010957</lido:conceptID><lido:term>bronze</lido:term></lido:termMaterialsTech></lido:materialsTech></lido:eventMaterialsTech>"
+       "</lido:event></lido:eventSet><lido:eventSet><lido:event><lido:eventType><lido:term>restoration</lido:term></lido:eventType>"
+       "<lido:eventMaterialsTech><lido:displayMaterialsTech>cleaned with white spirit</lido:displayMaterialsTech><lido:materialsTech><lido:termMaterialsTech lido:type=\"http://terminology.lido-schema.org/lido00132\">"
+       "<lido:conceptID>http://vocab.getty.edu/aat/300014711</lido:conceptID><lido:term>white spirit</lido:term></lido:termMaterialsTech></lido:materialsTech></lido:eventMaterialsTech>"
+       "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>"))
+
+(deftest a-restoration-s-material-is-no-constituent
+  (testing "only the production's materials are what the object consists of; a restoration employs its own (post-audit 5, G1)"
+    (let [nt  (:output (convert/convert {:from :lido :to :ntriples :source restored}))
+          la  (json/read-str (first (str/split-lines (:output (convert/convert {:from :lido :to :linked-art :source restored})))))
+          mrc (:output (convert/convert {:from :lido :to :marc21-object :source restored}))
+          p45 (set (keep (fn [[_ p o]] (when (str/ends-with? (:iri p) "P45_consists_of") o)) (nt/parse nt)))]
+      (is (re-find #"P45_consists_of> <http://vocab.getty.edu/aat/300010957>" nt) "the bronze")
+      (is (not (re-find #"P45_consists_of> <http://vocab.getty.edu/aat/300014711>" nt)) "never the solvent")
+      (is (re-find #"P126_employed> <http://vocab.getty.edu/aat/300014711>" nt) "the restoration employed it")
+      (is (str/includes? nt "E11_Modification"))
+      (is (= 1 (count p45)))
+      (is (empty? (violations restored)))
+      (is (= ["http://vocab.getty.edu/aat/300010957"] (map #(get % "id") (get la "made_of"))))
+      (is (not-any? #(= "cleaned with white spirit" (get % "content")) (get la "referred_to_by"))
+          "nor is the restoration's statement the object's material statement")
+      (is (not (str/includes? mrc ">cleaned with white spirit<")) "nor its 340")
+      (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source restored}))) (str to))))))
