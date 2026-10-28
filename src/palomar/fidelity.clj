@@ -79,6 +79,8 @@
    :iiif       json-strings
    :dc         xml-strings
    :marc21     xml-strings
+   :marc21-archival xml-strings
+   :marc21-fonds    xml-strings
    :mods       xml-strings
    :prov       nt-strings
    :nquads     nq-strings})

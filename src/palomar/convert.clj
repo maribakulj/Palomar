@@ -34,6 +34,7 @@
             [palomar.plugins.lrmoo.project :as project]
             [palomar.plugins.lrmoo.prov :as prov]
             [palomar.plugins.mapping :as mapping]
+            [palomar.plugins.marc21.archival :as marc21-archival]
             [palomar.plugins.marc21.export :as marc21-export]
             [palomar.plugins.mods.export :as mods-export]
             [palomar.runtime :as runtime]
@@ -89,6 +90,13 @@
    :marc21     {:render marc21-export/->marcxml      :losses marc21-export/export-losses
                 :accepts #{:bibliographic :digital}
                 :collection ["<collection xmlns=\"http://www.loc.gov/MARC21/slim\">" "</collection>"]}
+   ;; archives (ADR 0050): every unit with its hierarchy, or the fonds alone
+   :marc21-archival {:render marc21-archival/->marcxml :losses marc21-archival/export-losses
+                     :accepts #{:archival-unit}
+                     :collection ["<collection xmlns=\"http://www.loc.gov/MARC21/slim\">" "</collection>"]}
+   :marc21-fonds    {:render marc21-archival/->fonds-marcxml :losses marc21-archival/fonds-losses
+                     :accepts #{:archival-unit}
+                     :collection ["<collection xmlns=\"http://www.loc.gov/MARC21/slim\">" "</collection>"]}
    :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses
                 :accepts #{:bibliographic :digital}
                 :collection ["<modsCollection xmlns=\"http://www.loc.gov/mods/v3\">" "</modsCollection>"]}
