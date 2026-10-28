@@ -10,7 +10,7 @@
    - property elements whose object is `rdf:resource`, `rdf:nodeID`, a nested
      node element, or text (with `xml:lang` inherited and `rdf:datatype`);
    - `rdf:parseType` `Resource`, `Collection` (an `rdf:List`) and `Literal`
-     (the content's text).
+     (the content as exclusive canonical XML, markup kept).
 
    Reification (`rdf:ID` on a property) and `rdf:li` numbering are not read; an
    element using them throws rather than yielding a guessed triple. Parsing goes
@@ -44,6 +44,76 @@
 (defn- elements [el] (filter map? (:content el)))
 
 (defn- text-of [el] (apply str (filter string? (:content el))))
+
+;; ---------------------------------------------------------------------------
+;; rdf:parseType="Literal": the content as exclusive canonical XML
+;; ---------------------------------------------------------------------------
+
+(defn- escape-text [t]
+  (-> t (str/replace "&" "&amp;") (str/replace "<" "&lt;") (str/replace ">" "&gt;") (str/replace "\r" "&#xD;")))
+
+(defn- escape-attr [v]
+  (-> v (str/replace "&" "&amp;") (str/replace "<" "&lt;") (str/replace "\"" "&quot;")
+      (str/replace "\t" "&#x9;") (str/replace "\n" "&#xA;") (str/replace "\r" "&#xD;")))
+
+(defn- ns-uri [k]
+  (let [n (namespace k)]
+    (when (and n (str/starts-with? n "xmlns.")) (java.net.URLDecoder/decode (subs n 6) "UTF-8"))))
+
+(defn- nss [el] (get-in (meta el) [:clojure.data.xml/nss :p->u]))
+
+(defn- prefix-of
+  "The prefix element `el` most likely wrote namespace `uri` with, `ancestors`
+   its ancestors, nearest first. The parser keeps the bindings in scope, not
+   the prefix a name was written with, so when several prefixes bind `uri`
+   the one declared nearest wins (on the element itself, then on each
+   ancestor up), then the default namespace (for an element name only: an
+   unprefixed attribute is in no namespace), then the first in order."
+  [el ancestors uri attribute?]
+  (let [ok?      #(or (not attribute?) (not= "" %))
+        declared (fn [e up] (sort (for [[p u] (nss e) :when (and (= u uri) (ok? p) (not= u (get (nss up) p)))] p)))
+        chain    (cons el ancestors)]
+    (or (some (fn [[e up]] (first (declared e up))) (map vector chain (rest chain)))
+        (when (and (not attribute?) (= uri (get (nss el) ""))) "")
+        (first (sort (for [[p u] (nss el) :when (and (= u uri) (ok? p))] p))))))
+
+(defn- qname [prefix local] (if (str/blank? prefix) local (str prefix ":" local)))
+
+(defn- canonical
+  "Element or text `x` (`ancestors` its ancestor elements, nearest first) as exclusive
+   canonical XML (https://www.w3.org/TR/xml-exc-c14n/), `declared` the prefix
+   → namespace bindings an output ancestor already wrote: an element declares
+   the namespaces it and its attributes use and its ancestors did not;
+   namespace declarations, then attributes, are sorted; an empty element is
+   written with a start and an end tag."
+  [x ancestors declared]
+  (if (string? x)
+    (escape-text x)
+    (let [uri    (ns-uri (:tag x))
+          prefix (if uri (or (prefix-of x ancestors uri false) "") "")
+          attrs  (for [[k v] (:attrs x)
+                       :let [u (ns-uri k)]]
+                   {:uri u :local (name k) :value v
+                    :prefix (when u (if (= u xml-ns) "xml" (or (prefix-of x ancestors u true)
+                                                               (throw (ex-info "rdfxml: an attribute's namespace has no prefix"
+                                                                               {:namespace u})))))})
+          used   (cond-> (into {} (keep (fn [{:keys [uri prefix]}] (when (and uri (not= "xml" prefix)) [prefix uri]))) attrs)
+                   true (assoc prefix (or uri "")))
+          new    (sort-by key (remove (fn [[p u]] (= (get declared p (when (= "" p) "")) u)) used))
+          scope  (into declared new)]
+      (str "<" (qname prefix (name (:tag x)))
+           (apply str (for [[p u] new] (str " " (if (= "" p) "xmlns" (str "xmlns:" p)) "=\"" (escape-attr u) "\"")))
+           (apply str (for [{:keys [prefix local value]} (sort-by (juxt #(or (:uri %) "") :local) attrs)]
+                        (str " " (qname prefix local) "=\"" (escape-attr value) "\"")))
+           ">"
+           (apply str (map #(canonical % (cons x ancestors) scope) (:content x)))
+           "</" (qname prefix (name (:tag x))) ">"))))
+
+(defn- xml-literal
+  "The lexical form of a `rdf:parseType=\"Literal\"` property element's
+   content: its nodes as exclusive canonical XML (RDF/XML grammar 7.2.17)."
+  [pe]
+  (apply str (map #(canonical % [pe] {"" ""}) (:content pe))))
 
 (defn parse
   "The triples of RDF/XML document `s`, as `[subject predicate object]` terms."
@@ -108,7 +178,7 @@
                       (emit [cell {:iri (str rdf "rest")} (if (< (inc i) (count cells)) (cells (inc i)) {:iri (str rdf "nil")})])))
 
                   (= "Literal" ptype)
-                  (emit [subj pred {:lit (text-of pe) :datatype (str rdf "XMLLiteral")}])
+                  (emit [subj pred {:lit (xml-literal pe) :datatype (str rdf "XMLLiteral")}])
 
                   (seq kids)
                   (emit [subj pred (node (first kids) c)])
