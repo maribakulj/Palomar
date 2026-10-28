@@ -6,7 +6,9 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
-            [palomar.fidelity :as fidelity]))
+            [palomar.fidelity :as fidelity]
+            [palomar.ontology :as onto]
+            [palomar.plugins.lrmoo.ntriples :as nt]))
 
 (def ^:private lido-1-1
   "A LIDO 1.1 record: an eventSet with no event, a production typed by its
@@ -52,7 +54,7 @@
   (testing "in CIDOC CRM, the exhibition takes its own place and description"
     (let [out (nt)
           lines (str/split-lines out)
-          ev (some #(second (re-find #"^(<[^>]+>) <[^>]+rdf-syntax-ns#type> <[^>]+E5_Event>" %)) lines)]
+          ev (some #(second (re-find #"^(<[^>]+>) <[^>]+rdf-syntax-ns#type> <[^>]+E7_Activity>" %)) lines)]
       (is ev)
       (is (some #(and (str/starts-with? % ev) (str/includes? % "P7_took_place_at") (str/includes? % "place/EXH")) lines))
       (is (some #(and (str/starts-with? % ev) (str/includes? % "Exhibited in Paris")) lines))
@@ -86,3 +88,40 @@
 (deftest every-value-is-written-or-reported
   (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
     (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source lido-1-1}))) (str to))))
+
+(defn- one-event
+  "A LIDO record with one event of type `code` (a LIDO 1.1 code), `term` its
+   term (nil: none) and `actor` its actor's name (nil: none)."
+  [code term actor]
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>E-" code "</lido:lidoRecID><lido:descriptiveMetadata>"
+       "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+       "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:conceptID>http://terminology.lido-schema.org/" code "</lido:conceptID>"
+       (when term (str "<lido:term>" term "</lido:term>")) "</lido:eventType>"
+       (when actor (str "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>" actor
+                        "</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"))
+       "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>"))
+
+(def ^:private sch (delay (onto/schema onto/vendored)))
+
+(defn- violations [xml]
+  (let [out (:output (convert/convert {:from :lido :to :ntriples :source xml}))]
+    (onto/violations @sch (for [[s p o] (nt/parse out)] [(nt/term-key s) (:iri p) o]))))
+
+(deftest every-event-respects-cidoc-crm
+  (testing "an event carried out by someone is an activity, whatever its type (post-audit 4, F1)"
+    (doseq [[code term] [["lido00225" "Ausstellung"] ["lido00003" nil] ["lido00034" "Restaurierung"] ["lido00226" nil]
+                         ["lido00007" nil] ["lido00001" nil] ["lido00009" "Verlust"]]
+            actor       [nil "Kurator"]]
+      (is (empty? (violations (one-event code term actor))) (str code " " term " " actor))))
+  (testing "an exhibition with a curator: E7_Activity carried out by them; with no one, no P14"
+    (let [nt-out (:output (convert/convert {:from :lido :to :ntriples :source (one-event "lido00225" "Ausstellung" "Kurator")}))]
+      (is (str/includes? nt-out "cidoc-crm/E7_Activity"))
+      (is (str/includes? nt-out "P14_carried_out_by")))
+    (let [nt-out (:output (convert/convert {:from :lido :to :ntriples :source (one-event "lido00009" nil nil)}))]
+      (is (not (str/includes? nt-out "P14_carried_out_by"))))))
+
+(deftest an-event-type-with-no-term-is-read
+  (testing "an eventType that gives only a LIDO 1.1 code imports (post-audit 4, F1)"
+    (is (= 1 (:records (convert/convert {:from :lido :to :ntriples :source (one-event "lido00007" nil "Maes")}))))
+    (is (str/includes? (:output (convert/convert {:from :lido :to :dc :source (one-event "lido00007" nil "Maes")}))
+                       "<dc:creator>Maes</dc:creator>"))))

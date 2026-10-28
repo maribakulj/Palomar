@@ -46,8 +46,10 @@ an acquisition history.
 
    **Each event:**
    - It is a production (`P108i` → `E12_Production`), an acquisition (`P24i`
-     → `E8_Acquisition`) or another event the object was present at (`P12i` →
-     `E5_Event`).
+     → `E8_Acquisition`) or another event the object was present at (`P12i`). That
+     event is an `E7_Activity` when someone carried it out, it used a technique,
+     or its type is an activity (an exhibition, a restoration…), since `P14` and
+     `P32` take an E7; otherwise an `E5_Event` (amended, post-audit 4, F1).
    - It has its type, time-span (`P82`, `P82a`, `P82b`), place (`P7`), actors
      (`P14`), description (`P3`) and, for a production, its techniques (`P32`).
    - An actor or a place with an authority URI (GND) is that node.
