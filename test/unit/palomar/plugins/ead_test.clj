@@ -81,9 +81,17 @@
       (let [{:keys [loss]} (convert/convert {:from :ead :to :crm-only :source (slurp ead3)})]
         (is (some #{:rico/isOrWasIncludedIn} (:source-fields loss)))))))
 
-(deftest a-finding-aid-converts-to-every-format
-  (doseq [to [:ntriples :crm-only :linked-art :dc :marc21 :mods :trig]]
-    (is (string? (:output (convert/convert {:from :ead :to to :source (slurp ead3)}))) (str to))))
+(deftest a-finding-aid-converts-to-every-format-that-describes-it
+  (doseq [to [:ntriples :crm-only :dc :trig]]
+    (is (string? (:output (convert/convert {:from :ead :to to :source (slurp ead3)}))) (str to)))
+  (testing "a bibliographic format refuses it, saying why and which targets can (post-audit 3, E2)"
+    (doseq [to [:marc21 :mods :linked-art]]
+      (let [e (try (convert/convert {:from :ead :to to :source (slurp ead3)}) nil
+                   (catch clojure.lang.ExceptionInfo e e))]
+        (is (some? e) (str to))
+        (is (= #{:archival-unit} (:resource-types (ex-data e))))
+        (is (str/includes? (ex-message e) "archival units"))
+        (is (contains? (:supported (ex-data e)) :dc))))))
 
 (defn- mini-ead
   "A small EAD3 finding aid with a fonds `F` and one `c01` per unitid of `uids`

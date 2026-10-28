@@ -79,22 +79,76 @@
    :jsonld     {:render export/->jsonld              :losses export/export-losses}
    :crm        {:render crm/->ntriples               :losses export/export-losses}
    :crm-only   {:render crm/->crm-only-ntriples      :losses crm-only-losses}
-   :linked-art {:render linked-art/->jsonld          :losses linked-art/export-losses}
+   :linked-art {:render linked-art/->jsonld          :losses linked-art/export-losses
+                :accepts #{:bibliographic :digital}}
    :dc         {:render dc-export/->dc-xml           :losses dc-export/export-losses
+                :accepts #{:bibliographic :digital :archival-unit}
                 ;; DC has no collection element of its own: one record stays a
                 ;; DC document, several are wrapped to stay one XML document
                 :collection ["<collection>" "</collection>"] :wrap-one? false}
    :marc21     {:render marc21-export/->marcxml      :losses marc21-export/export-losses
+                :accepts #{:bibliographic :digital}
                 :collection ["<collection xmlns=\"http://www.loc.gov/MARC21/slim\">" "</collection>"]}
    :mods       {:render mods-export/->mods-xml       :losses mods-export/export-losses
+                :accepts #{:bibliographic :digital}
                 :collection ["<modsCollection xmlns=\"http://www.loc.gov/mods/v3\">" "</modsCollection>"]}
-   :iiif       {:render iiif-export/->json           :losses iiif-export/export-losses}
+   :iiif       {:render iiif-export/->json           :losses iiif-export/export-losses
+                :accepts #{:bibliographic :digital :archival-unit}}
    :prov       {:render prov/->ntriples              :losses prov/export-losses :history? true}
    ;; datasets: every claim, each status class in its own named graph (ADR 0029)
    :nquads     {:render dataset/->nquads             :losses export/export-losses :history? true}
    :trig       {:render dataset/->trig               :losses export/export-losses :history? true}
    ;; the pivot itself, as EDN (ADR 0034): every record whole, nothing lost
    :edn        {:render ir/->edn-line                :losses (constantly [])      :history? true}})
+
+(defn resource-type
+  "What kind of resource `record` describes, as the targets see it: an
+   archival unit (EAD), an archival authority — a person, a corporate body, a
+   family (EAC-CPF) —, a digital presentation (a IIIF manifest) or, for every
+   other spoke, a bibliographic description."
+  [record]
+  (case (:kind record)
+    :archival-unit      :archival-unit
+    :archival-authority :authority
+    :iiif/manifest      :digital
+    :bibliographic))
+
+(defn source-resource-type
+  "The `resource-type` spoke `from`'s records have (an OAI-PMH response, whose
+   records have their format's, and EDN, which may hold any, are nil)."
+  [from]
+  (case from
+    :ead     :archival-unit
+    :eac-cpf :authority
+    :iiif    :digital
+    (:oai :edn) nil
+    :bibliographic))
+
+(def ^:private resource-names
+  {:archival-unit "archival units (EAD)" :authority "authority records (EAC-CPF)"
+   :digital "digital presentations (IIIF)" :bibliographic "bibliographic records"})
+
+(defn accepts?
+  "True when target `to` describes resources of `type` (`resource-type`). A
+   record target (MARC21, MODS, DC, Linked Art, IIIF) states what it can say;
+   an RDF, PROV-O or EDN target writes any resource's graph."
+  [to type]
+  (let [a (get-in exporters [to :accepts])]
+    (or (nil? a) (contains? a type))))
+
+(defn- check-accepts!
+  "Throw when target `to` cannot describe one of `records`' resource types: a
+   field-by-field projection of an archival unit or an authority onto a
+   bibliographic format would give its fields a meaning they do not have
+   (post-audit 3, E2)."
+  [to records]
+  (when-let [bad (seq (distinct (remove #(accepts? to %) (map resource-type records))))]
+    (throw (ex-info (str (name to) " cannot describe " (str/join ", " (map resource-names bad))
+                         ": its fields would say what the source does not (a cote is no LCCN, a date of"
+                         " the documents no publication date). Targets that can: "
+                         (str/join ", " (map name (sort (filter (fn [t] (every? #(accepts? t %) bad)) (keys exporters))))))
+                    {:to to :resource-types (set bad)
+                     :supported (set (filter (fn [t] (every? #(accepts? t %) bad)) (keys exporters)))}))))
 
 (defn collection
   "`[open close]`, the element that makes several of target `to`'s XML
@@ -251,6 +305,7 @@
   ([to records {:keys [with-proposals? bare?]}]
    (when-not (contains? exporters to)
      (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
+   (check-accepts! to records)
    (let [{:keys [render losses]} (exporters to)
          facts?   (not (or (keeps-history? to) with-proposals?))
          withheld (if facts? (count (filter model/pending? (mapcat :assertions records))) 0)

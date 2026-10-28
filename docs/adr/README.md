@@ -62,6 +62,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0046](./0046-an-identified-agent-names-its-occurrence.md) | An identified agent names the occurrence it identifies | Accepted |
 | [0047](./0047-durable-archival-ids.md) | An archival id moves only when the source gives no better | Accepted |
 | [0048](./0048-a-manifest-independent-of-what-is-loaded.md) | A manifest names the source tree and the runtime, not what is loaded | Accepted |
+| [0049](./0049-a-target-says-what-it-can-describe.md) | A target says what it can describe | Accepted |
 
 ## Template
 
