@@ -104,6 +104,7 @@
         as      (remove nil?
                         (concat
                          [(nat :eac/record-id rec-id (x "control" "recordId"))
+                          (nat :eac/agency-code (not-empty agency) (x "control" "maintenanceAgency" "agencyCode"))
                           (let [et (child ident "entityType")]
                             (if-let [v (attr et "value")]
                               (nat :eac/entity-type v (update-in (x "cpfDescription" "identity" "entityType") [0 :selector :value] str "/@value"))
