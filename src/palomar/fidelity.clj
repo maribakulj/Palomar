@@ -262,7 +262,9 @@
            part-in (fn [{:keys [predicate value whole]}]
                      (let [v  (norm value)
                            re (re-pattern (str "(?<![\\p{L}\\p{N}])" (when (re-matches #"\d+" v) "0*")
-                                               (java.util.regex.Pattern/quote v) "(?![\\p{L}\\p{N}])"))
+                                               (java.util.regex.Pattern/quote v)
+                                               ;; a date may go on as an xsd:dateTime (\"1924-01-01T00:00:00Z\")
+                                               (if (re-matches #"-?\d{4}-\d{2}-\d{2}" v) "(?=T|(?![\\p{L}\\p{N}]))" "(?![\\p{L}\\p{N}])")))
                            ev (when (contains? (:predicates scopes) predicate) (or (:event whole) (:index whole)))]
                        (some #(re-find re (norm %))
                              (if ev (get-in scopes [:strings ev] #{}) seen))))

@@ -17,6 +17,15 @@ the works are in the public domain (Public Domain Mark 1.0).
   and licence), cut to six live records: a drawing with no actor, a
   photograph, an anonymous draughtsman's study, a print by its artist, a
   print with an inventor and an engraver, and a drawing by two draughtsmen.
+- `museum-digital-hessen-lido.xml`, `museum-digital-westfalen-lido.xml`: two
+  other institutions' records, as the museum-digital aggregator serves them
+  over OAI-PMH (`https://hessen.museum-digital.de/oai`,
+  `https://westfalen.museum-digital.de/oai`, `metadataPrefix=lido`, first
+  `ListRecords` page) on 2026-10-29: two prints of one portfolio, the
+  portfolio itself (five productions), plaster casts, a Greek vase, a
+  model. Every record's `recordRights` is CC0 1.0. Their practice differs
+  from the Städel's: German past participles as event types ("Hergestellt",
+  "Gefunden"), the object's materials in an "Event (non-specified)".
 - `staedel-lido-wrap.xml`: two of those records as a bare LIDO `lidoWrap`
   document, for the spoke read directly.
 

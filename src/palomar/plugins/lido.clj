@@ -36,6 +36,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
+            [palomar.plugins.lido-schema :as lido-schema]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.rules :as rules]
             [palomar.runtime :as runtime]
@@ -110,13 +111,15 @@
    "carrier_production" :production "acquisition" :acquisition
    ;; what changes the object without making it (post-audit 5, G1)
    "restoration" :modification "modification" :modification "part_addition" :modification
-   "part_removal" :modification})
+   "part_removal" :modification "unspecified_event" :unspecified})
 
 (def ^:private kind-labels
   "Event type terms, in the languages LIDO records use, when no URI says it."
   {"production" :production "herstellung" :production "entstehung" :production "création" :production
    "creation" :production "acquisition" :acquisition "erwerb" :acquisition "erwerbung" :acquisition
-   "zugang" :acquisition "produktion" :production "fabrication" :production "restoration" :modification "restauration" :modification "restaurierung" :modification
+   "zugang" :acquisition "produktion" :production "fabrication" :production "hergestellt" :production
+   ;; museum-digital's: an event of no stated kind (post-audit 5, G6)
+   "event (non-specified)" :unspecified "event (unspecified)" :unspecified "unspecified event" :unspecified "restoration" :modification "restauration" :modification "restaurierung" :modification
    "conservation" :modification "konservierung" :modification "modification" :modification
    "veränderung" :modification})
 
@@ -138,7 +141,9 @@
   #{"exhibition" "ausstellung" "exposition" "commissioning" "auftrag" "commande" "excavation"
     "ausgrabung" "fouille" "publication" "publikation" "collecting" "performance" "aufführung"
     "use" "nutzung" "gebrauch" "verwendung" "utilisation" "planning" "planung" "designing" "entwurf"
-    "sammeln" "sammlung" "collecte" "grabung" "transfer" "überführung" "transport"})
+    "sammeln" "sammlung" "collecte" "grabung" "transfer" "überführung" "transport"
+    ;; museum-digital's past participles (post-audit 5, G6)
+    "veröffentlicht" "wurde genutzt" "genutzt" "ausgestellt" "gesammelt" "beauftragt" "ausgegraben"})
 
 (defn- activity-type?
   "True when an event's type, by its LIDO URI or code, or else its term, names
@@ -473,8 +478,11 @@
      (str/join "/" (concat ctx child)))))
 
 (defn importer
-  "ADR 0007 importer: one record per `lido:lido` of `source` (see the ns doc)."
-  [_opts source]
+  "ADR 0007 importer: one record per `lido:lido` of `source` (see the ns doc).
+   Each is validated against the LIDO schema (`lido-schema`) unless
+   `:validate?` is false in `opts`: a record that is not valid carries an
+   `:error` diagnostic, `:lido/schema-invalid` (post-audit 5, G6)."
+  [opts source]
   (let [s     (if (string? source) source (slurp source))
         root  (rx/parse-str s)
         rn    (local (:tag root))
@@ -482,7 +490,8 @@
                 (throw (ex-info "lido: not a LIDO document" {:root rn})))
         top   [root (str "/*[local-name()='" rn "'][1]")]
         lidos (if (= "lido" rn) [top] (kids top "lido"))
-        out   (for [node lidos
+        xsd   (when (get opts :validate? true) (lido-schema/errors s))
+        out   (for [[i node] (map-indexed vector lidos)
                     :let [natives (vec (object-natives node))
                           rec-id (some-> (kid node "lidoRecID") text)
                           ;; a local id is unique only within its source: the
@@ -501,10 +510,16 @@
                 ;; what the LIDO schema requires and the record lacks is a
                 ;; warning on the record, which `validate` reports (post-audit 4, F7)
                 {:record (model/record {:id rid :kind :lido/object :source (or rec-id (name rid)) :assertions (vec as)
-                                        :diagnostics (for [m (missing-required node)]
-                                                       (model/diagnostic {:severity :warning :code :lido/missing-required :subject rid
-                                                                          :message (str "the record lacks " m ", which the LIDO schema requires")
-                                                                          :detail {:lido/element m}}))})
+                                        :diagnostics (concat
+                                                      (for [m (missing-required node)]
+                                                        (model/diagnostic {:severity :warning :code :lido/missing-required :subject rid
+                                                                           :message (str "the record lacks " m ", which the LIDO schema requires")
+                                                                           :detail {:lido/element m}}))
+                                                      (when-let [{:keys [version errors]} (get xsd i)]
+                                                        (when (seq errors)
+                                                          [(model/diagnostic {:severity :error :code :lido/schema-invalid :subject rid
+                                                                              :message (str "not valid " (lido-schema/version-name version) ": " (first errors))
+                                                                              :detail {:lido/schema version :lido/errors errors}})])))})
                  :losses (concat
                           (when-not rec-id
                             [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :lido/lidoRecID
@@ -556,7 +571,7 @@
    painting, a drawing, a print, a sculpture, a vessel… English and French
    words from their start, German stems anywhere in a compound
    (\"Ölgemälde\", \"Farbholzschnitt\") (post-audit 5, G4)."
-  #"(?i)(?<!\p{L})(?:paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|installation|sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|manuscript|book|tool|weapon|armou?r|clock|instrument|model|peinture|dessin|estampe|gravure|tableau|objet d'art|affiche|meuble|céramique|tissu|vêtement|monnaie)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|druck|stich|radierung|schnitt|lithographie|lithografie|fotografie|photographie|plakat|skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|handschrift|buch|werkzeug|waffe|uhr|instrument|modell)")
+  #"(?i)(?<!\p{L})(?:paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|installation|sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|manuscript|book|tool|weapon|armou?r|clock|instrument|model|peinture|dessin|estampe|gravure|tableau|objet d'art|affiche|meuble|céramique|tissu|vêtement|monnaie)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|druck|stich|radierung|schnitt|lithographie|lithografie|fotografie|photographie|plakat|abguss|altar|mappe|skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|handschrift|buch|werkzeug|waffe|uhr|instrument|modell)")
 
 (def natural-terms
   "Work type and classification terms that name a natural object: a fossil, a
@@ -586,11 +601,32 @@
                           (:assertions record))
                     (some #(re-find artefact-terms %) (type-terms record))))))
 
+(defn material-keys
+  "The keys of the events of `record` whose materials are the object's: its
+   productions, and an event of no stated kind that says nothing but its
+   materials (where aggregators such as museum-digital put an object's
+   materials). One that has an actor, a date, a place or a description is
+   something that happened (a cleaning, a restoration unnamed): its
+   materials are its own, never the object's (post-audit 5, G1, G6 review)."
+  [record]
+  (let [as     (remove model/out-of-force? (:assertions record))
+        busy   (into #{} (concat (keep #(when (= :lido/actor (:predicate %)) (:event (fields %))) as)
+                                 (keep #(when (#{:lido/event-description :lido/event-place :lido/event-place-id} (:predicate %)) (event-key %)) as)))]
+    (set (keep #(let [f (fields %)]
+                  (when (and (= :lido/event (:predicate %))
+                             (or (= "production" (:kind f))
+                                 (and (= "unspecified" (:kind f))
+                                      (not (busy (:index f)))
+                                      (not-any? f [:date :earliest :latest]))))
+                    (:index f)))
+               as))))
+
 (defn- production-event?
-  "True when the event of key `n` among `events` is a production, or when no
-   event is known for it (a value read outside any event)."
-  [events n]
-  (let [[f] (get events n)] (or (nil? f) (= "production" (:kind f)))))
+  "True when the event of key `n` is one whose materials are the object's
+   (`mkeys`, `material-keys`), or when no event is known for it (a value read
+   outside any event)."
+  [events mkeys n]
+  (or (nil? (get events n)) (contains? mkeys n)))
 
 (defn- runner
   "An object's CIDOC CRM view: an `E22_Human-Made_Object` with its titles,
@@ -626,7 +662,8 @@
                  (let [t (model/mint-entity-id kind (if uri uri [(str rid) label]))]
                    (concat [(entity t kind uri) (claim s p (model/reference t) a)]
                            (when label [(claim t :crm/P190_has_symbolic_content label a)]))))
-        events (into {} (for [a (of :lido/event) :let [f (fields a)]] [(:index f) [f a]]))]
+        events (into {} (for [a (of :lido/event) :let [f (fields a)]] [(:index f) [f a]]))
+        mkeys  (material-keys record)]
     (concat
      [(entity obj okind)]
      (when-not made?
@@ -698,7 +735,7 @@
            (mapcat (fn [a] (let [f (fields a)]
                              (cond
                                (= "technique" (:role f))      (typed e :crm/P32_used_general_technique :crm/E55_Type a f)
-                               (= "production" (:kind f*))    (typed obj :crm/P45_consists_of :crm/E57_Material a f)
+                               (contains? mkeys n)            (typed obj :crm/P45_consists_of :crm/E57_Material a f)
                                (= "modification" (:kind f*))  (typed e :crm/P126_employed :crm/E57_Material a f)
                                :else [{:kind :diagnostic
                                        :value (dx/loss {:category :dropped :subject rid :edge :projection :source-field :lido/material :value f
@@ -707,13 +744,13 @@
                    (in :lido/material))
            ;; the materials as displayed, of the production, are the object's;
            ;; any other event's are a note on that event
-           (when-not (= "production" (:kind f*))
+           (when-not (contains? mkeys n)
              (for [a (of :lido/materials) :when (= n (event-key a))] (claim e :crm/P3_has_note (:value a) a)))
            (for [a (of :lido/event-description) :when (= n (event-key a))] (claim e :crm/P3_has_note (:value a) a))
            (mapcat (fn [a] (typed e :crm/P7_took_place_at :crm/E53_Place a {:uri (:value a)}))
                    (filter #(= n (event-key %)) (of :lido/event-place-id))))))
       (sort-by (comp event-order key) events))
-     (for [a (of :lido/materials) :when (production-event? events (event-key a))] (claim obj :crm/P3_has_note (:value a) a))
+     (for [a (of :lido/materials) :when (production-event? events mkeys (event-key a))] (claim obj :crm/P3_has_note (:value a) a))
      (mapcat (fn [a] (let [{:keys [name uri]} (fields a)
                            g (model/mint-entity-id :crm/E74_Group (or uri [(str rid) name]))]
                        [(entity g :crm/E74_Group uri)
