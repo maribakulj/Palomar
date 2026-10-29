@@ -25,7 +25,11 @@ an acquisition history.
      museum-digital puts them there, only when the event says nothing else:
      one with an actor, a date, a place or a description is something that
      happened (a cleaning, an unnamed restoration), and its materials are its
-     own (amended, post-audit 5, G6 and its review).
+     own (amended, post-audit 5, G6 and its review). The English and
+     Hungarian terms of museum-digital's other portals are read too
+     ("Created", "Was used", "Felvétel készítése", "Gyűjtés", "Kiadás"):
+     before, a probe found every Hungarian object unattested as made
+     (amended, post-audit 6, H3).
    - It takes one record per `lido:lido`, bare or in a `lidoWrap`, named by
      its `lidoRecID` and the source (`lido:source`) that issued it, since a
      local id is unique only within its institution (amended, post-audit 4,

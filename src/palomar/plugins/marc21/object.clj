@@ -5,7 +5,7 @@
 
    | LIDO                                   | MARC21                                     |
    |----------------------------------------|--------------------------------------------|
-   | the object                             | Leader/06 `k` (a painting, a drawing, a print, a photograph: a two-dimensional graphic) or `r` (a three-dimensional artefact), /07 `m` |
+   | the object                             | Leader/06 `k` (a painting, a drawing, a print, a photograph: a two-dimensional graphic), `r` (a three-dimensional artefact), `a` or `t` (a printed book, a manuscript; `c`/`d` music, `e`/`f` a map), /07 `m` |
    | its stable id                          | `001`, and `003` the ISIL of its source    |
    | the inventory number                   | `099 $a` local call number                 |
    | the production's actors                | `100` 1# / `110` 2# (then `700`/`710`) `$a`, `$d` life dates, `$e` role, `$0` authority URI |
@@ -49,22 +49,55 @@
        "</datafield>"))
 
 (def ^:private two-dimensional
-  #"(?i)(?<!\p{L})(?:paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|peinture|dessin|estampe|gravure|tableau|affiche)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|druck|stich|radierung|holzschnitt|lithographie|lithografie|fotografie|photographie|plakat)")
+  "Types of a two-dimensional graphic: Leader/06 `k`. A print, a drawing or a
+   photograph stays one whatever book or manuscript it shows or illustrates;
+   a printed book is no print (post-audit 6, H3 review)."
+  #"(?i)(?<!\p{L})(?:paint|drawing|print(?!ed)|photograph(?!ed)|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|peinture|dessin|estampe|gravure|tableau|affiche|bookplate|ex-?libris|illustration|illumination|enluminure)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|(?<!ge)druck(?!schrift)|stich|radierung|holzschnitt|lithographie|lithografie|fotografie|photographie|plakat|skizze|illustration|exlibris)")
 
 (def ^:private three-dimensional
   "Types of a three-dimensional artefact, or a naturally occurring object:
    Leader/06 `r` (post-audit 5, G4)."
-  #"(?i)(?<!\p{L})(?:sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|book|tool|weapon|armou?r|clock|instrument|model|installation|object|objet|meuble|céramique|monnaie)|(?:skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|buch|werkzeug|waffe|uhr|modell|objekt)")
+  #"(?i)(?<!\p{L})(?:sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|tool|weapon|armou?r|clock|instrument|model|installation|object|objet|meuble|céramique|monnaie)|(?:skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|werkzeug|waffe|uhr|modell|objekt)")
+
+(def ^:private book-fitting
+  "A book's binding, cover or furniture, or a box for manuscripts: an
+   artefact, Leader/06 `r`, not the book (post-audit 6, H3 review)."
+  #"(?i)(?<!\p{L})(?:book ?(?:covers?|cases?|ends?|bindings?)|bindings?|reliures?)(?!\p{L})|einb(?:and|ände)|buchdeckel|buchschließe|buchstütze|handschriftenkasten")
+
+(def ^:private manuscript
+  "Types of a manuscript, a book of hours included: Leader/06 `t`,
+   manuscript language material (post-audit 6, H3)."
+  #"(?i)(?<!\p{L})(?:manuscripts?|manuscrits?|codex|codices|book of hours|livres? d'heures|\p{L}*handschrift(?:en)?|stundenb(?:uch|ücher))(?!\p{L})")
+
+(def ^:private printed-book
+  "Types of a printed book, a German compound in -buch included: Leader/06
+   `a`, language material (post-audit 6, H3)."
+  #"(?i)(?<!\p{L})(?:books?|livres?|incunab\p{L}*|inkunabel\p{L}*|druckschrift(?:en)?|\p{L}*buch|\p{L}*bücher)(?!\p{L})")
+
+(def ^:private music
+  "Notated music: a manuscript of it is Leader/06 `d`, a printed one `c`."
+  #"(?i)musi[ck]|musique|(?<!\p{L})(?:scores?|partitions?)(?!\p{L})|noten")
+
+(def ^:private cartographic
+  "A map or an atlas: a manuscript one is Leader/06 `f`, a printed one `e`."
+  #"(?i)(?<!\p{L})(?:maps?|cartes?|karten?|landkarten?|atlas|atlanten)(?!\p{L})")
 
 (defn- graphic
-  "Leader/06 of `record`: `k` when a type names a two-dimensional graphic,
-   `r` when one names a three-dimensional artefact or the record does not say
-   the object was made; nil when no type says which."
+  "Leader/06 of `record`, by its work types and classifications (post-audit
+   6, H3 and its review): `r` for a natural object; `k` when a type names a
+   two-dimensional graphic, whatever book it illustrates; `r` for a book's
+   fitting; `t` for a manuscript, `a` for a printed book (`d` and `c` for
+   music, `f` and `e` for a map), the language material MARC types them as;
+   `r` when a type names a three-dimensional artefact; nil when none says."
   [record]
-  (let [types (concat (strings record :lido/work-type) (strings record :lido/classification))]
-    (cond (lido/natural? record)                      "r"
-          (some #(re-find two-dimensional %) types)   "k"
-          (some #(re-find three-dimensional %) types) "r")))
+  (let [types (concat (strings record :lido/work-type) (strings record :lido/classification))
+        any?  (fn [re] (some #(re-find re %) types))]
+    (cond (lido/natural? record)    "r"
+          (any? two-dimensional)    "k"
+          (any? book-fitting)       "r"
+          (any? manuscript)         (cond (any? music) "d" (any? cartographic) "f" :else "t")
+          (any? printed-book)       (cond (any? music) "c" (any? cartographic) "e" :else "a")
+          (any? three-dimensional)  "r")))
 
 (defn- leader [record]
   ;; a type it cannot tell is r, and that is reported (`export-losses`)

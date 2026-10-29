@@ -24,7 +24,17 @@ LIDO values:
   when one names a three-dimensional artefact (a sculpture, a vessel…) or a
   natural object (a fossil, a mineral). When no type
   says which, `r` is assumed and that is reported (amended, post-audit 5,
-  G4). Leader/07 is `m`.
+  G4). A manuscript (a book of hours included) is `t`, a printed book `a`:
+  language material, as MARC types it, whatever a museum keeps it as;
+  manuscript and printed music are `d` and `c`, a manuscript and a printed
+  map `f` and `e`. A graphic stays `k` whatever book it illustrates or
+  shows (a woodcut book illustration, a bookplate, a photograph of a
+  manuscript), and a book's binding, cover or furniture is `r`. Words are
+  matched whole, a German compound in -buch or -handschrift included
+  (amended, post-audit 6, H3 and its review). The `264` of a printed book
+  stays the production's (`#0`), not a publication: a limit of this
+  profile.
+  Leader/07 is `m`.
 - **`001`** is the record's stable id. The inventory number goes to `099 $a`.
 - **`003`** names whose `001` it is: the `lido:source` of the `lidoRecID`
   when it is an ISIL, or the ISIL a ZDB organisation URI ends with. Any other

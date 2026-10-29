@@ -249,16 +249,21 @@ Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as
   and the full CLI (`convert · validate · report · inspect · reconcile ·
   apply-repairs · conformance · formats · ir-schema`), and `palomar.api`, the
   stable library surface (ADR 0034).
-- **WP-4 spokes** — nine importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF + EAD/EAC-CPF, the archives in RiC-O), plus OAI-PMH responses
-  reach the pivot and project to fourteen targets (RDF · CIDOC-CRM · Linked Art ·
-  the floor formats · PROV-O · N-Quads/TriG datasets with facts, proposals, history
-  and provenance in named graphs · the pivot itself as EDN, readable back with
-  `--from edn`); four floor round-trips; Linked Art validated against the
-  official draft-2020-12 schema.
+- **WP-4 spokes** — ten importers (the MARC family + INTERMARC-NG + DC/MODS/IIIF
+  + EAD/EAC-CPF, the archives in RiC-O, + LIDO, museum objects in CIDOC CRM),
+  plus OAI-PMH responses, reach the pivot and project to eighteen targets (RDF ·
+  CIDOC-CRM · Linked Art · the floor formats · MARC21 bibliographic, archival,
+  fonds, authority and object profiles · PROV-O · N-Quads/TriG datasets with
+  facts, proposals, history and provenance in named graphs · the pivot itself as
+  EDN, readable back with `--from edn`); four floor round-trips; Linked Art
+  validated against the official draft-2020-12 schema; LIDO validated against
+  its official XSD, offline. `clojure -M:run formats` lists them;
+  [`docs/guarantees.md`](./docs/guarantees.md) is the current reference.
 - **WP-6 conformance** — the mechanism + three profiles (Linked Art / IIIF / BnF
   INTERMARC); institutional *certification* on real samples is partnership-gated.
 - **WP-7 scale** — streaming end-to-end in constant memory (a 97 MB flat MARC dump
-  converts in a 256 MB heap); true millions-scale is data-gated.
+  converts in a 256 MB heap; a 218 MB LIDO dump too, slowly:
+  [`docs/eval/scale.md`](./docs/eval/scale.md)); true millions-scale is data-gated.
 - **WP-9 (hardening + release)** — in progress: XML input hardened against
   entity-expansion (`billion laughs`) and XXE (DTDs refused, `palomar.xml` +
   [`SECURITY.md`](./SECURITY.md)); a machine-readable loss report
@@ -443,8 +448,9 @@ INTERMARC · **INTERMARC-NG** · Dublin Core · MODS · IIIF · CIDOC-CRM / Link
 ↔ the **assertion IR (ground truth)** ↔ a **derived, typed LRMoo view** (a plugin,
 never the core). Every conversion emits a measurable loss report.
 
-As of 2026-06, **eight source spokes reach the LRMoo pivot and project to ten
-targets**: the full MARC family (MARC21 / INTERMARC / UNIMARC) plus the
+As of 2026-06 (a milestone; the current inventory is in *Current status* above
+and in [`docs/guarantees.md`](./docs/guarantees.md)), **eight source spokes
+reached the LRMoo pivot and projected to ten targets**: the full MARC family (MARC21 / INTERMARC / UNIMARC) plus the
 INTERMARC-NG **entity-relation** spoke (graph→graph, no inference — ADR 0019) and
 DC / MODS / IIIF; targets span RDF (N-Triples · Turtle · JSON-LD), CIDOC-CRM,
 Linked Art (validated against the official draft-2020-12 schema) and the floor

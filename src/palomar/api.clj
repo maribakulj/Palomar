@@ -63,7 +63,7 @@
 
 (defn convert
   "Read and write in one call. `request`: `{:from :to :source :opts
-   :with-proposals?}`. Returns `{:output string :records n :loss report :deleted [id…]}`."
+   :with-proposals?}`. Returns `{:output string :records n :loss report :deleted [id…] :invalid {:records n :errors [...]}}`."
   [request]
   (convert/convert request))
 

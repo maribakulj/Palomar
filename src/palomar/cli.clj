@@ -74,6 +74,8 @@
     "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
     "  --out         write the output to a file instead of stdout (convert)"
     "  --stream      convert in bounded memory, streaming a large MARC dump or LIDO lidoWrap to --out (WP-7)"
+    "  --fail-on-invalid convert: refuse the whole conversion (exit 1, nothing written) when a record is not valid"
+    "                    (one that carries an error: today a LIDO record its XSD rejects; the wrap is not checked)"
     "  --with-proposals  convert: also state the proposed claims (uncurated inferences) as facts; by default a"
     "                plain RDF or record export holds facts only, and trig/nquads/prov keep each claim with its status"
     "  --manifest    convert: write the run manifest (versions, digests, options, loss) as EDN"
@@ -101,6 +103,7 @@
           (#{"--stream"} a)         (recur (rest as) (assoc-in m [:flags "stream"] true)) ; boolean
           (#{"--facts-only"} a)     (recur (rest as) (assoc-in m [:flags "facts-only"] true)) ; boolean, now the default
           (#{"--with-proposals"} a) (recur (rest as) (assoc-in m [:flags "with-proposals"] true)) ; boolean
+          (#{"--fail-on-invalid"} a) (recur (rest as) (assoc-in m [:flags "fail-on-invalid"] true)) ; boolean
           (str/starts-with? a "--") (recur (drop 2 as) (assoc-in m [:flags (subs a 2)] (second as)))
           (:command m)              (recur (rest as) (update m :positional (fnil conj []) a))
           :else                     (recur (rest as) (assoc m :command a)))))))
@@ -153,6 +156,22 @@
                                   :started-at  started-at
                                   :finished-at (java.util.Date.)}))))
 
+(defn- invalid-note
+  "The report's line on the records that are not valid, or nil (post-audit 6, H3)."
+  [{n :records es :errors}]
+  (when (pos? (or n 0))
+    (str "\n(" n " record" (when (not= 1 n) "s") " not valid: " (:message (first es))
+         "; convert --fail-on-invalid refuses such a conversion)")))
+
+(defn- refused-or-error
+  "The exit of a conversion that threw: 1 when it refused invalid records
+   (`--fail-on-invalid`), as `validate` fails on them; 2 for any other error."
+  [e]
+  (if (and (:records (ex-data e)) (:errors (ex-data e)))
+    {:exit 1 :out "" :err (str "INVALID: " (.getMessage e) "\n"
+                               (str/join "\n" (map #(str "  " (:subject %) " " (:message %)) (:errors (ex-data e)))))}
+    {:exit 2 :out "" :err (str "error: " (.getMessage e) " " (pr-str (ex-data e)))}))
+
 (defn- do-convert [{:strs [from to record-id out with-proposals] :as flags} input]
   (cond
     (not (and from to input))
@@ -174,6 +193,7 @@
                                      :to     (keyword to)
                                      :source (slurp input)
                                      :with-proposals? (boolean with-proposals)
+                                     :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
                                      :opts   opts})
             _      (when-let [mpath (get flags "manifest")]
                      (write-manifest! mpath {:from (keyword from) :to (keyword to) :input input :out out
@@ -186,12 +206,13 @@
                           (str "\n(" (count (:deleted result)) " record"
                                (when (not= 1 (count (:deleted result))) "s")
                                " deleted at the source: " (str/join " " (:deleted result)) ")"))
+                        (invalid-note (:invalid result))
                         (zero-records-note (:records result) from input))]
         (if out
           (do (spit out (:output result)) {:exit 0 :out "" :err (str "wrote " out "\n" report)})
           {:exit 0 :out (:output result) :err report}))
       (catch clojure.lang.ExceptionInfo e
-        {:exit 2 :out "" :err (str "error: " (.getMessage e) " " (pr-str (ex-data e)))})
+        (refused-or-error e))
       (catch Exception e
         {:exit 2 :out "" :err (str "error: " (.getMessage e))}))))
 
@@ -326,6 +347,7 @@
                     (let [res (convert/convert-stream
                                {:from fromk :to (keyword to)
                                 :with-proposals? (boolean (get flags "with-proposals"))
+                                :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
                                 :records (convert/stream-source fromk opts r)}
                                (fn [doc] (.write w doc) (.write w "\n")))]
                       (when close (.write w close) (.write w "\n"))
@@ -335,10 +357,11 @@
              :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")
                         " streamed (bounded memory)\n"
                         (lr/format-conversion-report (:loss res))
+                        (invalid-note (:invalid res))
                         (zero-records-note (:records res) from input))}
             {:exit 2 :out "" :err (str "error: could not move streamed output to " out)}))
         (catch clojure.lang.ExceptionInfo e
-          {:exit 2 :out "" :err (str "error: " (.getMessage e) " " (pr-str (ex-data e)))})
+          (refused-or-error e))
         (catch Exception e
           {:exit 2 :out "" :err (str "error: " (.getMessage e))})
         (finally

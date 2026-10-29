@@ -187,3 +187,28 @@
                                     "<lido:lidoRecID>V</lido:lidoRecID></lido:lido>")
                                :v1.1)
            [(first (lido-schema/errors (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>V</lido:lidoRecID></lido:lido>") :v1.0))]))))
+
+(def ^:private invalid-lido
+  "A lidoWrap whose second record is not valid LIDO (an unknown element)."
+  (str "<lido:lidoWrap xmlns:lido=\"http://www.lido-schema.org\">"
+       (subs (slurp "test/fixtures/documentary/lido/staedel-lido-wrap.xml")
+             (str/index-of (slurp "test/fixtures/documentary/lido/staedel-lido-wrap.xml") "<lido:lido>")
+             (+ (str/index-of (slurp "test/fixtures/documentary/lido/staedel-lido-wrap.xml") "</lido:lido>") (count "</lido:lido>")))
+       "<lido:lido><lido:lidoRecID>BAD</lido:lidoRecID><lido:frobnicate/></lido:lido></lido:lidoWrap>"))
+
+(deftest an-invalid-record-can-stop-a-conversion
+  (testing "a conversion says how many records are not valid; asked to, it fails on one, batch and stream alike (post-audit 6, H3)"
+    (is (= 1 (get-in (convert/convert {:from :lido :to :ntriples :source invalid-lido}) [:invalid :records])))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not valid"
+                          (convert/convert {:from :lido :to :ntriples :source invalid-lido :fail-on-invalid? true})))
+    (is (= 1 (get-in (with-open [r (java.io.StringReader. invalid-lido)]
+                       (convert/convert-stream {:from :lido :to :ntriples :records (convert/stream-source :lido {} r)} (fn [_])))
+                     [:invalid :records])))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"record 2 not valid: the streamed conversion is refused there"
+                          (with-open [r (java.io.StringReader. invalid-lido)]
+                            (convert/convert-stream {:from :lido :to :ntriples :fail-on-invalid? true
+                                                     :records (convert/stream-source :lido {} r)} (fn [_])))))
+    (testing "a valid source converts as before"
+      (is (= 0 (get-in (convert/convert {:from :lido :to :ntriples :source (slurp "test/fixtures/documentary/lido/staedel-lido-wrap.xml")
+                                         :fail-on-invalid? true})
+                       [:invalid :records]))))))

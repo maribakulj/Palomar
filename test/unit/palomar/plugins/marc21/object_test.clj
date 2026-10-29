@@ -130,3 +130,38 @@
       (is (not (undetermined? "Skulptur")))
       (is (= \r (ldr "Ding")))
       (is (undetermined? "Ding") "a type it cannot tell is reported, not silently three-dimensional"))))
+
+(deftest a-book-is-language-material
+  (testing "Leader/06 a for a printed book, t for a manuscript: language material, not an artefact (post-audit 6, H3)"
+    (let [rec (fn [t] (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>B-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                           "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>" t "</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                           "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                           "</lido:descriptiveMetadata></lido:lido>"))
+          ldr (fn [t] (nth (second (re-find #"<leader>([^<]+)</leader>" (:output (convert/convert {:from :lido :to :marc21-object :source (rec t)})))) 6))]
+      (is (= \a (ldr "book")))
+      (is (= \a (ldr "Buch")))
+      (is (= \t (ldr "manuscript")))
+      (is (= \t (ldr "Handschrift")))
+      (is (= \t (ldr "manuscrit")))
+      (is (= \k (ldr "Zeichnung")) "a drawing stays a graphic")
+      (is (= \r (ldr "Skulptur")))
+      (testing "a graphic stays one, whatever book or manuscript it shows or illustrates (H3 review)"
+        (doseq [t ["Holzschnitt, Buchillustration" "Exlibris (bookplate), etching" "photograph of a manuscript"
+                   "Zeichnung, Handschrift" "book illustration" "Buchmalerei"]]
+          (is (= \k (ldr t)) t)))
+      (testing "a printed book stays a book"
+        (doseq [t ["printed book" "gedrucktes Buch" "Druckschrift" "livre imprimé" "incunabula" "Bücher"]]
+          (is (= \a (ldr t)) t)))
+      (testing "a book's fitting is an artefact, a word with buch inside no book"
+        (doseq [t ["Bucheinband" "Bucheinbände" "Buchdeckel" "Buchschließe" "Buchstütze" "bookcase" "bookend" "book cover" "reliure" "Handschriftenkasten"]]
+          (is (= \r (ldr t)) t))
+        (doseq [t ["Buchse" "tissu imprimé" "autographed photograph"]]
+          (is (not (#{\a \t} (ldr t))) t)))
+      (testing "a book of hours is a manuscript; music and maps are their own MARC types"
+        (doseq [t ["livre d'heures" "Book of Hours" "Stundenbuch"]]
+          (is (= \t (ldr t)) t))
+        (is (= \d (ldr "Musikhandschrift")))
+        (is (= \d (ldr "music manuscript")))
+        (is (= \f (ldr "manuscript map")))
+        (is (= \c (ldr "Notenbuch, gedruckt")) "printed music")
+        (is (= \e (ldr "atlas, printed book")) "a printed map")))))
