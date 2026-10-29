@@ -454,3 +454,73 @@
           (is (str/includes? (crm "Ding") "E19_Physical_Object"))
           (is (str/includes? output "HumanMadeObject"))
           (is (some #(and (= :class (get-in % [:detail :loss/aspect])) (= :lido/object (get-in % [:detail :loss/source-field]))) loss)))))))
+
+(def ^:private museum-digital
+  "Real records of two other institutions' aggregator, museum-digital (Hessen,
+   Westfalen; CC0): prints, a portfolio, Greek vases, plaster casts, a model."
+  ["test/fixtures/documentary/lido/museum-digital-hessen-lido.xml"
+   "test/fixtures/documentary/lido/museum-digital-westfalen-lido.xml"])
+
+(deftest another-institution-s-records-are-read-whole
+  (testing "museum-digital's practice: its event terms, its materials in an unspecified event, its casts (post-audit 5, G6)"
+    (doseq [f museum-digital]
+      (let [xml (slurp f)
+            {:keys [ingest records]} (convert/to-wemi :oai {:metadata-prefix "lido"} xml)
+            lost (set (keep #(get-in % [:detail :loss/source-field]) ingest))
+            norm #(str/replace % #"\s+" " ")
+            vals (set (map norm (mapcat (fn [r] (keep #(when (string? (:value %)) (:value %)) (:assertions r))) records)))
+            texts (for [[_ nm t] (re-seq #"<lido:(\w+)[^>]*>([^<]+)</lido:\1>" xml)
+                        :let [t (norm (str/trim t))] :when (and (seq t) (not (str/includes? t "&")))]
+                    [nm t])
+            nt (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :ntriples :source xml}))]
+        (is (empty? (remove (fn [[nm t]] (or (vals t) (lost (keyword "lido" nm)))) texts)) f)
+        (is (not (str/includes? nt "E19_Physical_Object")) (str f ": every one of these objects was made"))
+        (is (str/includes? nt "E12_Production") (str f ": \"Hergestellt\" is a production"))
+        (when (str/includes? f "westfalen")
+          (is (str/includes? (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :linked-art :source xml}))
+                             "\"content\":\"Gips\"")
+              "the materials of the unspecified event are the object's material statement"))
+        (is (empty? (mapcat :diagnostics (filter #(= :lido/missing-required (:code %)) (mapcat :diagnostics records)))) f)
+        (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
+          (is (empty? (:unaccounted (fidelity/audit {:from :oai :opts {:metadata-prefix "lido"} :to to :source xml}))) (str f " " to)))))))
+
+(defn- schema-errors [xml]
+  (keep #(when (= :lido/schema-invalid (:code %)) %) (mapcat :diagnostics (:records (convert/to-wemi :lido {} xml)))))
+
+(deftest a-record-is-checked-against-the-lido-schema
+  (testing "every record is validated against the official LIDO XSD, vendored, offline (post-audit 5, G6)"
+    (doseq [f (concat ["test/fixtures/documentary/lido/staedel-oai-lido-sample.xml" graphics] museum-digital)]
+      (is (empty? (filter #(= :lido/schema-invalid (:code %)) (mapcat :diagnostics (:records (convert/to-wemi :oai {:metadata-prefix "lido"} (slurp f))))))
+          (str f " is valid LIDO")))
+    (testing "an element out of place, or an unknown one, is an error naming it"
+      (let [bad (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID lido:type=\"local\">X-1</lido:lidoRecID><lido:frobnicate/></lido:lido>")
+            [e] (schema-errors bad)]
+        (is (= :error (:severity e)))
+        (is (re-find #"frobnicate" (:message e)))))
+    (testing "the validate gate fails on it"
+      (is (:failed? (validate/validate {:from :lido :source (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:frobnicate/></lido:lido>")}))))
+    (testing "and it can be turned off"
+      (is (empty? (filter #(= :lido/schema-invalid (:code %))
+                          (mapcat :diagnostics (:records (convert/to-wemi :lido {:validate? false} "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:frobnicate/></lido:lido>")))))))))
+
+(deftest no-record-escapes-the-schema
+  (testing "a record in no namespace, or the wrong one, is an error; an error stays on its own record (G6 review)"
+    (doseq [xml ["<lido><lidoRecID>X-1</lidoRecID><frobnicate/></lido>"
+                 "<lido:lido xmlns:lido=\"http://www.lido-schema.org/\"><lido:lidoRecID>X-2</lido:lidoRecID></lido:lido>"]]
+      (is (seq (schema-errors xml)) xml))
+    (let [wrap (str "<lido:lidoWrap xmlns:lido=\"http://www.lido-schema.org\" xmlns:x=\"urn:x\">"
+                    "<x:ext><lido:lido><lido:lidoRecID>Z</lido:lidoRecID><lido:frobnicate/></lido:lido></x:ext>"
+                    "<lido:lido><lido:lidoRecID>A</lido:lidoRecID><lido:frobnicate/></lido:lido>"
+                    "<lido:lido><lido:lidoRecID>B</lido:lidoRecID></lido:lido></lido:lidoWrap>")
+          recs (:records (convert/to-wemi :lido {} wrap))
+          bad  (fn [id] (some #(and (= :lido/schema-invalid (:code %)) (some (fn [m] (re-find #"frobnicate" m)) (get-in % [:detail :lido/errors])))
+                              (:diagnostics (first (filter #(= id (:source %)) recs)))))]
+      (is (bad "A"))
+      (is (not (bad "B")) "B is not given A's error, nor A Z's"))))
+
+(deftest a-restoration-in-disguise-is-no-constituent
+  (testing "an unspecified event that has a date, an actor or a description is no bare list of materials (G6 review)"
+    (let [xml (str/replace restored "<lido:term>restoration</lido:term>" "<lido:term>Event (non-specified)</lido:term>")
+          nt  (:output (convert/convert {:from :lido :to :ntriples :source (str/replace xml "</lido:eventMaterialsTech></lido:event></lido:eventSet></lido:eventWrap>"
+                                                                                        "</lido:eventMaterialsTech><lido:eventDate><lido:displayDate>1987</lido:displayDate></lido:eventDate></lido:event></lido:eventSet></lido:eventWrap>")}))]
+      (is (not (re-find #"P45_consists_of> <http://vocab.getty.edu/aat/300014711>" nt))))))

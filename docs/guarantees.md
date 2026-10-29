@@ -35,6 +35,9 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | A museum object is an `E22_Human-Made_Object` only when its record says it was made (a production, an artefact's work type in English, French or German), and no type names a natural object; a fossil is an `E19_Physical_Object`, depicts nothing, is not called a `HumanMadeObject` in Linked Art, and all of it is reported. An object merely unattested stays a `HumanMadeObject` in Linked Art, its class reported. | `palomar.plugins.lido-test/only-what-was-made-is-human-made`, `palomar.plugins.lido-test/what-is-made-is-told-in-many-tongues` |
 | A MARC21 object record's Leader/06 is `k` or `r` by a type that says so; a type that says neither is reported, not silently `r`. | `palomar.plugins.marc21.object-test/an-unknown-type-is-not-said-three-dimensional-silently` |
 | A value of an event put on the wrong node or in the wrong event is caught: in N-Triples an actor's name off its actor, a date off its event's time-span; in Linked Art the production's actor or date anywhere but in `produced_by`, an acquisition's anywhere but in its `changed_ownership_through`. | `palomar.fidelity-test/a-value-on-the-wrong-event-is-caught` |
+| Every LIDO record is validated against the official LIDO 1.0/1.1 XSD, vendored, offline; one that is not valid carries an error the `validate` gate fails on. The real corpora are valid. | `palomar.plugins.lido-test/a-record-is-checked-against-the-lido-schema` |
+| Records of other institutions (museum-digital, Hessen and Westfalen, CC0) are read whole: their event terms ("Hergestellt"), their materials in an unspecified event, their casts and vases; every conversion of them accounts for every value. | `palomar.plugins.lido-test/another-institution-s-records-are-read-whole` |
+| No LIDO record escapes the schema: one in no namespace or the wrong one is an error, and an error stays on its own record. An unspecified event that has a date, an actor or a description lends the object none of its materials. Two productions' actors or dates exchanged in Linked Art are caught, each production looked for in its own part. | `palomar.plugins.lido-test/no-record-escapes-the-schema`, `palomar.plugins.lido-test/a-restoration-in-disguise-is-no-constituent`, `palomar.fidelity-test/values-swapped-between-productions-are-caught` |
 | A loss accounts only for the fields, or the value, it names: a reported role URI does not hide an unreported seller or acquisition date. | `palomar.fidelity-test/one-field-lost-does-not-account-for-another` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
 | In the N-Triples family a value counts as preserved only on its own node: the right text on the wrong resource is caught. | `palomar.fidelity-test/the-right-text-on-the-wrong-node-is-caught` |
@@ -111,9 +114,12 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 - **Archival and museum domains.** EAD units project to RiC-O (ADR 0045),
   checked against RiC-O 1.1 on the fixtures only: the spoke stays
   experimental until validated on a real corpus. The LIDO spoke (ADR 0052)
-  is tested on eleven Städel records, one museum's practice: it checks only
-  the elements the LIDO schema requires, not the rest of the schema nor
-  LIDO-MC's own rules, and writes a title's language only for six languages.
+  is tested on eighteen real records of three institutions (the Städel, and
+  two through museum-digital): a far cry from the variety of LIDO in use.
+  It validates each record against the LIDO 1.0 or 1.1 XSD, but not
+  LIDO-MC's own rules, which are no XSD; it reads event types and artefact
+  terms from lists, in English, German and French; and it writes a title's
+  language only for six languages.
 - **Institutional validation of INTERMARC-NG.** Its spoke is tested on
   synthetic data only.
 - **Entity id collisions.** Ids carry a 64-bit hash; the policy and its limits

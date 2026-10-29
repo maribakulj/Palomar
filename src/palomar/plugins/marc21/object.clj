@@ -107,7 +107,10 @@
   [record]
   (let [events  (sort-by (comp lido/event-order :index) (fields record :lido/event))
         prod    (first (filter #(= "production" (:kind %)) events))
-        in-prod (if prod (filter #(= (:index prod) (:event %)) (fields record :lido/actor)) [])
+        ;; the actors of every production, the first production's first: a
+        ;; portfolio's other sheets have creators too (post-audit 5, G6)
+        pkeys   (lido/production-keys events)
+        in-prod (sort-by #(if (= (:index prod) (:event %)) 0 1) (filter #(pkeys (:event %)) (fields record :lido/actor)))
         ;; the creators first (the first is the main entry), then whoever
         ;; else took part, never as a main entry (ADR 0054)
         creators (filter #(= "creator" (:responsibility %)) in-prod)
@@ -141,7 +144,7 @@
                  ;; the production's materials, or those of no event: never a
                  ;; restoration's (post-audit 5, G1)
                  (for [a (in-force record :lido/materials)
-                       :when (and (string? (:value a)) (lido/of-production? (lido/production-keys events) (lido/event-key a)))]
+                       :when (and (string? (:value a)) (lido/of-production? (lido/material-keys record) (lido/event-key a)))]
                    (datafield "340" " " " " [["a" (:value a)]]))
                  (for [v (strings record :lido/inscription)] (datafield "500" " " " " [["a" v]]))
                  (for [v (strings record :lido/description)] (datafield "520" " " " " [["a" v]]))
@@ -198,16 +201,21 @@
                             :lido/title-name #{:content}}
                            "in the MARC21 object profile")
      (for [a (in-force record :lido/materials)
-           :when (and (string? (:value a)) (not (lido/of-production? (lido/production-keys (fields record :lido/event)) (lido/event-key a))))]
+           :when (and (string? (:value a)) (not (lido/of-production? (lido/material-keys record) (lido/event-key a))))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
                  :message (str "materials " (pr-str (:value a)) " of another event than the production are not the object's: no field")}))
      ;; only the production's actors and date have a field (F5 review)
-     (for [a (fields record :lido/actor) :when (not= (:index prod) (:event a))]
+     (for [a (fields record :lido/actor) :when (not (contains? (lido/production-keys (fields record :lido/event)) (:event a)))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
                  :message (str "actor " (pr-str (:name a)) " of an event other than the production has no field in the MARC21 object profile")}))
      (for [ev (fields record :lido/event) :when (and (not= (:index prod) (:index ev)) (some ev [:date :earliest :latest]))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/event :value ev :fields [:date :earliest :latest]
                  :message (str "the date of the " (:kind ev) " event, other than the production, has no field in the MARC21 object profile")}))
+     ;; the canonical date of a production other than the first: 264 $c has
+     ;; the first's alone (post-audit 5, G6)
+     (for [ev (fields record :lido/event) :when (and (= "production" (:kind ev)) (not= (:index prod) (:index ev)) (:date ev))]
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/date :value (:date ev)
+                 :message (str "the date " (pr-str (:date ev)) " of another production than the first has no field in the MARC21 object profile")}))
      (when (some #(not= (:index prod) (lido/event-key %)) (in-force record :lido/event-place))
        [(dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/event-place
                   :message "the place of an event other than the production has no field in the MARC21 object profile"})]))))

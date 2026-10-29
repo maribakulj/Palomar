@@ -195,9 +195,32 @@
           swap   (fn [f] (update real :linked-art assoc :render (fn [r] (f ((get-in real [:linked-art :render]) r)))))
           audit* (fn [f] (:unaccounted (with-redefs-fn {#'convert/exporters (swap f)} #(fidelity/audit {:from :lido :to :linked-art :source xml}))))]
       (is (empty? (:unaccounted (fidelity/audit {:from :lido :to :linked-art :source xml}))))
-      (is (some #(= "1650" (:value %)) (audit* #(str/replace % #"\"1650\"" "\"1899\"")))
-          "the production's date, swapped for the acquisition's, is caught")
+      (is (some #(#{"1650" "1899"} (:value %)) (audit* #(-> % (str/replace "\"1650\"" "\"@@\"") (str/replace "\"1899\"" "\"1650\"") (str/replace "\"@@\"" "\"1899\""))))
+          "the production's date and the acquisition's, swapped, are caught (G6 review: swapped, not dropped)")
       (is (some #(= "Zyx Painter" (:value %))
                 (audit* #(-> % (str/replace #"\"_label\":\"Zyx Painter\"" "\"_label\":\"x\"")
                              (str/replace #"\"_label\":\"T\"" "\"_label\":\"Zyx Painter\""))))
           "the production's actor, moved onto the object's label, is caught"))))
+
+(deftest values-swapped-between-productions-are-caught
+  (testing "two productions' actors or dates exchanged in Linked Art are caught, each looked for in its own (G6 review)"
+    (let [xml    (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>P-2</lido:lidoRecID><lido:descriptiveMetadata>"
+                      "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>print</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                      "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                      "<lido:eventWrap>"
+                      "<lido:eventSet><lido:event><lido:eventType><lido:term>Hergestellt</lido:term></lido:eventType>"
+                      "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Alpha Painter</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"
+                      "<lido:eventDate><lido:displayDate>1650</lido:displayDate></lido:eventDate></lido:event></lido:eventSet>"
+                      "<lido:eventSet><lido:event><lido:eventType><lido:term>Hergestellt</lido:term></lido:eventType>"
+                      "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Beta Printer</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                      "<lido:roleActor><lido:term>Drucker</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"
+                      "<lido:eventDate><lido:displayDate>1700</lido:displayDate></lido:eventDate></lido:event></lido:eventSet>"
+                      "</lido:eventWrap></lido:descriptiveMetadata></lido:lido>")
+          real   @#'convert/exporters
+          swap   (fn [a b] (update real :linked-art assoc :render
+                                   (fn [r] (-> ((get-in real [:linked-art :render]) r)
+                                               (str/replace a "@@") (str/replace b a) (str/replace "@@" b)))))
+          audit* (fn [a b] (:unaccounted (with-redefs-fn {#'convert/exporters (swap a b)} #(fidelity/audit {:from :lido :to :linked-art :source xml}))))]
+      (is (empty? (:unaccounted (fidelity/audit {:from :lido :to :linked-art :source xml}))) "the printer's role is written")
+      (is (seq (audit* "\"1650\"" "\"1700\"")) "two productions' dates swapped")
+      (is (seq (audit* "Alpha Painter" "Beta Printer")) "two productions' actors swapped"))))

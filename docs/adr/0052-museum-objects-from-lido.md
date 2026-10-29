@@ -18,6 +18,14 @@ an acquisition history.
 
 1. **A LIDO spoke** (`:lido`) reads LIDO 1.0 and 1.1 by local name, and so
    LIDO-MC, which is LIDO 1.1.
+   - It reads event types by their LIDO URI or code, else their terms, in
+     the forms the corpora use: the Städel's English ones, museum-digital's
+     German past participles ("Hergestellt", "Wurde genutzt", "Gefunden"),
+     and an "Event (non-specified)", whose materials are the object's, as
+     museum-digital puts them there, only when the event says nothing else:
+     one with an actor, a date, a place or a description is something that
+     happened (a cleaning, an unnamed restoration), and its materials are its
+     own (amended, post-audit 5, G6 and its review).
    - It takes one record per `lido:lido`, bare or in a `lidoWrap`, named by
      its `lidoRecID` and the source (`lido:source`) that issued it, since a
      local id is unique only within its institution (amended, post-audit 4,
@@ -38,6 +46,15 @@ an acquisition history.
    - Each title keeps its language (`:lido/title-name {:content :lang}`): its
      own `xml:lang`, else its set's, else the descriptive metadata's
      (amended, post-audit 4, F7).
+   - Each record is validated against the official LIDO XSD (1.0 or 1.1, as
+     its `xsi:schemaLocation` names it; one that names none is valid if it is
+     valid as either), vendored with the GML and XML schemas they import, so
+     validating needs no network. The records validated are those the
+     importer reads (the root, or its direct children named `lido`, in any
+     namespace): one whose element is not in the LIDO namespace is not
+     valid, and each error stays on its own record: a record that is not valid carries an
+     `:error` diagnostic, `:lido/schema-invalid`, which the `validate` gate
+     fails on; `:validate? false` turns it off (amended, post-audit 5, G6).
    - What the LIDO schema (1.0 and 1.1) requires and a record lacks is a
      warning on the record (`:lido/missing-required`, which `validate`
      reports): the `lidoRecID`, the descriptive and administrative metadata
@@ -119,7 +136,9 @@ an acquisition history.
    OAI-PMH (CC0 metadata), not on hand-made fixtures: five paintings and
    drawings, and six of the graphic arts (drawings, prints with an inventor
    and an engraver, a photograph, two draughtsmen; amended, post-audit 4,
-   F7).
+   F7); and seven records of two other institutions through museum-digital
+   (Hessen, Westfalen: prints, a portfolio, plaster casts, a Greek vase, a
+   model; amended, post-audit 5, G6).
 
 Rejected: projecting objects through LRMoo. An object is not the
 manifestation of an expression, and Linked Art would make it a text.

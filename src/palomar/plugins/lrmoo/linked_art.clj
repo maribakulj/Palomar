@@ -329,7 +329,7 @@
   "The `p` strings of `record` read in a production or in no event: what is
    said of the object itself (post-audit 5, G1)."
   [record p]
-  (let [ks (lido/production-keys (native-fields record :lido/event))]
+  (let [ks (lido/material-keys record)]
     (keep #(when (and (= p (:predicate %)) (string? (:value %)) (lido/of-production? ks (lido/event-key %))) (:value %))
           (:assertions record))))
 
@@ -356,7 +356,8 @@
     (let [t (str/trim s)]
       (if-let [[_ sign y] (re-matches #"(-?)(\d{1,4})" t)]
         (format (if end? "%s%04d-12-31T23:59:59Z" "%s%04d-01-01T00:00:00Z") sign (parse-long y))
-        (when (re-matches #"\d{4}-\d{2}-\d{2}" t)
+        ;; a date, before the common era too (\"-0270-01-01\", G6)
+        (when (re-matches #"-?\d{4}-\d{2}-\d{2}" t)
           (str t (if end? "T23:59:59Z" "T00:00:00Z")))))))
 
 (defn- dimension-obj
@@ -397,7 +398,8 @@
         actors   (flds :lido/actor)
         mats     (flds :lido/material)
         prod     (first (filter #(= "production" (:kind %)) events))
-        pkeys    (lido/production-keys events)
+        more-prods (rest (filter #(= "production" (:kind %)) events))
+        pkeys    (lido/material-keys record)
         acqs     (filter #(= "acquisition" (:kind %)) events)
         in-event (fn [n xs] (filter #(= n (:event %)) xs))
         ;; an actor with no authority id is the record's own node, as in the
@@ -431,6 +433,26 @@
                    (if (provenance-event? ev)
                      (statement d aat-provenance "Provenance Statement")
                      (cond-> (note-obj d) (:label ev) (assoc "_label" (:label ev)))))
+        ;; a Production: its creators carry it out; anyone else takes part in
+        ;; it, in a part classified by its role
+        production-obj
+        (fn [ev]
+          (let [n  (:index ev)
+                as (in-event n actors)
+                cs (filter #(= "creator" (:responsibility %)) as)
+                os (remove #(= "creator" (:responsibility %)) as)
+                ts (timespan ev)
+                ps (place-ids ev)
+                tq (filter #(and (:uri %) (= "technique" (:role %))) (in-event n mats))]
+            (cond-> {"type" "Production"}
+              (seq cs) (assoc "carried_out_by" (mapv actor cs))
+              (seq os) (assoc "part" (mapv (fn [a] (cond-> {"type" "Production" "carried_out_by" [(actor a)]}
+                                                     (:role a) (assoc "_label" (:role a))
+                                                     (:role-uri a) (assoc "classified_as" [(type-ref {:uri (:role-uri a) :label (:role a)} "Type")])))
+                                           os))
+              ts       (assoc "timespan" ts)
+              (seq ps) (assoc "took_place_at" (mapv (fn [u] {"id" u "type" "Place"}) ps))
+              (seq tq) (assoc "technique" (mapv #(type-ref % "Type") tq)))))
         visual?  (or (seq subjects) (seq rights))
         hmo      (cond-> {"@context" context
                           "id"       (object-id record)
@@ -453,24 +475,13 @@
                                            (type-ref m "Material"))))
                    prod
                    (assoc "produced_by"
-                          (let [n  (:index prod)
-                                as (in-event n actors)
-                                ;; the creators carry out the production; anyone else
-                                ;; takes part in it, in a part classified by its role
-                                cs (filter #(= "creator" (:responsibility %)) as)
-                                os (remove #(= "creator" (:responsibility %)) as)
-                                ts (timespan prod)
-                                ps (place-ids prod)
-                                tq (filter #(and (:uri %) (= "technique" (:role %))) (in-event n mats))]
-                            (cond-> {"type" "Production"}
-                              (seq cs) (assoc "carried_out_by" (mapv actor cs))
-                              (seq os) (assoc "part" (mapv (fn [a] (cond-> {"type" "Production" "carried_out_by" [(actor a)]}
-                                                                     (:role a) (assoc "_label" (:role a))
-                                                                     (:role-uri a) (assoc "classified_as" [(type-ref {:uri (:role-uri a) :label (:role a)} "Type")])))
-                                                           os))
-                              ts       (assoc "timespan" ts)
-                              (seq ps) (assoc "took_place_at" (mapv (fn [u] {"id" u "type" "Place"}) ps))
-                              (seq tq) (assoc "technique" (mapv #(type-ref % "Type") tq)))))
+                          ;; the object's other productions (a portfolio's
+                          ;; sheets, a print's designing) are parts of it, each
+                          ;; with its own creators and participants (G6, review)
+                          (cond-> (production-obj prod)
+                            (seq more-prods) (update "part" (fnil into [])
+                                                     (for [ev more-prods]
+                                                       (cond-> (production-obj ev) (:label ev) (assoc "_label" (:label ev)))))))
                    (seq acqs)
                    (assoc "changed_ownership_through"
                           (vec (for [ev acqs
@@ -533,12 +544,22 @@
   (when (and (object? record) (not (str/blank? output)))
     (let [hmo    (some #(let [d (json/read-str %)] (when (= "HumanMadeObject" (get d "type")) d)) (str/split-lines output))
           events (sort-by (comp lido/event-order :index) (native-fields record :lido/event))
-          prod   (first (filter #(= "production" (:kind %)) events))
           acqs   (filter #(= "acquisition" (:kind %)) events)]
       {:predicates #{:lido/actor :lido/event}
        :strings    (merge (into {} (map (fn [ev doc] [(:index ev) (set (json-leaves doc))])
                                         acqs (get hmo "changed_ownership_through")))
-                          (when prod {(:index prod) (set (json-leaves (get hmo "produced_by")))}))})))
+                          ;; the first production is produced_by, the others
+                          ;; its last parts: each is looked for in its own (G6 review)
+                          (let [prods (filter #(= "production" (:kind %)) events)
+                                pb    (get hmo "produced_by")
+                                n     (max 0 (dec (count prods)))
+                                parts (vec (get pb "part"))
+                                own   (subvec parts 0 (max 0 (- (count parts) n)))
+                                more  (subvec parts (max 0 (- (count parts) n)))]
+                            (into (if-let [p (first prods)]
+                                    {(:index p) (set (json-leaves (if (seq own) (assoc pb "part" own) (dissoc pb "part"))))}
+                                    {})
+                                  (map (fn [ev part] [(:index ev) (set (json-leaves part))]) (rest prods) more))))})))
 
 (defn ->jsonld
   "Render `record`'s WEMI view as Linked Art JSON-LD, one document per line
@@ -632,10 +653,9 @@
                  :message (str "measurement " (pr-str (:value d)) " " (:unit d) " is no number in a known unit: written only in the measurements statement")}))
      ;; only the production has actors in this profile, and only it and the
      ;; acquisitions a time-span (F5 review)
-     (let [evs  (native-fields record :lido/event)
-           prod (:index (first (filter #(= "production" (:kind %)) evs)))]
+     (let [evs (native-fields record :lido/event)]
        (concat
-        (for [a (native-fields record :lido/actor) :when (not= prod (:event a))]
+        (for [a (native-fields record :lido/actor) :when (not (contains? (lido/production-keys evs) (:event a)))]
           (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
                     :message (str "actor " (pr-str (:name a)) " of an event other than the production is not written in the Linked Art object profile")}))
         (for [ev evs :when (and (not (#{"production" "acquisition"} (:kind ev))) (some ev [:date :earliest :latest]))]
@@ -663,7 +683,7 @@
                  :message (str "title language " (pr-str (:lang t)) " has no AAT term here: " (pr-str (:content t)) " is written with no language")}))
      ;; a material is made_of, a technique the production's, only by a URI
      (let [prod  (:index (first (filter #(= "production" (:kind %)) (native-fields record :lido/event))))
-           pkeys (lido/production-keys (native-fields record :lido/event))]
+           pkeys (lido/material-keys record)]
        (for [m (native-fields record :lido/material)
              :let [tq? (= "technique" (:role m))]
              :when (or (nil? (:uri m)) (if tq? (not= prod (:event m)) (not (pkeys (:event m)))))]
@@ -673,7 +693,7 @@
                                    (if tq? " is not the production's: no event of this profile has a technique"
                                        " is not the production's: not what the object is made of, not written")
                                    (str " has no URI: " (if tq? "technique" "made_of") " cannot name it")))})))
-     (let [pkeys (lido/production-keys (native-fields record :lido/event))]
+     (let [pkeys (lido/material-keys record)]
        (for [a (:assertions record)
              :when (and (= :lido/materials (:predicate a)) (string? (:value a)) (not (lido/of-production? pkeys (lido/event-key a))))]
          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
@@ -686,6 +706,10 @@
                  :message (str "subject " (pr-str (:label c)) " has no URI: a VisualItem cannot be about it")}))
      (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
        (loss :dropped :lido/repository (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")))
+     ;; a keeper's id that is no IRI (an ISIL) names no Linked Art reference
+     (for [v (native-strings record :lido/repository-id) :when (nt/iri-problem v)]
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/repository-id :value v
+                 :message (str "the keeper's id " (pr-str v) " is no IRI: a Linked Art reference cannot name it (G6)")}))
      ;; only the production says where it took place in this profile
      (let [prod (:index (first (filter #(= "production" (:kind %)) (native-fields record :lido/event))))]
        (when (some #(and (= :lido/event-place-id (:predicate %)) (not= prod (lido/event-key %))) (:assertions record))
