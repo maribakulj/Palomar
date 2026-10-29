@@ -407,3 +407,20 @@
       (is (str/includes? (:err plain) "withheld"))
       (is (str/includes? (:out props) "R4_embodies"))
       (is (= (:out plain) (:out facts)) "--facts-only, once the opt-in, is the default"))))
+
+(deftest an-invalid-record-fails-a-conversion-on-demand
+  (testing "convert --fail-on-invalid exits 1 and writes nothing, batch and stream; without it the report says how many (post-audit 6, H3)"
+    (let [f   (java.io.File/createTempFile "palomar-invalid-" ".xml")
+          out (java.io.File/createTempFile "palomar-out-" ".nt")]
+      (.delete out)
+      (spit f "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>BAD</lido:lidoRecID><lido:frobnicate/></lido:lido>")
+      (let [{:keys [exit err]} (cli/run ["convert" (str f) "--from" "lido" "--to" "ntriples" "--fail-on-invalid"])]
+        (is (= 1 exit))
+        (is (clojure.string/includes? err "INVALID")))
+      (let [{:keys [exit]} (cli/run ["convert" (str f) "--from" "lido" "--to" "ntriples" "--stream" "--out" (str out) "--fail-on-invalid"])]
+        (is (= 1 exit))
+        (is (not (.exists out)) "nothing written"))
+      (let [{:keys [exit err]} (cli/run ["convert" (str f) "--from" "lido" "--to" "ntriples"])]
+        (is (= 0 exit))
+        (is (clojure.string/includes? err "1 record not valid")))
+      (.delete f))))

@@ -128,7 +128,10 @@
    ;; museum-digital's: an event of no stated kind (post-audit 5, G6)
    "event (non-specified)" :unspecified "event (unspecified)" :unspecified "unspecified event" :unspecified "restoration" :modification "restauration" :modification "restaurierung" :modification
    "conservation" :modification "konservierung" :modification "modification" :modification
-   "veränderung" :modification})
+   "veränderung" :modification
+   ;; museum-digital's other portals: English, Hungarian (post-audit 6, H3)
+   "created" :production "made" :production "produced" :production "készítés" :production
+   "felvétel készítése" :production "restored" :modification "restaurálás" :modification})
 
 (defn- event-kind [c terms]
   (or (some-> (:uri c) term-name event-kinds)
@@ -150,7 +153,10 @@
     "use" "nutzung" "gebrauch" "verwendung" "utilisation" "planning" "planung" "designing" "entwurf"
     "sammeln" "sammlung" "collecte" "grabung" "transfer" "überführung" "transport"
     ;; museum-digital's past participles (post-audit 5, G6)
-    "veröffentlicht" "wurde genutzt" "genutzt" "ausgestellt" "gesammelt" "beauftragt" "ausgegraben"})
+    "veröffentlicht" "wurde genutzt" "genutzt" "ausgestellt" "gesammelt" "beauftragt" "ausgegraben"
+    ;; museum-digital's other portals: English, Hungarian (post-audit 6, H3)
+    "was used" "used" "collected" "published" "exhibited" "excavated" "commissioned"
+    "gyűjtés" "kiadás" "használat" "kiállítás" "ásatás"})
 
 (defn- activity-type?
   "True when an event's type, by its LIDO URI or code, or else its term, names

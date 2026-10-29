@@ -1,8 +1,8 @@
 # What Palomar guarantees — and what it does not
 
-*State of 2026-10-26, after the post-audit corrections (C1–C5). No release is
-tagged yet; this file is the reference until one is, and each release should
-carry its own copy.*
+*State of 2026-10-29, after the corrections of six post-audits (C1–C7, D1–D6,
+E1–E6, F1–F7, G1–G7, H1–H3). No release is tagged yet; this file is the
+reference until one is, and each release should carry its own copy.*
 
 Every guarantee below is a behaviour a test pins. If the test is removed or
 fails, the guarantee is withdrawn. Anything not listed is not promised.
@@ -41,6 +41,9 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | A LIDO `lidoWrap` streams one record at a time, to the same output and loss report as batch, lazily. | `palomar.convert-stream-test/a-lido-dump-streams-as-it-converts` |
 | A museum object's IRI does not depend on its class: its record enriched from an unknown type to a sculpture, it stays the same node; two records of one source with one `lidoRecID` are flagged, in batch and stream. | `palomar.plugins.lido-test/an-object-keeps-its-iri-when-its-record-is-enriched`, `palomar.plugins.lido-test/a-duplicate-record-id-is-reported` |
 | A design is no production: designing in 1890 and making in 1902 make one `E12_Production` that used the design an `E65_Creation` created. A cast of a fossil, produced, is an `E22`, the contradiction reported. A commissioner took part in the production (`P11`), did not carry it out. | `palomar.plugins.lido-test/a-design-is-no-production`, `palomar.plugins.lido-test/a-cast-of-a-fossil-was-made`, `palomar.plugins.lido-test/a-commissioner-took-part-and-did-not-make-it`, `palomar.plugins.lido-test/a-design-alone-and-other-review-cases` |
+| A conversion says how many records are not valid, apart from what it lost; with `--fail-on-invalid` (`:fail-on-invalid?`) one such record refuses the whole conversion, batch or stream (which stops at it, and names it), exit 1 and nothing written. A record is not valid when it carries an error: today a LIDO record its XSD rejects; what lies between the records of a wrap is not checked. | `palomar.convert-stream-test/an-invalid-record-can-stop-a-conversion`, `palomar.cli-test/an-invalid-record-fails-a-conversion-on-demand` |
+| The event terms of museum-digital's English and Hungarian portals are read: "Created" or "Felvétel készítése" is a production, "Was used", "Gyűjtés" or "Kiadás" an activity. | `palomar.plugins.lido-test/the-terms-of-other-portals-are-read` |
+| A museum's book is MARC21 language material (Leader/06 `a`), its manuscript `t` (music `c`/`d`, a map `e`/`f`), not an artefact; a print illustrating a book stays `k`, a binding `r`. | `palomar.plugins.marc21.object-test/a-book-is-language-material` |
 | A loss accounts only for the fields, or the value, it names: a reported role URI does not hide an unreported seller or acquisition date. | `palomar.fidelity-test/one-field-lost-does-not-account-for-another` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
 | In the N-Triples family a value counts as preserved only on its own node: the right text on the wrong resource is caught. | `palomar.fidelity-test/the-right-text-on-the-wrong-node-is-caught` |

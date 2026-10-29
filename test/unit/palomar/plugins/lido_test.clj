@@ -625,3 +625,14 @@
   (testing "a cast of a fossil, made, is a HumanMadeObject in Linked Art"
     (is (str/includes? (:output (convert/convert {:from :lido :to :linked-art :source (events-record "fossil cast" ["lido00007" "Atelier" nil "1900"])}))
                        "HumanMadeObject"))))
+
+(deftest the-terms-of-other-portals-are-read
+  (testing "museum-digital outside Germany: English and Hungarian event terms (post-audit 6, H3)"
+    (doseq [t ["Created" "Made" "Felvétel készítése" "Készítés"]]
+      (let [nt (:output (convert/convert {:from :lido :to :ntriples :source (events-record "thing" [t "A" nil "1900"])}))]
+        (is (str/includes? nt "E12_Production") (str t " is a production"))
+        (is (str/includes? nt "E22_Human-Made_Object") (str t ": the object was made"))))
+    (doseq [t ["Was used" "Used" "Gyűjtés" "Kiadás" "Collected" "Published" "Exhibited"]]
+      (let [nt (:output (convert/convert {:from :lido :to :ntriples :source (events-record "thing" [t "A" nil "1900"])}))]
+        (is (str/includes? nt "E7_Activity") (str t " is an activity"))
+        (is (not (str/includes? nt "E12_Production")) (str t " is no production"))))))

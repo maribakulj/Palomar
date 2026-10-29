@@ -351,9 +351,30 @@
       :loss     (into [] (mapcat #(concat (losses %) (provenance-losses to %))) records)
       :withheld withheld})))
 
+(defn- invalid-records
+  "The records among `records` that carry an `:error` diagnostic (a LIDO
+   record that is not valid against its schema, …): validity, not loss."
+  [records]
+  (filter #(seq (dx/errors (:diagnostics %))) records))
+
+(defn- invalid-report [bad]
+  {:records (count bad)
+   :errors  (vec (take 20 (for [r bad e (dx/errors (:diagnostics r))] (select-keys e [:subject :code :message]))))})
+
+(defn- refuse-invalid!
+  "Throws when `bad` holds a record. A stream stops at the first, record
+   number `at`, before it is written: it reads no further, and so counts one."
+  ([bad] (refuse-invalid! bad nil))
+  ([bad at]
+   (when (seq bad)
+     (throw (ex-info (if at
+                       (str "record " at " not valid: the streamed conversion is refused there (:fail-on-invalid?)")
+                       (str (count bad) " record(s) not valid: the conversion is refused (:fail-on-invalid?)"))
+                     (cond-> (invalid-report bad) at (assoc :at at)))))))
+
 (defn convert
   "Convert `source` from spoke `from` to serialisation `to`. Returns
-   `{:output String :loss <conversion-report> :records N :deleted [id…]}`,
+   `{:output String :loss <conversion-report> :records N :deleted [id…] :invalid {…}}`,
    `:deleted` the identifiers an OAI-PMH response marks deleted (else empty).
 
    `opts` is threaded to the importer (e.g. `:record-id` for the single-record
@@ -361,13 +382,20 @@
    `:with-proposals? true` (`export-records`, ADR 0042); the report's
    `:withheld-proposals` says how many claims that left out. A dataset target
    keeps them, each status in its graph. Throws with the supported sets on an
-   unknown `from`/`to`."
-  [{:keys [from to source opts with-proposals?] :or {opts {}}}]
+   unknown `from`/`to`.
+
+   Validity is told apart from loss (post-audit 6, H3): `:invalid` says how
+   many records carry an `:error` diagnostic (a LIDO record not valid against
+   its schema), with the first errors. With `:fail-on-invalid? true` such a
+   record refuses the whole conversion: it throws, and writes nothing."
+  [{:keys [from to source opts with-proposals? fail-on-invalid?] :or {opts {}}}]
   (when-not (contains? (source-formats) from)
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
     (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
   (let [{:keys [records ingest deleted]} (to-wemi from opts source)
+        bad             (invalid-records records)
+        _               (when fail-on-invalid? (refuse-invalid! bad))
         projection-loss (dx/collect-many records)
         {output :output export-loss :loss withheld :withheld} (export-records to records {:with-proposals? with-proposals?})]
     {:output  output
@@ -375,6 +403,7 @@
      ;; an OAI response's deleted records (post-audit test 07): a synchroniser
      ;; must remove them, so they are part of the result, not dropped
      :deleted (vec deleted)
+     :invalid (invalid-report bad)
      :loss    (assoc (lr/conversion-report (concat ingest projection-loss export-loss)
                                            {:records (count records)})
                      :withheld-proposals withheld)}))
@@ -414,7 +443,7 @@
    loss the streamed report would under-count the import edge — fold the importer's
    `:diagnostics` into the same accumulator then. `:distinct-losses` (O(N)) is always
    batch-only. Throws on an unknown `from`/`to`."
-  [{:keys [from to records with-proposals?]} emit]
+  [{:keys [from to records with-proposals? fail-on-invalid?]} emit]
   (when-not (contains? spokes/plugins from)
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
@@ -422,15 +451,25 @@
   (let [to-pivot (to-pivots from)
         compiled (compiled-mappings from)
         result   (reduce
-                  (fn [{:keys [n acc withheld]} raw]
-                    (let [wemi (to-pivot (:record (runtime/run-phase raw compiled :normalize)))
+                  (fn [{:keys [n acc withheld invalid errors]} raw]
+                    ;; validity is read after normalisation, as in batch; an
+                    ;; invalid record stops the stream before it is written
+                    ;; when asked to (post-audit 6, H3); else it is counted
+                    (let [norm (:record (runtime/run-phase raw compiled :normalize))
+                          bad  (invalid-records [norm])
+                          _    (when fail-on-invalid? (refuse-invalid! bad (inc n)))
+                          wemi (to-pivot norm)
                           {doc :output loss :loss w :withheld} (export-records to [wemi] {:with-proposals? with-proposals? :bare? true})]
                       (when-not (str/blank? doc) (emit doc))
                       {:n        (inc n)
+                       :invalid  (+ invalid (count bad))
+                       :errors   (into errors (take (max 0 (- 20 (count errors))))
+                                       (:errors (invalid-report bad)))
                        :withheld (+ withheld w)
                        :acc      (lr/accumulate acc (concat (dx/collect wemi) loss))}))
-                  {:n 0 :acc lr/empty-acc :withheld 0}
+                  {:n 0 :acc lr/empty-acc :withheld 0 :invalid 0 :errors []}
                   records)]
     {:records (:n result)
+     :invalid {:records (:invalid result) :errors (:errors result)}
      :loss    (assoc (lr/finalize (:acc result) {:records (:n result)})
                      :withheld-proposals (:withheld result))}))
