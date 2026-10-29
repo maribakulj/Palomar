@@ -81,11 +81,13 @@ an acquisition history.
      object: titles, the production's actors as creators, its date, the
      inventory number, the description and the images.
 3. **The CIDOC CRM view.** The projection makes an `E22_Human-Made_Object`
-   only when the record says the object was made: it has a production (or a
-   designing, a creation), or a work type or classification that names an
+   only when the record says the object was made: it has a production (a
+   creation, an execution of a design) or a design, which outweighs a natural
+   term (a cast of a fossil was made; the contradiction is reported,
+   amended, post-audit 6, H2), or a work type or classification that names an
    artefact (a painting, a print, a sculpture…, in English, French or German,
-   compounds included), and none names a natural object (a fossil, a mineral,
-   a specimen), which vetoes it. Otherwise it is an `E19_Physical_Object`,
+   compounds included) while none names a natural object (a fossil, a
+   mineral, a specimen), which vetoes it. Otherwise it is an `E19_Physical_Object`,
    and that is reported. A type given only by a URI does not attest it: the
    lists of terms are the profile's limit. Such an object depicts nothing (`P62`'s domain is
    `E24`): its subjects are reported, not projected (amended, post-audit 5,
@@ -116,7 +118,16 @@ an acquisition history.
    - An activity's actors carried it out (`P14`); an `E5_Event`'s took part in
      it (`P11_had_participant`): an actor named in a loss, a find or an event
      of no stated type is not said to have done it. Naming an actor no longer
-     makes an event an activity (amended, post-audit 5, G2).
+     makes an event an activity (amended, post-audit 5, G2). An actor whose
+     every role is a passive one (who commissioned, paid for or received it:
+     a commissioner, a patron, an Auftraggeber) took part in the activity
+     (`P11`) and did not carry it out (amended, post-audit 6, H2).
+   - A design (`designing`, `work_conception`) is no production: it is an
+     `E65_Creation` that `P94_has_created` an `E29_Design_or_Procedure`,
+     which each of the object's productions `P33_used_specific_technique`.
+     A design with no production is linked to no production, and that is
+     reported. In Linked Art a design is a part of the production; in MARC
+     its creators are the object's (amended, post-audit 6, H2).
    - It has its type, time-span (`P82`, `P82a`, `P82b`), place (`P7`), actors,
      description (`P3`) and, for a production, its techniques (`P32`).
    - An actor or a place with an authority URI (GND) is that node.

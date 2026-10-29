@@ -554,3 +554,74 @@
           strm  (with-open [rd (java.io.StringReader. wrap)] (doall (convert/stream-source :lido {:validate? false} rd)))]
       (doseq [rs [batch strm]]
         (is (= [false true false] (mapv (comp boolean dup?) rs)))))))
+
+(defn- events-record
+  "A record with `events`, each `[type-code-or-term actor role date]`, and work type `wt`."
+  [wt & events]
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>H-2</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"en\">"
+       "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>" wt "</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+       "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+       "<lido:eventWrap>"
+       (apply str (for [[t actor role date] events]
+                    (str "<lido:eventSet><lido:event><lido:eventType>"
+                         (if (str/starts-with? t "lido") (str "<lido:conceptID>http://terminology.lido-schema.org/" t "</lido:conceptID>") (str "<lido:term>" t "</lido:term>"))
+                         "</lido:eventType>"
+                         (when actor (str "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>" actor
+                                          "</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                                          (when role (str "<lido:roleActor><lido:term>" role "</lido:term></lido:roleActor>"))
+                                          "</lido:actorInRole></lido:eventActor>"))
+                         (when date (str "<lido:eventDate><lido:displayDate>" date "</lido:displayDate></lido:eventDate>"))
+                         "</lido:event></lido:eventSet>")))
+       "</lido:eventWrap></lido:descriptiveMetadata></lido:lido>"))
+
+(deftest a-design-is-no-production
+  (testing "designing in 1890, making in 1902: one production, one creation of a design it used (post-audit 6, H2)"
+    (let [xml (events-record "sculpture" ["lido00224" "Rodin" "designer" "1890"] ["lido00007" "Rudier" "founder" "1902"])
+          nt  (:output (convert/convert {:from :lido :to :ntriples :source xml}))]
+      (is (= 1 (count (re-seq #"E12_Production> \." nt))) "one production")
+      (is (str/includes? nt "E65_Creation"))
+      (is (str/includes? nt "E29_Design_or_Procedure"))
+      (is (str/includes? nt "P94_has_created"))
+      (is (str/includes? nt "P33_used_specific_technique"))
+      (is (empty? (violations xml)))
+      (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source xml}))) (str to))))))
+
+(deftest a-cast-of-a-fossil-was-made
+  (testing "a production attested outweighs a natural term: an E22, the contradiction reported (post-audit 6, H2)"
+    (let [xml (events-record "fossil cast" ["lido00007" "Atelier" nil "1900"])
+          {:keys [records]} (convert/to-wemi :lido {:validate? false} xml)
+          nt  (:output (convert/convert {:from :lido :to :ntriples :source xml}))]
+      (is (str/includes? nt "E22_Human-Made_Object"))
+      (is (not (str/includes? nt "E19_Physical_Object")))
+      (is (empty? (violations xml)))
+      (is (some #(= :class (get-in % [:detail :loss/aspect])) (mapcat :diagnostics records)) "the natural term contradicted is reported"))))
+
+(deftest a-commissioner-took-part-and-did-not-make-it
+  (testing "a commissioner of the production took part in it (P11); the sculptor and the founder carried it out (P14) (post-audit 6, H2)"
+    (let [xml (str/replace (events-record "sculpture" ["lido00007" "Rodin" "sculptor" "1902"])
+                           "</lido:eventActor>"
+                           (str "</lido:eventActor><lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Musée</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                                "<lido:roleActor><lido:term>commissioner</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"))
+          nt  (:output (convert/convert {:from :lido :to :ntriples :source xml}))
+          ts  (nt/parse nt)
+          who (fn [p] (set (keep (fn [[_ pr o]] (when (str/ends-with? (:iri pr) p) (:iri o))) ts)))
+          lit   (into {} (keep (fn [[s pr o]] (when (str/ends-with? (:iri pr) "P190_has_symbolic_content") [(:iri s) (:lit o)])) ts))
+          app   (into {} (keep (fn [[s pr o]] (when (str/ends-with? (:iri pr) "P1_is_identified_by") [(:iri s) (:iri o)])) ts))
+          named (fn [iri] (or (lit iri) (lit (app iri))))]
+      (is (= #{"Rodin"} (set (map named (who "P14_carried_out_by")))))
+      (is (= #{"Musée"} (set (map named (who "P11_had_participant")))))
+      (is (empty? (violations xml))))))
+
+(deftest a-design-alone-and-other-review-cases
+  (testing "a design with no production: an object made, every value written or reported (H2 review)"
+    (let [xml (events-record "thing" ["lido00224" "Rodin" "designer" "1890"])]
+      (is (str/includes? (:output (convert/convert {:from :lido :to :ntriples :source xml})) "E22_Human-Made_Object") "designed, so made")
+      (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source xml}))) (str to)))))
+  (testing "a contractor (Auftragnehmer) carried the production out"
+    (is (not (lido/passive? "Auftragnehmer")))
+    (is (lido/passive? "Auftraggeber")))
+  (testing "a cast of a fossil, made, is a HumanMadeObject in Linked Art"
+    (is (str/includes? (:output (convert/convert {:from :lido :to :linked-art :source (events-record "fossil cast" ["lido00007" "Atelier" nil "1900"])}))
+                       "HumanMadeObject"))))

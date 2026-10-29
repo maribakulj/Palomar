@@ -110,7 +110,10 @@
 (def ^:private event-kinds
   "A LIDO event type → the event's kind: the events that make the object are
    its production; an acquisition changes its ownership."
-  {"production" :production "creation" :production "designing" :production "execution_of_design" :production
+  {"production" :production "creation" :production "execution_of_design" :production
+   ;; a design is no production: it creates the design a production used
+   ;; (post-audit 6, H2)
+   "designing" :design "work_conception" :design
    "carrier_production" :production "acquisition" :acquisition
    ;; what changes the object without making it (post-audit 5, G1)
    "restoration" :modification "modification" :modification "part_addition" :modification
@@ -120,7 +123,8 @@
   "Event type terms, in the languages LIDO records use, when no URI says it."
   {"production" :production "herstellung" :production "entstehung" :production "création" :production
    "creation" :production "acquisition" :acquisition "erwerb" :acquisition "erwerbung" :acquisition
-   "zugang" :acquisition "produktion" :production "fabrication" :production "hergestellt" :production
+   "zugang" :acquisition "designing" :design "design" :design "entwurf" :design "entworfen" :design
+   "conception" :design "produktion" :production "fabrication" :production "hergestellt" :production
    ;; museum-digital's: an event of no stated kind (post-audit 5, G6)
    "event (non-specified)" :unspecified "event (unspecified)" :unspecified "unspecified event" :unspecified "restoration" :modification "restauration" :modification "restaurierung" :modification
    "conservation" :modification "konservierung" :modification "modification" :modification
@@ -362,7 +366,7 @@
                             :when nm]
                         [:lido/actor (model/structured (cond-> {:event n :name nm
                                                                 :type (or (term-name (attr a "type")) "")
-                                                                :responsibility (if (and (= :production kind) (creator? rterms ruris))
+                                                                :responsibility (if (and (#{:production :design} kind) (creator? rterms ruris))
                                                                                   "creator" "participant")}
                                                          id (assoc :uri id)
                                                          (seq (keep :label roles)) (assoc :role (str/join "; " (keep :label roles)))
@@ -379,8 +383,8 @@
                                           (mapcat #(terms :lido/actor-role %) (kids air "roleActor"))
                                           ;; a production's actor in a creator's role (or in none
                                           ;; stated) is the object's creator; any other took part
-                                          (when (and (= :production kind) (creator? (keep text (descend air "roleActor" "term"))
-                                                                                    (keep #(:uri (concept %)) (kids air "roleActor"))))
+                                          (when (and (#{:production :design} kind) (creator? (keep text (descend air "roleActor" "term"))
+                                                                                             (keep #(:uri (concept %)) (kids air "roleActor"))))
                                             (strings :lido/creator (take 1 (when a (descend a "nameActorSet" "appellationValue"))))))))
                               (kids ea "actorInRole"))))
                    (kids ev "eventActor"))
@@ -638,10 +642,27 @@
 
 (defn production-keys
   "The keys of the events, among the structured `events`, that make the
-   object (a production, a designing, a creation…): their materials are the
-   object's (post-audit 5, G1 review)."
+   object (a production, a creation, an execution of a design; a design is
+   no production, `design-keys`): their materials are the object's
+   (post-audit 5, G1 review)."
   [events]
   (set (keep #(when (= "production" (:kind %)) (:index %)) events)))
+
+(defn design-keys
+  "The keys of the designing events among the structured `events`: each
+   created the design a production used (post-audit 6, H2)."
+  [events]
+  (set (keep #(when (= "design" (:kind %)) (:index %)) events)))
+
+(def ^:private passive-roles
+  "The roles of an actor who took part in an activity without carrying it
+   out: who commissioned, paid for or received it (post-audit 6, H2)."
+  #"(?i)commission|patron|client|sponsor|donor|auftraggeber|mäzen|stifter|besteller|commanditaire|mécène|donateur")
+
+(defn passive?
+  "True when every role of an actor (`;`-joined) is a passive one."
+  [role]
+  (boolean (and role (every? #(re-find passive-roles %) (str/split role #"; ")))))
 
 (defn of-production?
   "True when a native read at event key `k` (nil: in no event) is said of the
@@ -674,14 +695,17 @@
 
 (defn human-made?
   "True when `record` says its object was made: it has a production (or a
-   designing, a creation), or a work type or classification that names an
-   artefact, and none names a natural object. A record that says neither (a
+   creation, or a design: what was designed was made, H2 review), which
+   outweighs a natural term, or a work type or classification that names an
+   artefact while none names a natural object. A record that says neither (a
    fossil, a mineral, a specimen) is not said to be human-made (post-audit 5,
    G4)."
   [record]
-  (and (not (natural? record))
-       (boolean (or (some #(and (= :lido/event (:predicate %)) (not (model/out-of-force? %)) (= "production" (:kind (fields %))))
-                          (:assertions record))
+  ;; a production attested outweighs a natural term (a cast of a fossil was
+  ;; made); a natural term vetoes only an artefact term (post-audit 6, H2)
+  (boolean (or (some #(and (= :lido/event (:predicate %)) (not (model/out-of-force? %)) (#{"production" "design"} (:kind (fields %))))
+                     (:assertions record))
+               (and (not (natural? record))
                     (some #(re-find artefact-terms %) (type-terms record))))))
 
 (defn material-keys
@@ -751,6 +775,10 @@
         mkeys  (material-keys record)]
     (concat
      [(entity obj okind)]
+     (when (and made? (natural? record))
+       [{:kind :diagnostic
+         :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/object :aspect :class
+                          :message "a type names a natural object, but the record attests a production: an E22_Human-Made_Object (post-audit 6, H2)"})}])
      (when-not made?
        [{:kind :diagnostic
          :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/object :aspect :class
@@ -787,7 +815,7 @@
               ;; an E7_Activity, carried out (P14) by its actors; any other is an
               ;; E5_Event, which its actors took part in (P11): an actor named in
               ;; a loss or a find did not carry it out (post-audit 5, G2)
-              activity? (or (#{"production" "acquisition" "modification"} (:kind f))
+              activity? (or (#{"production" "acquisition" "modification" "design"} (:kind f))
                             (some #(= "technique" (:role (fields %))) (in :lido/material))
                             ;; by its type, or any of its terms in any language
                             (activity-type? f (for [t (of :lido/event-type) :when (= n (event-key t))] (:value t))))
@@ -795,13 +823,27 @@
                            "production"  [:crm/E12_Production :crm/P108i_was_produced_by]
                            "acquisition" [:crm/E8_Acquisition :crm/P24i_changed_ownership_through]
                            "modification" [:crm/E11_Modification :crm/P31i_was_modified_by]
+                           ;; a design: the creation of the design the
+                           ;; productions used, not an event of the object
+                           "design"       [:crm/E65_Creation nil]
                            (if activity?
                              [:crm/E7_Activity :crm/P12i_was_present_at]
                              [:crm/E5_Event :crm/P12i_was_present_at]))
               e  (model/mint-entity-id kind [(str rid) n])
               ts (model/mint-entity-id :crm/E52_Time-Span [(str rid) n])]
           (concat
-           [(entity e kind) (claim obj via (model/reference e) a)]
+           [(entity e kind)]
+           (when via [(claim obj via (model/reference e) a)])
+           (when (= "design" (:kind f))
+             (let [d     (model/mint-entity-id :crm/E29_Design_or_Procedure [(str rid) n])
+                   prods (keep (fn [[pn [pf]]] (when (= "production" (:kind pf)) pn)) events)]
+               (concat [(entity d :crm/E29_Design_or_Procedure) (claim e :crm/P94_has_created (model/reference d) a)]
+                       (for [pn prods]
+                         (claim (model/mint-entity-id :crm/E12_Production [(str rid) pn]) :crm/P33_used_specific_technique (model/reference d) a))
+                       (when (empty? prods)
+                         [{:kind :diagnostic
+                           :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/event :aspect :relation :value f
+                                            :message "a design of no production: the design it created is not linked to the object"})}]))))
            (when (:type f) (typed e :crm/P2_has_type :crm/E55_Type a {:uri (:type f) :label (:label f)}))
            (when (or (:date f) (:earliest f) (:latest f))
              (concat [(entity ts :crm/E52_Time-Span) (claim e :crm/P4_has_time-span (model/reference ts) a)]
@@ -811,7 +853,11 @@
            (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
                                  kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
                                  ag   (model/mint-entity-id kind (if uri uri [(str rid) name]))]
-                             [(entity ag kind uri) (claim e (if activity? :crm/P14_carried_out_by :crm/P11_had_participant) (model/reference ag) a)
+                             ;; an activity is carried out by its actors, but for
+                             ;; one who commissioned or paid for it, who took part
+                             [(entity ag kind uri) (claim e (if (and activity? (not (passive? (:role (fields a)))))
+                                                              :crm/P14_carried_out_by :crm/P11_had_participant)
+                                                          (model/reference ag) a)
                               (claim ag :crm/P190_has_symbolic_content name a)]))
                    (in :lido/actor))
            ;; a material is what the object consists of only when its
