@@ -212,7 +212,8 @@
 (defn streamable? [from] (boolean (spoke-streamer from)))
 
 (defn streamable-sources
-  "Source spokes whose importer can stream from a Reader (WP-7) — the MARC family."
+  "Source spokes whose importer can stream from a Reader (WP-7) — the MARC family
+   and LIDO (post-audit 5, G7)."
   []
   (into (sorted-set) (filter streamable?) (source-formats)))
 
@@ -407,7 +408,8 @@
    (report-at-ingest) loss is the importer's separate output, which a record stream
    does not carry; so the streamed report's per-edge / per-category / per-field
    counts equal the batch report's **iff the importer emits no ingest loss** — which
-   holds for every streamable spoke (the MARC family importers report none; pinned by
+   holds for every streamable spoke (the MARC family importers report none, and the
+   LIDO stream carries its import-edge losses on its records; pinned by
    `convert-stream-test`). For a hypothetical streamable spoke with report-at-ingest
    loss the streamed report would under-count the import edge — fold the importer's
    `:diagnostics` into the same accumulator then. `:distinct-losses` (O(N)) is always

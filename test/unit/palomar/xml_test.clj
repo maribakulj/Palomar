@@ -1,6 +1,7 @@
 (ns palomar.xml-test
   "Pins the input-hardening posture of `palomar.xml` (WP-9 security): every XML
-   importer parses through this façade, which refuses DTDs (`:support-dtd false`).
+   importer parses through this façade, which refuses DTDs (`:support-dtd false`:
+   a DTD is ignored, its entities never declared).
    That single policy closes two real holes verified against `clojure.data.xml`:
 
    - the `billion laughs` entity-expansion DoS (the baseline parser expands a
@@ -76,3 +77,10 @@
                  (marc21/ingest billion-laughs {})))
     (is (thrown? javax.xml.stream.XMLStreamException
                  (doall (marc21/stream {} (java.io.StringReader. billion-laughs)))))))
+
+(deftest an-unused-dtd-is-ignored-not-honoured
+  (testing "a DOCTYPE nothing references is passed over: the parser ignores DTDs, it does not throw on them (G7 review)"
+    (is (= :x (:tag (realize (rx/parse-str "<!DOCTYPE x [<!ENTITY e \"a\">]><x/>"))))))
+  (testing "and its entities are never declared, so using one fails"
+    (is (thrown? javax.xml.stream.XMLStreamException
+                 (realize (rx/parse-str "<!DOCTYPE x [<!ENTITY e \"a\">]><x>&e;</x>"))))))

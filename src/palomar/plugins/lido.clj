@@ -33,14 +33,17 @@
    number, the descriptions, the images), so Dublin Core can describe one.
    `project` makes the CIDOC CRM object graph (an `E22_Human-Made_Object`, its
    production, dimensions, types, keeper and owner, subjects and images)."
-  (:require [clojure.string :as str]
+  (:require [clojure.data.xml :as xml]
+            [clojure.data.xml.tree :as xml-tree]
+            [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.lido-schema :as lido-schema]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.rules :as rules]
             [palomar.runtime :as runtime]
-            [palomar.xml :as rx]))
+            [palomar.xml :as rx])
+  (:import [clojure.data.xml.event EmptyElementEvent EndElementEvent StartElementEvent]))
 
 (defn- local [tag] (when tag (name tag)))
 
@@ -477,6 +480,46 @@
                  (empty? (apply descend c child)))]
      (str/join "/" (concat ctx child)))))
 
+(defn- import-node
+  "One `lido:lido` `node` (`[el path]`) as `{:record :losses}`; `xsd` is its
+   schema validation (`lido-schema/errors`), or nil."
+  [node xsd]
+  (let [natives (vec (object-natives node))
+        rec-id  (some-> (kid node "lidoRecID") text)
+        ;; a local id is unique only within its source: the institution the
+        ;; lidoRecID's lido:source names is part of the key (post-audit 4, F6)
+        src     (some-> (kid node "lidoRecID") (attr "source") str/trim not-empty)
+        rid     (keyword "lido" (cond
+                                  (and rec-id src) (str (model/encode-name src) "_-" (model/encode-name rec-id))
+                                  rec-id           (model/encode-name rec-id)
+                                  :else            (str "h" (model/sha256-hex (pr-str (first node)) 12))))
+        as      (for [[p v path] natives]
+                  (model/assertion {:subject rid :predicate p :value v
+                                    :provenance (model/provenance {:pass :ingest
+                                                                   :evidence [{:selector {:type :xpath :value path}}]})}))]
+    ;; its source identifier is the lidoRecID as written (F6 review); what the
+    ;; LIDO schema requires and the record lacks is a warning on the record,
+    ;; which `validate` reports (post-audit 4, F7), and a record that is not
+    ;; valid an error (post-audit 5, G6)
+    {:record (model/record {:id rid :kind :lido/object :source (or rec-id (name rid)) :assertions (vec as)
+                            :diagnostics (concat
+                                          (for [m (missing-required node)]
+                                            (model/diagnostic {:severity :warning :code :lido/missing-required :subject rid
+                                                               :message (str "the record lacks " m ", which the LIDO schema requires")
+                                                               :detail {:lido/element m}}))
+                                          (when-let [{:keys [version errors]} xsd]
+                                            (when (seq errors)
+                                              [(model/diagnostic {:severity :error :code :lido/schema-invalid :subject rid
+                                                                  :message (str "not valid " (lido-schema/version-name version) ": " (first errors))
+                                                                  :detail {:lido/schema version :lido/errors errors}})])))})
+     :losses (concat
+              (when-not rec-id
+                [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :lido/lidoRecID
+                           :message "the record states no lidoRecID: it is named by its content's digest, and changes whenever it does"})])
+              (for [[u n] (sort (unread node natives))]
+                (dx/loss {:category :dropped :subject rid :edge :import :source-field (keyword "lido" u)
+                          :message (str n " " u " value(s) not read by the LIDO importer (ADR 0052)")})))}))
+
 (defn importer
   "ADR 0007 importer: one record per `lido:lido` of `source` (see the ns doc).
    Each is validated against the LIDO schema (`lido-schema`) unless
@@ -491,44 +534,65 @@
         top   [root (str "/*[local-name()='" rn "'][1]")]
         lidos (if (= "lido" rn) [top] (kids top "lido"))
         xsd   (when (get opts :validate? true) (lido-schema/errors s))
-        out   (for [[i node] (map-indexed vector lidos)
-                    :let [natives (vec (object-natives node))
-                          rec-id (some-> (kid node "lidoRecID") text)
-                          ;; a local id is unique only within its source: the
-                          ;; institution the lidoRecID's lido:source names is part
-                          ;; of the key (post-audit 4, F6)
-                          src    (some-> (kid node "lidoRecID") (attr "source") str/trim not-empty)
-                          rid    (keyword "lido" (cond
-                                                   (and rec-id src) (str (model/encode-name src) "_-" (model/encode-name rec-id))
-                                                   rec-id           (model/encode-name rec-id)
-                                                   :else            (str "h" (model/sha256-hex (pr-str (first node)) 12))))
-                          as     (for [[p v path] natives]
-                                   (model/assertion {:subject rid :predicate p :value v
-                                                     :provenance (model/provenance {:pass :ingest
-                                                                                    :evidence [{:selector {:type :xpath :value path}}]})}))]]
-                ;; its source identifier is the lidoRecID as written (F6 review);
-                ;; what the LIDO schema requires and the record lacks is a
-                ;; warning on the record, which `validate` reports (post-audit 4, F7)
-                {:record (model/record {:id rid :kind :lido/object :source (or rec-id (name rid)) :assertions (vec as)
-                                        :diagnostics (concat
-                                                      (for [m (missing-required node)]
-                                                        (model/diagnostic {:severity :warning :code :lido/missing-required :subject rid
-                                                                           :message (str "the record lacks " m ", which the LIDO schema requires")
-                                                                           :detail {:lido/element m}}))
-                                                      (when-let [{:keys [version errors]} (get xsd i)]
-                                                        (when (seq errors)
-                                                          [(model/diagnostic {:severity :error :code :lido/schema-invalid :subject rid
-                                                                              :message (str "not valid " (lido-schema/version-name version) ": " (first errors))
-                                                                              :detail {:lido/schema version :lido/errors errors}})])))})
-                 :losses (concat
-                          (when-not rec-id
-                            [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :lido/lidoRecID
-                                       :message "the record states no lidoRecID: it is named by its content's digest, and changes whenever it does"})])
-                          (for [[u n] (sort (unread node natives))]
-                            (dx/loss {:category :dropped :subject rid :edge :import :source-field (keyword "lido" u)
-                                      :message (str n " " u " value(s) not read by the LIDO importer (ADR 0052)")})))})]
+        out   (map-indexed (fn [i node] (import-node node (get xsd i))) lidos)]
     {:records     (mapv :record out)
      :diagnostics (vec (mapcat :losses out))}))
+
+(defn stream
+  "Streaming importer (WP-7, post-audit 5, G7): a **lazy** seq of the records
+   of a LIDO document `readable` (a `lidoWrap`, or a bare `lido`), in memory
+   bounded by one record at a time: events are read, and only one `lido:lido`
+   at a time is built as a tree, imported, validated (unless `:validate?` is
+   false) and released. Each record is the batch importer's, with the same
+   XPaths; its import-edge losses travel on its `:diagnostics`, so a streamed
+   loss report counts them as the batch one does. The caller keeps `readable`
+   open while it consumes the seq, and does not retain its head."
+  [opts readable]
+  (letfn [(start? [e] (instance? StartElementEvent e))
+          (lido-start? [e] (and (or (start? e) (instance? EmptyElementEvent e)) (= "lido" (local (:tag e)))))
+          (take-element [evs]
+            (if (instance? EmptyElementEvent (first evs))
+              [[(first evs)] (rest evs)]
+              (loop [acc [(first evs)] depth 1 evs (rest evs)]
+                (if-let [s (seq evs)]
+                  (let [e (first s)]
+                    (cond
+                      (start? e)                    (recur (conj acc e) (inc depth) (rest s))
+                      (instance? EndElementEvent e) (if (= 1 depth)
+                                                      [(conj acc e) (rest s)]
+                                                      (recur (conj acc e) (dec depth) (rest s)))
+                      :else                         (recur (conj acc e) depth (rest s))))
+                  (throw (ex-info "lido: the document ends inside a record" {}))))))
+          (one [own prefix version k]
+            (let [el   (xml-tree/event-tree own)
+                  path (str prefix "/*[local-name()='lido'][" k "]")
+                  xsd  (when (get opts :validate? true) (first (lido-schema/errors (xml/emit-str el) version)))
+                  {:keys [record losses]} (import-node [el path] xsd)]
+              (update record :diagnostics (fnil into []) losses)))
+          ;; the wrap's children, one element at a time: a `lido` is a record,
+          ;; any other child is passed over whole, a `lido` inside it
+          ;; included, as the batch importer reads only the wrap's children
+          ;; (G7 review); the wrap's end ends the records
+          (records [evs prefix version k]
+            (lazy-seq
+             (when-let [s (seq evs)]
+               (let [e (first s)]
+                 (cond
+                   (lido-start? e)                (let [[own more] (take-element s)]
+                                                    (cons (one own prefix version k) (records more prefix version (inc k))))
+                   (or (start? e) (instance? EmptyElementEvent e))
+                   (records (second (take-element s)) prefix version k)
+                   (instance? EndElementEvent e)  nil
+                   :else                          (records (rest s) prefix version k))))))]
+    (let [evs  (drop-while #(not (start? %)) (rx/event-seq readable))
+          root (first evs)
+          rn   (local (:tag root))]
+      (case rn
+        "lido"     (let [[own] (take-element evs)] [(one own "" nil 1)])
+        "lidoWrap" (records (rest evs) "/*[local-name()='lidoWrap'][1]"
+                            (lido-schema/declared-in (some (fn [[k v]] (when (= "schemaLocation" (name k)) v)) (:attrs root)))
+                            1)
+        (throw (ex-info "lido: not a LIDO document" {:root rn}))))))
 
 (def mapping
   "LIDO natives → the canonical floor: what a generic description says of an object."
@@ -547,6 +611,7 @@
    :input-format        :xml
    :mapping             mapping
    :importer            importer
+   :stream-importer     stream
    :doc                 "LIDO 1.0 / 1.1 (and LIDO-MC) museum object records, as CIDOC CRM objects."})
 
 ;; --- projection: a CIDOC CRM object (ADR 0052) ---------------------------------

@@ -73,7 +73,7 @@
     "  --authorities reconcile: a MADS or SKOS authority file (RDF/XML, or N-Triples as .nt) or an EAC-CPF record to match names against"
     "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
     "  --out         write the output to a file instead of stdout (convert)"
-    "  --stream      convert in bounded memory, streaming a large flat MARC dump to --out (WP-7)"
+    "  --stream      convert in bounded memory, streaming a large MARC dump or LIDO lidoWrap to --out (WP-7)"
     "  --with-proposals  convert: also state the proposed claims (uncurated inferences) as facts; by default a"
     "                plain RDF or record export holds facts only, and trig/nquads/prov keep each claim with its status"
     "  --manifest    convert: write the run manifest (versions, digests, options, loss) as EDN"
@@ -283,7 +283,7 @@
 (defn- do-convert-stream
   "Streaming convert (WP-7): lazily parse the input and write each rendered document
    to `--out` incrementally, in bounded memory (the whole corpus is never
-   materialised). Requires a streamable spoke (the MARC family) and `--out` (the
+   materialised). Requires a streamable spoke (the MARC family, LIDO) and `--out` (the
    document sink — like the batch `--out`, this writes a file). The loss report is
    returned in `:err`."
   [{:strs [from to record-id out] :as flags} input]

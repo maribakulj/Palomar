@@ -108,9 +108,9 @@
   "For each `lido:lido` of the LIDO document `doc` (a string) the importer
    reads (the root, or its direct children named `lido`), in order:
    `{:version v :errors [message…]}`, `:errors` empty when it is valid. The
-   version is `version` when given (a stream knows it from its root), else
-   the one the root's or the record's `xsi:schemaLocation` names. A record
-   whose element is not in the LIDO namespace is not valid."
+   version is the one the record's own `xsi:schemaLocation` names, else its
+   document root's, else `version` (a stream knows its wrap's), else either.
+   A record whose element is not in the LIDO namespace is not valid."
   ([doc] (errors doc nil))
   ([^String doc version]
    (let [dbf  (doto (DocumentBuilderFactory/newInstance)
@@ -121,6 +121,6 @@
          root (.getDocumentElement d)
          loc  (fn [^Element e] (not-empty (.getAttributeNS e xsi "schemaLocation")))]
      (vec (for [el (lido-elements root)]
-            (check el (or version (declared-in (or (loc el) (loc root))))))))))
+            (check el (or (declared-in (or (loc el) (loc root))) version)))))))
 
 (defn version-name [v] (str/replace (name v) "v" "LIDO "))
