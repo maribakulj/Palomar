@@ -91,7 +91,26 @@ reproducible with the snippet above on a generated dump.
   streams in **14 MB** peak heap after GC under `-Xmx128m`, exactly like the flat
   dump of the same 20 000 records (14 MB), and each streamed record equals the
   batch-parsed one (`convert-stream-test`).
-- **Non-MARC spokes don't stream.** Dublin Core / MODS / IIIF are single- or
+- **LIDO streams too (2026-10-29, post-audit 5, G7).** A museum's LIDO export
+  is a `lidoWrap` of many `lido:lido`: `lido/stream` reads its events and builds,
+  imports and validates one record at a time, with the batch importer's XPaths;
+  its import-edge losses travel on the records, so the streamed report equals the
+  batch one (`convert-stream-test/a-lido-dump-streams-as-it-converts`). Measured on
+  a generated `lidoWrap` of 6 000 Städel records (218 MB), under `-Xmx256m`, to
+  N-Triples:
+
+  | path                         | result                                   |
+  |------------------------------|------------------------------------------|
+  | batch `convert`              | `OutOfMemoryError` after 0.6 s           |
+  | `--stream`, no validation    | 6 000 records, 155 s (39/s), ≤ 17 MB heap after GC |
+  | `--stream`, XSD validation   | 6 000 records, 179 s (33/s), ≤ 20 MB heap after GC |
+
+  Memory is bounded; throughput is not good: 25 to 30 ms a record (without and
+  with validation), where a MARC record takes well under one. Importing a record
+  takes about 6 ms (8 with the XSD); the rest goes to the projection and the
+  export, which are not yet profiled. An OAI-PMH response of LIDO records does not stream: a harvest's
+  pages are small, and are read one by one (`oai/harvest`).
+- **Other non-MARC spokes don't stream.** Dublin Core / MODS / IIIF are single- or
   few-record formats (no flat-collection dump shape); `--stream` rejects them with the
   streamable set, rather than pretend.
 - **Distinct-loss dedup is batch-only** — by design, the one O(N) metric.

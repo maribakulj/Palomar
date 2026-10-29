@@ -38,6 +38,7 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | Every LIDO record is validated against the official LIDO 1.0/1.1 XSD, vendored, offline; one that is not valid carries an error the `validate` gate fails on. The real corpora are valid. | `palomar.plugins.lido-test/a-record-is-checked-against-the-lido-schema` |
 | Records of other institutions (museum-digital, Hessen and Westfalen, CC0) are read whole: their event terms ("Hergestellt"), their materials in an unspecified event, their casts and vases; every conversion of them accounts for every value. | `palomar.plugins.lido-test/another-institution-s-records-are-read-whole` |
 | No LIDO record escapes the schema: one in no namespace or the wrong one is an error, and an error stays on its own record. An unspecified event that has a date, an actor or a description lends the object none of its materials. Two productions' actors or dates exchanged in Linked Art are caught, each production looked for in its own part. | `palomar.plugins.lido-test/no-record-escapes-the-schema`, `palomar.plugins.lido-test/a-restoration-in-disguise-is-no-constituent`, `palomar.fidelity-test/values-swapped-between-productions-are-caught` |
+| A LIDO `lidoWrap` streams one record at a time, to the same output and loss report as batch, lazily. | `palomar.convert-stream-test/a-lido-dump-streams-as-it-converts` |
 | A loss accounts only for the fields, or the value, it names: a reported role URI does not hide an unreported seller or acquisition date. | `palomar.fidelity-test/one-field-lost-does-not-account-for-another` |
 | An export that drops a relation while keeping every string is caught. | `palomar.fidelity-test/a-dropped-relation-is-caught` |
 | In the N-Triples family a value counts as preserved only on its own node: the right text on the wrong resource is caught. | `palomar.fidelity-test/the-right-text-on-the-wrong-node-is-caught` |
@@ -125,4 +126,5 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 - **Entity id collisions.** Ids carry a 64-bit hash; the policy and its limits
   are in `palomar.model/mint-entity-id`.
 - **Batch memory.** `convert` holds the corpus and its output in memory; only
-  `convert --stream` (MARC family) is bounded.
+  `convert --stream` (the MARC family, and a LIDO `lidoWrap`) is bounded. A
+  streamed LIDO record takes 25 to 30 ms (`docs/eval/scale.md`).

@@ -17,7 +17,11 @@
      But a DTD is still the vehicle for the expansion DoS above.
 
    Both holes close the same way: **refuse DTDs entirely.** `:support-dtd false`
-   makes the parser throw on any `<!DOCTYPE …>`. Palomar has no fixture or
+   makes the parser ignore a `<!DOCTYPE …>`: its entities are never declared,
+   so a document that uses one fails (\"referenced, but not declared\") and
+   none is ever expanded; a DTD nothing references is passed over (corrected,
+   post-audit 5, G7 review: the parser does not throw on the DOCTYPE itself,
+   `palomar.xml-test/an-unused-dtd-is-ignored-not-honoured`). Palomar has no fixture or
    supported format that legitimately needs a DTD (verified WP-9 across every
    committed fixture), so the policy is total rather than per-format.
    `:supporting-external-entities false` is the data.xml default; it is pinned
@@ -30,7 +34,8 @@
   (:require [clojure.data.xml :as data-xml]))
 
 ;; data.xml / StAX option semantics:
-;;   :support-dtd false               -> throw on <!DOCTYPE …>; kills the
+;;   :support-dtd false               -> ignore <!DOCTYPE …>, its entities
+;;                                       undeclared (a reference throws); kills the
 ;;                                       entity-expansion DoS *and* any
 ;;                                       DTD-borne XXE in one move.
 ;;   :supporting-external-entities    -> already false by default; pinned for
@@ -41,14 +46,14 @@
 
 (defn parse-str
   "Parse XML `s` (a String) like `clojure.data.xml/parse-str`, but refuse DTDs.
-   Throws on a `<!DOCTYPE …>` — see the namespace doc for why this is the whole
+   Throws on an entity a `<!DOCTYPE …>` would declare — see the namespace doc for why this is the whole
    input-hardening story (entity-expansion DoS + DTD-borne XXE)."
   [s]
   (apply data-xml/parse-str s safe-opts))
 
 (defn parse
   "Parse XML from `readable` (a `Reader`/`InputStream`) like
-   `clojure.data.xml/parse`, but refuse DTDs. Throws on a `<!DOCTYPE …>`.
+   `clojure.data.xml/parse`, but refuse DTDs. Throws on an entity a `<!DOCTYPE …>` would declare.
    This is the streaming variant; see `parse-str` and the namespace doc."
   [readable]
   (apply data-xml/parse readable safe-opts))
