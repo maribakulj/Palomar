@@ -109,7 +109,8 @@
         prod    (first (filter #(= "production" (:kind %)) events))
         ;; the actors of every production, the first production's first: a
         ;; portfolio's other sheets have creators too (post-audit 5, G6)
-        pkeys   (lido/production-keys events)
+        ;; and of every design, whose creators are the object's too (H2)
+        pkeys   (into (lido/production-keys events) (lido/design-keys events))
         in-prod (sort-by #(if (= (:index prod) (:event %)) 0 1) (filter #(pkeys (:event %)) (fields record :lido/actor)))
         ;; the creators first (the first is the main entry), then whoever
         ;; else took part, never as a main entry (ADR 0054)
@@ -205,7 +206,7 @@
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
                  :message (str "materials " (pr-str (:value a)) " of another event than the production are not the object's: no field")}))
      ;; only the production's actors and date have a field (F5 review)
-     (for [a (fields record :lido/actor) :when (not (contains? (lido/production-keys (fields record :lido/event)) (:event a)))]
+     (for [a (fields record :lido/actor) :when (not (contains? (into (lido/production-keys (fields record :lido/event)) (lido/design-keys (fields record :lido/event))) (:event a)))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
                  :message (str "actor " (pr-str (:name a)) " of an event other than the production has no field in the MARC21 object profile")}))
      (for [ev (fields record :lido/event) :when (and (not= (:index prod) (:index ev)) (some ev [:date :earliest :latest]))]
