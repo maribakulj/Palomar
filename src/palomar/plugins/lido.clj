@@ -527,8 +527,9 @@
   [record]
   (update record :diagnostics (fnil conj [])
           (model/diagnostic {:severity :warning :code :lido/duplicate-id :subject (:id record)
-                             :message (str "another record of this document has the lidoRecID " (pr-str (:source record))
-                                           " of the same source: their ids coincide, and they merge into one object")})))
+                             :message (str "another record of this document has the same id " (pr-str (:source record))
+                                           " (its lidoRecID and source, or, with no lidoRecID, the same content):"
+                                           " their ids coincide, and they merge into one object")})))
 
 (defn importer
   "ADR 0007 importer: one record per `lido:lido` of `source` (see the ns doc).
