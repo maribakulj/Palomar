@@ -240,6 +240,10 @@
            here?   (fn [{:keys [subject value]}]
                      (contains? (get on (or (get idx subject) (export/entity-iri subject)) #{}) (norm value)))
            all     (concat loss losses)
+           ;; a value of an event is looked for where the export wrote that
+           ;; event, when it says where (`convert/scopes-of`): the production's
+           ;; actor in the production, not on the object (post-audit 5, G5)
+           scopes  (when-let [f (convert/scopes-of to)] (f record output))
            ;; a structured native's source values are checked as its predicate's
            ;; values, as a string native's are (post-audit 4, F5)
            checked (distinct
@@ -255,11 +259,13 @@
            ;; PROV-O), so it is present when a decoded string holds it as a
            ;; word of its own: \"1634\" in \"1634-1693\", not in \"16345\"; a
            ;; number padded or not (\"850\" in \"0850-12-31\", F7 review)
-           part-in (fn [{:keys [value]}]
+           part-in (fn [{:keys [predicate value whole]}]
                      (let [v  (norm value)
                            re (re-pattern (str "(?<![\\p{L}\\p{N}])" (when (re-matches #"\d+" v) "0*")
-                                               (java.util.regex.Pattern/quote v) "(?![\\p{L}\\p{N}])"))]
-                       (some #(re-find re %) seen)))
+                                               (java.util.regex.Pattern/quote v) "(?![\\p{L}\\p{N}])"))
+                           ev (when (contains? (:predicates scopes) predicate) (or (:event whole) (:index whole)))]
+                       (some #(re-find re (norm %))
+                             (if ev (get-in scopes [:strings ev] #{}) seen))))
            klass   (group-by #(cond (if (:part? %) (part-in %) (if rdf? (here? %) (present? seen (:predicate %) (:value %)))) :present
                                     (reported? all (:id record) %)                               :reported
                                     :else                                                        :unaccounted)

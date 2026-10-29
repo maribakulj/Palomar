@@ -515,6 +515,31 @@
       (into (mapv #(text-doc record % (= 1 (count ts))) ts)
             (map #(item-doc record %) (view/items record))))))
 
+(defn- json-leaves [x]
+  (cond (string? x)     [x]
+        (number? x)     [(str x)]
+        (map? x)        (mapcat json-leaves (vals x))
+        (sequential? x) (mapcat json-leaves x)
+        :else           []))
+
+(defn event-scopes
+  "Where, in the Linked Art `output` of a museum object `record`, each of its
+   events is written: `{:predicates #{…} :strings {event-key #{string…}}}`,
+   the strings of the production's `produced_by` and of each acquisition's
+   `changed_ownership_through`. The fidelity audit looks for an event's
+   actors and dates there, not anywhere in the document (post-audit 5, G5).
+   Nil for any other record."
+  [record output]
+  (when (and (object? record) (not (str/blank? output)))
+    (let [hmo    (some #(let [d (json/read-str %)] (when (= "HumanMadeObject" (get d "type")) d)) (str/split-lines output))
+          events (sort-by (comp lido/event-order :index) (native-fields record :lido/event))
+          prod   (first (filter #(= "production" (:kind %)) events))
+          acqs   (filter #(= "acquisition" (:kind %)) events)]
+      {:predicates #{:lido/actor :lido/event}
+       :strings    (merge (into {} (map (fn [ev doc] [(:index ev) (set (json-leaves doc))])
+                                        acqs (get hmo "changed_ownership_through")))
+                          (when prod {(:index prod) (set (json-leaves (get hmo "produced_by")))}))})))
+
 (defn ->jsonld
   "Render `record`'s WEMI view as Linked Art JSON-LD, one document per line
    (`documents`), or \"\" when there is none."

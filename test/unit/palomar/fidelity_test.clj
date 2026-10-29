@@ -158,3 +158,46 @@
       (is (empty? (:unaccounted (fidelity/audit {:from :lido :to :marc21-object :source xml}))))
       (is (some #(and (= :lido/actor (:predicate %)) (= "1634" (:value %))) unaccounted)
           "a birth year dropped from 100 $d is not found inside the inventory number 16345"))))
+
+(deftest a-value-on-the-wrong-event-is-caught
+  (testing "an actor's name moved off its own node, onto the object's, is not present (post-audit 5, G5)"
+    (let [xml    (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>M-5</lido:lidoRecID><lido:descriptiveMetadata>"
+                      "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>painting</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                      "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                      "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:term>production</lido:term></lido:eventType>"
+                      "<lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Zyx Painter</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"
+                      "<lido:eventDate><lido:displayDate>1650</lido:displayDate></lido:eventDate>"
+                      "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")
+          ok     (fidelity/audit {:from :lido :to :ntriples :source xml})
+          real   @#'convert/exporters
+          moved  (fn [re] (update real :ntriples assoc :render
+                                  (fn [r] (let [out ((get-in real [:ntriples :render]) r)
+                                                obj (second (re-find #"(<urn:palomar:ent:E22_Human-Made_Object[^>]*>)" out))]
+                                            (str/replace out re (str obj " <http://www.cidoc-crm.org/cidoc-crm/P3_has_note> $1 ."))))))
+          name-m (with-redefs-fn {#'convert/exporters (moved #"<[^>]+> <http://www.cidoc-crm.org/cidoc-crm/P190_has_symbolic_content> (\"Zyx Painter\") \.")}
+                   #(fidelity/audit {:from :lido :to :ntriples :source xml}))
+          date-m (with-redefs-fn {#'convert/exporters (moved #"<[^>]+> <http://www.cidoc-crm.org/cidoc-crm/P82_at_some_time_within> (\"1650\") \.")}
+                   #(fidelity/audit {:from :lido :to :ntriples :source xml}))]
+      (is (empty? (:unaccounted ok)))
+      (is (some #(= "Zyx Painter" (:value %)) (:unaccounted name-m)) "the name is not on its actor")
+      (is (some #(= "1650" (:value %)) (:unaccounted date-m)) "the date is not on its event's time-span")))
+  (testing "in Linked Art, an actor or a date of the production is looked for in the production, not anywhere (post-audit 5, G5)"
+    (let [xml    (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>M-6</lido:lidoRecID><lido:descriptiveMetadata>"
+                      "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>painting</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                      "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                      "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:term>production</lido:term></lido:eventType>"
+                      "<lido:eventActor><lido:actorInRole><lido:actor><lido:actorID>http://d-nb.info/gnd/1</lido:actorID><lido:nameActorSet><lido:appellationValue>Zyx Painter</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"
+                      "<lido:eventDate><lido:displayDate>1650</lido:displayDate></lido:eventDate></lido:event></lido:eventSet>"
+                      "<lido:eventSet><lido:event><lido:eventType><lido:term>acquisition</lido:term></lido:eventType>"
+                      "<lido:eventDate><lido:displayDate>1899</lido:displayDate></lido:eventDate></lido:event></lido:eventSet>"
+                      "</lido:eventWrap></lido:descriptiveMetadata></lido:lido>")
+          real   @#'convert/exporters
+          swap   (fn [f] (update real :linked-art assoc :render (fn [r] (f ((get-in real [:linked-art :render]) r)))))
+          audit* (fn [f] (:unaccounted (with-redefs-fn {#'convert/exporters (swap f)} #(fidelity/audit {:from :lido :to :linked-art :source xml}))))]
+      (is (empty? (:unaccounted (fidelity/audit {:from :lido :to :linked-art :source xml}))))
+      (is (some #(= "1650" (:value %)) (audit* #(str/replace % #"\"1650\"" "\"1899\"")))
+          "the production's date, swapped for the acquisition's, is caught")
+      (is (some #(= "Zyx Painter" (:value %))
+                (audit* #(-> % (str/replace #"\"_label\":\"Zyx Painter\"" "\"_label\":\"x\"")
+                             (str/replace #"\"_label\":\"T\"" "\"_label\":\"Zyx Painter\""))))
+          "the production's actor, moved onto the object's label, is caught"))))
