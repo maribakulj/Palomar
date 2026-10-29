@@ -524,3 +524,33 @@
           nt  (:output (convert/convert {:from :lido :to :ntriples :source (str/replace xml "</lido:eventMaterialsTech></lido:event></lido:eventSet></lido:eventWrap>"
                                                                                         "</lido:eventMaterialsTech><lido:eventDate><lido:displayDate>1987</lido:displayDate></lido:eventDate></lido:event></lido:eventSet></lido:eventWrap>")}))]
       (is (not (re-find #"P45_consists_of> <http://vocab.getty.edu/aat/300014711>" nt))))))
+
+(defn- object-iri [xml]
+  (second (re-find #"<([^>]+)> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.cidoc-crm.org/cidoc-crm/(?:E22_Human-Made_Object|E19_Physical_Object)>"
+                   (:output (convert/convert {:from :lido :to :ntriples :source xml})))))
+
+(deftest an-object-keeps-its-iri-when-its-record-is-enriched
+  (testing "the object's IRI does not depend on its class: an E19 enriched into an E22 is the same node (post-audit 6, H1)"
+    (let [v1 (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID lido:source=\"DE-Mb112\">INV-42</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"en\">"
+                  "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>Ding</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                  "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                  "</lido:descriptiveMetadata></lido:lido>")
+          v2 (str/replace v1 "<lido:term>Ding</lido:term>" "<lido:term>sculpture</lido:term>")
+          nt (fn [x] (:output (convert/convert {:from :lido :to :ntriples :source x})))]
+      (is (str/includes? (nt v1) "E19_Physical_Object"))
+      (is (str/includes? (nt v2) "E22_Human-Made_Object"))
+      (is (some? (object-iri v1)))
+      (is (= (object-iri v1) (object-iri v2)) "the same object, the same IRI")
+      (is (not (re-find #"E22|E19" (object-iri v1))) "the IRI says nothing of a class"))))
+
+(deftest a-duplicate-record-id-is-reported
+  (testing "two records of one source with the same lidoRecID would merge: each after the first is flagged (post-audit 6, H1)"
+    (let [rec  (fn [t] (str "<lido:lido><lido:lidoRecID lido:source=\"DE-Mb112\">42</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"en\">"
+                            "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>" t "</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                            "</lido:descriptiveMetadata></lido:lido>"))
+          wrap (str "<lido:lidoWrap xmlns:lido=\"http://www.lido-schema.org\">" (rec "A") (rec "B") (str/replace (rec "C") ">42<" ">43<") "</lido:lidoWrap>")
+          dup? (fn [r] (some #(= :lido/duplicate-id (:code %)) (:diagnostics r)))
+          batch (:records (convert/to-wemi :lido {:validate? false} wrap))
+          strm  (with-open [rd (java.io.StringReader. wrap)] (doall (convert/stream-source :lido {:validate? false} rd)))]
+      (doseq [rs [batch strm]]
+        (is (= [false true false] (mapv (comp boolean dup?) rs)))))))

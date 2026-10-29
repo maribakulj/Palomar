@@ -36,6 +36,15 @@ an acquisition history.
      (`:lido/rec-id-source`), and its ISIL is the MARC `003` (ADR 0053,
      amended, post-audit 5, G3). With no `lidoRecID` the record is
      named by a digest, and that is reported (ADR 0047).
+   - The object's IRI is minted from the record's key alone, never from its
+     class: an `E19_Physical_Object` whose record, enriched, says it was
+     made stays the same node, an `E22_Human-Made_Object` now. This changes
+     every object IRI once more (amended, post-audit 6, H1): data converted
+     before must be re-converted, not merged.
+   - Two records of one document with the same `lidoRecID` of the same
+     source would merge into one object: each after the first carries a
+     warning, `:lido/duplicate-id`, in batch as in a stream (which keeps the
+     ids it has seen: one per record).
    - Every value is a native `:lido/*` with its absolute XPath.
    - Each concept (work type, classification, material, technique, role,
      subject, rights) is kept whole, as `{:uri :label}`, beside its terms in

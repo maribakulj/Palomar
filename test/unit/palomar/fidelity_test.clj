@@ -172,7 +172,7 @@
           real   @#'convert/exporters
           moved  (fn [re] (update real :ntriples assoc :render
                                   (fn [r] (let [out ((get-in real [:ntriples :render]) r)
-                                                obj (second (re-find #"(<urn:palomar:ent:E22_Human-Made_Object[^>]*>)" out))]
+                                                obj (second (re-find #"(<[^>]+>) <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.cidoc-crm.org/cidoc-crm/E22_Human-Made_Object>" out))]
                                             (str/replace out re (str obj " <http://www.cidoc-crm.org/cidoc-crm/P3_has_note> $1 ."))))))
           name-m (with-redefs-fn {#'convert/exporters (moved #"<[^>]+> <http://www.cidoc-crm.org/cidoc-crm/P190_has_symbolic_content> (\"Zyx Painter\") \.")}
                    #(fidelity/audit {:from :lido :to :ntriples :source xml}))
