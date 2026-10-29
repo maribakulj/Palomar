@@ -520,6 +520,17 @@
                 (dx/loss {:category :dropped :subject rid :edge :import :source-field (keyword "lido" u)
                           :message (str n " " u " value(s) not read by the LIDO importer (ADR 0052)")})))}))
 
+(defn- duplicate
+  "`record` flagged as one whose id another record of the same document
+   already has: two records of one source with one `lidoRecID` would merge
+   into one object (post-audit 6, H1)."
+  [record]
+  (update record :diagnostics (fnil conj [])
+          (model/diagnostic {:severity :warning :code :lido/duplicate-id :subject (:id record)
+                             :message (str "another record of this document has the same id " (pr-str (:source record))
+                                           " (its lidoRecID and source, or, with no lidoRecID, the same content):"
+                                           " their ids coincide, and they merge into one object")})))
+
 (defn importer
   "ADR 0007 importer: one record per `lido:lido` of `source` (see the ns doc).
    Each is validated against the LIDO schema (`lido-schema`) unless
@@ -534,8 +545,11 @@
         top   [root (str "/*[local-name()='" rn "'][1]")]
         lidos (if (= "lido" rn) [top] (kids top "lido"))
         xsd   (when (get opts :validate? true) (lido-schema/errors s))
-        out   (map-indexed (fn [i node] (import-node node (get xsd i))) lidos)]
-    {:records     (mapv :record out)
+        out   (map-indexed (fn [i node] (import-node node (get xsd i))) lidos)
+        recs  (second (reduce (fn [[seen acc] {r :record}]
+                                [(conj seen (:id r)) (conj acc (cond-> r (seen (:id r)) duplicate))])
+                              [#{} []] out))]
+    {:records     recs
      :diagnostics (vec (mapcat :losses out))}))
 
 (defn stream
@@ -573,17 +587,21 @@
           ;; any other child is passed over whole, a `lido` inside it
           ;; included, as the batch importer reads only the wrap's children
           ;; (G7 review); the wrap's end ends the records
-          (records [evs prefix version k]
+          ;; `seen`: the ids streamed so far, to flag a duplicate as batch does
+          ;; (the one state that grows with the dump: an id per record)
+          (records [evs prefix version k seen]
             (lazy-seq
              (when-let [s (seq evs)]
                (let [e (first s)]
                  (cond
-                   (lido-start? e)                (let [[own more] (take-element s)]
-                                                    (cons (one own prefix version k) (records more prefix version (inc k))))
+                   (lido-start? e)                (let [[own more] (take-element s)
+                                                        r (one own prefix version k)]
+                                                    (cons (cond-> r (seen (:id r)) duplicate)
+                                                          (records more prefix version (inc k) (conj seen (:id r)))))
                    (or (start? e) (instance? EmptyElementEvent e))
-                   (records (second (take-element s)) prefix version k)
+                   (records (second (take-element s)) prefix version k seen)
                    (instance? EndElementEvent e)  nil
-                   :else                          (records (rest s) prefix version k))))))]
+                   :else                          (records (rest s) prefix version k seen))))))]
     (let [evs  (drop-while #(not (start? %)) (rx/event-seq readable))
           root (first evs)
           rn   (local (:tag root))]
@@ -591,7 +609,7 @@
         "lido"     (let [[own] (take-element evs)] [(one own "" nil 1)])
         "lidoWrap" (records (rest evs) "/*[local-name()='lidoWrap'][1]"
                             (lido-schema/declared-in (some (fn [[k v]] (when (= "schemaLocation" (name k)) v)) (:attrs root)))
-                            1)
+                            1 #{})
         (throw (ex-info "lido: not a LIDO document" {:root rn}))))))
 
 (def mapping
@@ -718,7 +736,9 @@
         ;; a physical object, and that is reported (post-audit 5, G4)
         made?  (human-made? record)
         okind  (if made? :crm/E22_Human-Made_Object :crm/E19_Physical_Object)
-        obj    (model/mint-entity-id okind [(str rid)])
+        ;; its id is the record's, whatever its class: an E19 enriched into an
+        ;; E22 is the same node, its type alone changes (post-audit 6, H1)
+        obj    (model/mint-entity-id :lido/object [(str rid)])
         unsaid (fn [p msg] (for [a (of p)]
                              {:kind :diagnostic
                               :value (dx/loss (cond-> {:category :dropped :subject rid :edge :projection :source-field p :message msg}
