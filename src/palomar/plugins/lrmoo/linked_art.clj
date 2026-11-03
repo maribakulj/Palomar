@@ -423,7 +423,8 @@
         place-ids (fn [ev] (filter #(nil? (nt/iri-problem %)) (event-strings record :lido/event-place-id (:index ev))))
         subjects (flds :lido/subject-concept)
         rights   (flds :lido/rights-work-type)
-        keepers  (flds :lido/keeper)
+        ;; a former repository is no current custodian (post-audit 7, I3)
+        keepers  (remove :former (flds :lido/keeper))
         notes    (concat (map #(statement % aat-materials "Material Statement") (production-strings record :lido/materials))
                          (map #(statement % aat-dimensions "Dimension Statement") (strs :lido/measurements))
                          (map #(note-obj %) (strs :lido/description))
@@ -708,7 +709,11 @@
              :when (and (= :lido/materials (:predicate a)) (string? (:value a)) (not (lido/of-production? pkeys (lido/event-key a))))]
          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
                    :message (str "materials " (pr-str (:value a)) " of another event than the production are not the object's: not written")})))
-     (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
+     (for [k (native-fields record :lido/keeper) :when (:former k)
+           [p v] (cond-> [[:lido/keeper k] [:lido/repository (:name k)]] (:uri k) (conj [:lido/repository-id (:uri k)]))]
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p :value v
+                 :message (str "former keeper " (pr-str (:name k)) " is no current custodian, and the Linked Art object profile writes no former one")}))
+     (for [k (native-fields record :lido/keeper) :when (and (nil? (:uri k)) (not (:former k)))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/keeper :value k
                  :message (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")}))
      (for [c (native-fields record :lido/subject-concept) :when (nil? (:uri c))]

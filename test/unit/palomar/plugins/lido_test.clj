@@ -669,3 +669,49 @@
           p33  (filter #(= :crm/P33_used_specific_technique (:predicate %)) (mapcat :assertions recs))]
       (is (= [0.5] (map :confidence p33)))
       (is (some #(re-find #"linked to the object by no fact" (str (get-in % [:detail :message]) (:message %))) (mapcat :diagnostics recs))))))
+
+(defn- triples-of [xml]
+  (let [ts (nt/parse (:output (convert/convert {:from :lido :to :ntriples :source xml})))]
+    (set (for [[_ p _] ts] (last (str/split (:iri p) #"/"))))))
+
+(deftest what-the-record-does-not-say-is-not-stated
+  (testing "a former repository is a former keeper (P49), not the current one (post-audit 7, I3)"
+    (let [kept (fn [attr] (str/replace (events-record "sculpture" ["lido00007" "Rodin" "sculptor" "1902"])
+                                       "</lido:titleWrap>"
+                                       (str "</lido:titleWrap><lido:repositoryWrap><lido:repositorySet" attr "><lido:repositoryName><lido:legalBodyID>http://d-nb.info/gnd/1-1</lido:legalBodyID><lido:legalBodyName>"
+                                            "<lido:appellationValue>Old Museum</lido:appellationValue></lido:legalBodyName></lido:repositoryName></lido:repositorySet></lido:repositoryWrap>")))
+          xml  (kept " lido:type=\"former\"")
+          ps   (triples-of xml)]
+      (is (contains? (triples-of (kept "")) "P50_has_current_keeper") "a repository of no type is the current keeper")
+      (is (contains? ps "P49_has_former_or_current_keeper"))
+      (is (not (contains? ps "P50_has_current_keeper")))
+      (is (empty? (violations xml)))
+      (is (not (str/includes? (:output (convert/convert {:from :lido :to :linked-art :source xml})) "current_custodian")))
+      (is (not (str/includes? (:output (convert/convert {:from :lido :to :marc21-object :source xml})) "tag=\"852\"")) "no current location in MARC")
+      (doseq [to [:linked-art :marc21-object :ntriples :dc]]
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source xml}))) (str "former keeper, " to)))
+      (testing "a current repository that was formerly another stays current; a former one is told by a whole word"
+        (is (contains? (triples-of (kept " lido:type=\"current (formerly Old Museum)\"")) "P50_has_current_keeper"))
+        (is (contains? (triples-of (kept " lido:type=\"vorheriger Standort\"")) "P49_has_former_or_current_keeper")))))
+  (testing "the object was not present at its own commissioning or planning: no P12i, reported"
+    (doseq [t ["lido00226" "Commissioning" "Auftrag" "Planung"]]
+      (let [xml (events-record "sculpture" [t "Musée" nil "1898"] ["lido00007" "Rodin" "sculptor" "1902"])
+            ts  (nt/parse (:output (convert/convert {:from :lido :to :ntriples :source xml})))]
+        (is (not (some (fn [[_ p o]] (and (str/ends-with? (:iri p) "P12i_was_present_at") (str/includes? (str (:iri o)) "E7_Activity"))) ts)) t)
+        (doseq [to [:ntriples :linked-art]]
+          (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source xml}))) (str t " " to))))))
+  (testing "a seller gave the title (P23), a buyer received it (P22): neither carried the acquisition out"
+    (let [xml (str/replace (events-record "painting" ["lido00001" "Dealer" "seller" "1950"])
+                           "</lido:eventActor>"
+                           (str "</lido:eventActor><lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Museum</lido:appellationValue></lido:nameActorSet></lido:actor>"
+                                "<lido:roleActor><lido:term>Käufer</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"))
+          ps  (triples-of xml)]
+      (is (contains? ps "P23_transferred_title_from"))
+      (is (contains? ps "P22_transferred_title_to"))
+      (is (not (contains? ps "P14_carried_out_by")))
+      (is (empty? (violations xml)))))
+  (testing "a role is told by its whole words: an auction house for its client receives nothing; who bequeaths gives"
+    (is (nil? (lido/title-role "auction house acting for their client")))
+    (is (= :from (lido/title-role "Vererber")))
+    (is (= :from (lido/title-role "Verkäufer; Auktionator")) "a seller who also auctioned gave the title")
+    (is (nil? (lido/title-role "Verkäufer; Käufer")) "both: which is not said")))

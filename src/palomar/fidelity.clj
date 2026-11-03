@@ -30,6 +30,7 @@
             [clojure.string :as str]
             [palomar.convert :as convert]
             [palomar.diagnostics :as dx]
+            [palomar.inferences :as inferences]
             [palomar.model :as model]
             [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.lrmoo.crm :as crm]
@@ -283,13 +284,18 @@
 (defn audit
   "Audit converting `source` from spoke `from` to `to` (as `convert/convert`
    would), record by record. Returns `{:target :records :checked :present
-   :reported :unaccounted [...]}`, or `{:target :unchecked true}`."
+   :reported :unaccounted [...] :inferences {:inferred :undeclared}}`, or
+   `{:target :unchecked true}`. `:inferences` tells which relations a rule
+   read into the source, and which no rule declares (ADR 0055)."
   [{:keys [from to source opts] :or {opts {}}}]
   (if-not (decoders to)
     {:target to :unchecked true}
     (let [{:keys [records ingest]} (convert/to-wemi from opts source)
           per (map #(audit-record to % ingest) records)]
       (cond-> {:target      to
+               ;; what was stated without the source saying it in so many
+               ;; words, and what no rule declares (post-audit 7, I3)
+               :inferences  {:inferred (inferences/inferred records) :undeclared (inferences/undeclared records)}
                :records     (count records)
                :checked     (reduce + (map :checked per))
                :present     (reduce + (map :present per))
