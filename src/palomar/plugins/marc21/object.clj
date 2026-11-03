@@ -10,7 +10,7 @@
    | the inventory number                   | `099 $a` local call number                 |
    | the production's actors                | `100` 1# / `110` 2# (then `700`/`710`) `$a`, `$d` life dates, `$e` role, `$0` authority URI |
    | the first title, the others            | `245` 10 `$a`, `246` 1# `$a`               |
-   | the production's place and date        | `264` #0 `$a`, `$c` (a production, not a publication) |
+   | the production's place and date        | `264` #0 `$a`, `$c` (a production, not a publication); #3 for a printed book, music or map (its manufacture) |
    | the measurements as displayed          | `300 $c`                                   |
    | the materials as displayed             | `340 $a`                                   |
    | the inscriptions                       | `500 $a`                                   |
@@ -173,7 +173,12 @@
                  (when prod
                    (let [places (distinct (event-strings record :lido/event-place (:index prod)))]
                      (when (or (seq places) (:date prod))
-                       [(datafield "264" " " "0" (concat (for [pl places] ["a" pl]) [["c" (:date prod)]]))])))
+                       ;; a printed book, music or map was manufactured in a
+                       ;; published form (#3), which says no publication the
+                       ;; record does not; anything else was produced (#0)
+                       ;; (post-audit 7, I2)
+                       [(datafield "264" " " (if (#{"a" "c" "e"} (graphic record)) "3" "0")
+                                   (concat (for [pl places] ["a" pl]) [["c" (:date prod)]]))])))
                  (for [v (strings record :lido/measurements)] (datafield "300" " " " " [["c" v]]))
                  ;; the production's materials, or those of no event: never a
                  ;; restoration's (post-audit 5, G1)

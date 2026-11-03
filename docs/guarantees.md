@@ -92,6 +92,8 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 | MARC field occurrences keep their subfields together, in order, with their indicators; the leader is kept. | `palomar.plugins.marc21-test/each-field-occurrence-keeps-its-subfields-together-and-in-order` |
 | Distinct source identifiers do not share a record id (barring a 40-bit digest collision when slugging changed the identifier). | `palomar.plugins.record-id-test/identifiers-that-slug-alike-stay-distinct` |
 | MARC flat dumps and SRU pages stream in bounded memory, and a streamed record equals the batch one. | `palomar.convert-stream-test/an-sru-page-streams-like-a-flat-dump` (memory: `docs/eval/scale.md`) |
+| A LIDO file streamed to PROV-O names its document by the digest batch gives it: batch and stream write the same provenance graph. A pipe, read once, is converted and names no document, which the CLI says. | `palomar.convert-stream-test/a-stream-names-the-document-it-read`, `palomar.cli-test/a-streamed-conversion-names-its-document-as-batch-does`, `palomar.cli-test/a-piped-stream-is-read-once` |
+| A printed book's production is MARC21 `264` #3, its manufacture, never a publication the record does not state; a unique object's stays #0. | `palomar.plugins.marc21.object-test/a-printed-book-was-manufactured` |
 | `convert --stream` never destroys an existing `--out` before the new one is in place. | `palomar.cli-test/convert-stream-replaces-existing-out-only-on-success` |
 
 ## Not guaranteed

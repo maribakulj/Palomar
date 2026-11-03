@@ -165,3 +165,18 @@
         (is (= \f (ldr "manuscript map")))
         (is (= \c (ldr "Notenbuch, gedruckt")) "printed music")
         (is (= \e (ldr "atlas, printed book")) "a printed map")))))
+
+(deftest a-printed-book-was-manufactured
+  (testing "a printed book's production is its manufacture (264 #3), a unique object's its production (#0): no publication inferred (post-audit 7, I2)"
+    (let [rec (fn [t] (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>B-2</lido:lidoRecID><lido:descriptiveMetadata>"
+                           "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>" t "</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                           "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                           "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType><lido:term>Herstellung</lido:term></lido:eventType>"
+                           "<lido:eventDate><lido:displayDate>1493</lido:displayDate></lido:eventDate>"
+                           "<lido:eventPlace><lido:place><lido:namePlaceSet><lido:appellationValue>Nürnberg</lido:appellationValue></lido:namePlaceSet></lido:place></lido:eventPlace>"
+                           "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>"))
+          ind2 (fn [t] (second (re-find #"<datafield tag=\"264\" ind1=\" \" ind2=\"(.)\"" (:output (convert/convert {:from :lido :to :marc21-object :source (rec t)})))))]
+      (is (= "3" (ind2 "Inkunabel")) "a printed book")
+      (is (= "3" (ind2 "atlas, printed book")) "a printed map")
+      (is (= "0" (ind2 "Handschrift")) "a manuscript is produced, not manufactured")
+      (is (= "0" (ind2 "Gemälde")) "a painting"))))

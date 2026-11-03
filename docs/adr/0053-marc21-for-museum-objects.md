@@ -31,9 +31,7 @@ LIDO values:
   shows (a woodcut book illustration, a bookplate, a photograph of a
   manuscript), and a book's binding, cover or furniture is `r`. Words are
   matched whole, a German compound in -buch or -handschrift included
-  (amended, post-audit 6, H3 and its review). The `264` of a printed book
-  stays the production's (`#0`), not a publication: a limit of this
-  profile.
+  (amended, post-audit 6, H3 and its review).
   Leader/07 is `m`.
 - **`001`** is the record's stable id. The inventory number goes to `099 $a`.
 - **`003`** names whose `001` it is: the `lido:source` of the `lidoRecID`
@@ -45,7 +43,12 @@ LIDO values:
   life dates, `$e` role and `$0` authority URI.
 - **Titles:** the first is `245`, the others `246`.
 - **The production** is `264` #0: every place in `$a`, the date as given in
-  `$c`.
+  `$c`. A printed book, printed music or a printed map (Leader/06 `a`, `c`,
+  `e`) was manufactured in a published form: `264` #3, its manufacture,
+  never #1, a publication the record does not state (amended, post-audit 7,
+  I2). Read back, a manufacture makes no `F30_Manifestation_Creation` (ADR
+  0036): its place and date stay the record's native `264` fields and its
+  date the canonical one.
 - **Measurements and materials** as displayed are `300 $c` and `340 $a`.
 - **Notes:**
   - inscriptions `500`, description `520`;
