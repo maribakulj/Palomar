@@ -398,9 +398,10 @@
         actors   (flds :lido/actor)
         mats     (flds :lido/material)
         prod     (first (filter #(= "production" (:kind %)) events))
-        ;; the object's other productions, and its designs (H2), are parts of
-        ;; its production
-        more-prods (concat (rest (filter #(= "production" (:kind %)) events)) (filter #(= "design" (:kind %)) events))
+        ;; the object's other productions are parts of its production; a
+        ;; design is none, which LIDO does not say which production used: it
+        ;; is reported, not written (post-audit 7, I1 and its review)
+        more-prods (rest (filter #(= "production" (:kind %)) events))
         pkeys    (lido/material-keys record)
         acqs     (filter #(= "acquisition" (:kind %)) events)
         in-event (fn [n xs] (filter #(= n (:event %)) xs))
@@ -552,7 +553,7 @@
                                         acqs (get hmo "changed_ownership_through")))
                           ;; the first production is produced_by, the others
                           ;; its last parts: each is looked for in its own (G6 review)
-                          (let [prods (concat (filter #(= "production" (:kind %)) events) (filter #(= "design" (:kind %)) events))
+                          (let [prods (filter #(= "production" (:kind %)) events)
                                 pb    (get hmo "produced_by")
                                 n     (max 0 (dec (count prods)))
                                 parts (vec (get pb "part"))
@@ -657,18 +658,16 @@
      ;; acquisitions a time-span (F5 review)
      (let [evs (native-fields record :lido/event)]
        (concat
-        (for [a (native-fields record :lido/actor) :when (not (or (contains? (lido/production-keys evs) (:event a))
-                                                                  (and (seq (lido/production-keys evs)) (contains? (lido/design-keys evs) (:event a)))))]
+        (for [a (native-fields record :lido/actor) :when (not (contains? (lido/production-keys evs) (:event a)))]
           (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
                     :message (str "actor " (pr-str (:name a)) " of an event other than the production is not written in the Linked Art object profile")}))
-        ;; a designer is the object's creator, a canonical agent too: with no
-        ;; production to carry it out, it is written nowhere (H2 review)
-        (when (empty? (lido/production-keys evs))
-          (for [a (native-fields record :lido/actor) :when (and (= "creator" (:responsibility a)) (contains? (lido/design-keys evs) (:event a)))]
-            (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/agent :value (:name a)
-                      :message (str "the designer " (pr-str (:name a)) ", a creator, is written nowhere: the object has no production in the Linked Art object profile")})))
+        ;; a designer is the object's creator, a canonical agent too: a design
+        ;; is no part of a production LIDO does not say used it, so it is
+        ;; written nowhere (H2 review; post-audit 7, I1 review)
+        (for [a (native-fields record :lido/actor) :when (and (= "creator" (:responsibility a)) (contains? (lido/design-keys evs) (:event a)))]
+          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/agent :value (:name a)
+                    :message (str "the designer " (pr-str (:name a)) ", a creator, is written nowhere: LIDO does not say which production used the design, and Linked Art has no place for it but a production")}))
         (for [ev evs :when (and (not (#{"production" "acquisition"} (:kind ev)))
-                                (not (and (= "design" (:kind ev)) (seq (lido/production-keys evs))))
                                 (some ev [:date :earliest :latest]))]
           (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/event :value ev :fields [:date :earliest :latest]
                     :message (str "the date of the " (:kind ev) " event is not written in the Linked Art object profile")}))))

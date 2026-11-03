@@ -82,13 +82,13 @@ an acquisition history.
    - Linked Art, Dublin Core and the RDF targets accept an object.
    - MARC21, MODS and IIIF do not.
    - The canonical floor gets only what a generic description says of an
-     object: titles, the production's actors as creators, its date, the
+     object: titles, the production's and the design's creators as creators, its date, the
      inventory number, the description and the images.
 3. **The CIDOC CRM view.** The projection makes an `E22_Human-Made_Object`
    only when the record says the object was made: it has a production (a
-   creation, an execution of a design) or a design, which outweighs a natural
-   term (a cast of a fossil was made; the contradiction is reported,
-   amended, post-audit 6, H2), or a work type or classification that names an
+   creation, an execution of a design), which outweighs a natural term (a
+   cast of a fossil was made; the contradiction is reported, amended,
+   post-audit 6, H2), or a work type or classification that names an
    artefact (a painting, a print, a sculpture…, in English, French or German,
    compounds included) while none names a natural object (a fossil, a
    mineral, a specimen), which vetoes it. Otherwise it is an `E19_Physical_Object`,
@@ -127,11 +127,23 @@ an acquisition history.
      a commissioner, a patron, an Auftraggeber) took part in the activity
      (`P11`) and did not carry it out (amended, post-audit 6, H2).
    - A design (`designing`, `work_conception`) is no production: it is an
-     `E65_Creation` that `P94_has_created` an `E29_Design_or_Procedure`,
-     which each of the object's productions `P33_used_specific_technique`.
-     A design with no production is linked to no production, and that is
-     reported. In Linked Art a design is a part of the production; in MARC
-     its creators are the object's (amended, post-audit 6, H2).
+     `E65_Creation` that `P94_has_created` an `E29_Design_or_Procedure`.
+     A design alone does not say the object was made: what was designed may
+     never have been (amended, post-audit 7, I1).
+   - LIDO links no event to another, so that a production used a design is
+     no fact: each pairing is a proposal (`P33_used_specific_technique`,
+     status `:proposed`, rule `:rule.lido/design-used-by-production`,
+     confidence 0.5 over the number of productions, below any promotion
+     threshold), which a plain export withholds and a dataset keeps in its
+     proposals graph (ADR 0042). No fact then links the design to the
+     object, and that is reported, with productions or none (amended,
+     post-audit 7, I1 and its review).
+   - In Linked Art, which has no place for a design but a part of a
+     production, a design is not written: placing it in one production
+     would state the link CIDOC CRM withholds. Its designer, date and place
+     are reported. In Dublin Core and MARC its designer is the object's
+     creator, who conceived it, which says nothing of its making (amended,
+     post-audit 6, H2; post-audit 7, I1 review).
    - It has its type, time-span (`P82`, `P82a`, `P82b`), place (`P7`), actors,
      description (`P3`) and, for a production, its techniques (`P32`).
    - An actor or a place with an authority URI (GND) is that node.
