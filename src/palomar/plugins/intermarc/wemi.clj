@@ -71,7 +71,7 @@
    no `100 $3` authority id): its key is partly fuzzy, so it stays `:proposed`."
   [record]
   (let [rid   (:id record)
-        prov  (model/provenance {:pass :infer :derivation [rid]})
+        prov  (model/provenance {:pass :infer :rule :rule.intermarc/derive-wemi :derivation [rid]})
         manif (model/mint-entity-id :lrmoo/F3_Manifestation [(str rid)])
         miri  (ark-iri record)
         x3    (field record :intermarc/f145_3)
@@ -170,7 +170,7 @@
   (if-let [isni (field record :intermarc/f100_1)]
     (let [iri  (isni->uri isni)
           id   (model/mint-entity-id :crm/E21_Person iri)
-          prov (model/provenance {:pass :infer :derivation [(:id record)]})]
+          prov (model/provenance {:pass :infer :rule :rule.intermarc/derive-wemi :derivation [(:id record)]})]
       (update record :entities (fnil conj [])
               (model/entity {:id id :kind :crm/E21_Person :iri iri :provenance prov})))
     record))

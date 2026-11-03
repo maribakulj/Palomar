@@ -68,6 +68,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0052](./0052-museum-objects-from-lido.md) | A museum object is a CIDOC CRM object, read from LIDO | Accepted |
 | [0053](./0053-marc21-for-museum-objects.md) | MARC21 for museum objects is a profile of its own | Accepted |
 | [0054](./0054-who-created-a-museum-object.md) | Who created a museum object is said by the role, not by the event | Accepted |
+| [0055](./0055-a-projection-states-what-its-rules-declare.md) | A projection states as facts only the relations its rules declare | Accepted |
 
 ## Template
 

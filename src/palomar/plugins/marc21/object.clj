@@ -196,7 +196,11 @@
                    (datafield "561" " " " " [["a" d]]))
                  (map #(concept "650" %) (fields record :lido/subject-concept))
                  (map #(concept "655" %) (concat (fields record :lido/work-type-concept) (fields record :lido/classification-concept)))
-                 (for [v (strings record :lido/repository)] (datafield "852" " " " " [["a" v]]))
+                 ;; 852 is where the object is: a former repository is
+                 ;; none, written as provenance (post-audit 7, I3 review)
+                 (let [former (set (keep #(when (:former %) (:name %)) (fields record :lido/keeper)))]
+                   (concat (for [v (strings record :lido/repository) :when (not (former v))] (datafield "852" " " " " [["a" v]]))
+                           (for [v (sort former)] (datafield "561" " " " " [["a" v]]))))
                  (for [v (distinct (strings record :lido/resource-url))] (datafield "856" "4" " " [["u" v]]))
                  (for [v (strings record :lido/record-link)] (datafield "856" "4" "2" [["u" v]])))
         ctrl    (record-id/source-identifier record)
@@ -217,6 +221,11 @@
   (let [prod (first (filter #(= "production" (:kind %)) (fields record :lido/event)))
         srcs (strings record :lido/rec-id-source)]
     (concat
+     ;; a former repository is written as custodial history (561), which
+     ;; says not that it was one (I3 review)
+     (for [k (fields record :lido/keeper) :when (:former k)]
+       (dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :lido/keeper :aspect :qualifier :value k
+                 :message (str "former repository " (pr-str (:name k)) " is written in 561, custodial history, with nothing saying it was a repository")}))
      ;; whose id the 001 is: an ISIL is written as such, a URI's ISIL only
      ;; as a code, any other source not at all (post-audit 5, G3)
      (for [s srcs :let [c (org-code s)] :when (not= c s)]

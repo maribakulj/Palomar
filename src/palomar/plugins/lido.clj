@@ -37,6 +37,7 @@
             [clojure.data.xml.tree :as xml-tree]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.digest-set :as digest-set]
             [palomar.model :as model]
             [palomar.plugins.lido-schema :as lido-schema]
             [palomar.plugins.lrmoo.ntriples :as nt]
@@ -257,6 +258,14 @@
 
 (defn- inventory? [n] (re-find #"(?i)invent|accession" (or (attr n "type") "")))
 
+(defn- former?
+  "True when repository set `n` is a former one, by its `lido:type`, told by
+   a whole word, and none says it current (\"current (formerly …)\")."
+  [n]
+  (let [t (or (attr n "type") "")]
+    (boolean (and (re-find #"(?iu)(?<!\p{L})(?:former|previous|earlier|ehemalig\p{L}*|früher\p{L}*|vormalig\p{L}*|vorherig\p{L}*|ancien\p{L}*|précédent\p{L}*|antérieur\p{L}*)(?!\p{L})" t)
+                  (not (re-find #"(?iu)(?<!\p{L})(?:current|present|aktuell\p{L}*|derzeitig\p{L}*|gegenwärtig\p{L}*|actuel\p{L}*)(?!\p{L})" t))))))
+
 (defn- object-natives
   "The natives of one `lido:lido` node, as `[predicate value path]`."
   [node]
@@ -303,7 +312,9 @@
                  :let [nm (some-> (first (descend r "repositoryName" "legalBodyName" "appellationValue")) text)
                        id (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (descend r "repositoryName" "legalBodyID"))]
                  :when nm]
-             [:lido/keeper (model/structured (cond-> {:name nm} id (assoc :uri id))) (second r)])
+             ;; a repository set may be a former one (`lido:type`, LIDO's
+             ;; "current" or "former"): it is no current keeper (post-audit 7, I3)
+             [:lido/keeper (model/structured (cond-> {:name nm} id (assoc :uri id) (former? r) (assoc :former true))) (second r)])
            (for [w (mapcat #(kids % "workID") repos) :let [t (text w)] :when t]
              [(if (inventory? w) :lido/inventory-number :lido/work-id) t (second w)])
            (strings :lido/location (mapcat #(descend % "repositoryLocation" "namePlaceSet" "appellationValue") repos))
@@ -597,8 +608,10 @@
           ;; any other child is passed over whole, a `lido` inside it
           ;; included, as the batch importer reads only the wrap's children
           ;; (G7 review); the wrap's end ends the records
-          ;; `seen`: the ids streamed so far, to flag a duplicate as batch does
-          ;; (the one state that grows with the dump: an id per record)
+          ;; `seen`: the ids streamed so far, to flag a duplicate as batch does;
+          ;; the one state that grows with the dump, a 64-bit digest an id,
+          ;; some 16 bytes (`digest-set`, post-audit 7, I3). A lazy cell is
+          ;; realised once, so each record is added once, in order
           (records [evs prefix version k seen]
             (lazy-seq
              (when-let [s (seq evs)]
@@ -606,8 +619,8 @@
                  (cond
                    (lido-start? e)                (let [[own more] (take-element s)
                                                         r (one own prefix version k)]
-                                                    (cons (cond-> r (seen (:id r)) duplicate)
-                                                          (records more prefix version (inc k) (conj seen (:id r)))))
+                                                    (cons (cond-> r (digest-set/seen! seen (:id r)) duplicate)
+                                                          (records more prefix version (inc k) seen)))
                    (or (start? e) (instance? EmptyElementEvent e))
                    (records (second (take-element s)) prefix version k seen)
                    (instance? EndElementEvent e)  nil
@@ -619,7 +632,7 @@
         "lido"     (let [[own] (take-element evs)] [(one own "" nil 1)])
         "lidoWrap" (records (rest evs) "/*[local-name()='lidoWrap'][1]"
                             (lido-schema/declared-in (some (fn [[k v]] (when (= "schemaLocation" (name k)) v)) (:attrs root)))
-                            1 #{})
+                            1 (digest-set/create))
         (throw (ex-info "lido: not a LIDO document" {:root rn}))))))
 
 (def mapping
@@ -664,6 +677,43 @@
   "The roles of an actor who took part in an activity without carrying it
    out: who commissioned, paid for or received it (post-audit 6, H2)."
   #"(?i)commission|patron|client|sponsor|donor|auftraggeber|mäzen|stifter|besteller|commanditaire|mécène|donateur")
+
+(def ^:private title-from-roles
+  "The roles of who gave up an object's title in an acquisition: its seller,
+   donor or former owner (post-audit 7, I3)."
+  #"(?iu)(?<!\p{L})(?:sellers?|vendors?|vendeur|vendeuse|verkäufer\p{L}*|verkaeufer\p{L}*|donors?|donateur|donatrice|schenker\p{L}*|stifter\p{L}*|former owner|previous owner|vorbesitzer\p{L}*|ancien propriétaire|testat(?:or|rix)|erblasser\p{L}*|vererber\p{L}*|bequeathed by)(?!\p{L})")
+
+(def ^:private title-to-roles
+  "The roles of who received an object's title in an acquisition: its buyer
+   or new owner (post-audit 7, I3)."
+  #"(?iu)(?<!\p{L})(?:buyers?|purchasers?|acquirers?|acheteur|acheteuse|acquéreur|käufer\p{L}*|kaeufer\p{L}*|erwerber\p{L}*|new owner|neuer eigentümer|nouveau propriétaire|heirs?|erben?|erbin|héritier|héritière)(?!\p{L})")
+
+(defn title-role
+  "In an acquisition, `:from` when a role of an actor gave up the title and
+   none received it, `:to` the other way round, else nil: one who brokered
+   or carried it out, or both, which is not said (I3 review)."
+  [role]
+  (let [rs    (when role (str/split role #"; "))
+        from? (some #(re-find title-from-roles %) rs)
+        to?   (some #(re-find title-to-roles %) rs)]
+    (cond (and from? (not to?)) :from
+          (and to? (not from?)) :to)))
+
+(def ^:private prior-types
+  "LIDO event types of what precedes the object: it was not there."
+  #{"commissioning" "planning"})
+
+(def ^:private prior-labels
+  "Event type terms of what precedes the object, when no URI says it."
+  #{"commissioning" "commission" "commissioned" "auftrag" "beauftragt" "beauftragung" "commande" "commandé"
+    "planning" "planung" "geplant" "planned" "planification"})
+
+(defn- prior-type?
+  "True when an event's type names one that precedes the object (its
+   commissioning, its planning): the object was not present at it."
+  [{:keys [type label]} terms]
+  (boolean (or (prior-types (term-name type))
+               (some #(some-> % str/trim str/lower-case prior-labels) (cons label terms)))))
 
 (defn passive?
   "True when every role of an actor (`;`-joined) is a passive one."
@@ -830,6 +880,12 @@
                             (some #(= "technique" (:role (fields %))) (in :lido/material))
                             ;; by its type, or any of its terms in any language
                             (activity-type? f (for [t (of :lido/event-type) :when (= n (event-key t))] (:value t))))
+              terms     (for [t (of :lido/event-type) :when (= n (event-key t))] (:value t))
+              ;; the object did not exist yet: it was not present at its own
+              ;; commissioning or planning (post-audit 7, I3)
+              prior?    (and (not (#{"production" "acquisition" "modification" "design"} (:kind f))) (prior-type? f terms))
+              ;; a commission or a planning is something someone does (I3 review)
+              activity? (or activity? prior?)
               [kind via] (case (:kind f)
                            "production"  [:crm/E12_Production :crm/P108i_was_produced_by]
                            "acquisition" [:crm/E8_Acquisition :crm/P24i_changed_ownership_through]
@@ -837,14 +893,18 @@
                            ;; a design: the creation of the design the
                            ;; productions used, not an event of the object
                            "design"       [:crm/E65_Creation nil]
-                           (if activity?
-                             [:crm/E7_Activity :crm/P12i_was_present_at]
-                             [:crm/E5_Event :crm/P12i_was_present_at]))
+                           (cond prior?    [:crm/E7_Activity nil]
+                                 activity? [:crm/E7_Activity :crm/P12i_was_present_at]
+                                 :else     [:crm/E5_Event :crm/P12i_was_present_at]))
               e  (model/mint-entity-id kind [(str rid) n])
               ts (model/mint-entity-id :crm/E52_Time-Span [(str rid) n])]
           (concat
            [(entity e kind)]
            (when via [(claim obj via (model/reference e) a)])
+           (when prior?
+             [{:kind :diagnostic
+               :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/event :aspect :relation :value f
+                                :message "an event that precedes the object (its commissioning, its planning): the object was not present at it, and no fact links them"})}])
            (when (= "design" (:kind f))
              (let [d     (model/mint-entity-id :crm/E29_Design_or_Procedure [(str rid) n])
                    prods (keep (fn [[pn [pf]]] (when (= "production" (:kind pf)) pn)) events)]
@@ -874,8 +934,13 @@
                                  ag   (model/mint-entity-id kind (if uri uri [(str rid) name]))]
                              ;; an activity is carried out by its actors, but for
                              ;; one who commissioned or paid for it, who took part
-                             [(entity ag kind uri) (claim e (if (and activity? (not (passive? (:role (fields a)))))
-                                                              :crm/P14_carried_out_by :crm/P11_had_participant)
+                             ;; in an acquisition, who gave up the title and
+                                             ;; who received it did not carry it out (I3)
+                             [(entity ag kind uri) (claim e (let [r (:role (fields a))]
+                                                              (cond (and (= "acquisition" (:kind f)) (= :from (title-role r))) :crm/P23_transferred_title_from
+                                                                    (and (= "acquisition" (:kind f)) (= :to (title-role r)))   :crm/P22_transferred_title_to
+                                                                    (and activity? (not (passive? r)))                          :crm/P14_carried_out_by
+                                                                    :else                                                        :crm/P11_had_participant))
                                                           (model/reference ag) a)
                               (claim ag :crm/P190_has_symbolic_content name a)]))
                    (in :lido/actor))
@@ -904,7 +969,7 @@
      (mapcat (fn [a] (let [{:keys [name uri]} (fields a)
                            g (model/mint-entity-id :crm/E74_Group (or uri [(str rid) name]))]
                        [(entity g :crm/E74_Group uri)
-                        (claim obj :crm/P50_has_current_keeper (model/reference g) a)
+                        (claim obj (if (:former (fields a)) :crm/P49_has_former_or_current_keeper :crm/P50_has_current_keeper) (model/reference g) a)
                         (claim g :crm/P190_has_symbolic_content name a)]))
              (of :lido/keeper))
      ;; only a human-made thing depicts (P62's domain is E24)

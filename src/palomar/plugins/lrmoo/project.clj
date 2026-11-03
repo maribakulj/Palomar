@@ -119,7 +119,7 @@
    with no uniform title fall back to the transcribed title — unchanged behaviour."
   [record]
   (let [rid        (:id record)
-        prov       (model/provenance {:pass :infer :derivation [rid]})
+        prov       (model/provenance {:pass :infer :rule :rule.lrmoo/project :derivation [rid]})
         manif      (model/mint-entity-id :lrmoo/F3_Manifestation [(str rid)])
         title      (title-of record)
         work-title (work-title-of record)

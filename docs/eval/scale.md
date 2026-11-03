@@ -108,7 +108,19 @@ reproducible with the snippet above on a generated dump.
   Memory is bounded; throughput is not good: 25 to 30 ms a record (without and
   with validation), where a MARC record takes well under one. Importing a record
   takes about 6 ms (8 with the XSD); the rest goes to the projection and the
-  export, which are not yet profiled. An OAI-PMH response of LIDO records does not stream: a harvest's
+  export, which are not yet profiled.
+  The one state that grows with the dump is the set of ids seen, to report a
+  duplicate `lidoRecID` (post-audit 6, H1): memory is O(distinct ids), not
+  O(1). Since post-audit 7, I3, each id is kept as a 64-bit digest
+  (`palomar.digest-set`). Measured on a million distinct ids like
+  museum-digital's (`http://ld.zdb-services.de/…/lido/<n>`), heap after GC:
+  16 MB, where a set of the ids themselves takes 163 MB. The table holds at
+  most 2²¹ slots for a million (`digest-set-test`), 8 MB more for a moment
+  while it doubles. Two ids share a digest with a
+  probability of about 3·10⁻⁸ at that size, and a duplicate is then reported
+  that is none. A dump of a million records is not measured end to end: at
+  33 to 39 records a second it would take seven to eight hours.
+  An OAI-PMH response of LIDO records does not stream: a harvest's
   pages are small, and are read one by one (`oai/harvest`).
 - **Other non-MARC spokes don't stream.** Dublin Core / MODS / IIIF are single- or
   few-record formats (no flat-collection dump shape); `--stream` rejects them with the

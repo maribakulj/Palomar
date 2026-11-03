@@ -109,16 +109,26 @@ an acquisition history.
      The materials as displayed follow their event the same way: the
      production's are the object's, another event's a note on that event
      (amended, post-audit 5, G1);
-   - its keeper (`P50` → the repository's `E74_Group`);
+   - its keeper (`P50` → the repository's `E74_Group`); a repository set
+     LIDO types as a former one (`lido:type` "former") is a former keeper
+     (`P49_has_former_or_current_keeper`), and in Linked Art no current
+     custodian, which is reported (amended, post-audit 7, I3);
    - its subjects (`P62_depicts`), its images (`P138i` → `E36_Visual_Item`)
      and its rights (`P104` → `E30_Right`).
 
    **Each event:**
    - It is a production (`P108i` → `E12_Production`), an acquisition (`P24i`
-     → `E8_Acquisition`) or another event the object was present at (`P12i`). That
+     → `E8_Acquisition`) or another event the object was present at (`P12i`),
+     but for what precedes the object, its commissioning or planning: it was
+     not present at it, no fact links them, and that is reported (amended,
+     post-audit 7, I3). That
      event is an `E7_Activity` when its type, by its LIDO URI or code or else
      its term, is an activity (an exhibition, a commission, an excavation…) or
      it used a technique; otherwise an `E5_Event` (amended, post-audit 4, F1).
+   - In an acquisition, who gave up the title (a seller, a donor, a former
+     owner) is `P23_transferred_title_from`, who received it (a buyer, a new
+     owner) `P22_transferred_title_to`: neither carried it out (amended,
+     post-audit 7, I3).
    - An activity's actors carried it out (`P14`); an `E5_Event`'s took part in
      it (`P11_had_participant`): an actor named in a loss, a find or an event
      of no stated type is not said to have done it. Naming an actor no longer
