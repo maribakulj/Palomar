@@ -700,16 +700,16 @@
   (boolean (some #(re-find natural-terms %) (type-terms record))))
 
 (defn human-made?
-  "True when `record` says its object was made: it has a production (or a
-   creation, or a design: what was designed was made, H2 review), which
+  "True when `record` says its object was made: it has a production, which
    outweighs a natural term, or a work type or classification that names an
-   artefact while none names a natural object. A record that says neither (a
-   fossil, a mineral, a specimen) is not said to be human-made (post-audit 5,
-   G4)."
+   artefact while none names a natural object. A design alone does not say
+   it: what was designed may never have been made (post-audit 7, I1). A
+   record that says neither (a fossil, a mineral, a specimen) is not said to
+   be human-made (post-audit 5, G4)."
   [record]
   ;; a production attested outweighs a natural term (a cast of a fossil was
   ;; made); a natural term vetoes only an artefact term (post-audit 6, H2)
-  (boolean (or (some #(and (= :lido/event (:predicate %)) (not (model/out-of-force? %)) (#{"production" "design"} (:kind (fields %))))
+  (boolean (or (some #(and (= :lido/event (:predicate %)) (not (model/out-of-force? %)) (= "production" (:kind (fields %))))
                      (:assertions record))
                (and (not (natural? record))
                     (some #(re-find artefact-terms %) (type-terms record))))))
@@ -760,6 +760,11 @@
                          (seq (some-> a model/evidence-of)) (assoc :evidence (model/evidence-of a))))
         claim  (fn [s p v a] {:kind :assertion :value (model/assertion {:subject s :predicate p :value v :status :asserted
                                                                         :provenance (model/provenance (prov a))})})
+        ;; what the record does not say, only suggests: a proposal, which a
+        ;; plain export withholds (ADR 0042; post-audit 7, I1)
+        propose (fn [s p v a rule conf]
+                  {:kind :assertion :value (model/assertion {:subject s :predicate p :value v :status :proposed :confidence conf
+                                                             :provenance (model/provenance (assoc (prov a) :rule rule))})})
         entity (fn [id kind & [iri]] {:kind :entity :value (model/entity (cond-> {:id id :kind kind :provenance (model/provenance (prov nil))}
                                                                            iri (assoc :iri iri)))})
         ;; a human-made object only when the record says it was made; else
@@ -844,12 +849,20 @@
              (let [d     (model/mint-entity-id :crm/E29_Design_or_Procedure [(str rid) n])
                    prods (keep (fn [[pn [pf]]] (when (= "production" (:kind pf)) pn)) events)]
                (concat [(entity d :crm/E29_Design_or_Procedure) (claim e :crm/P94_has_created (model/reference d) a)]
+                       ;; LIDO links no event to another: that a production
+                       ;; used this design is a guess, one per production
                        (for [pn prods]
-                         (claim (model/mint-entity-id :crm/E12_Production [(str rid) pn]) :crm/P33_used_specific_technique (model/reference d) a))
-                       (when (empty? prods)
-                         [{:kind :diagnostic
-                           :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/event :aspect :relation :value f
-                                            :message "a design of no production: the design it created is not linked to the object"})}]))))
+                         (propose (model/mint-entity-id :crm/E12_Production [(str rid) pn]) :crm/P33_used_specific_technique (model/reference d) a
+                                  ;; below any promotion threshold: a guess,
+                                  ;; however few the productions (I1 review)
+                                  :rule.lido/design-used-by-production (/ 0.5 (count prods))))
+                       ;; no fact links the design to the object: that is
+                       ;; reported, with productions or not (I1 review)
+                       [{:kind :diagnostic
+                         :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/event :aspect :relation :value f
+                                          :message (if (empty? prods)
+                                                     "a design of no production: the design it created is not linked to the object"
+                                                     "a design no production is said to have used: the design it created is linked to the object by no fact, each production's use of it only proposed")})}])))
            (when (:type f) (typed e :crm/P2_has_type :crm/E55_Type a {:uri (:type f) :label (:label f)}))
            (when (or (:date f) (:earliest f) (:latest f))
              (concat [(entity ts :crm/E52_Time-Span) (claim e :crm/P4_has_time-span (model/reference ts) a)]

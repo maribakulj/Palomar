@@ -582,7 +582,9 @@
       (is (str/includes? nt "E65_Creation"))
       (is (str/includes? nt "E29_Design_or_Procedure"))
       (is (str/includes? nt "P94_has_created"))
-      (is (str/includes? nt "P33_used_specific_technique"))
+      (is (not (str/includes? nt "P33_used_specific_technique")) "that it used the design is no fact (post-audit 7, I1)")
+      (is (str/includes? (:output (convert/convert {:from :lido :to :ntriples :source xml :with-proposals? true})) "P33_used_specific_technique")
+          "it is a proposal")
       (is (empty? (violations xml)))
       (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
         (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source xml}))) (str to))))))
@@ -614,9 +616,10 @@
       (is (empty? (violations xml))))))
 
 (deftest a-design-alone-and-other-review-cases
-  (testing "a design with no production: an object made, every value written or reported (H2 review)"
+  (testing "a design with no production: no object said made, every value written or reported (H2 review, post-audit 7, I1)"
     (let [xml (events-record "thing" ["lido00224" "Rodin" "designer" "1890"])]
-      (is (str/includes? (:output (convert/convert {:from :lido :to :ntriples :source xml})) "E22_Human-Made_Object") "designed, so made")
+      (is (str/includes? (:output (convert/convert {:from :lido :to :ntriples :source xml})) "E19_Physical_Object")
+          "designed is not made: a design alone attests no physical object (post-audit 7, I1)")
       (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
         (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source xml}))) (str to)))))
   (testing "a contractor (Auftragnehmer) carried the production out"
@@ -636,3 +639,33 @@
       (let [nt (:output (convert/convert {:from :lido :to :ntriples :source (events-record "thing" [t "A" nil "1900"])}))]
         (is (str/includes? nt "E7_Activity") (str t " is an activity"))
         (is (not (str/includes? nt "E12_Production")) (str t " is no production"))))))
+
+(deftest a-design-is-not-said-to-be-used-by-a-production
+  (testing "LIDO links no design to a production: that one used the other is a proposal, never a fact (post-audit 7, I1)"
+    (let [xml   (events-record "sculpture" ["lido00224" "Rodin" "designer" "1890"] ["lido00224" "Rodin" "designer" "1895"]
+                               ["lido00007" "Rudier" "founder" "1902"] ["lido00007" "Susse" "founder" "1920"])
+          facts (:output (convert/convert {:from :lido :to :ntriples :source xml}))
+          all   (:output (convert/convert {:from :lido :to :ntriples :source xml :with-proposals? true}))]
+      (is (= 2 (count (re-seq #"E65_Creation> \." facts))) "two designs")
+      (is (= 2 (count (re-seq #"E12_Production> \." facts))) "two productions")
+      (is (not (str/includes? facts "P33_used_specific_technique")) "no design is stated used by a production")
+      (is (= 4 (count (re-seq #"P33_used_specific_technique" all))) "each pairing is a proposal")
+      (is (every? #(str/ends-with? % "<urn:palomar:graph:proposals> .")
+                  (filter #(re-find #"^\S+ <[^>]+P33_used_specific_technique>" %)
+                          (str/split-lines (:output (convert/convert {:from :lido :to :nquads :source xml})))))
+          "a dataset keeps each in the graph of its status")
+      (is (empty? (violations xml)))))
+  (testing "Linked Art states no part of a production LIDO does not give: a design is reported, never a part (post-audit 7, I1 review)"
+    (doseq [design [["lido00224" "Rodin" "designer" "1890"] ["Entwurf" "Rodin" "designer" "1890"]]]
+      (let [xml  (events-record "sculpture" design ["lido00007" "Rudier" "founder" "1902"] ["lido00007" "Susse" "founder" "1920"])
+            la   (json/read-str (:output (convert/convert {:from :lido :to :linked-art :source xml})))
+            pb   (get la "produced_by")]
+        (is (not (str/includes? (json/write-str pb) "Rodin")) "the designer is in no production")
+        (is (not (str/includes? (json/write-str pb) "1890")))
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to :linked-art :source xml}))) "and is reported"))))
+  (testing "a proposal is below any promotion threshold, one production or many; and the design's unlinking is reported"
+    (let [xml  (events-record "sculpture" ["lido00224" "Rodin" "designer" "1890"] ["lido00007" "Rudier" "founder" "1902"])
+          recs (:records (convert/to-wemi :lido {} xml))
+          p33  (filter #(= :crm/P33_used_specific_technique (:predicate %)) (mapcat :assertions recs))]
+      (is (= [0.5] (map :confidence p33)))
+      (is (some #(re-find #"linked to the object by no fact" (str (get-in % [:detail :message]) (:message %))) (mapcat :diagnostics recs))))))
