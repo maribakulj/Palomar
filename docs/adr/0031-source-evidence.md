@@ -49,5 +49,14 @@ attestations of one fact could not be told from one.
 
 - The other targets (format exports, plain RDF) do not carry evidence; that
   is reported once the loss taxonomy can name a provenance loss (plan step 9).
-- The streaming path does not stamp the source digest (it never holds the
-  whole document); its selectors are recorded as in batch.
+- The streaming path never holds the whole document: it is given its
+  digest (`:source-sha256`, from `source-digest`, one more read of the file
+  in constant memory, the digest of its text's UTF-8 bytes as batch takes
+  it), and stamps it on each record, so that its provenance names the same
+  document as batch's; `convert --stream` passes it. A stream given none (an
+  API caller's reader) names no document, nor does a stream read from a pipe
+  (stdin, a FIFO), which can be read but once: the CLI says so (amended,
+  post-audit 7, I2 and its review). Its selectors are recorded as in batch.
+- This digest is that of the text as read, re-encoded in UTF-8: for a UTF-8
+  file it is the file's own, the run manifest's; for a file in another
+  encoding the two differ (the manifest hashes the bytes).

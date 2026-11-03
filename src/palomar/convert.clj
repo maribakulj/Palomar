@@ -14,7 +14,8 @@
    projection edge (canonical fields with no WEMI home, WEMI-derivation loss), and the
    export edge (what the chosen target cannot express). The per-edge, per-field
    account is exactly `palomar.loss-report`'s artifact."
-  (:require [clojure.string :as str]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.plugins.eac :as eac]
             [palomar.plugins.ead :as ead]
@@ -240,16 +241,31 @@
     (mapping/compile-mappings (plug/all-mappings reg)
                               (plug/effective-transforms reg))))
 
-(defn- with-source-digest
-  "`record` with the SHA-256 of the document it was read from on its provenance
-   (`[:provenance :source :sha256]`, ADR 0031), unless it names another source
-   or a digest already: every attestation inside it points into that exact
-   document."
-  [record source]
+(defn- with-digest
+  "`record` with `sha`, the SHA-256 of the document it was read from, on its
+   provenance (`[:provenance :source :sha256]`, ADR 0031), unless it names
+   another source or a digest already: every attestation inside it points
+   into that exact document."
+  [record sha]
   (let [src (get-in record [:provenance :source])]
-    (if (and (string? source) (or (nil? src) (and (map? src) (not (contains? src :sha256)))))
-      (assoc-in record [:provenance :source :sha256] (model/sha256-hex source 64))
+    (if (and sha (or (nil? src) (and (map? src) (not (contains? src :sha256)))))
+      (assoc-in record [:provenance :source :sha256] sha)
       record)))
+
+(defn- with-source-digest [record source]
+  (with-digest record (when (string? source) (model/sha256-hex source 64))))
+
+(defn source-digest
+  "The SHA-256 a batch conversion gives the document at `path` (the digest
+   of its text's UTF-8 bytes, as `slurp` reads it), read in constant memory:
+   what a stream passes as `:source-sha256` so that its provenance names the
+   same document as the batch's (post-audit 7, I2)."
+  [path]
+  (let [md (java.security.MessageDigest/getInstance "SHA-256")]
+    (with-open [r (io/reader path)
+                w (java.io.OutputStreamWriter. (java.security.DigestOutputStream. (java.io.OutputStream/nullOutputStream) md) "UTF-8")]
+      (io/copy r w))
+    (apply str (map #(format "%02x" (bit-and (int %) 0xff)) (.digest md)))))
 
 (defn- pivot-imported
   "Normalise and project the `records` spoke `from` imported from `source`."
@@ -442,8 +458,12 @@
    `convert-stream-test`). For a hypothetical streamable spoke with report-at-ingest
    loss the streamed report would under-count the import edge — fold the importer's
    `:diagnostics` into the same accumulator then. `:distinct-losses` (O(N)) is always
-   batch-only. Throws on an unknown `from`/`to`."
-  [{:keys [from to records with-proposals? fail-on-invalid?]} emit]
+   batch-only. Throws on an unknown `from`/`to`.
+
+   `:source-sha256` is the digest of the document streamed (`source-digest`):
+   each record carries it as batch does, so the provenance names the same
+   document (post-audit 7, I2). Without it no record names its document."
+  [{:keys [from to records with-proposals? fail-on-invalid? source-sha256]} emit]
   (when-not (contains? spokes/plugins from)
     (throw (ex-info "Unknown source format" {:from from :supported (source-formats)})))
   (when-not (contains? exporters to)
@@ -455,7 +475,7 @@
                     ;; validity is read after normalisation, as in batch; an
                     ;; invalid record stops the stream before it is written
                     ;; when asked to (post-audit 6, H3); else it is counted
-                    (let [norm (:record (runtime/run-phase raw compiled :normalize))
+                    (let [norm (:record (runtime/run-phase (with-digest raw source-sha256) compiled :normalize))
                           bad  (invalid-records [norm])
                           _    (when fail-on-invalid? (refuse-invalid! bad (inc n)))
                           wemi (to-pivot norm)

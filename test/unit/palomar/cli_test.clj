@@ -424,3 +424,31 @@
         (is (= 0 exit))
         (is (clojure.string/includes? err "1 record not valid")))
       (.delete f))))
+
+(deftest a-streamed-conversion-names-its-document-as-batch-does
+  (testing "convert --stream to PROV-O writes the provenance a batch conversion writes, document digest included (post-audit 7, I2)"
+    (let [f    "test/fixtures/documentary/lido/staedel-lido-wrap.xml"
+          out1 (java.io.File/createTempFile "palomar-batch-" ".nt")
+          out2 (java.io.File/createTempFile "palomar-stream-" ".nt")]
+      (.delete out2)
+      (is (= 0 (:exit (cli/run ["convert" f "--from" "lido" "--to" "prov" "--out" (str out1)]))))
+      (is (= 0 (:exit (cli/run ["convert" f "--from" "lido" "--to" "prov" "--stream" "--out" (str out2)]))))
+      (let [lines #(set (remove clojure.string/blank? (clojure.string/split-lines (slurp %))))]
+        (is (some #(clojure.string/includes? % "vocab#sha256") (lines out2)))
+        (is (= (lines out1) (lines out2))))
+      (.delete out1)
+      (.delete out2))))
+
+(deftest a-piped-stream-is-read-once
+  (testing "convert --stream reads a named pipe once: it converts, and says no record names its document (post-audit 7, I2 review)"
+    (let [dir  (.toFile (java.nio.file.Files/createTempDirectory "palomar-fifo-" (make-array java.nio.file.attribute.FileAttribute 0)))
+          fifo (java.io.File. dir "in.xml")
+          out  (java.io.File. dir "out.nt")]
+      (when (zero? (.waitFor (.start (ProcessBuilder. ^java.util.List ["mkfifo" (str fifo)]))))
+        (let [writer (future (spit fifo (slurp "test/fixtures/documentary/marc21/marcxml/loc_collection.xml")))
+              {:keys [exit err]} (cli/run ["convert" (str fifo) "--from" "marc21" "--to" "ntriples" "--stream" "--out" (str out)])]
+          @writer
+          (is (= 0 exit) err)
+          (is (clojure.string/includes? err "no record names its document"))
+          (is (pos? (count (slurp out))))))
+      (run! #(.delete ^java.io.File %) (reverse (file-seq dir))))))

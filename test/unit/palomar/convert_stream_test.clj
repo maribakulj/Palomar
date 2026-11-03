@@ -212,3 +212,17 @@
       (is (= 0 (get-in (convert/convert {:from :lido :to :ntriples :source (slurp "test/fixtures/documentary/lido/staedel-lido-wrap.xml")
                                          :fail-on-invalid? true})
                        [:invalid :records]))))))
+
+(deftest a-stream-names-the-document-it-read
+  (testing "the same LIDO, batch and streamed to PROV-O: the same document digest, the same provenance (post-audit 7, I2)"
+    (let [f     "test/fixtures/documentary/lido/staedel-lido-wrap.xml"
+          batch (set (str/split-lines (:output (convert/convert {:from :lido :to :prov :source (slurp f)}))))
+          strm  (let [docs (atom [])]
+                  (with-open [r (clojure.java.io/reader f)]
+                    (convert/convert-stream {:from :lido :to :prov :source-sha256 (convert/source-digest f)
+                                             :records (convert/stream-source :lido {} r)}
+                                            #(swap! docs conj %)))
+                  (set (mapcat str/split-lines @docs)))]
+      (is (some #(str/includes? % "vocab#sha256") batch) "batch names its document")
+      (is (= (set (filter #(str/includes? % "sha256") batch)) (set (filter #(str/includes? % "sha256") strm))))
+      (is (= batch strm) "the same provenance graph"))))

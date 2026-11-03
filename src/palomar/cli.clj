@@ -336,6 +336,7 @@
     ;; the `finally` deletes the temp in every failure path (on success it was renamed away).
     (let [fromk (keyword from)
           opts  (cond-> {} record-id (assoc :record-id (->record-id record-id)))
+          sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest input))
           outf  (.getAbsoluteFile (java.io.File. ^String out))
           tmp   (atom nil)]
       (try
@@ -348,6 +349,10 @@
                                {:from fromk :to (keyword to)
                                 :with-proposals? (boolean (get flags "with-proposals"))
                                 :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
+                                ;; one more read, in constant memory: the same
+                                ;; document digest as batch (post-audit 7, I2);
+                                ;; a pipe can be read but once (I2 review)
+                                :source-sha256 sha
                                 :records (convert/stream-source fromk opts r)}
                                (fn [doc] (.write w doc) (.write w "\n")))]
                       (when close (.write w close) (.write w "\n"))
@@ -358,6 +363,7 @@
                         " streamed (bounded memory)\n"
                         (lr/format-conversion-report (:loss res))
                         (invalid-note (:invalid res))
+                        (when-not sha "\nnote: the input is no regular file (a pipe): it is read once, so no record names its document by a digest\n")
                         (zero-records-note (:records res) from input))}
             {:exit 2 :out "" :err (str "error: could not move streamed output to " out)}))
         (catch clojure.lang.ExceptionInfo e
