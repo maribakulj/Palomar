@@ -108,10 +108,13 @@ makes them makers by what the qualifier says.
 ### Subjects
 
 YCBA types each subject set as a `description`, and its own Linked Art says
-`represents`: 6 089 distinct labels (6 108 statements). Palomar's Linked Art
-still writes every subject as `about`: 4 572 distinct labels. The
-rule slice of the study reads the type and says depicted. Wiring it into the
-conversion is lot K5, and this comparison will measure it then. YCBA's 6 089
+`represents`: 6 089 distinct labels (6 108 statements). After K1 to K3,
+Palomar's Linked Art still wrote every subject as `about` (4 572 distinct
+labels). **Since K5 (ADR 0056)** the rules read the subject's type, and
+Linked Art writes what the CIDOC CRM view states: the same 4 572 are
+`represents`, none `about`, as YCBA has them. The makers and influences
+stay as above. The makers Palomar writes fall from 497 to 492: one node
+named twice in a production is written once. YCBA's 6 089
 also count the persons and places a work represents (`subjectActor`,
 `subjectPlace`), which Palomar does not write in the visual item.
 

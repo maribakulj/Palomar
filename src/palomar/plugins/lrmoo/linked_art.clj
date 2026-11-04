@@ -48,6 +48,7 @@
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.lido :as lido]
+            [palomar.plugins.lido-rules :as lido-rules]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.plugins.lrmoo.view :as view]))
@@ -377,6 +378,22 @@
 
 (defn- visual-iri [record] (str (object-id record) "/visual"))
 
+(defn- stated-doings
+  "`[event-node agent-node]` → what `record` states the agent did in that
+   event (asserted only): `#{predicate…}` (post-audit 8, K5). By event: an
+   authority's actor of two events did in each what that event says."
+  [record]
+  (reduce (fn [m a] (if (and (= :asserted (:status a)) (model/reference-value? (:value a))
+                             (#{:crm/P14_carried_out_by :crm/P11_had_participant :crm/P15_was_influenced_by} (:predicate a)))
+                      (update m [(:subject a) (:value/target (:value a))] (fnil conj #{}) (:predicate a))
+                      m))
+          {} (:assertions record)))
+
+(defn- production-node
+  "The node the CIDOC CRM view makes of production event `n` of record `rid`."
+  [rid n]
+  (model/mint-entity-id :crm/E12_Production [(str rid) n]))
+
 (defn- object-docs
   "The Linked Art documents of a museum object (ADR 0052): its
    `HumanMadeObject` and, when its record names subjects or rights for the
@@ -407,10 +424,14 @@
         in-event (fn [n xs] (filter #(= n (:event %)) xs))
         ;; an actor with no authority id is the record's own node, as in the
         ;; CRM view (scoped to the record, ADR 0041): a reference, not an identity
-        actor    (fn [{:keys [name uri type]}]
+        actor    (fn [{:keys [name uri type position] :as a}]
                    (let [group? (lido/group-types type)
                          kind   (if group? :crm/E74_Group :crm/E21_Person)]
-                     {"id"     (or uri (export/entity-iri (model/mint-entity-id kind [(str (:id record)) name])))
+                     ;; an event's actor is the node the CRM view's rules make
+                     ;; of it, its occurrence (post-audit 8, K5)
+                     {"id"     (or uri (export/entity-iri (if position
+                                                            (lido-rules/agent-node (:id record) a)
+                                                            (model/mint-entity-id kind [(str (:id record)) name]))))
                       "type"   (if group? "Group" "Person")
                       "_label" name}))
         timespan (fn [{:keys [date earliest latest]}]
@@ -439,22 +460,27 @@
                      (cond-> (note-obj d) (:label ev) (assoc "_label" (:label ev)))))
         ;; a Production: its creators carry it out; anyone else takes part in
         ;; it, in a part classified by its role
+        stated   (stated-doings record)
         production-obj
         (fn [ev]
           (let [n  (:index ev)
                 as (in-event n actors)
-                cs (filter #(= "creator" (:responsibility %)) as)
-                ;; who it was made after, or whose follower made it,
-                ;; influenced it; a former or uncertain attribution is no
-                ;; fact, and is reported (post-audit 8, K2)
-                infl (filter #(#{"influence" "related"} (:attribution %)) as)
-                os (remove #(or (= "creator" (:responsibility %)) (#{"influence" "related" "former" "uncertain"} (:attribution %))) as)
+                ;; what the CRM view's rules state each actor did, read, not
+                ;; decided again (post-audit 8, K5): carried it out (P14),
+                ;; influenced it (P15); who only took part (a commissioner, a
+                ;; publisher) or is only proposed or superseded is reported
+                did  #(get stated [(production-node (:id record) n) (lido-rules/agent-node (:id record) %)])
+                cs (filter #(and (= "creator" (:responsibility %)) (contains? (did %) :crm/P14_carried_out_by)) as)
+                infl (filter #(contains? (did %) :crm/P15_was_influenced_by) as)
+                os (filter #(and (not= "creator" (:responsibility %)) (contains? (did %) :crm/P14_carried_out_by)) as)
                 ts (timespan ev)
                 ps (place-ids ev)
                 tq (filter #(and (:uri %) (= "technique" (:role %))) (in-event n mats))]
             (cond-> {"type" "Production"}
-              (seq cs) (assoc "carried_out_by" (mapv actor cs))
-              (seq infl) (assoc "influenced_by" (mapv actor infl))
+              ;; one node an authority names twice in the event (after, and
+              ;; author of the text) is written once (K5 review)
+              (seq cs) (assoc "carried_out_by" (vec (distinct (map actor cs))))
+              (seq infl) (assoc "influenced_by" (vec (distinct (map actor infl))))
               (seq os) (assoc "part" (mapv (fn [a] (cond-> {"type" "Production" "carried_out_by" [(actor a)]}
                                                      (:role a) (assoc "_label" (:role a))
                                                      (:role-uri a) (assoc "classified_as" [(type-ref {:uri (:role-uri a) :label (:role a)} "Type")])))
@@ -506,10 +532,18 @@
                    (seq (flds :lido/resource))
                    (assoc "representation" (vec (distinct (map #(digital-obj (:url %)) (filter #(re-find #"(?i)image" (str (:format %))) (flds :lido/resource))))))
                    visual? (assoc "shows" [{"id" (visual-iri record) "type" "VisualItem"}]))
+        depicted (set (for [a (:assertions record)
+                            :when (and (= :crm/P62_depicts (:predicate a)) (= :asserted (:status a)) (model/reference-value? (:value a)))]
+                        (:value/target (:value a))))
         vi       (when visual?
                    (cond-> {"@context" context "id" (visual-iri record) "type" "VisualItem"
                             "_label" (str "Visual content of " (get hmo "_label"))}
-                     (seq (filter :uri subjects)) (assoc "about" (vec (for [c subjects :when (:uri c)] (type-ref c "Type"))))
+                     ;; what the CRM view's rules say it depicts it represents;
+                     ;; any other subject, it is about (post-audit 8, K5)
+                     (seq (filter #(and (:uri %) (depicted (lido-rules/concept-node (:id record) %))) subjects))
+                     (assoc "represents" (vec (for [c subjects :when (and (:uri c) (depicted (lido-rules/concept-node (:id record) c)))] (type-ref c "Type"))))
+                     (seq (filter #(and (:uri %) (not (depicted (lido-rules/concept-node (:id record) %)))) subjects))
+                     (assoc "about" (vec (for [c subjects :when (and (:uri c) (not (depicted (lido-rules/concept-node (:id record) c))))] (type-ref c "Type"))))
                      (seq rights) (assoc "subject_to" (vec (for [r rights]
                                                              (cond-> {"type" "Right"}
                                                                (:label r) (assoc "_label" (:label r))
@@ -667,6 +701,16 @@
         (for [a (native-fields record :lido/actor) :when (not (contains? (lido/production-keys evs) (:event a)))]
           (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
                     :message (str "actor " (pr-str (:name a)) " of an event other than the production is not written in the Linked Art object profile")}))
+        ;; who only took part in a production (a commissioner, a publisher,
+        ;; the author of a text) carried it out in no Linked Art statement (K5)
+        (let [stated (stated-doings record)]
+          (for [a (native-fields record :lido/actor)
+                :when (and (contains? (lido/production-keys evs) (:event a))
+                           (not (#{"former" "uncertain"} (:attribution a)))
+                           (not (some #{:crm/P14_carried_out_by :crm/P15_was_influenced_by}
+                                      (get stated [(production-node (:id record) (:event a)) (lido-rules/agent-node (:id record) a)]))))]
+            (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
+                      :message (str (pr-str (:name a)) " took part in the production and did not carry it out: the Linked Art object profile has no place for who only took part")})))
         ;; a former or uncertain attribution of the making is no fact (K2)
         (for [a (native-fields record :lido/actor)
               :when (and (contains? (lido/production-keys evs) (:event a)) (#{"former" "uncertain"} (:attribution a)))]

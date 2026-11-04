@@ -37,7 +37,9 @@ That is an attribution the source does not make.
      main entry. A production with no creator has no main entry, and `245`
      takes indicator 0.
    - **Linked Art:** a `part` of the Production that it carries out, labelled
-     and, when the role has a URI, classified by it.
+     and, when the role has a URI, classified by it. Who only took part (a
+     commissioner, a publisher, `P11` in the CIDOC CRM view) is reported, not
+     written (amended, ADR 0056).
    - **Dublin Core:** not a `dc:creator`.
 4. **Each actor's responsibility is kept** on its native (`creator` or
    `participant`), with its role and role URI, for any later view.

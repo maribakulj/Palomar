@@ -242,7 +242,9 @@
              [st (str rdf "predicate") {:iri (term-iri (:predicate a))}]
              [st (str rdf "object") (object idx (:value a))]]
             (when (:status a) [[st (str pal "status") {:lit (name (:status a))}]])
-            (when (:bindings p) [[st (str pal "bindings") {:lit (pr-str (:bindings p))}]])
+            ;; sorted by variable: a map's order is no fact, and an EDN round trip
+            ;; changes it (post-audit 8, K5)
+            (when (:bindings p) [[st (str pal "bindings") {:lit (pr-str (into (sorted-map-by #(compare (str %1) (str %2))) (:bindings p)))}]])
             (mapcat (fn [d] [[st (str prov "wasDerivedFrom") {:iri (node-iri idx d)}]
                              [(node-iri idx d) (str rdf "type") {:iri (str prov "Entity")}]])
                     (:derivation p))

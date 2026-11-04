@@ -21,7 +21,8 @@
    no disjunction and no conditional term, so a rule is written once per
    branch; `rules` generates them from the tables below, and each generated
    rule is still data (`rules` can be printed, read and diffed)."
-  (:require [palomar.rules :as rules]))
+  (:require [palomar.model :as model]
+            [palomar.rules :as rules]))
 
 ;; ---------------------------------------------------------------------------
 ;; Events: their CRM class, by kind, else by type
@@ -39,6 +40,8 @@
         [(field ?ev :label ?label) (vocab-some? :lido/event-types ?label :event/activity)]
         [(field ?ev :type ?type) (vocab-some? :lido/event-types ?type :event/prior)]
         [(field ?ev :label ?label) (vocab-some? :lido/event-types ?label :event/prior)]
+        [(field ?ev :terms ?terms) (vocab-some? :lido/event-types ?terms :event/activity)]
+        [(field ?ev :terms ?terms) (vocab-some? :lido/event-types ?terms :event/prior)]
         [[?r :lido/material ?m] (field ?m :event ?n) (field ?m :role "technique")]))
 
 (def ^:private event-branches
@@ -77,10 +80,12 @@
   "What an actor of an activity did: `[label match [[predicate status]…]]`."
   (concat
    (for [[label at claims] attributed] [label [making (list 'field '?a :attribution at)] claims])
-   [["passive" [unqualified role passive] [[:crm/P11_had_participant :asserted]]]
-    ["gives" [unqualified in-acq role gives (list 'not role gets) (list 'not role passive)]
+   ;; in an acquisition, giving up or receiving the title outweighs being
+   ;; passive: a donor took part and gave it up, proposed (K5 review)
+   [["passive" [unqualified role passive (list 'not in-acq role (list 'any [gives] [gets]))] [[:crm/P11_had_participant :asserted]]]
+    ["gives" [unqualified in-acq role gives (list 'not role gets)]
      [[:crm/P11_had_participant :asserted] [:crm/P23_transferred_title_from :proposed]]]
-    ["gets" [unqualified in-acq role gets (list 'not role gives) (list 'not role passive)]
+    ["gets" [unqualified in-acq role gets (list 'not role gives)]
      [[:crm/P11_had_participant :asserted] [:crm/P22_transferred_title_to :proposed]]]
     ["carried-out" [unqualified (list 'not role passive)
                     (list 'not in-acq role gives (list 'not role gets))
@@ -152,6 +157,31 @@
                                  [[ctype :crm/P190_has_symbolic_content '?cl {:status :asserted}]]))}})))
 
 (def all-rules (into actor-rules subject-rules))
+
+(defn agent-node
+  "The node the rules make of an actor of record `rid`: its authority URI's,
+   else its occurrence's (the record, the event, its position there), of the
+   class its type names. What Linked Art references it by, so that both
+   views name one node (post-audit 8, K5)."
+  [rid {:keys [uri event position type]}]
+  (model/mint-entity-id (rules/lookup-value :lido/actor-classes (or type ""))
+                        [(or uri (str rid "|" event "|" position))]))
+
+(defn concept-node
+  "The node the rules make of a subject concept of record `rid`."
+  [rid {:keys [uri label]}]
+  (if uri (model/mint-entity-id :crm/E55_Type [uri]) (model/mint-entity-id :crm/E55_Type [(str rid) label])))
+
+(defn declared
+  "What each rule states, as `palomar.inferences` reads it (ADR 0055): the
+   rule's own predicates, each an inference whose reason is the rule's
+   `:doc`, but for a name it writes (`P190`), a transcription. Derived from
+   the rules, so the registry cannot drift from them (post-audit 8, K5)."
+  []
+  (into {} (for [{:keys [id doc produce]} all-rules
+                 :let [ps (set (for [t (:construct produce) :when (vector? t)] (second t)))]]
+             [id {:transcribes (set (filter #{:crm/P190_has_symbolic_content} ps))
+                  :infers      (into {} (for [p ps :when (not= p :crm/P190_has_symbolic_content)] [p doc]))}])))
 
 (def compiled
   "`all-rules`, compiled."
