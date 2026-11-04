@@ -31,6 +31,8 @@
      "an actor of an activity whose role is not passive (no commissioner, patron, donor), nor gave or received the title, carried it out"
      :crm/P11_had_participant
      "an actor of an event that is no activity, or whose role is passive, took part in it"
+     :crm/P15_was_influenced_by
+     "a production its record says was made after an actor's work (\"after\"), or by an unnamed hand related to the actor (\"follower of\", \"workshop of\"), was influenced by that actor, by the words of the attribution qualifier"
      :crm/P22_transferred_title_to
      "an acquisition's actor whose role names a buyer or a new owner, and none who gave the title, received it"
      :crm/P23_transferred_title_from

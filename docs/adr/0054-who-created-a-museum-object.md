@@ -41,6 +41,41 @@ That is an attribution the source does not make.
    - **Dublin Core:** not a `dc:creator`.
 4. **Each actor's responsibility is kept** on its native (`creator` or
    `participant`), with its role and role URI, for any later view.
+5. **An attribution qualifier outweighs the roles** (`attributionQualifierActor`,
+   read in `resources/palomar/vocab/lido/attribution-qualifiers.edn`;
+   amended, post-audit 8, K2). Records such as the Yale Center for British
+   Art's put the actor's role there and leave `roleActor` empty, so before
+   this every such actor was the maker by rule 2.
+   - *After* ("after", "nach", "d'après"): the work was made after the
+     actor's, which influenced it. CIDOC CRM: `P15_was_influenced_by`;
+     Linked Art: `influenced_by`; never a creator.
+   - *A related hand* ("follower of", "circle of", "workshop of", "Umkreis",
+     "suiveur de"): another, unnamed hand made it. It was influenced by the
+     actor, and who made it is reported as not stated.
+   - *Formerly*: the attribution is superseded. CIDOC CRM keeps the `P14` with
+     status `:superseded`, which only the history (PROV) writes. It is no
+     creator anywhere else, and Linked Art reports it.
+   - *Uncertain* ("attributed to", "zugeschrieben", "fraglich", "?"): the
+     `P14` is proposed (rule `:rule.lido/attributed-maker`), not stated, and
+     the actor is no creator. A Städel drawing "fraglich" by Rodin has no
+     stated maker now.
+   - *A role* in the qualifier's place: "Print made by" makes the actor the
+     maker; "Text by" or "Published by" means the actor took part (`P11`).
+     The qualifier stands for the role when the record states none.
+
+   MARC21 writes the qualifier first in the `$e` of a `700` ("after"), and
+   only a maker is a `100`. A German "nach" names an influence, but not in
+   "nach schriftlicher Mitteilung", which says where the attribution comes
+   from.
+
+   The words are those of the Getty's CDWA attribution qualifiers and their
+   German and French counterparts ("copy after", "Kopie nach", "studio of",
+   "Umfeld", "Kreis um", "assistant to"…). When a qualifier names several,
+   the first wins: former, related hand, influence, uncertain, a role.
+   "Attributed to workshop of" is a related hand. "Possibly after" is an
+   influence, stated, not proposed: the work was not made by that actor
+   either way. A qualifier the table does not name leaves the roles to
+   decide (K2 review).
 
 ## Consequences
 

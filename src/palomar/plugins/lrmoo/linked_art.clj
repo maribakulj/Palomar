@@ -444,12 +444,17 @@
           (let [n  (:index ev)
                 as (in-event n actors)
                 cs (filter #(= "creator" (:responsibility %)) as)
-                os (remove #(= "creator" (:responsibility %)) as)
+                ;; who it was made after, or whose follower made it,
+                ;; influenced it; a former or uncertain attribution is no
+                ;; fact, and is reported (post-audit 8, K2)
+                infl (filter #(#{"influence" "related"} (:attribution %)) as)
+                os (remove #(or (= "creator" (:responsibility %)) (#{"influence" "related" "former" "uncertain"} (:attribution %))) as)
                 ts (timespan ev)
                 ps (place-ids ev)
                 tq (filter #(and (:uri %) (= "technique" (:role %))) (in-event n mats))]
             (cond-> {"type" "Production"}
               (seq cs) (assoc "carried_out_by" (mapv actor cs))
+              (seq infl) (assoc "influenced_by" (mapv actor infl))
               (seq os) (assoc "part" (mapv (fn [a] (cond-> {"type" "Production" "carried_out_by" [(actor a)]}
                                                      (:role a) (assoc "_label" (:role a))
                                                      (:role-uri a) (assoc "classified_as" [(type-ref {:uri (:role-uri a) :label (:role a)} "Type")])))
@@ -662,6 +667,11 @@
         (for [a (native-fields record :lido/actor) :when (not (contains? (lido/production-keys evs) (:event a)))]
           (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
                     :message (str "actor " (pr-str (:name a)) " of an event other than the production is not written in the Linked Art object profile")}))
+        ;; a former or uncertain attribution of the making is no fact (K2)
+        (for [a (native-fields record :lido/actor)
+              :when (and (contains? (lido/production-keys evs) (:event a)) (#{"former" "uncertain"} (:attribution a)))]
+          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/actor :value a
+                    :message (str "the " (:attribution a) " attribution of the making to " (pr-str (:name a)) " (" (pr-str (:qualifier a)) ") is no fact: the Linked Art object profile states it nowhere")}))
         ;; a designer is the object's creator, a canonical agent too: a design
         ;; is no part of a production LIDO does not say used it, so it is
         ;; written nowhere (H2 review; post-audit 7, I1 review)
@@ -674,7 +684,8 @@
                     :message (str "the date of the " (:kind ev) " event is not written in the Linked Art object profile")}))))
      ;; what the documents write of each structured value, and what they do not
      (cov/unwritten-fields record
-                           {:lido/actor            #(if (= "creator" (:responsibility %)) #{:name :uri} #{:name :uri :role :role-uri})
+                           {:lido/actor            #(if (or (= "creator" (:responsibility %)) (#{"influence" "related"} (:attribution %)))
+                                                      #{:name :uri} #{:name :uri :role :role-uri})
                             :lido/event            #{:date :earliest :latest}
                             :lido/dimension        #{:value}
                             :lido/resource         #{:url}

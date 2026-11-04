@@ -1,0 +1,36 @@
+;; What an actor's attribution qualifier (`attributionQualifierActor`) says of
+;; who made the work, in English, German and French (post-audit 8, K2 and its
+;; review): the qualifiers of the Getty's Categories for the Description of
+;; Works of Art (CDWA) and their German and French counterparts, and those of
+;; the corpora Palomar reads. Patterns are Java regexes found in the lowercased
+;; qualifier. When a qualifier names several, the first of these wins: former,
+;; related hand, influence, uncertain, then a role. A qualifier none names
+;; leaves the actor's roles to decide.
+{:id     :lido/attribution-qualifiers
+ :source "CDWA attribution qualifiers (Getty Research Institute); the qualifiers of the Yale Center for British Art and the Städel Museum"
+ :concepts
+ {:attribution/former
+  {:doc      "A former attribution: no longer held to be the maker."
+   :patterns ["(?<!\\p{L})(?:formerly|früher|ehemals|vormals|anciennement|autrefois)(?!\\p{L})"
+              "(?<!\\p{L})(?:previously|once) (?:attributed|ascribed|given|thought)(?!\\p{L})"]}
+  :attribution/related
+  {:doc      "Another, unnamed hand related to the actor: a follower, a circle, a workshop, a school, an assistant."
+   :patterns ["(?<!\\p{L})(?:followers?|circle|workshop|studio|atelier|school|manner|style|imitator|pupil|student|assistant|associate|office|entourage)(?!\\p{L})"
+              "(?<!\\p{L})(?:umkreis|umfeld|werkstatt\\p{L}*|schule|nachfolger\\p{L}*|nachfolge|nachahmer\\p{L}*|schüler\\p{L}*|kreis (?:um|des|der)|richtung (?:des|der)|art (?:des|der))(?!\\p{L})"
+              "(?<!\\p{L})(?:suiveur|cercle|école|manière|élève|disciple) de(?!\\p{L})"]}
+  :attribution/influence
+  {:doc      "Made after the actor's work, or a copy of it: the actor influenced it and did not make it."
+   :patterns ["(?<!\\p{L})(?:after|copy|copies|copied|copyist)(?!\\p{L})"
+              "(?<!\\p{L})(?:kopie|kopist\\p{L}*|nachbildung)(?!\\p{L})"
+              "(?<!\\p{L})nach(?!\\p{L})(?! (?:schriftlich|mündlich|angabe|auskunft|mitteilung|literatur|quelle|information))"
+              "(?<!\\p{L})(?:d['’]après|copie)(?!\\p{L})"]}
+  :attribution/uncertain
+  {:doc      "An attribution held uncertain: the actor may be the maker."
+   :patterns ["(?<!\\p{L})(?:attributed|possibly|probably|doubtful|questionable|uncertain|zugeschrieben|vermutlich|wohl|fraglich|unsicher|zweifelhaft|attribué|attribuée|peut-être|douteux|incertain)(?!\\p{L})"
+              "^\\?$"]}
+  :attribution/maker-role
+  {:doc      "A role that makes the actor the maker, in the qualifier's place."
+   :patterns ["^(?:print made|drawn|engraved|etched|painted|sculpted|carved|photographed|made|created|designed and made) by$"]}
+  :attribution/other-role
+  {:doc      "A role that is not the maker's: the actor took part."
+   :patterns ["^(?:text|published|printed|sold|lettered|edited|dedicated|commissioned|written) by$"]}}}

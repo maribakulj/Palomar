@@ -14,10 +14,13 @@
    [:oai {:metadata-prefix "lido"} "test/fixtures/documentary/lido/staedel-oai-lido-graphics.xml"]
    [:oai {:metadata-prefix "lido"} "test/fixtures/documentary/lido/staedel-oai-lido-sample.xml"]
    [:oai {:metadata-prefix "lido"} "test/fixtures/documentary/lido/museum-digital-hessen-lido.xml"]
-   [:oai {:metadata-prefix "lido"} "test/fixtures/documentary/lido/museum-digital-westfalen-lido.xml"]])
+   [:oai {:metadata-prefix "lido"} "test/fixtures/documentary/lido/museum-digital-westfalen-lido.xml"]
+   ;; attribution qualifiers and ids by source and code (post-audit 8, K1, K2)
+   [:oai {:metadata-prefix "lido"} "test/fixtures/documentary/lido/ycba-oai-lido.xml"]])
 
 (def ^:private actor-ps
-  #{:crm/P14_carried_out_by :crm/P11_had_participant :crm/P22_transferred_title_to :crm/P23_transferred_title_from})
+  #{:crm/P14_carried_out_by :crm/P11_had_participant :crm/P22_transferred_title_to :crm/P23_transferred_title_from
+    :crm/P15_was_influenced_by})
 
 (defn- ruled
   "The assertions the rules produce on `record` (some the code made already,
