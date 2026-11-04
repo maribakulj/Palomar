@@ -1,0 +1,10 @@
+;; Subject vocabularies that say what an image shows. Iconclass classifies the
+;; content of images: a subject an Iconclass notation names is depicted. Any
+;; other vocabulary (GND subject headings, AAT, a local thesaurus) says what a
+;; work is about, not that it is shown (post-audit 8, rules study).
+{:id     :lido/subject-schemes
+ :source "Iconclass (iconclass.org), a classification of the subjects of images"
+ :concepts
+ {:subject/ofness
+  {:doc      "An Iconclass notation: iconographic content, what the image represents."
+   :patterns ["^https?://(?:www\\.)?iconclass\\.org/"]}}}

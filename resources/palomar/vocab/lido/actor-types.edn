@@ -1,0 +1,7 @@
+;; LIDO actor types (actor/@lido:type, by its 1.0 name or 1.1 code).
+{:id     :lido/actor-types
+ :source "LIDO Terminology (lido-schema.org, CC BY 4.0)"
+ :concepts
+ {:actor/group
+  {:doc   "A group (CIDOC CRM E74_Group), not a person."
+   :terms ["corporation" "family" "group" "group_of_persons" "organization"]}}}

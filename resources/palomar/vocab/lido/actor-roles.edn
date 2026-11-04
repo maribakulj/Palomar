@@ -1,0 +1,15 @@
+;; The roles of an actor in a LIDO event, as data (post-audit 8, rules study).
+;; Patterns are Java regexes found in a lowercased role part (one of the
+;; `; `-joined roles of an actor). Moved out of palomar.plugins.lido.
+{:id     :lido/actor-roles
+ :source "The role terms of the corpora Palomar reads, in English, German and French (post-audits 6 and 7)"
+ :concepts
+ {:role/passive
+  {:doc      "Took part without carrying the activity out: who commissioned, paid for or received it."
+   :patterns ["(?i)commission|patron|client|sponsor|donor|auftraggeber|mäzen|stifter|besteller|commanditaire|mécène|donateur"]}
+  :role/gives-title
+  {:doc      "In an acquisition, who gave up the title: a seller, a donor, a former owner."
+   :patterns ["(?iu)(?<!\\p{L})(?:sellers?|vendors?|vendeur|vendeuse|verkäufer\\p{L}*|verkaeufer\\p{L}*|donors?|donateur|donatrice|schenker\\p{L}*|stifter\\p{L}*|former owner|previous owner|vorbesitzer\\p{L}*|ancien propriétaire|testat(?:or|rix)|erblasser\\p{L}*|vererber\\p{L}*|bequeathed by)(?!\\p{L})"]}
+  :role/receives-title
+  {:doc      "In an acquisition, who received the title: a buyer, a new owner, an heir."
+   :patterns ["(?iu)(?<!\\p{L})(?:buyers?|purchasers?|acquirers?|acheteur|acheteuse|acquéreur|käufer\\p{L}*|kaeufer\\p{L}*|erwerber\\p{L}*|new owner|neuer eigentümer|nouveau propriétaire|heirs?|erben?|erbin|héritier|héritière)(?!\\p{L})"]}}}

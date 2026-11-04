@@ -1,0 +1,14 @@
+;; LIDO event types: what an event is, by its LIDO terminology URI or code
+;; (the 1.0 name or the 1.1 code, LIDO Terminology, CC BY 4.0), else its term.
+;; Moved out of palomar.plugins.lido for the rules study (post-audit 8).
+{:id     :lido/event-types
+ :source "LIDO Terminology (lido-schema.org, CC BY 4.0); the terms of the corpora Palomar reads (Städel, museum-digital)"
+ :concepts
+ {:event/activity
+  {:doc      "Something someone does: CIDOC CRM E7_Activity, even when the record names no actor."
+   :terms    ["attribute_assignment" "aufführung" "auftrag" "ausgegraben" "ausgestellt" "ausgrabung" "ausstellung" "beauftragt" "carrier_production" "collecte" "collected" "collecting" "commande" "commissioned" "commissioning" "creation" "designing" "entwurf" "excavated" "excavation" "execution_of_design" "exhibited" "exhibition" "exposition" "expression_creation" "fouille" "gebrauch" "genutzt" "gesammelt" "grabung" "gyűjtés" "használat" "kiadás" "kiállítás" "modification" "move_of_object" "nutzung" "part_addition" "part_removal" "performance" "planning" "planung" "publication" "publikation" "published" "restoration" "sammeln" "sammlung" "transfer" "transfer_of_custody" "transport" "type_assignment" "type_creation" "use" "used" "utilisation" "verwendung" "veröffentlicht" "was used" "work_conception" "wurde genutzt" "ásatás" "überführung"]
+   :patterns ["(?:^|/)(?:attribute_assignment|carrier_production|collecting|commissioning|creation|designing|excavation|execution_of_design|exhibition|expression_creation|lido00005|lido00006|lido00008|lido00010|lido00011|lido00012|lido00013|lido00021|lido00023|lido00024|lido00030|lido00031|lido00032|lido00033|lido00034|lido00223|lido00224|lido00225|lido00226|lido00228|lido00484|lido00486|lido00487|modification|move_of_object|part_addition|part_removal|performance|planning|publication|restoration|transfer_of_custody|type_assignment|type_creation|use|work_conception)$"]}
+  :event/prior
+  {:doc      "What precedes the object, its commissioning or planning: the object was not present at it."
+   :terms    ["auftrag" "beauftragt" "beauftragung" "commande" "commandé" "commission" "commissioned" "commissioning" "geplant" "planification" "planned" "planning" "planung"]
+   :patterns ["(?:^|/)(?:commissioning|lido00032|lido00226|planning)$"]}}}

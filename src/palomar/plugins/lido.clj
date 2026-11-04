@@ -367,10 +367,12 @@
                                      [[:lido/material (model/structured (assoc c :event n :role (or (term-name (attr m "type")) "material")))
                                        (second m)]])))
                    (descend ev "eventMaterialsTech" "materialsTech" "termMaterialsTech"))
-           (mapcat (fn [ea]
+           (apply concat
+                  (map-indexed
+                   (fn [ei ea]
                      (concat
                       (strings :lido/actor-display (kids ea "displayActorInRole"))
-                      (for [air (kids ea "actorInRole")
+                      (for [[ai air] (map-indexed vector (kids ea "actorInRole"))
                             :let [a     (kid air "actor")
                                   names (when a (descend a "nameActorSet" "appellationValue"))
                                   id    (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (when a (kids a "actorID")))
@@ -381,7 +383,10 @@
                                   vd    (fn [nm] (some-> a (kid "vitalDatesActor") (kid nm) text))
                                   nm    (some text names)]
                             :when nm]
-                        [:lido/actor (model/structured (cond-> {:event n :name nm
+                        ;; its position in the event: an actor is this occurrence, and
+                        ;; two of one name are two until an authority says otherwise
+                        ;; (post-audit 8)
+                        [:lido/actor (model/structured (cond-> {:event n :name nm :position (str (inc ei) "." (inc ai))
                                                                 :type (or (term-name (attr a "type")) "")
                                                                 :responsibility (if (and (#{:production :design} kind) (creator? rterms ruris))
                                                                                   "creator" "participant")}
@@ -404,13 +409,20 @@
                                                                                              (keep #(:uri (concept %)) (kids air "roleActor"))))
                                             (strings :lido/creator (take 1 (when a (descend a "nameActorSet" "appellationValue"))))))))
                               (kids ea "actorInRole"))))
-                   (kids ev "eventActor"))
+                   (kids ev "eventActor")))
            (when (= :production kind)
              (strings :lido/production-date (take 1 (some-> ed (kids "displayDate"))))))))
       events)
      ;; subjects
-     (mapcat (fn [c] (concat (terms :lido/subject c) (whole :lido/subject-concept c)))
-             (cnodes "objectRelationWrap" "subjectWrap" "subjectSet" "subject" "subjectConcept"))
+     ;; each concept with the type of its subject (`lido:type`): what the
+     ;; work depicts, or what it means (post-audit 8)
+     (mapcat (fn [s]
+               (let [st (some-> (attr s "type") str/trim not-empty)]
+                 (mapcat (fn [c] (concat (terms :lido/subject c)
+                                         (when-let [cc (concept c)]
+                                           [[:lido/subject-concept (model/structured (cond-> cc st (assoc :subject-type st))) (second c)]])))
+                         (kids s "subjectConcept"))))
+             (cnodes "objectRelationWrap" "subjectWrap" "subjectSet" "subject"))
      ;; the people a work depicts
      (mapcat (fn [sa]
                (let [a  (kid sa "actor")

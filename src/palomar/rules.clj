@@ -37,7 +37,9 @@
    `ref`, `norm`, `str`, `or`. A triple one of whose terms is unbound (an
    `optional` that did not match) is not written. A `:retract` / `:supersede`
    family is a planned future addition (ADR 0008)."
-  (:require [clojure.set :as set]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.walk :as walk]
             [malli.core :as m]
@@ -81,28 +83,36 @@
   [clause]
   (and (seq? clause) (= 'not (first clause))))
 
+(defn- field-form?
+  "True for a `(field ?v :key x)` match clause: `x` is field `:key` of the
+   structured value bound to `?v` (bound or checked), and a row whose `?v`
+   has no such field does not match."
+  [clause]
+  (and (seq? clause) (= 'field (first clause))))
+
 (defn- guard-form? [clause]
   (and (sequential? clause) (not (vector? clause))
-       (not (optional-form? clause)) (not (not-form? clause))))
+       (not (optional-form? clause)) (not (not-form? clause)) (not (field-form? clause))))
 
 (defn- variables-bound-by-match
-  "Variables introduced by triple-patterns in a `:match` vector. Guards
-   cannot introduce bindings; they only consume them."
+  "Variables introduced by triple-patterns and `field` clauses in a `:match`
+   vector. Guards cannot introduce bindings; they only consume them."
   [match]
   (reduce (fn [acc clause]
-            (if (triple-pattern? clause)
-              (into acc (collect-variables clause))
-              acc))
+            (cond (triple-pattern? clause) (into acc (collect-variables clause))
+                  (field-form? clause)     (into acc (collect-variables (nth clause 3 nil)))
+                  :else                    acc))
           #{}
           match))
 
 (defn- variables-used-in-guards
-  "Variables referenced as arguments to guard-forms in `:match`."
+  "Variables referenced as arguments to guard-forms in `:match`, and the
+   structured value a `field` clause reads."
   [match]
   (reduce (fn [acc clause]
-            (if (guard-form? clause)
-              (into acc (collect-variables clause))
-              acc))
+            (cond (guard-form? clause) (into acc (collect-variables clause))
+                  (field-form? clause) (into acc (collect-variables (second clause)))
+                  :else                acc))
           #{}
           match))
 
@@ -170,6 +180,71 @@
         (into diagnostic-triples)
         (into assertion-triples))))
 
+(def ^:private last-view
+  "The triple view of the last record matched, indexed by predicate: a phase
+   runs every rule against the same record, which builds it once, not once a
+   rule (post-audit 8, rules study). A single slot, compared by identity."
+  (atom nil))
+
+(defn- triple-view
+  "`{:all triples :by-predicate {p triples}}` of `record`."
+  [record]
+  (let [[r v] @last-view]
+    (if (identical? r record)
+      v
+      (let [ts (record-triples record)
+            v  {:all ts :by-predicate (group-by second ts)}]
+        (reset! last-view [record v])
+        v))))
+
+;; ---------------------------------------------------------------------------
+;; Vocabularies: term tables as data
+;; ---------------------------------------------------------------------------
+
+(def ^:private vocab-table
+  "The vocabulary table `id` (`:lido/actor-roles` →
+   `resources/palomar/vocab/lido/actor-roles.edn`): `{:source … :concepts
+   {concept {:terms [lowercase term…] :patterns [regex string…]}}}`."
+  (memoize
+   (fn [id]
+     (let [path (str "palomar/vocab/" (namespace id) "/" (name id) ".edn")
+           res  (io/resource path)]
+       (when-not res (throw (ex-info "Unknown vocabulary" {:vocab id :path path})))
+       (let [t (edn/read-string (slurp res))]
+         (update t :concepts
+                 (fn [cs] (into {} (for [[c {:keys [terms patterns]}] cs]
+                                     [c {:terms (set terms) :patterns (mapv re-pattern patterns)}])))))))))
+
+(def ^:private concept-cache
+  "Each `[table term]` looked up, its concepts: a corpus repeats its terms."
+  (atom {}))
+
+(declare vocab-concepts*)
+
+(defn vocab-concepts
+  "The concepts of each `; `-joined part of `term` in vocabulary `table`, a
+   set per part, trimmed and lowercased: a part names a concept when it is
+   one of its terms or one of its patterns finds in it. Cached; the cache is
+   emptied past 100 000 terms."
+  [table term]
+  (let [k [table term]]
+    (if-let [[_ v] (find @concept-cache k)]
+      v
+      (let [v (vocab-concepts* table term)]
+        (swap! concept-cache #(assoc (if (< 100000 (count %)) {} %) k v))
+        v))))
+
+(defn- vocab-concepts*
+  [table term]
+  (when (string? term)
+    (let [{:keys [concepts]} (vocab-table table)]
+      (for [part (str/split term #";")
+            :let [p (str/lower-case (str/trim part))]
+            :when (seq p)]
+        (set (for [[c {:keys [terms patterns]}] concepts
+                   :when (or (contains? terms p) (some #(re-find % p) patterns))]
+               c))))))
+
 ;; ---------------------------------------------------------------------------
 ;; Predicate stdlib for guard forms
 ;;
@@ -203,16 +278,24 @@
   {'=        (fn [_ _ a b] (= a b))
    'not=     (fn [_ _ a b] (not= a b))
    'absent?  (fn [_ record subject pred]
-               (not (triple-matches-subject-pred? (record-triples record)
+               (not (triple-matches-subject-pred? (:all (triple-view record))
                                                   subject pred)))
    'present? (fn [_ record subject pred]
-               (triple-matches-subject-pred? (record-triples record)
+               (triple-matches-subject-pred? (:all (triple-view record))
                                              subject pred))
    'matches? (fn [_ _ value re]
                (and (string? value)
                     (boolean (re-find (re-pattern re) value))))
    'in?      (fn [_ _ value coll]
                (boolean (some #(= value %) coll)))
+   ;; a term's concepts in a vocabulary table, data under
+   ;; resources/palomar/vocab (`vocab-concepts`): some of its `; `-joined
+   ;; parts, or every one, names `concept`
+   'vocab-some? (fn [_ _ table term concept]
+                  (boolean (some #(contains? % concept) (vocab-concepts table term))))
+   'vocab-all?  (fn [_ _ table term concept]
+                  (let [cs (vocab-concepts table term)]
+                    (boolean (and (seq cs) (every? #(contains? % concept) cs)))))
    'not-in?  (fn [_ _ value coll]
                (not-any? #(= value %) coll))
    'string?  (fn [_ _ value] (string? value))})
@@ -290,10 +373,22 @@
    (fn [binding-rows clause]
      (cond
        (vector? clause)
-       (mapcat #(match-pattern % clause triples) binding-rows)
+       (let [p  (second clause)
+             ts (if (keyword? p) (get (:by-predicate triples) p) (:all triples))]
+         (mapcat #(match-pattern % clause ts) binding-rows))
 
        (not-form? clause)
        (remove #(seq (match-rows (rest clause) record triples [%])) binding-rows)
+
+       (field-form? clause)
+       (let [[_ v k x] clause]
+         (keep (fn [row]
+                 (let [sv (if (variable? v) (get row v) v)
+                       fs (when (model/structured-value? sv) (:value/fields sv))]
+                   (when (contains? fs k)
+                     (let [d (position-match row x (get fs k))]
+                       (when-not (= ::fail d) (merge row d))))))
+               binding-rows))
 
        (optional-form? clause)
        (mapcat (fn [row]
@@ -314,7 +409,7 @@
    (variables → values) for every matching row; a variable only an `optional`
    clause binds is absent from the rows it did not match."
   [clauses record]
-  (match-rows clauses record (record-triples record) [{}]))
+  (match-rows clauses record (triple-view record) [{}]))
 
 ;; ---------------------------------------------------------------------------
 ;; Template substitution for productions
@@ -535,8 +630,15 @@
    [:fn {:error/message "not holds triple patterns, guards or optionals"}
     #(every? valid-match-clause? (rest %))]])
 
+(def FieldForm
+  "`(field ?v :key x)`: field `:key` of the structured value `?v`."
+  [:and
+   [:fn {:error/message "must be a (field ?v :key x) form"} field-form?]
+   [:fn {:error/message "field takes a variable, a keyword and a term"}
+    #(and (= 4 (count %)) (variable? (second %)) (keyword? (nth % 2)))]])
+
 (def MatchClause
-  [:or TriplePattern OptionalForm NotForm GuardForm])
+  [:or TriplePattern OptionalForm NotForm FieldForm GuardForm])
 
 (defn- valid-match-clause? [c] (m/validate MatchClause c))
 
