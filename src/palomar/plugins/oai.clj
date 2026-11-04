@@ -20,6 +20,7 @@
    returns the pages lazily."
   (:require [clojure.data.xml :as data-xml]
             [clojure.string :as str]
+            [palomar.digest-set :as digest-set]
             [palomar.model :as model]
             [palomar.spokes :as spokes]
             [palomar.xml :as rx]))
@@ -83,36 +84,58 @@
   [rid]
   (model/decode-name (name rid)))
 
+(defn- duplicate
+  "`record` flagged as one whose id a record already read in this harvest
+   has: the two would merge into one (post-audit 8, K6)."
+  [record]
+  (update record :diagnostics (fnil conj [])
+          (model/diagnostic {:severity :warning :code :oai/duplicate-id :subject (:id record)
+                             :message (str "a record already harvested has the same id " (pr-str (:id record))
+                                           ": the two would merge into one (OAI identifier "
+                                           (pr-str (get-in record [:provenance :source :oai :identifier])) ")")})))
+
 (defn import-response
   "Import every live record of OAI-PMH response `xml`, whose metadata is in
    format `prefix`, through its spoke's importer. Returns `{:records [...]
    :diagnostics [...] :deleted [identifier…] :resumption-token t}`, each record
    carrying its OAI header at `[:provenance :source :oai]`. Throws on an OAI
    error other than `noRecordsMatch`, and on a prefix no spoke reads."
-  [prefix xml]
-  (let [from (or (formats prefix)
-                 (throw (ex-info (str "oai: no spoke reads the metadata format " (pr-str prefix))
-                                 {:prefix prefix :supported (set (keys formats))})))
-        {:keys [records resumption-token error]} (read-response xml)
-        _    (when (and error (not= "noRecordsMatch" (:code error)))
-               (throw (ex-info (str "oai: the repository answered " (:code error) ": " (:message error)) error)))
-        imp  (:importer (spokes/plugin from))
-        live (remove (comp :deleted? :header) records)
-        outs (for [{:keys [header metadata]} live
-                   :when metadata]
-               (let [{rs :records ds :diagnostics} (imp (cond-> {} (= :dc from) (assoc :record-id (record-id (:identifier header))))
-                                                        metadata)]
+  ([prefix xml] (import-response prefix xml (digest-set/create)))
+  ([prefix xml seen]
+   (let [from (or (formats prefix)
+                  (throw (ex-info (str "oai: no spoke reads the metadata format " (pr-str prefix))
+                                  {:prefix prefix :supported (set (keys formats))})))
+         {:keys [records resumption-token error]} (read-response xml)
+         _    (when (and error (not= "noRecordsMatch" (:code error)))
+                (throw (ex-info (str "oai: the repository answered " (:code error) ": " (:message error)) error)))
+         imp  (:importer (spokes/plugin from))
+         live (remove (comp :deleted? :header) records)
+         outs (for [{:keys [header metadata]} live
+                    :when metadata]
+                (let [{rs :records ds :diagnostics} (imp (cond-> {} (= :dc from) (assoc :record-id (record-id (:identifier header))))
+                                                         metadata)]
                  ;; three levels: the response (its digest, added by `convert`), the
                  ;; harvested record (its header) and the metadata document the
                  ;; values' XPaths point into (its digest)
-                 {:records     (mapv #(assoc-in % [:provenance :source :oai]
-                                                (assoc header :metadata-sha256 (model/sha256-hex metadata 64)))
-                                     rs)
-                  :diagnostics ds}))]
-    (cond-> {:records     (vec (mapcat :records outs))
-             :diagnostics (vec (mapcat :diagnostics outs))
-             :deleted     (vec (keep #(when (get-in % [:header :deleted?]) (get-in % [:header :identifier])) records))}
-      resumption-token (assoc :resumption-token resumption-token))))
+                  {:records     (mapv #(assoc-in % [:provenance :source :oai]
+                                                 (assoc header :metadata-sha256 (model/sha256-hex metadata 64)))
+                                      rs)
+                   :diagnostics ds}))]
+    ;; a record of an id the harvest has already read would merge with it:
+    ;; it is reported, in a page as across pages (`import-harvest`; K6)
+     (cond-> {:records     (mapv #(cond-> % (digest-set/seen! seen (:id %)) duplicate) (mapcat :records outs))
+              :diagnostics (vec (mapcat :diagnostics outs))
+              :deleted     (vec (keep #(when (get-in % [:header :deleted?]) (get-in % [:header :identifier])) records))}
+       resumption-token (assoc :resumption-token resumption-token)))))
+
+(defn import-harvest
+  "Import each page (OAI-PMH response xml) of `pages`, a harvest in format
+   `prefix`, lazily: the pages' `import-response`s, sharing the ids seen, so
+   that a record two pages carry is reported in the second (post-audit 8,
+   K6). The ids are kept as 64-bit digests (`digest-set`)."
+  [prefix pages]
+  (let [seen (digest-set/create)]
+    (map #(import-response prefix % seen) pages)))
 
 (defn- query [base params]
   (str base (if (str/includes? base "?") "&" "?")

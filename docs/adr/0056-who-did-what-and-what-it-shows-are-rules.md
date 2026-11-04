@@ -88,11 +88,21 @@ decided again, from the LIDO, what the CIDOC CRM view had decided.
   Art, which types every subject set as a description, Palomar now writes
   `represents` where YCBA does (`docs/eval/ycba.md`).
 - **What is still code.** The event classes, the object's class ("made")
-  and subject persons are still code. They are the next parts to port
-  (plan K6). An event's terms in every language are read by the rules as
-  by the code (`:terms` on the event), so that both give an event the same
-  class (K5 review: a term in another language once made the rules a
-  second node).
+  and subject persons are still code.
+  - An event's terms in every language are read by the rules as by the
+    code (`:terms` on the event), so that both give an event the same class
+    (K5 review: a term in another language once made the rules a second
+    node).
+  - Porting the rest waits on two things the rule language lacks:
+    - a mint whose id and class differ (the object keeps one id, ADR 0052
+      and H1, while its class is E22 or E19);
+    - losses written as data (a rule makes no `dx/loss` today).
+  - Until then, a generative test holds the code and the rules to one
+    decision (K6, `lido-rules-property-test`). It runs 150 LIDO records of
+    random event types, terms in two languages, techniques, roles and
+    attribution qualifiers, and checks that every actor the rules place is
+    on an event node the code declared, of one class. It finds the K5
+    defect again when the fix is undone, shrunk to its smallest case.
 - **Cost.** The rules, and the evidence they carry, cost a LIDO record
   about 3 ms more in the whole pipeline: about 19 ms against 22, measured
   warm. PROV grows by 2 to 7 % in triples, since a claim cites the event and

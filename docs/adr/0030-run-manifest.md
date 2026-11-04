@@ -39,3 +39,19 @@ For reproducible research a conversion has to say what it was.
   (pinned by `manifest-test`); a changed mapping is named.
 - `build.edn` is not yet written by the release workflow; until it is, the
   version reads `"dev"`.
+
+## Amendment (post-audit 8, K6)
+
+- `convert --stream --manifest` writes the manifest too, as batch does. Its
+  output is the file written, and its options say `:stream? true`. The
+  manifest is written beside its path before `--out` is replaced: a manifest
+  that cannot be written leaves `--out` as it was.
+- An input that is no regular file (a pipe) is read once: the manifest names
+  it, `:fingerprinted? false`, and does not read it again.
+- A file is fingerprinted as it is read, in constant memory: a streamed
+  dump's output may be larger than the heap.
+- The manifest lists the vocabularies and lookup tables
+  (`resources/palomar/vocab`), each fingerprinted (`:vocabularies`). They are
+  data that decide what the rules and the code state, so they are part of
+  what a run ran. When the resources are packed in a jar they are not listed.
+
