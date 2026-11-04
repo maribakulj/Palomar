@@ -41,6 +41,7 @@
             [palomar.diagnostics :as dx]
             [palomar.digest-set :as digest-set]
             [palomar.model :as model]
+            [palomar.plugins.lido-rules :as lido-rules]
             [palomar.plugins.lido-schema :as lido-schema]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.rules :as rules]
@@ -105,6 +106,19 @@
    bodies), or an id the record gives an actor."
   [actor-iris v]
   (boolean (or (str/starts-with? v "http://vocab.getty.edu/ulan/") (contains? actor-iris v))))
+
+(defn- vocab?
+  "True when some `; `-joined part of `term` names `concept` in vocabulary
+   `table`: the words that decide are data, under resources/palomar/vocab,
+   read here as by the rules (post-audit 8, K5)."
+  [table term concept]
+  (boolean (some #(contains? % concept) (rules/vocab-concepts table term))))
+
+(defn group-types
+  "True when a LIDO actor type is a group (CIDOC CRM `E74_Group`), not a
+   person, by resources/palomar/vocab/lido/actor-classes.edn (K5)."
+  [t]
+  (= :crm/E74_Group (rules/lookup-value :lido/actor-classes (or t ""))))
 
 (defn- concept
   "The concept of a LIDO concept element (`objectWorkType`, `roleActor`…):
@@ -175,32 +189,12 @@
       (some #(get kind-labels (str/lower-case (str/trim %))) (remove nil? (cons (:label c) terms)))
       :event))
 
-(def ^:private activity-types
-  "LIDO event types that are activities, carried out by someone (CIDOC CRM
-   `E7_Activity`), even when the record names no actor."
-  #{"exhibition" "commissioning" "restoration" "excavation" "collecting" "use" "performance"
-    "publication" "move_of_object" "transfer_of_custody" "planning" "modification" "part_addition"
-    "part_removal" "type_assignment" "attribute_assignment" "type_creation" "designing"
-    "execution_of_design" "creation" "carrier_production" "work_conception" "expression_creation"})
-
-(def ^:private activity-labels
-  "Event type terms that name an activity, when no URI says it (post-audit 5, G2)."
-  #{"exhibition" "ausstellung" "exposition" "commissioning" "auftrag" "commande" "excavation"
-    "ausgrabung" "fouille" "publication" "publikation" "collecting" "performance" "aufführung"
-    "use" "nutzung" "gebrauch" "verwendung" "utilisation" "planning" "planung" "designing" "entwurf"
-    "sammeln" "sammlung" "collecte" "grabung" "transfer" "überführung" "transport"
-    ;; museum-digital's past participles (post-audit 5, G6)
-    "veröffentlicht" "wurde genutzt" "genutzt" "ausgestellt" "gesammelt" "beauftragt" "ausgegraben"
-    ;; museum-digital's other portals: English, Hungarian (post-audit 6, H3)
-    "was used" "used" "collected" "published" "exhibited" "excavated" "commissioned"
-    "gyűjtés" "kiadás" "használat" "kiállítás" "ásatás"})
-
 (defn- activity-type?
   "True when an event's type, by its LIDO URI or code, or else its term, names
    an activity: something someone does, not something that befalls the object."
   [{:keys [type label]} terms]
-  (boolean (or (activity-types (term-name type))
-               (some #(some-> % str/trim str/lower-case activity-labels) (cons label terms)))))
+  ;; by the vocabulary, data: resources/palomar/vocab/lido/event-types.edn (K5)
+  (boolean (some #(vocab? :lido/event-types % :event/activity) (cons type (cons label terms)))))
 
 (def ^:private creator-heads
   "The words a creator's role ends with, in the languages LIDO records use:
@@ -270,10 +264,6 @@
                     (and (not (re-find not-creator t))
                          (re-find creator-heads (last (str/split t #"[\s\-/]+")))))
                  terms))))))
-
-(def group-types
-  "The LIDO actor types that are a group (CIDOC CRM `E74_Group`), not a person."
-  #{"organization" "corporation" "group" "group_of_persons" "family"})
 
 (def ^:private event-path #"local-name\(\)='eventSet'\]\[(\d+)\]/\*\[local-name\(\)='event'\]\[(\d+)\]")
 
@@ -414,6 +404,9 @@
            [[:lido/event (model/structured (cond-> {:index n :kind (name kind)}
                                              (:uri tc) (assoc :type (:uri tc))
                                              (:label tc) (assoc :label (:label tc))
+                                             ;; every term of its type, in every language: the rules
+                                             ;; read its kind by any of them, as the code does (K5 review)
+                                             (seq (keep text (descend ev "eventType" "term"))) (assoc :terms (str/join "; " (keep text (descend ev "eventType" "term"))))
                                              (some-> ed (kid "displayDate") text) (assoc :date (text (kid ed "displayDate")))
                                              (lat "earliestDate") (assoc :earliest (lat "earliestDate"))
                                              (lat "latestDate") (assoc :latest (lat "latestDate"))))
@@ -768,70 +761,34 @@
   [events]
   (set (keep #(when (= "design" (:kind %)) (:index %)) events)))
 
-(def ^:private passive-roles
-  "The roles of an actor who took part in an activity without carrying it
-   out: who commissioned, paid for or received it (post-audit 6, H2)."
-  #"(?i)commission|patron|client|sponsor|donor|auftraggeber|mäzen|stifter|besteller|commanditaire|mécène|donateur")
-
-(def ^:private title-from-roles
-  "The roles of who gave up an object's title in an acquisition: its seller,
-   donor or former owner (post-audit 7, I3)."
-  #"(?iu)(?<!\p{L})(?:sellers?|vendors?|vendeur|vendeuse|verkäufer\p{L}*|verkaeufer\p{L}*|donors?|donateur|donatrice|schenker\p{L}*|stifter\p{L}*|former owner|previous owner|vorbesitzer\p{L}*|ancien propriétaire|testat(?:or|rix)|erblasser\p{L}*|vererber\p{L}*|bequeathed by)(?!\p{L})")
-
-(def ^:private title-to-roles
-  "The roles of who received an object's title in an acquisition: its buyer
-   or new owner (post-audit 7, I3)."
-  #"(?iu)(?<!\p{L})(?:buyers?|purchasers?|acquirers?|acheteur|acheteuse|acquéreur|käufer\p{L}*|kaeufer\p{L}*|erwerber\p{L}*|new owner|neuer eigentümer|nouveau propriétaire|heirs?|erben?|erbin|héritier|héritière)(?!\p{L})")
-
 (defn title-role
   "In an acquisition, `:from` when a role of an actor gave up the title and
    none received it, `:to` the other way round, else nil: one who brokered
    or carried it out, or both, which is not said (I3 review)."
   [role]
   (let [rs    (when role (str/split role #"; "))
-        from? (some #(re-find title-from-roles %) rs)
-        to?   (some #(re-find title-to-roles %) rs)]
+        from? (some #(vocab? :lido/actor-roles % :role/gives-title) rs)
+        to?   (some #(vocab? :lido/actor-roles % :role/receives-title) rs)]
     (cond (and from? (not to?)) :from
           (and to? (not from?)) :to)))
-
-(def ^:private prior-types
-  "LIDO event types of what precedes the object: it was not there."
-  #{"commissioning" "planning"})
-
-(def ^:private prior-labels
-  "Event type terms of what precedes the object, when no URI says it."
-  #{"commissioning" "commission" "commissioned" "auftrag" "beauftragt" "beauftragung" "commande" "commandé"
-    "planning" "planung" "geplant" "planned" "planification"})
 
 (defn- prior-type?
   "True when an event's type names one that precedes the object (its
    commissioning, its planning): the object was not present at it."
   [{:keys [type label]} terms]
-  (boolean (or (prior-types (term-name type))
-               (some #(some-> % str/trim str/lower-case prior-labels) (cons label terms)))))
+  (boolean (some #(vocab? :lido/event-types % :event/prior) (cons type (cons label terms)))))
 
 (defn passive?
   "True when every role of an actor (`;`-joined) is a passive one."
   [role]
-  (boolean (and role (every? #(re-find passive-roles %) (str/split role #"; ")))))
+  (let [cs (rules/vocab-concepts :lido/actor-roles role)]
+    (boolean (and (seq cs) (every? #(contains? % :role/passive) cs)))))
 
 (defn of-production?
   "True when a native read at event key `k` (nil: in no event) is said of the
    object itself: it is in no event, or in one of the `production-keys` `ks`."
   [ks k]
   (or (nil? k) (contains? ks k)))
-
-(def artefact-terms
-  "Work type and classification terms that say an object was made: a
-   painting, a drawing, a print, a sculpture, a vessel… English and French
-   words from their start, German stems anywhere in a compound
-   (\"Ölgemälde\", \"Farbholzschnitt\") (post-audit 5, G4)."
-  #"(?i)(?<!\p{L})(?:paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|installation|sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|manuscript|book|tool|weapon|armou?r|clock|instrument|model|peinture|dessin|estampe|gravure|tableau|objet d'art|affiche|meuble|céramique|tissu|vêtement|monnaie)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|druck|stich|radierung|schnitt|lithographie|lithografie|fotografie|photographie|plakat|abguss|altar|mappe|skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|handschrift|buch|werkzeug|waffe|uhr|instrument|modell)")
-
-(def natural-terms
-  "Work type and classification terms that name a natural object: a fossil, a
-   mineral, a specimen. They veto any artefact term (post-audit 5, G4 review)."
-  #"(?i)fossil|mineral|specimen|spécimen|minéral|naturalia|herbar|präparat|praeparat|gestein|meteorit|(?<!\p{L})(?:rock|shell|sample|skeleton|insect|taxiderm|roche|coquillage|échantillon)|muschel|skelett|insekt|probe(?!\p{L})")
 
 (defn- type-terms [record]
   (keep #(when (and (#{:lido/work-type :lido/classification} (:predicate %)) (string? (:value %))
@@ -842,7 +799,7 @@
 (defn natural?
   "True when a work type or classification of `record` names a natural object."
   [record]
-  (boolean (some #(re-find natural-terms %) (type-terms record))))
+  (boolean (some #(vocab? :lido/object-types % :object/natural) (type-terms record))))
 
 (defn human-made?
   "True when `record` says its object was made: it has a production, which
@@ -857,7 +814,7 @@
   (boolean (or (some #(and (= :lido/event (:predicate %)) (not (model/out-of-force? %)) (= "production" (:kind (fields %))))
                      (:assertions record))
                (and (not (natural? record))
-                    (some #(re-find artefact-terms %) (type-terms record))))))
+                    (some #(vocab? :lido/object-types % :object/artefact) (type-terms record))))))
 
 (defn material-keys
   "The keys of the events of `record` whose materials are the object's: its
@@ -1024,38 +981,16 @@
                      (when (:date f) [(claim ts :crm/P82_at_some_time_within (:date f) a)])
                      (when (:earliest f) [(claim ts :crm/P82a_begin_of_the_begin (:earliest f) a)])
                      (when (:latest f) [(claim ts :crm/P82b_end_of_the_end (:latest f) a)])))
-           (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
-                                 kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
-                                 ag   (model/mint-entity-id kind (if uri uri [(str rid) name]))
-                                 ;; an activity is carried out by its actors, but for
-                                 ;; one who commissioned or paid for it, who took part;
-                                 ;; in an acquisition, who gave up the title and who
-                                 ;; received it did not carry it out (I3)
-                                 {r :role at :attribution q :qualifier} (fields a)
-                                 made  (#{"production" "design"} (:kind f))
-                                 doing (cond (and made (= "maker-role" at))                                  :crm/P14_carried_out_by
-                                             (and made (= "other-role" at))                                  :crm/P11_had_participant
-                                             (and (= "acquisition" (:kind f)) (= :from (title-role r))) :crm/P23_transferred_title_from
-                                             (and (= "acquisition" (:kind f)) (= :to (title-role r)))   :crm/P22_transferred_title_to
-                                             (and activity? (not (passive? r)))                          :crm/P14_carried_out_by
-                                             :else                                                        :crm/P11_had_participant)]
-                             (concat
-                              [(entity ag kind uri) (claim ag :crm/P190_has_symbolic_content name a)]
-                                ;; what the attribution qualifier says of the making (K2):
-                                ;; made after them, or by an unnamed hand related to
-                                ;; them, it was influenced by them; a former
-                                ;; attribution is superseded; an uncertain one, proposed
-                              (case (when made at)
-                                "influence" [(claim e :crm/P15_was_influenced_by (model/reference ag) a)]
-                                "related"   [(claim e :crm/P15_was_influenced_by (model/reference ag) a)
-                                             {:kind :diagnostic
-                                              :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/actor
-                                                               :aspect :relation :value (fields a)
-                                                               :message (str "made by an unnamed hand, \"" q "\" " (pr-str name) ": who made it is not stated, only that it follows " name)})}]
-                                "former"    [(assoc-in (claim e :crm/P14_carried_out_by (model/reference ag) a) [:value :status] :superseded)]
-                                "uncertain" [(propose e :crm/P14_carried_out_by (model/reference ag) a :rule.lido/attributed-maker 0.5)]
-                                [(claim e doing (model/reference ag) a)]))))
-                   (in :lido/actor))
+           ;; who did what in the event is the rules' (palomar.plugins.lido-rules,
+           ;; post-audit 8, K5); the code reports only what they do not say:
+           ;; that an unnamed hand related to an actor made the work
+           (for [a (in :lido/actor)
+                 :let [{:keys [name attribution qualifier]} (fields a)]
+                 :when (and (#{"production" "design"} (:kind f)) (= "related" attribution))]
+             {:kind :diagnostic
+              :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/actor
+                               :aspect :relation :value (fields a)
+                               :message (str "made by an unnamed hand, \"" qualifier "\" " (pr-str name) ": who made it is not stated, only that it follows " name)})})
            ;; a material is what the object consists of only when its
            ;; production used it; a modification employed it; of any other
            ;; event, nothing is said of it (post-audit 5, G1)
@@ -1087,7 +1022,7 @@
      ;; only a human-made thing depicts (P62's domain is E24)
      (if made?
        (concat
-        (mapcat #(typed obj :crm/P62_depicts :crm/E55_Type % (fields %)) (of :lido/subject-concept))
+        ;; a subject concept is the rules': depicted, or what it is about (K5)
         (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
                               kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
                               pe   (model/mint-entity-id kind (or uri [(str rid) name]))]
@@ -1100,7 +1035,10 @@
                            v (model/mint-entity-id :crm/E36_Visual_Item url)]
                        [(entity v :crm/E36_Visual_Item url) (claim obj :crm/P138i_has_representation (model/reference v) a)]))
              (of :lido/resource))
-     (mapcat #(typed obj :crm/P104_is_subject_to :crm/E30_Right % (fields %)) (of :lido/rights-work-type)))))
+     (mapcat #(typed obj :crm/P104_is_subject_to :crm/E30_Right % (fields %)) (of :lido/rights-work-type))
+     ;; who did what in each event, and what a made object shows: rules and
+     ;; vocabularies, data (palomar.plugins.lido-rules, post-audit 8, K5)
+     (mapcat #(rules/apply-rule % record) lido-rules/compiled))))
 
 (def rule
   "The compiled `:infer` projection of a museum object (ADR 0052)."

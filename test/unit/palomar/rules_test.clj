@@ -878,3 +878,32 @@
           m1  (array-map :a "1" :b "2")
           m2  (array-map :b "2" :a "1")]
       (is (= (ids [m2]) (clojure.set/difference (ids [m1 m2]) (ids [m1])))))))
+
+(deftest a-rule-cites-what-it-read
+  (testing "a production carries the evidence of every assertion its match read, and the record it derives from (post-audit 8, K5)"
+    (let [ev  (fn [x] [{:selector {:type :xpath :value x}}])
+          rec {:id :rec/e :kind :test
+               :assertions [(model/assertion {:subject :rec/e :predicate :x/actor :value (model/structured {:name "Rodin"})
+                                              :provenance (model/provenance {:pass :ingest :evidence (ev "/a[1]")})})
+                            (model/assertion {:subject :rec/e :predicate :x/event :value "production"
+                                              :provenance (model/provenance {:pass :ingest :evidence (ev "/e[1]")})})
+                            (model/assertion {:subject :rec/e :predicate :x/other :value "unread"
+                                              :provenance (model/provenance {:pass :ingest :evidence (ev "/o[1]")})})]}
+          [p] (filter #(= :assertion (:kind %))
+                      (produce {:id :r/e :phase :infer :match '[[?r :x/event ?k] [?r :x/actor ?a] (field ?a :name ?n)]
+                                :produce {:construct '[[?r :x/maker ?n {:status :asserted}]]}}
+                               rec))
+          prov (get-in p [:value :provenance])]
+      (is (= #{"/a[1]" "/e[1]"} (set (map #(get-in % [:selector :value]) (:evidence prov)))) "what it read, not what it did not")
+      (is (= [:rec/e] (:derivation prov)))
+      (is (not (contains? (:bindings prov) '?a)) "a structured value is cited by its evidence, not copied into the trace")
+      (is (= "Rodin" (get (:bindings prov) '?n))))))
+
+(deftest a-mint-of-an-iri-names-its-node
+  (testing "(mint kind iri): the entity is the authority's, its :iri that IRI (post-audit 8, K5)"
+    (let [ents (fn [v] (->> (produce {:id :r/i :phase :infer :match '[[?r :x/v ?v]]
+                                      :produce {:construct '[[?r :x/e (mint :x/T ?v)]]}}
+                                     {:id :rec/i :kind :test :assertions [{:subject :rec/i :predicate :x/v :value v}]})
+                            (filter #(= :entity (:kind %))) (map :value)))]
+      (is (= ["http://d-nb.info/gnd/118512374"] (map :iri (ents "http://d-nb.info/gnd/118512374"))))
+      (is (= [nil] (map :iri (ents ":lido/x|1.1|1.1"))) "a local key names no IRI"))))

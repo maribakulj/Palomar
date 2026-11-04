@@ -14,10 +14,12 @@
    records, an asserted relation no rule declares: the fidelity audit reports
    it, and the test suite holds every corpus to none. A new rule, or a rule
    that starts to state a new relation, must say which it is."
-  (:require [palomar.model :as model]))
+  (:require [palomar.model :as model]
+            [palomar.plugins.lido-rules :as lido-rules]))
 
-(def declared
-  "Rule → `{:transcribes #{predicate…} :infers {predicate reason}}`."
+(def ^:private by-code
+  "Rule → `{:transcribes #{predicate…} :infers {predicate reason}}`, for the
+   rules written as code."
   {:rule.lido/project
    {:transcribes #{:crm/P108i_was_produced_by :crm/P24i_changed_ownership_through :crm/P31i_was_modified_by
                    :crm/P2_has_type :crm/P1_is_identified_by :crm/P4_has_time-span :crm/P7_took_place_at
@@ -27,22 +29,12 @@
     :infers
     {:crm/P12i_was_present_at
      "an event of the object that is no production, acquisition, modification or design, nor precedes it (a commissioning, a planning), is one it was present at"
-     :crm/P14_carried_out_by
-     "an actor of an activity whose role is not passive (no commissioner, patron, donor), nor gave or received the title, carried it out"
-     :crm/P11_had_participant
-     "an actor of an event that is no activity, or whose role is passive, took part in it"
-     :crm/P15_was_influenced_by
-     "a production its record says was made after an actor's work (\"after\"), or by an unnamed hand related to the actor (\"follower of\", \"workshop of\"), was influenced by that actor, by the words of the attribution qualifier"
-     :crm/P22_transferred_title_to
-     "an acquisition's actor whose role names a buyer or a new owner, and none who gave the title, received it"
-     :crm/P23_transferred_title_from
-     "an acquisition's actor whose role names a seller, a donor or a former owner, and none who received the title, gave it up"
+     :crm/P62_depicts
+     "a person a made object's record names as its subject (subjectActor) is one it depicts; subject concepts are the rules' (post-audit 8, K5)"
      :crm/P45_consists_of
      "the object consists of its production's materials, and of those of an event of no stated kind that says nothing else (museum-digital's practice)"
      :crm/P50_has_current_keeper
-     "a repository set not typed as a former one names the current keeper"
-     :crm/P62_depicts
-     "a made object's subject concepts are what it depicts: LIDO's subject sets say what a work is about, which for a picture is what it shows"}}
+     "a repository set not typed as a former one names the current keeper"}}
 
    :rule.ead/project
    {:transcribes #{:rico/hasRecordSetType :rico/isOrWasIncludedIn}
@@ -66,6 +58,12 @@
      "the Work is Palomar's, minted from the author's authority (100 $3) and the uniform title (145): the record identifies no Work, it realises one"
      :lrmoo/R4_embodies
      "the record's manifestation embodies the one expression of the Work its 145 names (ADR 0013)"}}})
+
+(def declared
+  "Rule → `{:transcribes #{predicate…} :infers {predicate reason}}`: the
+   rules written as code, declared by hand, and the rules written as data,
+   whose declarations are derived from them (post-audit 8, K5)."
+  (merge by-code (lido-rules/declared)))
 
 (defn- relation? [a]
   (and (= :asserted (:status a))

@@ -156,10 +156,11 @@
         (is (re-find #"tag=\"700\"[^\n]*>Rudier</subfield><subfield code=\"e\">founder<" m))
         (is (re-find #"tag=\"700\"[^\n]*>Musée</subfield><subfield code=\"e\">commissioner<" m))
         (is (not (re-find #"tag=\"100\"[^\n]*>(Rudier|Musée)<" m)))))
-    (testing "in Linked Art the creators carry out the production, each other participant a part of it in its role"
+    (testing "in Linked Art the creators carry out the production, each other who carried it out a part of it in its role; a commissioner, who only took part, is reported (post-audit 8, K5)"
       (let [hmo (first (map json/read-str (str/split-lines (:output (convert/convert {:from :lido :to :linked-art :source xml})))))]
         (is (= #{"Rodin" "Anonyme"} (set (map #(get % "_label") (get-in hmo ["produced_by" "carried_out_by"])))))
-        (is (= #{"Rudier" "Musée"} (set (for [p (get-in hmo ["produced_by" "part"]) a (get p "carried_out_by")] (get a "_label")))))))))
+        (is (= #{"Rudier"} (set (for [p (get-in hmo ["produced_by" "part"]) a (get p "carried_out_by")] (get a "_label")))))
+        (is (empty? (:unaccounted (fidelity/audit {:from :lido :to :linked-art :source xml}))))))))
 
 (deftest a-production-without-a-creator-has-no-main-entry
   (let [m (:output (convert/convert {:from :lido :to :marc21-object :source (production-with ["Rudier" "founder"])}))]
@@ -702,15 +703,20 @@
         (is (not (some (fn [[_ p o]] (and (str/ends-with? (:iri p) "P12i_was_present_at") (str/includes? (str (:iri o)) "E7_Activity"))) ts)) t)
         (doseq [to [:ntriples :linked-art]]
           (is (empty? (:unaccounted (fidelity/audit {:from :lido :to to :source xml}))) (str t " " to))))))
-  (testing "a seller gave the title (P23), a buyer received it (P22): neither carried the acquisition out"
+  (testing "a seller and a buyer took part; that they gave and received the title is proposed"
     (let [xml (str/replace (events-record "painting" ["lido00001" "Dealer" "seller" "1950"])
                            "</lido:eventActor>"
                            (str "</lido:eventActor><lido:eventActor><lido:actorInRole><lido:actor><lido:nameActorSet><lido:appellationValue>Museum</lido:appellationValue></lido:nameActorSet></lido:actor>"
                                 "<lido:roleActor><lido:term>Käufer</lido:term></lido:roleActor></lido:actorInRole></lido:eventActor>"))
-          ps  (triples-of xml)]
-      (is (contains? ps "P23_transferred_title_from"))
-      (is (contains? ps "P22_transferred_title_to"))
-      (is (not (contains? ps "P14_carried_out_by")))
+          ps  (triples-of xml)
+          all (set (for [[_ p _] (nt/parse (:output (convert/convert {:from :lido :to :ntriples :source xml :with-proposals? true})))]
+                     (last (str/split (:iri p) #"/"))))]
+      ;; the role's words do not establish who held the title, and P22/P23
+      ;; imply P14: both took part, the transfer is proposed (post-audit 8, K5)
+      (is (contains? ps "P11_had_participant"))
+      (is (not-any? ps ["P23_transferred_title_from" "P22_transferred_title_to" "P14_carried_out_by"]))
+      (is (contains? all "P23_transferred_title_from"))
+      (is (contains? all "P22_transferred_title_to"))
       (is (empty? (violations xml)))))
   (testing "a role is told by its whole words: an auction house for its client receives nothing; who bequeaths gives"
     (is (nil? (lido/title-role "auction house acting for their client")))

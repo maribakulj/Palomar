@@ -239,8 +239,14 @@
   (let [[r v] @last-view]
     (if (identical? r record)
       v
-      (let [ts (record-triples record)
-            v  {:all ts :by-predicate (group-by second ts)}]
+      ;; an assertion's triple carries its evidence, as a fourth element, so a
+      ;; rule's production cites what its match read (post-audit 8, K5)
+      (let [asr (into [] (comp (remove model/out-of-force?)
+                               (map (fn [a] [(:subject a) (:predicate a) (:value a) (seq (model/evidence-of a))])))
+                      (:assertions record))
+            all (record-triples record)
+            ts  (into (vec (take (- (count all) (count asr)) all)) asr)
+            v   {:all ts :by-predicate (group-by second ts)}]
         (reset! last-view [record v])
         v))))
 
@@ -415,8 +421,9 @@
    of binding maps extending `current-bindings`."
   [current-bindings pattern triples]
   (keep (fn [triple]
-          (let [r (match-pattern-against-triple current-bindings pattern triple)]
-            (when-not (= ::fail r) r)))
+          (let [r (match-pattern-against-triple current-bindings pattern (subvec (vec triple) 0 3))]
+            (when-not (= ::fail r)
+              (if-let [ev (nth triple 3 nil)] (update r ::evidence (fnil into []) ev) r))))
         triples))
 
 (defn- run-guard
@@ -515,6 +522,10 @@
     rule-id (assoc :rule rule-id)
     phase   (assoc :pass phase)))
 
+(def ^:dynamic ^:private *derivation*
+  "The record a rule's run reads, as a production's `:derivation` (K5)."
+  nil)
+
 (defn- merge-provenance
   "Combine the engine's authoritative fields with whatever the rule
    template supplied. Template fields like `:source`, `:derivation` and
@@ -523,8 +534,14 @@
    the rule (variable → value), so each production can be traced back to
    the exact facts that triggered it (audit S27)."
   [template-prov rule-id phase bindings]
-  (cond-> (merge (or template-prov {}) (engine-provenance rule-id phase))
-    (seq bindings) (assoc :bindings bindings)))
+  ;; the evidence of what the match read and the record it read, in place of
+  ;; the structured values it bound, which that evidence cites (K5)
+  (let [ev   (distinct (::evidence bindings))
+        lean (into {} (remove (fn [[k v]] (or (= ::evidence k) (model/structured-value? v)))) bindings)]
+    (cond-> (merge (or template-prov {}) (engine-provenance rule-id phase))
+      (seq lean)    (assoc :bindings lean)
+      (seq ev)      (update :evidence #(vec (distinct (concat % ev))))
+      *derivation*  (update :derivation #(or % *derivation*)))))
 
 (defn- default-status-for-phase
   "Per ADR 0005: assertions produced in :infer or :repair phases are
@@ -619,7 +636,11 @@
             (let [parts (mapv #(if (::mint %) (::mint %) %) vs)]
               (if (every? #(and (string? %) (str/blank? %)) parts)
                 ::unbound
-                {::mint (mint-id kind parts) ::kind kind}))))
+                ;; a mint of one absolute IRI is that authority's node (K5)
+                (cond-> {::mint (mint-id kind parts) ::kind kind}
+                  ;; an absolute IRI, of any scheme (urn:nbn:…), not a local key (K5 review)
+                  (and (= 1 (count parts)) (string? (first parts)) (re-find #"^[A-Za-z][A-Za-z0-9+.-]*:[^\s/|][^\s|]*$|^https?://\S+$" (first parts)))
+                  (assoc ::iri (first parts)))))))
         (let [vs (map #(eval-term bindings %) args)]
           (case op
             or   (or (first (remove #(or (nil? %) (= ::unbound %)) vs)) ::unbound)
@@ -635,7 +656,7 @@
     (seq? t) (throw (ex-info "Unknown construct term" {:term t :supported term-stdlib}))
     :else    t))
 
-(defn- minted [v] (when (map? v) (when-let [id (::mint v)] {:id id :kind (::kind v)})))
+(defn- minted [v] (when (map? v) (when-let [id (::mint v)] (cond-> {:id id :kind (::kind v)} (::iri v) (assoc :iri (::iri v))))))
 
 (defn- run-construct
   "A `:construct` template (ADR 0035) under one binding row: an assertion per
@@ -661,8 +682,8 @@
                      (when-let [e (minted v)] {:mints [e]}))))
         ents   (distinct (mapcat :mints (remove nil? rows)))]
     (concat
-     (for [{:keys [id kind]} ents]
-       {:kind :entity :value (model/entity {:id id :kind kind :provenance prov})})
+     (for [{:keys [id kind iri]} ents]
+       {:kind :entity :value (model/entity (cond-> {:id id :kind kind :provenance prov} iri (assoc :iri iri)))})
      (keep :prod rows))))
 
 (def ^:private action-runners
@@ -826,7 +847,7 @@
     ;; the runner closes over the planned rule (K4 review)
     (assoc rule ::runner
            (fn run [record]
-             (binding [*mints* (volatile! {})]
+             (binding [*mints* (volatile! {}) *derivation* (some-> (:id record) vector)]
                (let [rows (match-clauses (:match rule) record)]
                  (vec (run-produce (:produce rule) rows (:id rule) (:phase rule)))))))))
 
