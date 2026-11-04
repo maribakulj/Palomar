@@ -85,3 +85,8 @@
       (is (= (clojure-version) (:clojure runtime)))
       (is (= {:mvn/version "0.2.0-alpha9"} (get dependencies 'org.clojure/data.xml)))
       (is (every? #(or (:mvn/version %) (:git/sha %) (:local/root %)) (vals dependencies))))))
+
+(deftest an-input-that-is-no-file-is-named-not-fingerprinted
+  (testing "a pipe is read once: the manifest names it and reads it no more (post-audit 8, K6 review)"
+    (is (= {:path "-" :fingerprinted? false}
+           (first (:inputs (manifest/manifest {:from :dc :to :ntriples :inputs [{:path "-" :content nil}]})))))))

@@ -46,3 +46,18 @@ it read the fifteen DCMES elements only.
 - Encoding schemes (`xsi:type="dcterms:W3CDTF"`) are not read. The
   refinements without a floor home (`spatial`, `temporal`, `audience`, …) stay
   losses until the floor grows by its discipline (ADR 0003).
+
+## Amendment (post-audit 8, K6): a record harvested twice
+
+Two records of one id would merge into one.
+- `import-response` reports each record whose id an earlier record of the
+  same response has (`:oai/duplicate-id`, a warning).
+- `import-harvest` imports a harvest's pages lazily, sharing the ids seen
+  across them, so a record two pages carry is reported in the second.
+- The ids are kept as 64-bit digests (`palomar.digest-set`), about 16 bytes
+  each.
+- The warning is a diagnostic of the record: it is in the EDN pivot
+  (`--to edn`) and in the API's result; `validate` reports errors only. `import-harvest` is a function
+  of the API; `convert --from oai` reads one response, so it reports a
+  duplicate within that response only.
+

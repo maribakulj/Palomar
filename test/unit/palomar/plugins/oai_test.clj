@@ -145,3 +145,21 @@
         (is (= {:lit (model/sha256-hex xml 64)} (sha resp))))
       (testing "and the record is derived from its metadata document"
         (is (some #{{:iri doc}} (objects-of ts (str "urn:palomar:oai:" (name (:id r))) (P "wasDerivedFrom"))))))))
+
+(defn- ycba-page
+  "The YCBA fixture response, its first record repeated `n` times."
+  [n]
+  (let [xml (slurp "test/fixtures/documentary/lido/ycba-oai-lido.xml")
+        rec (re-find #"(?s)<record>.*?</record>" xml)]
+    (clojure.string/replace xml #"(?s)<ListRecords>.*</ListRecords>" (java.util.regex.Matcher/quoteReplacement (str "<ListRecords>" (apply str (repeat n rec)) "</ListRecords>")))))
+
+(defn- dup? [r] (some #(= :oai/duplicate-id (:code %)) (:diagnostics r)))
+
+(deftest a-record-harvested-twice-is-reported
+  (testing "two records of one id in a page, or in two pages of one harvest, would merge into one: the second is reported (post-audit 8, K6)"
+    (let [{rs :records} (oai/import-response "lido" (ycba-page 2))]
+      (is (= [false true] (map (comp boolean dup?) rs))))
+    (let [pages (oai/import-harvest "lido" [(ycba-page 1) (ycba-page 1)])]
+      (is (= [[false] [true]] (map #(map (comp boolean dup?) (:records %)) pages))))
+    (testing "two harvests are not one"
+      (is (not-any? dup? (:records (oai/import-response "lido" (ycba-page 1))))))))

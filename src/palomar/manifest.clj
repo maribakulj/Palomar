@@ -97,10 +97,26 @@
 (defn fingerprint
   "`{:sha256 hex :bytes n}` of `content` (a String, a byte array or a File)."
   [content]
-  (let [bytes (cond (bytes? content) content
-                    (instance? java.io.File content) (java.nio.file.Files/readAllBytes (.toPath ^java.io.File content))
-                    :else (.getBytes (str content) "UTF-8"))]
-    {:sha256 (model/sha256-hex bytes 64) :bytes (alength ^bytes bytes)}))
+  (if (instance? java.io.File content)
+    ;; a file is read as a stream, in constant memory: a streamed dump's
+    ;; output may be larger than the heap (post-audit 8, K6)
+    (let [md (java.security.MessageDigest/getInstance "SHA-256")
+          n  (with-open [in (java.security.DigestInputStream. (io/input-stream content) md)]
+               (let [buf (byte-array 65536)]
+                 (loop [n 0] (let [k (.read in buf)] (if (neg? k) n (recur (+ n k)))))))]
+      {:sha256 (.formatHex (java.util.HexFormat/of) (.digest md)) :bytes n})
+    (let [bytes (if (bytes? content) content (.getBytes (str content) "UTF-8"))]
+      {:sha256 (model/sha256-hex bytes 64) :bytes (alength ^bytes bytes)})))
+
+(defn- vocabularies
+  "The vocabularies and lookup tables the rules and the code decide by, each
+   fingerprinted: data now, so part of what a run ran (post-audit 8, K6)."
+  []
+  (when-let [root (io/resource "palomar/vocab")]
+    (when (= "file" (.getProtocol root))
+      (vec (for [f (sort-by str (file-seq (io/file root))) :when (.isFile ^java.io.File f)]
+             (assoc (fingerprint f) :path (str "palomar/vocab/" (str/replace (str (.relativize (.toPath (io/file root)) (.toPath ^java.io.File f)))
+                                                                             java.io.File/separator "/"))))))))
 
 (defn- plugin-entry [plugin]
   (cond-> {:id           (:id plugin)
@@ -128,10 +144,16 @@
              :to               to
              :plugins          (mapv plugin-entry (keep identity [(spokes/plugin from) canonical/plugin]))
              :ontologies       (vec onto)
-             :inputs           (mapv #(assoc (fingerprint (:content %)) :path (:path %)) inputs)
+             ;; an input that is no regular file (a pipe, stdin) is read but
+             ;; once: it is named, not fingerprinted (post-audit 8, K6 review)
+             :inputs           (mapv #(if (some? (:content %))
+                                        (assoc (fingerprint (:content %)) :path (:path %))
+                                        {:path (:path %) :fingerprinted? false})
+                                     inputs)
              :outputs          (mapv #(assoc (fingerprint (:content %)) :path (:path %)) outputs)
              :options          (or opts {})}
       (seq rules)  (assoc :rules (vec (sort rules)))
+      (seq (vocabularies)) (assoc :vocabularies (vocabularies))
       loss         (assoc :loss (loss-summary loss))
       started-at   (assoc :started-at started-at)
       finished-at  (assoc :finished-at finished-at)

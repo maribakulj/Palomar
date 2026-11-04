@@ -143,18 +143,24 @@
          " — is --from " from " correct for this file?")
     ""))
 
+(defn- manifest-edn
+  "The run manifest of a `convert` (ADR 0030), as EDN. An input that is no
+   regular file (a pipe) is not read again (post-audit 8, K6 review)."
+  [{:keys [from to input out result opts started-at]}]
+  (manifest/->edn
+   (manifest/manifest {:from        from
+                       :to          to
+                       :opts        opts
+                       :inputs      [{:path input :content (let [f (io/file input)] (when (.isFile f) f))}]
+                       :outputs     [{:path (or out "-") :content (:output result)}]
+                       :loss        (:loss result)
+                       :started-at  started-at
+                       :finished-at (java.util.Date.)})))
+
 (defn- write-manifest!
   "Write the run manifest of a `convert` (ADR 0030) to `path`."
-  [path {:keys [from to input out result opts started-at]}]
-  (spit path (manifest/->edn
-              (manifest/manifest {:from        from
-                                  :to          to
-                                  :opts        opts
-                                  :inputs      [{:path input :content (io/file input)}]
-                                  :outputs     [{:path (or out "-") :content (:output result)}]
-                                  :loss        (:loss result)
-                                  :started-at  started-at
-                                  :finished-at (java.util.Date.)}))))
+  [path run]
+  (spit path (manifest-edn run)))
 
 (defn- invalid-note
   "The report's line on the records that are not valid, or nil (post-audit 6, H3)."
@@ -338,7 +344,9 @@
           opts  (cond-> {} record-id (assoc :record-id (->record-id record-id)))
           sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest input))
           outf  (.getAbsoluteFile (java.io.File. ^String out))
-          tmp   (atom nil)]
+          started (java.util.Date.)
+          tmp   (atom nil)
+          mtmp  (atom nil)]
       (try
         (reset! tmp (java.io.File/createTempFile "palomar-stream-" ".part" (.getParentFile outf)))
         (let [[open close] (convert/collection (keyword to))
@@ -357,7 +365,19 @@
                                (fn [doc] (.write w doc) (.write w "\n")))]
                       (when close (.write w close) (.write w "\n"))
                       res))]
-          (if (replace-file! @tmp outf)
+          ;; the run manifest, as batch writes it: the output is the file
+          ;; written, fingerprinted as it is read (post-audit 8, K6). It is
+          ;; written beside its path first, so a manifest that cannot be
+          ;; written leaves --out as it was (K6 review)
+          (when-let [mpath (get flags "manifest")]
+            (reset! mtmp (java.io.File/createTempFile "palomar-manifest-" ".part"
+                                                      (.getParentFile (.getAbsoluteFile (io/file mpath)))))
+            (spit @mtmp (manifest-edn {:from fromk :to (keyword to) :input input :out out
+                                       :result (assoc res :output @tmp) :started-at started
+                                       :opts (cond-> (assoc opts :stream? true)
+                                               (get flags "with-proposals") (assoc :with-proposals? true))})))
+          (if (and (replace-file! @tmp outf)
+                   (or (nil? @mtmp) (replace-file! @mtmp (.getAbsoluteFile (io/file (get flags "manifest"))))))
             {:exit 0 :out ""
              :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")
                         " streamed (bounded memory)\n"
@@ -365,13 +385,14 @@
                         (invalid-note (:invalid res))
                         (when-not sha "\nnote: the input is no regular file (a pipe): it is read once, so no record names its document by a digest\n")
                         (zero-records-note (:records res) from input))}
-            {:exit 2 :out "" :err (str "error: could not move streamed output to " out)}))
+            {:exit 2 :out "" :err (str "error: could not move streamed output to " out
+                                       (when @mtmp (str " or its manifest to " (get flags "manifest"))))}))
         (catch clojure.lang.ExceptionInfo e
           (refused-or-error e))
         (catch Exception e
           {:exit 2 :out "" :err (str "error: " (.getMessage e))})
         (finally
-          (when-let [t @tmp] (when (.exists t) (.delete t))))))))
+          (doseq [t [@tmp @mtmp] :when (and t (.exists ^java.io.File t))] (.delete ^java.io.File t)))))))
 
 (defn- jsonable
   "Render a value as JSON-safe data for the loss report: every keyword — whether a

@@ -6,7 +6,8 @@
             [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [palomar.cli :as cli]))
+            [palomar.cli :as cli]
+            [palomar.manifest :as manifest]))
 
 (def ^:private marc21 "test/fixtures/documentary/marc21/marcxml/loc_collection.xml")
 (def ^:private dc "test/fixtures/documentary/dublin-core/w3c_dc_example1.xml")
@@ -452,3 +453,29 @@
           (is (clojure.string/includes? err "no record names its document"))
           (is (pos? (count (slurp out))))))
       (run! #(.delete ^java.io.File %) (reverse (file-seq dir))))))
+
+(deftest a-streamed-conversion-writes-its-manifest
+  (testing "convert --stream --manifest writes the run manifest, its output fingerprinted, and the vocabularies the run read (post-audit 8, K6)"
+    (let [f   "test/fixtures/documentary/lido/staedel-lido-wrap.xml"
+          out (java.io.File/createTempFile "palomar-stream-" ".nt")
+          man (java.io.File/createTempFile "palomar-manifest-" ".edn")]
+      (.delete out) (.delete man)
+      (let [{:keys [exit err]} (cli/run ["convert" f "--from" "lido" "--to" "ntriples" "--stream" "--out" (str out) "--manifest" (str man)])]
+        (is (= 0 exit) err)
+        (is (.exists man) "the manifest is written")
+        (let [m (clojure.edn/read-string (slurp man))]
+          (is (= (:sha256 (manifest/fingerprint (slurp out))) (get-in m [:outputs 0 :sha256])) "the output as written")
+          (is (true? (get-in m [:options :stream?])))
+          (is (some #(clojure.string/ends-with? (:path %) "attribution-qualifiers.edn") (:vocabularies m)) "the vocabularies, fingerprinted")))
+      (.delete out) (.delete man))))
+
+(deftest a-manifest-that-cannot-be-written-leaves-the-output-as-it-was
+  (testing "a streamed --manifest into no directory fails before --out is replaced (post-audit 8, K6 review)"
+    (let [f   "test/fixtures/documentary/lido/staedel-lido-wrap.xml"
+          out (java.io.File/createTempFile "palomar-stream-" ".nt")]
+      (spit out "before")
+      (let [{:keys [exit]} (cli/run ["convert" f "--from" "lido" "--to" "ntriples" "--stream" "--out" (str out)
+                                     "--manifest" "/nonexistent-palomar-dir/m.edn"])]
+        (is (= 2 exit))
+        (is (= "before" (slurp out)) "--out untouched"))
+      (.delete out))))
