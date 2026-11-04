@@ -246,6 +246,8 @@
      (cov/unwritten-fields record
                            {:lido/actor #{:name :uri :role :birth :death}
                             :lido/event #{:date}
+                            ;; a 650 has no place for what kind of subject it is
+                            :lido/subject-concept #{:uri :label}
                             :lido/title-name #{:content}}
                            "in the MARC21 object profile")
      (for [a (in-force record :lido/materials)

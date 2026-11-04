@@ -9,5 +9,9 @@ is not covered by the above. All of it lives under test/fixtures/, and each
 directory's README.md names the source and the licence it carries — among them
 BnF open data (Licence Ouverte / Etalab), the BIB-R benchmark gold (CC BY-NC,
 non-commercial evaluation only), OpenLibrary data (CC0), Library of Congress
-MARC crosswalk stylesheets (US Government work, public domain) and the Linked
-Art JSON schemas (Apache-2.0).
+MARC crosswalk stylesheets (US Government work, public domain), the Linked
+Art JSON schemas (Apache-2.0), and five records of the Yale Center for British
+Art (Data Source: Yale Center for British Art, under the Center's Open Data
+and Data Services Terms of Use,
+https://britishart.yale.edu/open-data-and-data-services-terms-use; Collections
+Data Sharing, https://britishart.yale.edu/collections-data-sharing).

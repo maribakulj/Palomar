@@ -715,3 +715,48 @@
     (is (= :from (lido/title-role "Vererber")))
     (is (= :from (lido/title-role "Verkäufer; Auktionator")) "a seller who also auctioned gave the title")
     (is (nil? (lido/title-role "Verkäufer; Käufer")) "both: which is not said")))
+
+(def ^:private ycba
+  "Five records of the Yale Center for British Art (Data Source: Yale Center
+   for British Art), which give authority ids by source and code."
+  "test/fixtures/documentary/lido/ycba-oai-lido.xml")
+
+(deftest an-id-given-by-its-source-and-code-is-an-iri
+  (testing "`lido:source` AAT and `300033618` is http://vocab.getty.edu/aat/300033618; ULAN, TGN likewise (post-audit 8, K1)"
+    (let [xml (slurp ycba)
+          nt  (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :ntriples :source xml}))
+          la  (map json/read-str (remove str/blank? (str/split-lines (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :linked-art :source xml})))))
+          hmo (filter #(= "HumanMadeObject" (get % "type")) la)]
+      (is (str/includes? nt "<http://vocab.getty.edu/aat/300033618>") "the work type painting")
+      (is (= 5 (count hmo)))
+      (is (every? #(some (fn [t] (= "http://vocab.getty.edu/aat/300033618" (get t "id"))) (get % "classified_as"))
+                  (filter #(re-find #"(?i)painting" (str (get % "classified_as") (get % "_label"))) hmo))
+          "a painting is classified as one")
+      (is (every? #(seq (get % "made_of")) hmo) "its materials")
+      (is (every? #(some (fn [g] (= "http://vocab.getty.edu/ulan/500303557" (get g "id"))) (get % "current_custodian")) hmo)
+          "its custodian, the YCBA by its ULAN id")
+      (is (not (str/includes? nt "ycba_term_")) "a local id of no known source is no IRI")
+      (testing "a venue's name authority is the institution's, not a place: no node is both (K1 review)"
+        (let [types (reduce (fn [m [s p o]] (if (str/ends-with? (:iri p) "#type") (update m (:iri s) (fnil conj #{}) (:iri o)) m)) {} (nt/parse nt))]
+          (is (empty? (filter (fn [[_ ts]] (and (some #(str/ends-with? % "E53_Place") ts) (some #(str/ends-with? % "E74_Group") ts))) types)))))
+      (testing "the keeper's id given by source and code is not reported as no IRI, it is written"
+        (is (not-any? #(re-find #"keeper's id .* is no IRI" (str (get-in % [:detail :message]) (:message %)))
+                      (:loss (convert/export-records :linked-art (:records (convert/to-wemi :oai {:metadata-prefix "lido"} xml)))))))
+      (testing "and every value of these records is written or reported, whatever the target"
+        (doseq [to [:ntriples :linked-art :dc :marc21-object :crm]]
+          (is (empty? (:unaccounted (fidelity/audit {:from :oai :opts {:metadata-prefix "lido"} :to to :source xml}))) (str to)))))))
+
+(deftest an-unknown-source-or-a-code-of-the-wrong-form-is-no-iri
+  (let [rec (fn [src code] (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>K-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                                "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:conceptID lido:source=\"" src "\">" code "</lido:conceptID>"
+                                "<lido:term>painting</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                                "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap></lido:objectIdentificationWrap>"
+                                "</lido:descriptiveMetadata></lido:lido>"))
+        nt  #(:output (convert/convert {:from :lido :to :ntriples :source %}))]
+    (is (str/includes? (nt (rec "aat" "300033618")) "aat/300033618") "the source in any case")
+    (is (str/includes? (nt (rec "http://vocab.getty.edu/aat" "300033618")) "aat/300033618") "or as its URI")
+    (is (not (str/includes? (nt (rec "AAT" "painting")) "vocab.getty.edu")) "an AAT id is a number")
+    (is (str/includes? (nt (rec "GND" "4113779-6")) "d-nb.info/gnd/4113779-6"))
+    (is (str/includes? (nt (rec "GND" "118540238")) "d-nb.info/gnd/118540238"))
+    (is (not (str/includes? (nt (rec "GND" "12")) "d-nb.info")) "a GND id has its form")
+    (is (not (str/includes? (nt (rec "Museum X" "4711")) "4711>")) "an unknown source names no IRI")))

@@ -35,6 +35,8 @@
    production, dimensions, types, keeper and owner, subjects and images)."
   (:require [clojure.data.xml :as xml]
             [clojure.data.xml.tree :as xml-tree]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.digest-set :as digest-set]
@@ -70,14 +72,48 @@
 
 (defn- lang [[el]] (some (fn [[k v]] (when (= "lang" (name k)) v)) (:attrs el)))
 
+(def ^:private id-schemes
+  "The authority sources a record may name an id by, with its code
+   (`resources/palomar/vocab/lido/id-sources.edn`): source name or URI →
+   `{:prefix :code}` (post-audit 8, K1)."
+  (delay
+    (let [{:keys [schemes]} (edn/read-string (slurp (io/resource "palomar/vocab/lido/id-sources.edn")))]
+      (into {} (for [{:keys [names uris prefix code]} schemes
+                     k (concat names (map str/lower-case uris))]
+                 [k {:prefix prefix :code (re-pattern code)}])))))
+
+(defn- id-iri
+  "The IRI an id element names: its text when that is an IRI, else, given by
+   its `lido:source` and a code of that source's form, the source's IRI for
+   it (`AAT` and `300033618`: `http://vocab.getty.edu/aat/300033618`); nil
+   for a local id or an unknown source."
+  [n]
+  (when-let [v (text n)]
+    (if (nil? (nt/iri-problem v))
+      v
+      (let [src (some-> (attr n "source") str/trim str/lower-case (str/replace #"/+$" ""))
+            {:keys [prefix code]} (get @id-schemes src)]
+        (when (and prefix (re-find code v)) (str prefix v))))))
+
+(defn- named-in
+  "Every element named `nm` under `node`, at any depth, as `[el nil]`."
+  [[el] nm]
+  (for [e (tree-seq map? :content el) :when (and (map? e) (= nm (local (:tag e))))] [e nil]))
+
+(defn- agent-iri?
+  "True when IRI `v` names an agent: a ULAN id (persons and corporate
+   bodies), or an id the record gives an actor."
+  [actor-iris v]
+  (boolean (or (str/starts-with? v "http://vocab.getty.edu/ulan/") (contains? actor-iris v))))
+
 (defn- concept
   "The concept of a LIDO concept element (`objectWorkType`, `roleActor`…):
    `{:uri :label}`, its preferred URI `conceptID` and its English term, else
    its first."
   [node]
   (let [ids   (descend node "conceptID")
-        uri   (or (some #(let [v (text %)] (when (and v (= "preferred" (attr % "pref")) (nil? (nt/iri-problem v))) v)) ids)
-                  (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) ids))
+        uri   (or (some #(when (= "preferred" (attr % "pref")) (id-iri %)) ids)
+                  (some id-iri ids))
         terms (descend node "term")
         label (or (some #(when (= "en" (lang %)) (text %)) terms) (some text terms))]
     (when (or uri label) (cond-> {} uri (assoc :uri uri) label (assoc :label label)))))
@@ -271,6 +307,7 @@
   [node]
   (let [dm      (kid node "descriptiveMetadata")
         am      (kid node "administrativeMetadata")
+        actor-iris (set (keep id-iri (named-in node "actorID")))
         ident   (some-> dm (kid "objectIdentificationWrap"))
         strings (fn [p nodes] (keep #(when-let [t (text %)] [p t (second %)]) nodes))
         ;; a concept's terms, and its identifiers (`p`-id), each as read
@@ -310,7 +347,7 @@
            ;; each keeper with its own id, set by set
            (for [r repos
                  :let [nm (some-> (first (descend r "repositoryName" "legalBodyName" "appellationValue")) text)
-                       id (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (descend r "repositoryName" "legalBodyID"))]
+                       id (some id-iri (descend r "repositoryName" "legalBodyID"))]
                  :when nm]
              ;; a repository set may be a former one (`lido:type`, LIDO's
              ;; "current" or "former"): it is no current keeper (post-audit 7, I3)
@@ -358,8 +395,13 @@
                                              (descend ev "eventDate" "date" "latestDate")))
            (strings :lido/event-place (concat (descend ev "eventPlace" "displayPlace")
                                               (descend ev "eventPlace" "place" "namePlaceSet" "appellationValue")))
-           (for [p (descend ev "eventPlace" "place") :let [c (some-> (kid p "placeID") text)] :when c]
-             [:lido/event-place-id c (second (kid p "placeID"))])
+           ;; the first of its ids that names a place's IRI: a local one names
+           ;; none, nor does an agent's, a venue's institution (K1 review)
+           (for [p (descend ev "eventPlace" "place")
+                 :let [ids (kids p "placeID")
+                       i   (first (filter #(when-let [v (id-iri %)] (not (agent-iri? actor-iris v))) ids))]
+                 :when i]
+             [:lido/event-place-id (id-iri i) (second i)])
            (strings :lido/event-description (descend ev "eventDescriptionSet" "descriptiveNoteValue"))
            (strings :lido/materials (descend ev "eventMaterialsTech" "displayMaterialsTech"))
            (mapcat (fn [m] (concat (terms :lido/material-term m)
@@ -375,7 +417,7 @@
                       (for [[ai air] (map-indexed vector (kids ea "actorInRole"))
                             :let [a     (kid air "actor")
                                   names (when a (descend a "nameActorSet" "appellationValue"))
-                                  id    (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (when a (kids a "actorID")))
+                                  id    (some id-iri (when a (kids a "actorID")))
                                   ;; every role it has, not only the first
                                   roles  (keep concept (kids air "roleActor"))
                                   rterms (keep text (descend air "roleActor" "term"))
@@ -427,7 +469,7 @@
      (mapcat (fn [sa]
                (let [a  (kid sa "actor")
                      nm (some-> a (descend "nameActorSet" "appellationValue") first text)
-                     id (some #(let [v (text %)] (when (and v (nil? (nt/iri-problem v))) v)) (when a (kids a "actorID")))]
+                     id (some id-iri (when a (kids a "actorID")))]
                  (concat (strings :lido/subject-actor-display (kids sa "displayActor"))
                          (strings :lido/subject-actor (when a (descend a "nameActorSet" "appellationValue")))
                          (strings :lido/subject-actor-id (when a (kids a "actorID")))
