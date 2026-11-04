@@ -294,8 +294,10 @@
       (is (empty? (remove (fn [[nm t]] (or (vals t) (lost (keyword "lido" nm)))) texts)))
       (testing "an inventor and engraver is a creator, with both roles; so is each of two draughtsmen"
         (is (some #(and (= "Dürer, Albrecht" (:name %)) (= "inventor; engraver" (:role %)) (= "creator" (:responsibility %))) actors))
-        (is (= #{"Anonym" "Rodin, Auguste" "Roche, Odilon"}
-               (set (keep #(when (and (= "draughtsman" (:role %)) (= "creator" (:responsibility %))) (:name %)) actors)))))
+        (is (= #{"Anonym" "Roche, Odilon"}
+               (set (keep #(when (and (= "draughtsman" (:role %)) (= "creator" (:responsibility %))) (:name %)) actors))))
+        (is (some #(and (= "Rodin, Auguste" (:name %)) (= "fraglich" (:qualifier %)) (= "uncertain" (:attribution %))) actors)
+            "a doubtful (fraglich) attribution is no stated creator (post-audit 8, K2)"))
       (doseq [to [:linked-art :ntriples :crm :dc :marc21-object]]
         (is (empty? (:unaccounted (fidelity/audit {:from :oai :opts {:metadata-prefix "lido"} :to to :source xml}))) (str to))))))
 
@@ -760,3 +762,66 @@
     (is (str/includes? (nt (rec "GND" "118540238")) "d-nb.info/gnd/118540238"))
     (is (not (str/includes? (nt (rec "GND" "12")) "d-nb.info")) "a GND id has its form")
     (is (not (str/includes? (nt (rec "Museum X" "4711")) "4711>")) "an unknown source names no IRI")))
+
+(defn- doings-by-name
+  "`{name #{predicate…}}`: what each named actor is linked to its events by, in N-Triples `nt`."
+  [nt]
+  (let [ts    (nt/parse nt)
+        lit   (into {} (keep (fn [[s p o]] (when (str/ends-with? (:iri p) "P190_has_symbolic_content") [(:iri s) (:lit o)])) ts))
+        app   (into {} (keep (fn [[s p o]] (when (str/ends-with? (:iri p) "P1_is_identified_by") [(:iri s) (:iri o)])) ts))
+        named (fn [iri] (or (lit iri) (lit (app iri))))
+        ps    #{"P14_carried_out_by" "P11_had_participant" "P15_was_influenced_by"}]
+    (reduce (fn [m [_ p o]] (let [k (last (str/split (:iri p) #"/"))]
+                              (if (and (ps k) (named (:iri o))) (update m (named (:iri o)) (fnil conj #{}) k) m)))
+            {} ts)))
+
+(deftest an-attribution-qualifier-says-who-made-it
+  (testing "after, follower of, formerly: never the maker; print made by: the maker; text by, published by: took part (post-audit 8, K2)"
+    (let [xml (slurp ycba)
+          conv #(:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to % :source xml}))
+          by   (doings-by-name (conv :ntriples))
+          dc   (conv :dc)
+          creators (set (map second (re-seq #"<dc:creator>([^<]*)</dc:creator>" dc)))]
+      (is (= #{"P15_was_influenced_by"} (by "Thomas Phillips")) "a print after Phillips was influenced by him")
+      (is (= #{"P14_carried_out_by"} (by "Luigi Schiavonetti")) "who made the print carried it out")
+      (is (= #{"P11_had_participant"} (by "Robert Blair")) "the text's author took part")
+      (is (= #{"P11_had_participant"} (by "Robert Hartley Cromek")) "the publisher took part")
+      (is (= #{"P15_was_influenced_by"} (by "John Varley I")) "a follower's work was influenced by Varley, not made by him")
+      (is (nil? (by "Constable, John, 1776-1837")) "a former attribution is stated nowhere as a fact")
+      (is (some #(str/includes? % "Schiavonetti") creators))
+      (is (not-any? #(re-find #"Phillips|Varley|Constable, John|Blair|Cromek" %) creators) "only the maker is a creator")
+      (let [la   (map json/read-str (remove str/blank? (str/split-lines (conv :linked-art))))
+            prod (some #(when (re-find #"Schiavonetti" (json/write-str (get % "produced_by"))) (get % "produced_by")) la)]
+        (is (re-find #"Phillips" (json/write-str (get prod "influenced_by"))) "Linked Art: influenced_by")
+        (is (not (re-find #"Phillips" (json/write-str (get prod "carried_out_by"))))))
+      (testing "the former attribution is kept in the history, superseded"
+        (is (str/includes? (conv :prov) "superseded")))
+      (testing "MARC: only the maker is a main or added creator; the one a print is after says so"
+        (let [marc (conv :marc21-object)]
+          (is (re-find #"tag=\"100\"[^>]*>\s*<subfield code=\"a\">Luigi Schiavonetti" marc))
+          (is (re-find #"<subfield code=\"a\">Thomas Phillips</subfield>(?:\s*<subfield code=\"[d0]\">[^<]*</subfield>)*\s*<subfield code=\"e\">after</subfield>" marc))))
+      (doseq [to [:ntriples :linked-art :dc :marc21-object]]
+        (is (empty? (:unaccounted (fidelity/audit {:from :oai :opts {:metadata-prefix "lido"} :to to :source xml}))) (str to)))))
+  (testing "the qualifiers of CDWA and their German and French counterparts (K2 review)"
+    (doseq [[q at] [["copy after" :influence] ["Kopie nach" :influence] ["after (?)" :influence] ["possibly after" :influence]
+                    ["engraved after" :influence] ["nach dem Original von" :influence] ["copyist of" :influence] ["d'après" :influence]
+                    ["studio" :related] ["workshop" :related] ["assistant to" :related] ["atelier of" :related] ["student of" :related]
+                    ["Umfeld" :related] ["Kreis um" :related] ["Richtung des" :related] ["Werkstattkopie" :related] ["suiveur de" :related]
+                    ["formerly attributed to" :former] ["previously attributed to" :former] ["attributed to workshop of" :related]
+                    ["attributed to" :uncertain] ["zugeschrieben" :uncertain] ["?" :uncertain]
+                    ["Print made by" :maker-role] ["Published by" :other-role]
+                    ["gesichert" nil] ["nach schriftlicher Mitteilung" nil] ["previously unknown" nil] ["secure attribution" nil]]]
+      (is (= at (lido/attribution q)) q)))
+  (testing "a maker's qualifier outweighs a passive role in every target"
+    (let [xml (str/replace (events-record "print" ["lido00007" "Engraver" "commissioner" "1800"])
+                           "</lido:actor>" "</lido:actor><lido:attributionQualifierActor>Print made by</lido:attributionQualifierActor>")]
+      (is (= #{"P14_carried_out_by"} (get (doings-by-name (:output (convert/convert {:from :lido :to :ntriples :source xml}))) "Engraver")))
+      (is (str/includes? (:output (convert/convert {:from :lido :to :dc :source xml})) "<dc:creator>Engraver"))))
+  (testing "attributed to: the maker is proposed, not stated"
+    (let [xml (str/replace (events-record "painting" ["lido00007" "Rembrandt" nil "1650"])
+                           "</lido:actor>" "</lido:actor><lido:attributionQualifierActor>attributed to</lido:attributionQualifierActor>")
+          facts (:output (convert/convert {:from :lido :to :ntriples :source xml}))
+          all   (:output (convert/convert {:from :lido :to :ntriples :source xml :with-proposals? true}))]
+      (is (nil? (get (doings-by-name facts) "Rembrandt")))
+      (is (= #{"P14_carried_out_by"} (get (doings-by-name all) "Rembrandt")))
+      (is (not (str/includes? (:output (convert/convert {:from :lido :to :dc :source xml})) "<dc:creator>Rembrandt"))))))

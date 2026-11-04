@@ -91,9 +91,33 @@
 (def ^:private gives   '(vocab-some? :lido/actor-roles ?role :role/gives-title))
 (def ^:private gets    '(vocab-some? :lido/actor-roles ?role :role/receives-title))
 
+(def ^:private attributed
+  "What an attribution qualifier says an actor of a making did (post-audit 8,
+   K2): influenced it, was formerly held to have made it, may have made it,
+   or took part."
+  [["after"     "influence"  [[:crm/P15_was_influenced_by :asserted]]]
+   ["follower"  "related"    [[:crm/P15_was_influenced_by :asserted]]]
+   ["former"    "former"     [[:crm/P14_carried_out_by :superseded]]]
+   ["uncertain" "uncertain"  [[:crm/P14_carried_out_by :proposed]]]
+   ["took-part" "other-role" [[:crm/P11_had_participant :asserted]]]
+   ["maker"     "maker-role" [[:crm/P14_carried_out_by :asserted]]]])
+
+(def ^:private unqualified
+  "No attribution qualifier says what an actor did: its roles do."
+  (list 'not '(field ?a :attribution ?att) (list 'in? '?att (mapv second attributed))))
+
+(declare doings*)
+
 (defn- doings
   "What an actor of an event of class `activity?` and kind `k` did:
    `[label match [[predicate status]…]]`."
+  [activity? k]
+  (if (#{"production" "design"} k)
+    (concat (for [[label at claims] attributed] [label [(list 'field '?a :attribution at)] claims])
+            (for [[label match claims] (doings* activity? k)] [label (cons unqualified match) claims]))
+    (doings* activity? k)))
+
+(defn- doings*
   [activity? k]
   (let [role '(field ?a :role ?role)]
     (if-not activity?

@@ -150,12 +150,14 @@
         creators (filter #(= "creator" (:responsibility %)) in-prod)
         others   (remove #(= "creator" (:responsibility %)) in-prod)
         titles  (distinct (strings record :lido/title))
-        name-f  (fn [main? {:keys [name uri type role birth death]}]
+        name-f  (fn [main? {:keys [name uri type role birth death qualifier attribution]}]
                   (let [group? (lido/group-types type)
                         tag    (if group? (if main? "110" "710") (if main? "100" "700"))]
                     (datafield tag (if group? "2" "1") " "
                                (concat [["a" name] ["d" (when (or birth death) (str birth "-" death))]]
-                                       ;; each role its own $e
+                                       ;; what its attribution says first ("after",
+                                       ;; "formerly"), then each role its own $e (K2)
+                                       (when (#{"influence" "related" "former" "uncertain"} attribution) [["e" qualifier]])
                                        (for [r (when role (str/split role #"; "))] ["e" r])
                                        [["0" uri]]))))
         ;; #7 says the source is in $2: only for a vocabulary MARC has a code

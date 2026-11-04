@@ -221,6 +221,34 @@
     "http://vocab.getty.edu/aat/300025181" "http://vocab.getty.edu/aat/300025687"
     "http://d-nb.info/gnd/4037215-7"})
 
+(declare creator?)
+
+(def ^:private attribution-order
+  [:attribution/former :attribution/related :attribution/influence :attribution/uncertain
+   :attribution/maker-role :attribution/other-role])
+
+(defn attribution
+  "What an attribution qualifier (`attributionQualifierActor`) says of who
+   made the work, by `resources/palomar/vocab/lido/attribution-qualifiers.edn`:
+   `:former`, `:related` (an unnamed hand related to the actor), `:influence`
+   (made after the actor's work), `:uncertain`, `:maker-role`, `:other-role`,
+   or nil when it says none of these (post-audit 8, K2)."
+  [qualifier]
+  (when-let [q (some-> qualifier str/trim not-empty)]
+    (let [cs (reduce into #{} (rules/vocab-concepts :lido/attribution-qualifiers q))]
+      (some-> (some cs attribution-order) name keyword))))
+
+(defn- maker?
+  "True when an actor of a production, in role `terms` and `uris`, with
+   attribution qualifier `q`, made the object: a qualifier that says another
+   made it, or that the actor only took part, outweighs the roles; one that
+   names the maker's role is one (post-audit 8, K2)."
+  [terms uris q]
+  (case (attribution q)
+    (:former :related :influence :uncertain :other-role) false
+    :maker-role true
+    (creator? terms uris)))
+
 (defn creator?
   "True when an actor of a production, in role `terms` (the terms of all its
    roles, in every language) and role URIs `uris`, created the object
@@ -423,17 +451,24 @@
                                   rterms (keep text (descend air "roleActor" "term"))
                                   ruris  (keep :uri roles)
                                   vd    (fn [nm] (some-> a (kid "vitalDatesActor") (kid nm) text))
-                                  nm    (some text names)]
+                                  nm    (some text names)
+                                  ;; what its attribution says of who made it (K2)
+                                  q     (some text (kids air "attributionQualifierActor"))
+                                  at    (attribution q)]
                             :when nm]
                         ;; its position in the event: an actor is this occurrence, and
                         ;; two of one name are two until an authority says otherwise
                         ;; (post-audit 8)
                         [:lido/actor (model/structured (cond-> {:event n :name nm :position (str (inc ei) "." (inc ai))
                                                                 :type (or (term-name (attr a "type")) "")
-                                                                :responsibility (if (and (#{:production :design} kind) (creator? rterms ruris))
+                                                                :responsibility (if (and (#{:production :design} kind) (maker? rterms ruris q))
                                                                                   "creator" "participant")}
                                                          id (assoc :uri id)
+                                                         q  (assoc :qualifier q)
+                                                         at (assoc :attribution (name at))
                                                          (seq (keep :label roles)) (assoc :role (str/join "; " (keep :label roles)))
+                                                         ;; a qualifier that is a role stands for one none states
+                                                         (and (empty? (keep :label roles)) (#{:maker-role :other-role} at)) (assoc :role q)
                                                          (seq ruris) (assoc :role-uri (first ruris))
                                                          (vd "earliestDate") (assoc :birth (vd "earliestDate"))
                                                          (vd "latestDate") (assoc :death (vd "latestDate"))))
@@ -447,8 +482,9 @@
                                           (mapcat #(terms :lido/actor-role %) (kids air "roleActor"))
                                           ;; a production's actor in a creator's role (or in none
                                           ;; stated) is the object's creator; any other took part
-                                          (when (and (#{:production :design} kind) (creator? (keep text (descend air "roleActor" "term"))
-                                                                                             (keep #(:uri (concept %)) (kids air "roleActor"))))
+                                          (when (and (#{:production :design} kind) (maker? (keep text (descend air "roleActor" "term"))
+                                                                                           (keep #(:uri (concept %)) (kids air "roleActor"))
+                                                                                           (some text (kids air "attributionQualifierActor"))))
                                             (strings :lido/creator (take 1 (when a (descend a "nameActorSet" "appellationValue"))))))))
                               (kids ea "actorInRole"))))
                    (kids ev "eventActor")))
@@ -985,18 +1021,35 @@
                      (when (:latest f) [(claim ts :crm/P82b_end_of_the_end (:latest f) a)])))
            (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
                                  kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
-                                 ag   (model/mint-entity-id kind (if uri uri [(str rid) name]))]
-                             ;; an activity is carried out by its actors, but for
-                             ;; one who commissioned or paid for it, who took part
-                             ;; in an acquisition, who gave up the title and
-                                             ;; who received it did not carry it out (I3)
-                             [(entity ag kind uri) (claim e (let [r (:role (fields a))]
-                                                              (cond (and (= "acquisition" (:kind f)) (= :from (title-role r))) :crm/P23_transferred_title_from
-                                                                    (and (= "acquisition" (:kind f)) (= :to (title-role r)))   :crm/P22_transferred_title_to
-                                                                    (and activity? (not (passive? r)))                          :crm/P14_carried_out_by
-                                                                    :else                                                        :crm/P11_had_participant))
-                                                          (model/reference ag) a)
-                              (claim ag :crm/P190_has_symbolic_content name a)]))
+                                 ag   (model/mint-entity-id kind (if uri uri [(str rid) name]))
+                                 ;; an activity is carried out by its actors, but for
+                                 ;; one who commissioned or paid for it, who took part;
+                                 ;; in an acquisition, who gave up the title and who
+                                 ;; received it did not carry it out (I3)
+                                 {r :role at :attribution q :qualifier} (fields a)
+                                 made  (#{"production" "design"} (:kind f))
+                                 doing (cond (and made (= "maker-role" at))                                  :crm/P14_carried_out_by
+                                             (and made (= "other-role" at))                                  :crm/P11_had_participant
+                                             (and (= "acquisition" (:kind f)) (= :from (title-role r))) :crm/P23_transferred_title_from
+                                             (and (= "acquisition" (:kind f)) (= :to (title-role r)))   :crm/P22_transferred_title_to
+                                             (and activity? (not (passive? r)))                          :crm/P14_carried_out_by
+                                             :else                                                        :crm/P11_had_participant)]
+                             (concat
+                              [(entity ag kind uri) (claim ag :crm/P190_has_symbolic_content name a)]
+                                ;; what the attribution qualifier says of the making (K2):
+                                ;; made after them, or by an unnamed hand related to
+                                ;; them, it was influenced by them; a former
+                                ;; attribution is superseded; an uncertain one, proposed
+                              (case (when made at)
+                                "influence" [(claim e :crm/P15_was_influenced_by (model/reference ag) a)]
+                                "related"   [(claim e :crm/P15_was_influenced_by (model/reference ag) a)
+                                             {:kind :diagnostic
+                                              :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field :lido/actor
+                                                               :aspect :relation :value (fields a)
+                                                               :message (str "made by an unnamed hand, \"" q "\" " (pr-str name) ": who made it is not stated, only that it follows " name)})}]
+                                "former"    [(assoc-in (claim e :crm/P14_carried_out_by (model/reference ag) a) [:value :status] :superseded)]
+                                "uncertain" [(propose e :crm/P14_carried_out_by (model/reference ag) a :rule.lido/attributed-maker 0.5)]
+                                [(claim e doing (model/reference ag) a)]))))
                    (in :lido/actor))
            ;; a material is what the object consists of only when its
            ;; production used it; a modification employed it; of any other
