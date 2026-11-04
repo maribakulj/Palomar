@@ -434,7 +434,12 @@
            (strings :lido/materials (descend ev "eventMaterialsTech" "displayMaterialsTech"))
            (mapcat (fn [m] (concat (terms :lido/material-term m)
                                    (when-let [c (concept m)]
-                                     [[:lido/material (model/structured (assoc c :event n :role (or (term-name (attr m "type")) "material")))
+                                     ;; its type on it, as LIDO has it, or on its conceptID,
+                                     ;; as the Yale Center gives it, but not an id's type, uri or
+                                     ;; local, which is no role (post-audit 8, K3 and its review)
+                                     [[:lido/material (model/structured (assoc c :event n :role (or (term-name (or (attr m "type") (some #(let [t (attr % "type")] (when-not (re-find #"(?i)identifier|^(?:uri|url|local|purl)$" (str t)) t))
+                                                                                                                                         (kids m "conceptID"))))
+                                                                                                    "material")))
                                        (second m)]])))
                    (descend ev "eventMaterialsTech" "materialsTech" "termMaterialsTech"))
            (apply concat

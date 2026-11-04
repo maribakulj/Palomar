@@ -1,16 +1,23 @@
 # Palomar against the Yale Center for British Art's own Linked Art
 
 The Yale Center for British Art (YCBA) publishes, for the same objects, LIDO
-records (OAI-PMH, CC0) and its own Linked Art (made by its own pipeline from
-its collection database, not from its LIDO). Converting the LIDO with Palomar
-and comparing the result with YCBA's Linked Art is a comparison with an
-independent mapping of the same sources (`docs/eval/rules-study.md`).
+records over OAI-PMH and its own Linked Art, made by its own pipeline from its
+collection database, not from its LIDO. Converting the LIDO with Palomar and
+comparing the result with YCBA's Linked Art compares two independent mappings
+of the same sources. The results are in `docs/eval/ycba.md`.
 
-    mkdir -p /tmp/ycba && curl -sS -o /tmp/ycba/p1.json \
+    D=/tmp/ycba && mkdir -p $D && curl -sS -o $D/p1.json \
       https://ycba-lux.s3.amazonaws.com/activity_stream/page1.json
-    python3 -I dev/eval/ycba/sample.py /tmp/ycba 40        # pairs, network
-    clojure -M dev/eval/ycba/convert.clj /tmp/ycba          # Palomar's side
-    python3 -I dev/eval/ycba/compare.py /tmp/ycba           # the counts
+    python3 -I dev/eval/ycba/sample.py $D 500           # the pairs (network)
+    python3 -I dev/eval/ycba/people.py $D               # YCBA's people and their ids
+    clojure -M dev/eval/ycba/convert.clj $D after.json  # Palomar's side, run from a checkout
+    python3 -I dev/eval/ycba/compare.py $D after.json   # the counts, one column per output
+    python3 -I dev/eval/ycba/diff_makers.py $D after.json
 
-The data is fetched, never committed: YCBA's Linked Art states no license.
-The sample is seeded (40 objects of the stream's first page).
+To compare two versions of Palomar on the same pairs, run this `convert.clj`
+(by its absolute path, an older checkout's may take no output name) from
+each checkout, with two output names. The sample is seeded.
+
+The data is fetched, never committed. Data Source: Yale Center for British
+Art, under the Center's
+[Open Data and Data Services Terms of Use](https://britishart.yale.edu/open-data-and-data-services-terms-use).
