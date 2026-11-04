@@ -1,0 +1,14 @@
+;; The type of a LIDO subject (subject/@lido:type), after the LIDO 1.1
+;; subjectWrap documentation: a subject is a description or identification of
+;; what the work depicts ("ofness"), or an interpretation of its meaning
+;; ("aboutness"). The LIDO Terminology's codes for these types are not listed:
+;; they could not be checked offline, and a code is not guessed.
+{:id     :lido/subject-types
+ :source "LIDO 1.1 schema, subjectWrap (lido-schema.org, CC BY 4.0)"
+ :concepts
+ {:subject/ofness
+  {:doc   "What is depicted: generic content (description) or a named subject (identification)."
+   :terms ["description" "identification" "beschreibung" "identifizierung" "identifikation"]}
+  :subject/aboutness
+  {:doc   "What the work means: its iconographical, thematic or symbolic interpretation."
+   :terms ["interpretation" "deutung" "interprétation"]}}}

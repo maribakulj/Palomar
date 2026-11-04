@@ -772,3 +772,38 @@
           id   #(get-in (first (filter (fn [p] (= :entity (:kind p))) (produce (rule %) book))) [:value :id])]
       (is (not= (id ["a|b" "c"]) (id ["a" "b|c"])))
       (is (not= (id ["1"]) (id [1])) "a string and a number are different parts"))))
+
+(def ^:private with-actor
+  {:id :rec/a :kind :test
+   :assertions [{:subject :rec/a :predicate :x/actor :value (model/structured {:name "Rodin" :role "Auftraggeber; Mäzen"})}
+                {:subject :rec/a :predicate :x/actor :value (model/structured {:name "Rudier"})}]})
+
+(deftest a-field-of-a-structured-value-is-matched
+  (testing "(field ?v :key x) binds or checks a field; a value without it does not match (post-audit 8)"
+    (let [names (fn [match] (set (map #(get-in % [:value :value]) (filter #(= :assertion (:kind %))
+                                                                          (produce {:id :r/f :phase :infer :match match
+                                                                                    :produce {:assert '{:subject ?r :predicate :x/name :value ?n}}}
+                                                                                   with-actor)))))]
+      (is (= #{"Rodin" "Rudier"} (names '[[?r :x/actor ?a] (field ?a :name ?n)])))
+      (is (= #{"Rodin"} (names '[[?r :x/actor ?a] (field ?a :name ?n) (field ?a :role ?role)])) "no role, no row")
+      (is (= #{"Rudier"} (names '[[?r :x/actor ?a] (field ?a :name ?n) (not (field ?a :role _))])))
+      (is (= #{"Rudier"} (names '[[?r :x/actor ?a] (field ?a :name "Rudier") (field ?a :name ?n)])) "a literal checks")))
+  (testing "a field clause reads a bound value only"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (rules/compile-rule {:id :r/f :phase :infer :match '[(field ?a :name ?n)]
+                                      :produce {:assert '{:subject :x/s :predicate :x/name :value ?n}}})))))
+
+(deftest a-term-is-looked-up-in-a-vocabulary
+  (testing "vocabularies are data: each `; `-joined part of a term, its concepts (post-audit 8)"
+    (is (= [#{:role/passive} #{:role/passive}] (rules/vocab-concepts :lido/actor-roles "Auftraggeber; Mäzen")))
+    (is (= [#{:role/gives-title} #{}] (rules/vocab-concepts :lido/actor-roles "Verkäufer; Auktionator")))
+    (is (= [#{:subject/ofness}] (rules/vocab-concepts :lido/subject-types "Description"))))
+  (testing "vocab-some? and vocab-all? guard a rule"
+    (let [fired (fn [g] (seq (produce {:id :r/v :phase :infer :match ['[?r :x/actor ?a] '(field ?a :role ?role) g]
+                                       :produce {:assert '{:subject ?r :predicate :x/p :value true}}}
+                                      with-actor)))]
+      (is (fired '(vocab-all? :lido/actor-roles ?role :role/passive)))
+      (is (not (fired '(vocab-some? :lido/actor-roles ?role :role/gives-title))))))
+  (testing "an unknown vocabulary is refused"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Unknown vocabulary"
+                          (rules/vocab-concepts :lido/no-such "x")))))

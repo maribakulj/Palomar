@@ -1,0 +1,8 @@
+;; Work types and classifications that say an object was made, or that it
+;; is a natural one, which vetoes the other (post-audits 5 and 6). Moved out of
+;; palomar.plugins.lido (artefact-terms, natural-terms), as Java regexes.
+{:id     :lido/object-types
+ :source "The work types of the corpora Palomar reads, in English, French and German"
+ :concepts
+ {:object/artefact {:doc "A made thing: a painting, a print, a sculpture, a vessel…" :patterns ["(?i)(?<!\\p{L})(?:paint|drawing|print|photograph|watercolou?r|pastel|gouache|engraving|etching|lithograph|woodcut|mezzotint|aquatint|poster|collage|installation|sculpt|statue|bust|relief|vessel|vase|bowl|jug|furniture|chair|cabinet|textile|tapestry|carpet|costume|garment|coin|medal|jewel|ceramic|pottery|porcelain|faience|glass|manuscript|book|tool|weapon|armou?r|clock|instrument|model|peinture|dessin|estampe|gravure|tableau|objet d'art|affiche|meuble|céramique|tissu|vêtement|monnaie)|(?:gemälde|malerei|zeichnung|aquarell|grafik|graphik|druck|stich|radierung|schnitt|lithographie|lithografie|fotografie|photographie|plakat|abguss|altar|mappe|skulptur|plastik|büste|gefäß|keramik|porzellan|möbel|textil|teppich|gewand|kostüm|münze|medaille|schmuck|handschrift|buch|werkzeug|waffe|uhr|instrument|modell)"]}
+  :object/natural  {:doc "A natural object: a fossil, a mineral, a specimen…" :patterns ["(?i)fossil|mineral|specimen|spécimen|minéral|naturalia|herbar|präparat|praeparat|gestein|meteorit|(?<!\\p{L})(?:rock|shell|sample|skeleton|insect|taxiderm|roche|coquillage|échantillon)|muschel|skelett|insekt|probe(?!\\p{L})"]}}}
