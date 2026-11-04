@@ -254,7 +254,8 @@
   [s n]
   (let [bytes (.digest (java.security.MessageDigest/getInstance "SHA-256")
                        ^bytes (if (bytes? s) s (.getBytes (str s) "UTF-8")))]
-    (subs (apply str (map #(format "%02x" (bit-and (int %) 0xff)) bytes)) 0 n)))
+    ;; one pass, not a `format` a byte: every minted id goes through here (K4)
+    (subs (.formatHex (java.util.HexFormat/of) bytes) 0 n)))
 
 (defn canonical
   "A print-stable form of a value, for hashing: equal values (`=`) give equal

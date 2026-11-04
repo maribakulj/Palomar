@@ -90,9 +90,23 @@
   [clause]
   (and (seq? clause) (= 'field (first clause))))
 
+(defn- any-form?
+  "True for an `(any [clause…] [clause…] …)` match clause: the rows each
+   branch makes, a disjunction (post-audit 8, K4)."
+  [clause]
+  (and (seq? clause) (= 'any (first clause))))
+
 (defn- guard-form? [clause]
   (and (sequential? clause) (not (vector? clause))
-       (not (optional-form? clause)) (not (not-form? clause)) (not (field-form? clause))))
+       (not (optional-form? clause)) (not (not-form? clause)) (not (field-form? clause)) (not (any-form? clause))))
+
+(declare variables-bound-by-match)
+
+(defn- any-bindings
+  "The variables every branch of an `any` binds, and those only some do."
+  [clause]
+  (let [bs (map variables-bound-by-match (rest clause))]
+    [(if (seq bs) (apply set/intersection bs) #{}) (apply set/union #{} bs)]))
 
 (defn- variables-bound-by-match
   "Variables introduced by triple-patterns and `field` clauses in a `:match`
@@ -101,6 +115,7 @@
   (reduce (fn [acc clause]
             (cond (triple-pattern? clause) (into acc (collect-variables clause))
                   (field-form? clause)     (into acc (collect-variables (nth clause 3 nil)))
+                  (any-form? clause)       (into acc (first (any-bindings clause)))
                   :else                    acc))
           #{}
           match))
@@ -121,13 +136,45 @@
    patterns, nested optionals included."
   [match]
   (reduce (fn [acc clause]
-            (if (optional-form? clause)
-              (-> acc
-                  (into (variables-bound-by-match (rest clause)))
-                  (into (optional-bindings (rest clause))))
-              acc))
+            (cond (optional-form? clause)
+                  (-> acc
+                      (into (variables-bound-by-match (rest clause)))
+                      (into (optional-bindings (rest clause))))
+                  ;; what only some branches of an `any` bind, a construct may use
+                  (any-form? clause)
+                  (into acc (second (any-bindings clause)))
+                  :else acc))
           #{}
           match))
+
+(defn- binder? [clause]
+  (or (triple-pattern? clause) (field-form? clause) (optional-form? clause) (any-form? clause)))
+
+(defn plan-rule
+  "`rule` with its `:match` reordered so that each guard and `not` comes
+   right after the last clause before it that binds, or may bind, one of
+   its variables (post-audit 8, K4 and its review). It only moves up: past a
+   clause that binds nothing it needs, never past one that may bind a
+   variable it reads (an `optional`, an `any` branch, which bind it in some
+   rows only), and never down, where a variable free at its place would be
+   bound. The clauses that bind keep their order. The rows are the same,
+   filtered sooner: a rule's author orders clauses for meaning, not speed."
+  [rule]
+  (let [match (vec (:match rule))
+        ;; what each binder newly binds, or may bind: what it names that no
+        ;; binder before it has surely bound
+        sure  (reductions (fn [acc c] (if (binder? c) (into acc (variables-bound-by-match [c])) acc)) #{} match)
+        binds (fn [j] (let [c (match j)]
+                        (when (binder? c)
+                          (set/difference (into (set (variables-bound-by-match [c])) (optional-bindings [c])) (nth sure j)))))
+        slot  (fn [i c]
+                ;; the position after the last binder before i that may bind
+                ;; a variable of c; -1: none, c can go first
+                (let [vs (collect-variables c)]
+                  (or (last (keep (fn [j] (when (seq (set/intersection vs (or (binds j) #{}))) j)) (range i)))
+                      -1)))
+        placed (map-indexed (fn [i c] [(if (binder? c) i (+ 0.5 (slot i c))) i c]) match)]
+    (assoc rule :match (mapv #(nth % 2) (sort-by (juxt first second) placed)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Triple view of a record
@@ -220,6 +267,26 @@
   (atom {}))
 
 (declare vocab-concepts*)
+
+(def ^:private lookup-table
+  "The lookup table `id` (`:lido/event-classes` →
+   `resources/palomar/vocab/lido/event-classes.edn`): `{:map {key value}
+   :default value}`."
+  (memoize
+   (fn [id]
+     (let [path (str "palomar/vocab/" (namespace id) "/" (name id) ".edn")
+           res  (io/resource path)]
+       (when-not res (throw (ex-info "Unknown lookup table" {:table id :path path})))
+       (edn/read-string (slurp res))))))
+
+(defn lookup-value
+  "The value lookup table `table` maps `k` to, else its `:default`, else
+   `::unbound`."
+  [table k]
+  (let [{m :map d :default :as t} (lookup-table table)]
+    (cond (contains? m k) (get m k)
+          (contains? t :default) d
+          :else ::unbound)))
 
 (defn vocab-concepts
   "The concepts of each `; `-joined part of `term` in vocabulary `table`, a
@@ -390,6 +457,9 @@
                        (when-not (= ::fail d) (merge row d))))))
                binding-rows))
 
+       (any-form? clause)
+       (distinct (mapcat (fn [row] (mapcat #(match-rows % record triples [row]) (rest clause))) binding-rows))
+
        (optional-form? clause)
        (mapcat (fn [row]
                  (let [ext (match-rows (rest clause) record triples [row])]
@@ -511,8 +581,24 @@
    - `(ref x)` — a reference value to entity `x`;
    - `(norm s)` — `palomar.text/norm`, the matching form of a string;
    - `(str x…)` — the concatenation of the parts' printed forms;
-   - `(or x…)` — the first part that is bound and not nil."
-  #{'mint 'ref 'norm 'str 'or})
+   - `(or x…)` — the first part that is bound and not nil;
+   - `(lookup :table key)` — the value lookup table `:table` (data, under
+     resources/palomar/vocab) maps `key` to, else its `:default`, else
+     unbound (post-audit 8, K4)."
+  #{'mint 'ref 'norm 'str 'or 'lookup})
+
+(def ^:dynamic ^:private *mints*
+  "The ids minted in one run of a rule, by `[kind parts]`: its rows mint the
+   same object, the same visual item, again and again (K4)."
+  nil)
+
+(defn- mint-id [kind parts]
+  (if-let [c *mints*]
+    ;; keyed by what is hashed, the printed parts: two values = but printed
+    ;; apart mint apart, as without the cache (K4 review)
+    (let [k [kind (pr-str parts)]]
+      (or (get @c k) (let [id (model/mint-entity-id kind parts)] (vswap! c assoc k id) id)))
+    (model/mint-entity-id kind parts)))
 
 (defn- eval-term
   "The value of construct term `t` under `bindings`: a value, `{::mint id ::kind
@@ -524,17 +610,21 @@
     (and (seq? t) (contains? term-stdlib (first t)))
     (let [[op & args] t]
       (if (= 'mint op)
-        (let [[kind & parts] args
+        ;; its kind may be a term too, a lookup (K4)
+        (let [[kind* & parts] args
+              kind           (if (keyword? kind*) kind* (eval-term bindings kind*))
               vs             (map #(eval-term bindings %) parts)]
-          (if (some #{::unbound} vs)
+          (if (or (= ::unbound kind) (some #{::unbound} vs))
             ::unbound
             (let [parts (mapv #(if (::mint %) (::mint %) %) vs)]
               (if (every? #(and (string? %) (str/blank? %)) parts)
                 ::unbound
-                {::mint (model/mint-entity-id kind parts) ::kind kind}))))
+                {::mint (mint-id kind parts) ::kind kind}))))
         (let [vs (map #(eval-term bindings %) args)]
           (case op
             or   (or (first (remove #(or (nil? %) (= ::unbound %)) vs)) ::unbound)
+            lookup (let [[table k] vs]
+                     (if (= ::unbound k) ::unbound (lookup-value table k)))
             (if (some #{::unbound} vs)
               ::unbound
               (case op
@@ -637,8 +727,15 @@
    [:fn {:error/message "field takes a variable, a keyword and a term"}
     #(and (= 4 (count %)) (variable? (second %)) (keyword? (nth % 2)))]])
 
+(def AnyForm
+  "`(any [clause…] [clause…] …)`: the rows each branch makes (post-audit 8, K4)."
+  [:and
+   [:fn {:error/message "must be an (any [clause…] …) form"} any-form?]
+   [:fn {:error/message "any holds branches, each a vector of match clauses"}
+    #(and (seq (rest %)) (every? (fn [b] (and (vector? b) (every? valid-match-clause? b))) (rest %)))]])
+
 (def MatchClause
-  [:or TriplePattern OptionalForm NotForm FieldForm GuardForm])
+  [:or TriplePattern OptionalForm NotForm FieldForm AnyForm GuardForm])
 
 (defn- valid-match-clause? [c] (m/validate MatchClause c))
 
@@ -722,13 +819,16 @@
    Throws ex-info at compile time if the rule is malformed or
    references unbound variables."
   [rule]
-  (-> rule
-      validate-or-throw!
-      check-bound-variables!
-      (assoc ::runner
-             (fn run [record]
+  (as-> rule rule
+    (validate-or-throw! rule)
+    (check-bound-variables! rule)
+    (plan-rule rule)
+    ;; the runner closes over the planned rule (K4 review)
+    (assoc rule ::runner
+           (fn run [record]
+             (binding [*mints* (volatile! {})]
                (let [rows (match-clauses (:match rule) record)]
-                 (vec (run-produce (:produce rule) rows (:id rule) (:phase rule))))))))
+                 (vec (run-produce (:produce rule) rows (:id rule) (:phase rule)))))))))
 
 (defn apply-rule
   "Run a compiled rule against a record, returning a vector of productions."

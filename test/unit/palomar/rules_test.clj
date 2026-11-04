@@ -1,7 +1,8 @@
 (ns palomar.rules-test
   "Tests for the rule DSL: schema validation, compilation, pattern
    matching, guards, production actions, and provenance tagging."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.set]
+            [clojure.test :refer [deftest is testing]]
             [palomar.model :as model]
             [palomar.rules :as rules]))
 
@@ -807,3 +808,73 @@
   (testing "an unknown vocabulary is refused"
     (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Unknown vocabulary"
                           (rules/vocab-concepts :lido/no-such "x")))))
+
+(deftest any-is-a-disjunction
+  (testing "(any [clauses…] …): a row each branch makes; a variable is bound when every branch binds it (post-audit 8, K4)"
+    (let [names (fn [match] (set (map #(get-in % [:value :value]) (filter #(= :assertion (:kind %))
+                                                                          (produce {:id :r/any :phase :infer :match match
+                                                                                    :produce {:assert '{:subject ?r :predicate :x/name :value ?n}}}
+                                                                                   with-actor)))))]
+      (is (= #{"Rodin" "Rudier"} (names '[[?r :x/actor ?a] (field ?a :name ?n)
+                                          (any [(field ?a :role ?role) (vocab-some? :lido/actor-roles ?role :role/passive)]
+                                               [(not (field ?a :role _))])])))
+      (is (= #{"Rudier"} (names '[[?r :x/actor ?a] (field ?a :name ?n) (not (any [(field ?a :role ?role)] [(field ?a :uri _)]))])))
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (rules/compile-rule {:id :r/any :phase :infer
+                                        :match '[[?r :x/actor ?a] (any [(field ?a :name ?n)] [(field ?a :role ?q)])]
+                                        :produce {:assert '{:subject ?r :predicate :x/name :value ?n}}}))
+          "a variable one branch does not bind is not bound"))))
+
+(deftest a-lookup-term-maps-a-value
+  (testing "(lookup :table key): the value a lookup table maps key to, else its default (post-audit 8, K4)"
+    (let [out (fn [kind] (->> (produce {:id :r/l :phase :infer :match '[[?r :x/kind ?k]]
+                                        :produce {:construct '[[?r :x/class (lookup :lido/event-classes ?k)]]}}
+                                       {:id :rec/k :kind :test :assertions [{:subject :rec/k :predicate :x/kind :value kind}]})
+                              (filter #(= :assertion (:kind %))) (map #(get-in % [:value :value]))))]
+      (is (= [:crm/E12_Production] (out "production")))
+      (is (= [] (out "no such kind")) "no value, no default: no triple"))))
+
+(deftest guards-are-tested-as-soon-as-their-variables-are-bound
+  (testing "the compiler moves a guard or a not up to where its variables are bound: the same rows, sooner (post-audit 8, K4)"
+    (let [rule {:id :r/plan :phase :infer
+                :match '[[?r :x/actor ?a] [?r :x/actor ?b] (field ?a :name ?n) (field ?b :name ?m) (= ?n "Rodin")]
+                :produce {:assert '{:subject ?r :predicate :x/pair :value ?m}}}]
+      (is (= ['[?r :x/actor ?a] '[?r :x/actor ?b] '(field ?a :name ?n) '(= ?n "Rodin") '(field ?b :name ?m)]
+             (:match (rules/plan-rule (assoc rule :match '[[?r :x/actor ?a] [?r :x/actor ?b] (field ?a :name ?n) (field ?b :name ?m) (= ?n "Rodin")]))))
+          "the clauses that bind keep their order")
+      (is (= ['[?r :x/actor ?a] '(not [?r :x/z _]) '[?r :x/actor ?b]]
+             (:match (rules/plan-rule {:id :r/p :phase :infer :match '[[?r :x/actor ?a] [?r :x/actor ?b] (not [?r :x/z _])] :produce {}})))
+          "a not waits for the variables it shares, and no longer")
+      (is (= #{"Rodin" "Rudier"} (set (map #(get-in % [:value :value]) (filter #(= :assertion (:kind %)) (produce rule with-actor)))))))))
+
+(deftest planning-never-changes-the-rows
+  (testing "a guard or not moves up, never past a clause that may bind one of its variables, never down (K4 review)"
+    (let [rec  (update with-actor :assertions conj {:subject :rec/a :predicate :x/z :value "Something"})
+          rows (fn [match] (try (set (map #(get-in % [:value :value]) (filter #(= :assertion (:kind %))
+                                                                              (produce {:id :r/p :phase :infer :match match
+                                                                                        :produce {:assert '{:subject ?r :predicate :x/v :value ?a}}}
+                                                                                       rec))))
+                                (catch clojure.lang.ExceptionInfo _ :throws)))
+          src  (fn [match] (let [r (rules/compile-rule {:id :r/s :phase :infer :match match :produce {:assert '{:subject ?r :predicate :x/v :value ?a}}})]
+                             (:match r)))]
+      (doseq [m ['[[?r :x/actor ?a] (optional (field ?a :role ?n)) (field ?a :name ?n) (= ?n "Rudier")]
+                 '[[?r :x/actor ?a] (optional (field ?a :role ?n)) (field ?a :name ?n) (not [?r :x/z ?n])]
+                 '[[?r :x/actor ?a] (any [(field ?a :role ?n)] [(not (field ?a :role _))]) (field ?a :name ?n) (not= ?n "x")]
+                 '[[?r :x/actor ?a] (not [?r :x/z ?n]) (field ?a :name ?n)]]]
+        (is (= (rows m) (rows (src m))) (pr-str m)))))
+  (testing "the compiled rule runs its planned match"
+    (let [r (rules/compile-rule {:id :r/s :phase :infer
+                                 :match '[[?r :x/actor ?a] [?r :x/actor ?b] (field ?a :name ?n) (= ?n "Rodin")]
+                                 :produce {:assert '{:subject ?r :predicate :x/v :value ?b}}})]
+      (is (= '[[?r :x/actor ?a] [?r :x/actor ?b] (field ?a :name ?n) (= ?n "Rodin")] (:match r)))
+      (is (= #{:rec/a} (set (map #(get-in % [:value :subject]) (rules/apply-rule r with-actor))))))))
+
+(deftest a-mint-is-the-same-whatever-else-the-record-holds
+  (testing "two values equal but printed apart mint apart, as without the cache (K4 review)"
+    (let [ids (fn [vals] (->> (produce {:id :r/m :phase :infer :match '[[?r :x/v ?v]]
+                                        :produce {:construct '[[?r :x/e (mint :x/T ?v)]]}}
+                                       {:id :rec/m :kind :test :assertions (for [v vals] {:subject :rec/m :predicate :x/v :value v})})
+                              (filter #(= :entity (:kind %))) (map #(get-in % [:value :id])) set))
+          m1  (array-map :a "1" :b "2")
+          m2  (array-map :b "2" :a "1")]
+      (is (= (ids [m2]) (clojure.set/difference (ids [m1 m2]) (ids [m1])))))))

@@ -265,7 +265,7 @@
     (with-open [r (io/reader path)
                 w (java.io.OutputStreamWriter. (java.security.DigestOutputStream. (java.io.OutputStream/nullOutputStream) md) "UTF-8")]
       (io/copy r w))
-    (apply str (map #(format "%02x" (bit-and (int %) 0xff)) (.digest md)))))
+    (.formatHex (java.util.HexFormat/of) (.digest md))))
 
 (defn- pivot-imported
   "Normalise and project the `records` spoke `from` imported from `source`."
