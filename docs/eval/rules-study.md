@@ -160,7 +160,10 @@ wrong.
 
    Take YCBA LIDO records (CC0) as fixtures.
 2. **Make the YCBA comparison an evaluation** that is rerun and published,
-   on 500 objects, as `docs/eval/` does for the bibliographic side.
+   on 500 objects, as `docs/eval/` does for the bibliographic side. Done in
+   `docs/eval/ycba.md` (K3): after K1 and K2, Palomar's makers that YCBA
+   names in no part of the production fell from 37 to 8, all of them one
+   person matched as two.
 3. **Then the engine, before wiring the rules.**
    - Add a disjunction clause, a lookup term (concept → class or property),
      and facts derived within a phase.

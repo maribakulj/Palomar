@@ -734,7 +734,7 @@
       (is (every? #(some (fn [t] (= "http://vocab.getty.edu/aat/300033618" (get t "id"))) (get % "classified_as"))
                   (filter #(re-find #"(?i)painting" (str (get % "classified_as") (get % "_label"))) hmo))
           "a painting is classified as one")
-      (is (every? #(seq (get % "made_of")) hmo) "its materials")
+      (is (= 4 (count (filter #(seq (get % "made_of")) hmo))) "its materials; a record that gives only its technique has none (K3)")
       (is (every? #(some (fn [g] (= "http://vocab.getty.edu/ulan/500303557" (get g "id"))) (get % "current_custodian")) hmo)
           "its custodian, the YCBA by its ULAN id")
       (is (not (str/includes? nt "ycba_term_")) "a local id of no known source is no IRI")
@@ -747,6 +747,16 @@
       (testing "and every value of these records is written or reported, whatever the target"
         (doseq [to [:ntriples :linked-art :dc :marc21-object :crm]]
           (is (empty? (:unaccounted (fidelity/audit {:from :oai :opts {:metadata-prefix "lido"} :to to :source xml}))) (str to)))))))
+
+(deftest a-technique-is-no-material-wherever-its-type-is-given
+  (testing "YCBA types a materials term on its conceptID, not on termMaterialsTech: a technique is still one (post-audit 8, K3)"
+    (let [xml  (slurp ycba)
+          la   (map json/read-str (remove str/blank? (str/split-lines (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :linked-art :source xml})))))
+          made (set (for [o la t (get o "made_of")] (get t "id")))
+          nt   (:output (convert/convert {:from :oai :opts {:metadata-prefix "lido"} :to :ntriples :source xml}))]
+      (is (not (contains? made "http://vocab.getty.edu/aat/300054216")) "painting (technique) is no material")
+      (is (contains? made "http://vocab.getty.edu/aat/300015050") "oil paint is")
+      (is (re-find #"P32_used_general_technique> <http://vocab.getty.edu/aat/300054216>" nt) "the production used it"))))
 
 (deftest an-unknown-source-or-a-code-of-the-wrong-form-is-no-iri
   (let [rec (fn [src code] (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>K-1</lido:lidoRecID><lido:descriptiveMetadata>"
@@ -810,6 +820,7 @@
                     ["formerly attributed to" :former] ["previously attributed to" :former] ["attributed to workshop of" :related]
                     ["attributed to" :uncertain] ["zugeschrieben" :uncertain] ["?" :uncertain]
                     ["Print made by" :maker-role] ["Published by" :other-role]
+                    ["Landscape by" :maker-role] ["figures by" :maker-role] ["and stag possibly by" :uncertain]
                     ["gesichert" nil] ["nach schriftlicher Mitteilung" nil] ["previously unknown" nil] ["secure attribution" nil]]]
       (is (= at (lido/attribution q)) q)))
   (testing "a maker's qualifier outweighs a passive role in every target"

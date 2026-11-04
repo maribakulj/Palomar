@@ -30,7 +30,9 @@
               "^\\?$"]}
   :attribution/maker-role
   {:doc      "A role that makes the actor the maker, in the qualifier's place."
-   :patterns ["^(?:print made|drawn|engraved|etched|painted|sculpted|carved|photographed|made|created|designed and made) by$"]}
+   :patterns ["^(?:print made|drawn|engraved|etched|painted|sculpted|carved|photographed|made|created|designed and made) by$"
+              ;; who made a part of it, as the Yale Center's records say (K3)
+              "^(?:and )?(?:the )?(?:figures?|landscape|portrait) by$"]}
   :attribution/other-role
   {:doc      "A role that is not the maker's: the actor took part."
    :patterns ["^(?:text|published|printed|sold|lettered|edited|dedicated|commissioned|written) by$"]}}}

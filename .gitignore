@@ -17,3 +17,5 @@ pom.xml.asc
 # sandbox. The hook script and settings.json are tracked; the binaries are
 # reproducible from the pinned versions in .claude/hooks/session-start.sh.
 .claude/bin/
+
+__pycache__/
