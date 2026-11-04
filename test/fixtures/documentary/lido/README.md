@@ -28,5 +28,21 @@ the works are in the public domain (Public Domain Mark 1.0).
   "Gefunden"), the object's materials in an "Event (non-specified)".
 - `staedel-lido-wrap.xml`: two of those records as a bare LIDO `lidoWrap`
   document, for the spoke read directly.
+- `ycba-oai-lido.xml`: five records of the **Yale Center for British Art**
+  (three paintings, a watercolour by a follower of John Varley, a print
+  after Thomas Phillips with its engraver, author and publisher), harvested
+  with `GetRecord` from `https://harvester-bl.britishart.yale.edu/oaicatmuseum/OAIHandler`
+  (`metadataPrefix=lido`) on 2026-11-04 and joined into one `ListRecords`
+  response. Their practice: authority ids given by source and code
+  (`lido:source="AAT"`, `300033618`), the actor's role in
+  `attributionQualifierActor`, subjects typed `description`.
+  **Data Source: Yale Center for British Art** — reused under the Center's
+  [Open Data and Data Services Terms of Use](https://britishart.yale.edu/open-data-and-data-services-terms-use)
+  ([Collections Data Sharing](https://britishart.yale.edu/collections-data-sharing)),
+  which allow free use and redistribution with this attribution and a link
+  to those terms, and forbid redistributing the data under more restrictive
+  terms: these five records are under those terms, not under Palomar's
+  licence. The records name no licence of their own (the CC0 they carry is
+  the works' rights statement).
 
 The records are LIDO 1.0 (the namespace is LIDO 1.1's: `http://www.lido-schema.org`).

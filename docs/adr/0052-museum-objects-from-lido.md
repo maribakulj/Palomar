@@ -53,6 +53,21 @@ an acquisition history.
    - Each concept (work type, classification, material, technique, role,
      subject, rights) is kept whole, as `{:uri :label}`, beside its terms in
      every language.
+   - An id is an IRI when its text is one, or when it is given by its source
+     and a code of that source's form (`lido:source="AAT"` and
+     `300033618`: `http://vocab.getty.edu/aat/300033618`). Only sources
+     whose URI pattern their authority publishes are known (AAT, ULAN, TGN,
+     GND, Wikidata, VIAF; `resources/palomar/vocab/lido/id-sources.edn`). A
+     local id, or one of an unknown source, names no IRI. This holds for
+     concepts, actors, keepers and places. A place takes the first of its
+     ids that names a place: not a ULAN id, nor one the record gives an
+     actor (a venue's institution, which the Yale Center gives as the
+     exhibition's place). No IRI is normalised: a GND code is written
+     `https://d-nb.info/gnd/…`, and a record that gives the same concept as
+     `http://d-nb.info/gnd/…` names another node. Records that give their ids this
+     way, such as the Yale Center for British Art's, lost every type,
+     material, subject and keeper before, and a local place id could stop an
+     export (amended, post-audit 8, K1).
    - What it does not read is reported, for instance related works and
      subject actors.
    - OAI-PMH reads the `lido` metadata prefix through it.

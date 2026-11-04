@@ -1,0 +1,27 @@
+;; Authority sources whose ids a LIDO record may give by source and code
+;; (`<conceptID lido:source="AAT">300033618</conceptID>`) rather than as a URI,
+;; with the URI each code names. A source is matched by any of its names,
+;; lowercased, or by its URI; a code must have its source's form, else it names
+;; nothing. Only sources whose URI pattern is published by the authority itself
+;; are listed (post-audit 8, K1).
+{:id     :lido/id-sources
+ :source "Getty Vocabularies (vocab.getty.edu), DNB GND (d-nb.info), Wikidata, VIAF"
+ :schemes
+ [{:names ["aat" "getty aat" "art & architecture thesaurus" "art and architecture thesaurus"]
+   :uris  ["http://vocab.getty.edu/aat" "https://vocab.getty.edu/aat"]
+   :prefix "http://vocab.getty.edu/aat/" :code "^3\\d{8}$"}
+  {:names ["ulan" "getty ulan" "union list of artist names"]
+   :uris  ["http://vocab.getty.edu/ulan" "https://vocab.getty.edu/ulan"]
+   :prefix "http://vocab.getty.edu/ulan/" :code "^5\\d{8}$"}
+  {:names ["tgn" "getty tgn" "thesaurus of geographic names"]
+   :uris  ["http://vocab.getty.edu/tgn" "https://vocab.getty.edu/tgn"]
+   :prefix "http://vocab.getty.edu/tgn/" :code "^[17]\\d{6}$"}
+  {:names ["gnd" "deutsche nationalbibliothek" "gemeinsame normdatei"]
+   :uris  ["http://d-nb.info/gnd" "https://d-nb.info/gnd"]
+   :prefix "https://d-nb.info/gnd/" :code "^(?:\\d{8,9}[0-9X]|\\d{6,8}-[0-9X])$"}
+  {:names ["wikidata"]
+   :uris  ["http://www.wikidata.org/entity" "https://www.wikidata.org/entity" "https://www.wikidata.org/wiki"]
+   :prefix "http://www.wikidata.org/entity/" :code "^Q[1-9]\\d*$"}
+  {:names ["viaf" "virtual international authority file (viaf)" "virtual international authority file"]
+   :uris  ["http://viaf.org/viaf" "https://viaf.org/viaf"]
+   :prefix "http://viaf.org/viaf/" :code "^[1-9]\\d*$"}]}

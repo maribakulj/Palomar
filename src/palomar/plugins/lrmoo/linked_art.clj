@@ -709,6 +709,13 @@
              :when (and (= :lido/materials (:predicate a)) (string? (:value a)) (not (lido/of-production? pkeys (lido/event-key a))))]
          (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/materials :value (:value a)
                    :message (str "materials " (pr-str (:value a)) " of another event than the production are not the object's: not written")})))
+     ;; a resource that is no image (a IIIF manifest, a web page) is no
+     ;; representation of the object (post-audit 8, K1)
+     (for [r (native-fields record :lido/resource) :when (not (re-find #"(?i)image" (str (:format r))))
+           [p v] [[:lido/resource r] [:canon/digital-object (:url r)]]]
+       ;; its url: its format and type are reported with every resource's
+       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p :value v :fields (when (= p :lido/resource) [:url])
+                 :message (str "resource " (pr-str (:url r)) " of format " (pr-str (:format r)) " is no image: the Linked Art object profile writes it nowhere")}))
      (for [k (native-fields record :lido/keeper) :when (:former k)
            [p v] (cond-> [[:lido/keeper k] [:lido/repository (:name k)]] (:uri k) (conj [:lido/repository-id (:uri k)]))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p :value v
@@ -722,9 +729,14 @@
      (for [k (native-fields record :lido/keeper) :when (nil? (:uri k))]
        (loss :dropped :lido/repository (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")))
      ;; a keeper's id that is no IRI (an ISIL) names no Linked Art reference
-     (for [v (native-strings record :lido/repository-id) :when (nt/iri-problem v)]
-       (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/repository-id :value v
-                 :message (str "the keeper's id " (pr-str v) " is no IRI: a Linked Art reference cannot name it (G6)")}))
+     ;; one given by source and code is written as the IRI it names (K1 review)
+     (for [v (native-strings record :lido/repository-id) :when (nt/iri-problem v)
+           :let [iri (some #(when (some-> (:uri %) (str/ends-with? (str "/" v))) (:uri %)) (native-fields record :lido/keeper))]]
+       (if iri
+         (dx/loss {:category :coerced :subject (:id record) :edge :export :source-field :lido/repository-id :value v
+                   :message (str "the keeper's id " (pr-str v) " is written as the IRI its source names, " iri)})
+         (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/repository-id :value v
+                   :message (str "the keeper's id " (pr-str v) " is no IRI: a Linked Art reference cannot name it (G6)")})))
      ;; only the production says where it took place in this profile
      (let [prod (:index (first (filter #(= "production" (:kind %)) (native-fields record :lido/event))))]
        (when (some #(and (= :lido/event-place-id (:predicate %)) (not= prod (lido/event-key %))) (:assertions record))
