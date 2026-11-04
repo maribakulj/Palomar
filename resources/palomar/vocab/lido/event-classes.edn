@@ -1,0 +1,9 @@
+;; The CIDOC CRM class of a LIDO event of a kind that says it (post-audit 8,
+;; K4): a lookup table, `key → value`. An event of no such kind is an activity
+;; or an event by its type (event-types.edn).
+{:id     :lido/event-classes
+ :source "ADR 0052"
+ :map    {"production"   :crm/E12_Production
+          "acquisition"  :crm/E8_Acquisition
+          "modification" :crm/E11_Modification
+          "design"       :crm/E65_Creation}}

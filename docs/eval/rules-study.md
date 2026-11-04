@@ -79,6 +79,13 @@ Clause order decides the rest. The first version tested "the object was
 made" as a join, and ran 14 times slower. The engine has no planner: a rule's
 author orders its clauses for speed. Caching vocabulary lookups gained 15 %.
 
+*Since K4 (ADR 0035, amended): a disjunction, a lookup term and a planner
+brought the slice from 117 rules to 27, and from 14 ms to 4 to 5.6 ms a
+record.
+The engine had two costs of its own besides: a phase's merge scanned the
+record for each production, and each minted id was hex-encoded a byte at a
+time.*
+
 ### 3. What the language lacks
 
 - **Disjunction.** "An activity by its type, or its term, or a technique it

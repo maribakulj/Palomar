@@ -73,3 +73,48 @@ should give several Expressions is a modelling question this ADR leaves open.
 - `(not …)` and `optional` are evaluated on the record as it entered the
   phase (ADR 0004). A rule cannot see what another rule of the same phase
   produces.
+
+## Amendment (post-audit 8, K4): disjunction, lookups, a planner
+
+The museum rules study (`docs/eval/rules-study.md`) found the language could
+not say "or", nor look a class up, and found that a rule's speed hung on
+clause order. Three additions, still closed (ADR 0002):
+
+1. **`(any [clause…] [clause…] …)`**, a match clause: the rows each branch
+   makes, deduplicated. A variable every branch binds is bound. One that only
+   some branches bind may appear in a `:construct` template, like an
+   `optional`'s. `(not (any …))` says none of them holds.
+2. **`(lookup :table key)`**, a construct term: the value a lookup table maps
+   `key` to, else its `:default`, else unbound (no triple). Tables are data
+   (`resources/palomar/vocab/<ns>/<name>.edn`, `{:map … :default …}`), like
+   the vocabularies `vocab-some?` and `vocab-all?` read. A `mint`'s kind may be
+   a term, so a class is looked up (`(mint (lookup :lido/actor-classes ?t)
+   …)`).
+3. **A planner.** At compile time (`plan-rule`), each guard and `not` moves
+   up to just after the last clause before it that binds, or may bind, one
+   of its variables. It never moves past an `optional` or an `any` that
+   binds one of them in some rows only, and it never moves down, where a
+   variable free at its place would be bound. The clauses that bind keep
+   their order. The rows are the same, filtered sooner (K4 review: the
+   first version moved them past such clauses and changed the rows, and the
+   compiled runner did not use the plan). A test that needs only the record
+   runs once if the rule binds the record first (`[?r :meta/id ?r]`).
+
+The engine also stopped doing per production what it could do once: a
+phase merges its productions through an index of the record's assertions
+and entities instead of scanning them, and a rule's run mints each id once.
+Every minted id is hashed with one-pass hex encoding (`java.util.HexFormat`),
+not one `format` a byte.
+
+**Measured** on the museum slice (`palomar.plugins.lido-rules`), 20 records,
+warm:
+- 117 rules became 27;
+- 14 to 17 ms a record became **4 to 5.6 ms**, about the study's 5 ms
+  target, from run to run;
+- the whole import and projection gained 2 to 3 ms a record (about 21 to
+  19), all of Palomar benefiting from the hashing and the merge.
+
+The gain comes from the rule count, the merge's index, the mint cache and
+the hex encoding. The planner adds nothing measurable to these rules, which
+were written in a good order by hand. It spares a rule's author that care.
+

@@ -27,74 +27,41 @@
 ;; Events: their CRM class, by kind, else by type
 ;; ---------------------------------------------------------------------------
 
-(def ^:private kind-classes
-  "The events whose class their kind says, and whether they are activities."
-  [["production"   :crm/E12_Production]
-   ["acquisition"  :crm/E8_Acquisition]
-   ["modification" :crm/E11_Modification]
-   ["design"       :crm/E65_Creation]])
+(def ^:private fixed-kinds
+  "The kinds of event whose class their kind says (lido/event-classes.edn)."
+  ["production" "acquisition" "modification" "design"])
 
-(def ^:private fixed-kinds (set (map first kind-classes)))
-
-(def ^:private other-kind
-  "An event of none of the kinds that say its class."
-  (vec (for [k fixed-kinds] (list 'not= '?kind k))))
+(def ^:private activity
+  "An event of no fixed kind is an activity by its type URI or code, its
+   term, a technique it used, or what it precedes (post-audit 8, K4: one
+   disjunction)."
+  '(any [(field ?ev :type ?type) (vocab-some? :lido/event-types ?type :event/activity)]
+        [(field ?ev :label ?label) (vocab-some? :lido/event-types ?label :event/activity)]
+        [(field ?ev :type ?type) (vocab-some? :lido/event-types ?type :event/prior)]
+        [(field ?ev :label ?label) (vocab-some? :lido/event-types ?label :event/prior)]
+        [[?r :lido/material ?m] (field ?m :event ?n) (field ?m :role "technique")]))
 
 (def ^:private event-branches
-  "Each way an event gets its class: `[label class activity? match]`. An event
-   of no fixed kind is an activity by its type URI or code, its term, a
-   technique it used, or what it precedes; else an `E5_Event`. Each disjunct
-   is its own branch, the later ones excluding the earlier."
-  (let [by-type  '(vocab-some? :lido/event-types ?type :event/activity)
-        by-label '(vocab-some? :lido/event-types ?label :event/activity)
-        prior-t  '(vocab-some? :lido/event-types ?type :event/prior)
-        prior-l  '(vocab-some? :lido/event-types ?label :event/prior)
-        tech     '([?r :lido/material ?m] (field ?m :event ?n) (field ?m :role "technique"))
-        no       (fn [& cs] (list* 'not cs))
-        typed    '[(field ?ev :type ?type)]
-        labelled '[(field ?ev :label ?label)]]
-    (concat
-     (for [[k c] kind-classes] [k c true [(list 'field '?ev :kind k)]])
-     [["activity-by-type"  :crm/E7_Activity true (concat other-kind typed [by-type])]
-      ["prior-by-type"     :crm/E7_Activity true (concat other-kind typed [prior-t (no '(field ?ev :type ?type) by-type)])]
-      ["activity-by-label" :crm/E7_Activity true (concat other-kind labelled [by-label
-                                                                              (no '(field ?ev :type ?type) by-type)
-                                                                              (no '(field ?ev :type ?type) prior-t)])]
-      ["prior-by-label"    :crm/E7_Activity true (concat other-kind labelled [prior-l
-                                                                              (no '(field ?ev :label ?label) by-label)
-                                                                              (no '(field ?ev :type ?type) by-type)
-                                                                              (no '(field ?ev :type ?type) prior-t)])]
-      ["activity-by-technique" :crm/E7_Activity true
-       (concat other-kind tech
-               [(no '(field ?ev :type ?type) by-type) (no '(field ?ev :type ?type) prior-t)
-                (no '(field ?ev :label ?label) by-label) (no '(field ?ev :label ?label) prior-l)])]
-      ["event" :crm/E5_Event false
-       (concat other-kind
-               [(no '(field ?ev :type ?type) by-type) (no '(field ?ev :type ?type) prior-t)
-                (no '(field ?ev :label ?label) by-label) (no '(field ?ev :label ?label) prior-l)
-                (apply list 'not tech)])]])))
+  "Each way an event gets its class: `[label class activity? match]`."
+  [["by-kind"  '(lookup :lido/event-classes ?kind) true [(list 'in? '?kind fixed-kinds)]]
+   ["activity" :crm/E7_Activity true [(list 'not (list 'in? '?kind fixed-kinds)) activity]]
+   ["event"    :crm/E5_Event false [(list 'not (list 'in? '?kind fixed-kinds)) (list 'not activity)]]])
 
 ;; ---------------------------------------------------------------------------
 ;; Actors: who they are, and what they did
 ;; ---------------------------------------------------------------------------
 
-(def ^:private identities
-  "An actor named by an authority is that node; any other is its occurrence."
-  [["authority"  '[(field ?a :uri ?u)] '?u]
-   ["occurrence" '[(not (field ?a :uri _))] '(str ?r "|" ?n "|" ?pos)]])
-
-(def ^:private agent-kinds
-  [["person" :crm/E21_Person '[(not (field ?a :type ?at) (vocab-some? :lido/actor-types ?at :actor/group))]]
-   ["group"  :crm/E74_Group  '[(field ?a :type ?at) (vocab-some? :lido/actor-types ?at :actor/group)]]])
-
 (def ^:private passive '(vocab-all? :lido/actor-roles ?role :role/passive))
 (def ^:private gives   '(vocab-some? :lido/actor-roles ?role :role/gives-title))
 (def ^:private gets    '(vocab-some? :lido/actor-roles ?role :role/receives-title))
+(def ^:private role    '(field ?a :role ?role))
+(def ^:private making  '(in? ?kind ["production" "design"]))
+(def ^:private in-acq  '(= ?kind "acquisition"))
 
 (def ^:private attributed
   "What an attribution qualifier says an actor of a making did (post-audit 8,
    K2): influenced it, was formerly held to have made it, may have made it,
-   or took part."
+   took part, or made it."
   [["after"     "influence"  [[:crm/P15_was_influenced_by :asserted]]]
    ["follower"  "related"    [[:crm/P15_was_influenced_by :asserted]]]
    ["former"    "former"     [[:crm/P14_carried_out_by :superseded]]]
@@ -103,54 +70,40 @@
    ["maker"     "maker-role" [[:crm/P14_carried_out_by :asserted]]]])
 
 (def ^:private unqualified
-  "No attribution qualifier says what an actor did: its roles do."
-  (list 'not '(field ?a :attribution ?att) (list 'in? '?att (mapv second attributed))))
+  "No attribution qualifier of a making says what the actor did: its roles do."
+  (list 'not making '(field ?a :attribution ?att) (list 'in? '?att (mapv second attributed))))
 
-(declare doings*)
-
-(defn- doings
-  "What an actor of an event of class `activity?` and kind `k` did:
-   `[label match [[predicate status]…]]`."
-  [activity? k]
-  (if (#{"production" "design"} k)
-    (concat (for [[label at claims] attributed] [label [(list 'field '?a :attribution at)] claims])
-            (for [[label match claims] (doings* activity? k)] [label (cons unqualified match) claims]))
-    (doings* activity? k)))
-
-(defn- doings*
-  [activity? k]
-  (let [role '(field ?a :role ?role)]
-    (if-not activity?
-      [["participant" [] [[:crm/P11_had_participant :asserted]]]]
-      (concat
-       [["passive" [role passive] [[:crm/P11_had_participant :asserted]]]]
-       (when (= k "acquisition")
-         [["gives" [role gives (list 'not role gets) (list 'not role passive)]
-           [[:crm/P11_had_participant :asserted] [:crm/P23_transferred_title_from :proposed]]]
-          ["gets" [role gets (list 'not role gives) (list 'not role passive)]
-           [[:crm/P11_had_participant :asserted] [:crm/P22_transferred_title_to :proposed]]]])
-       [["carried-out" (concat [(list 'not role passive)]
-                               (when (= k "acquisition")
-                                 [(list 'not role gives (list 'not role gets))
-                                  (list 'not role gets (list 'not role gives))]))
-         [[:crm/P14_carried_out_by :asserted]]]]))))
+(def ^:private activity-doings
+  "What an actor of an activity did: `[label match [[predicate status]…]]`."
+  (concat
+   (for [[label at claims] attributed] [label [making (list 'field '?a :attribution at)] claims])
+   [["passive" [unqualified role passive] [[:crm/P11_had_participant :asserted]]]
+    ["gives" [unqualified in-acq role gives (list 'not role gets) (list 'not role passive)]
+     [[:crm/P11_had_participant :asserted] [:crm/P23_transferred_title_from :proposed]]]
+    ["gets" [unqualified in-acq role gets (list 'not role gives) (list 'not role passive)]
+     [[:crm/P11_had_participant :asserted] [:crm/P22_transferred_title_to :proposed]]]
+    ["carried-out" [unqualified (list 'not role passive)
+                    (list 'not in-acq role gives (list 'not role gets))
+                    (list 'not in-acq role gets (list 'not role gives))]
+     [[:crm/P14_carried_out_by :asserted]]]]))
 
 (def actor-rules
-  "One rule per event branch, identity, kind of agent and doing."
+  "One rule per event branch and doing; who the actor is, its class and its
+   identity, are terms (post-audit 8, K4): an authority's URI, else its
+   occurrence, the record, the event and its position there."
   (vec
    (for [[elabel eclass activity? ematch] event-branches
-         [ilabel imatch ikey]              identities
-         [klabel kclass kmatch]            agent-kinds
-         [dlabel dmatch claims]            (doings activity? (some #(when (= [(list 'field '?ev :kind %)] ematch) %) fixed-kinds))
+         [dlabel dmatch claims]            (if activity? activity-doings [["participant" [] [[:crm/P11_had_participant :asserted]]]])
          :let [event (list 'mint eclass '(str ?r) '?n)
-               agent (list 'mint kclass ikey)]]
-     {:id      (keyword "rule.lido.actor" (str elabel "-" ilabel "-" klabel "-" dlabel))
+               agent '(mint (lookup :lido/actor-classes ?at) (or ?u (str ?r "|" ?n "|" ?pos)))]]
+     {:id      (keyword "rule.lido.actor" (str elabel "-" dlabel))
       :phase   :infer
-      :doc     (str "An actor of an event (" elabel "), " ilabel ", a " klabel ": " dlabel ".")
+      :doc     (str "An actor of an event (" elabel "): " dlabel ".")
       :match   (vec (concat '[[?r :lido/event ?ev] (field ?ev :index ?n) (field ?ev :kind ?kind)]
                             ematch
-                            '[[?r :lido/actor ?a] (field ?a :event ?n) (field ?a :name ?name) (field ?a :position ?pos)]
-                            imatch kmatch dmatch))
+                            '[[?r :lido/actor ?a] (field ?a :event ?n) (field ?a :name ?name) (field ?a :position ?pos)
+                              (field ?a :type ?at) (optional (field ?a :uri ?u))]
+                            dmatch))
       :produce {:construct (vec (concat
                                  (for [[p status] claims] [event p agent {:status status}])
                                  [[agent :crm/P190_has_symbolic_content '?name {:status :asserted}]]))}})))
@@ -161,14 +114,13 @@
 
 (def ^:private made
   "The record says its object was made: a production, or an artefact's type
-   and no natural one. Each is a test (`(not (not …))`: some row exists),
-   which binds nothing and so multiplies no row."
-  [["produced" '[(not (not [?r :lido/event ?pe] (field ?pe :kind "production")))]]
-   ["artefact" '[(not [?r :lido/event ?pe] (field ?pe :kind "production"))
-                 (not (not [?r :lido/work-type ?at] (vocab-some? :lido/object-types ?at :object/artefact))
-                      (not [?r :lido/classification ?ac] (vocab-some? :lido/object-types ?ac :object/artefact)))
-                 (not [?r :lido/work-type ?nt] (vocab-some? :lido/object-types ?nt :object/natural))
-                 (not [?r :lido/classification ?nc] (vocab-some? :lido/object-types ?nc :object/natural))]]])
+   and no natural one. A test (`(not (not …))`: some row exists), which binds
+   nothing and so multiplies no row; one disjunction (K4)."
+  [["made" '[(not (not (any [[?r :lido/event ?pe] (field ?pe :kind "production")]
+                            [(not (not [?r :lido/work-type ?at] (vocab-some? :lido/object-types ?at :object/artefact))
+                                  (not [?r :lido/classification ?ac] (vocab-some? :lido/object-types ?ac :object/artefact)))
+                             (not [?r :lido/work-type ?nt] (vocab-some? :lido/object-types ?nt :object/natural))
+                             (not [?r :lido/classification ?nc] (vocab-some? :lido/object-types ?nc :object/natural))])))]]])
 
 (def ^:private concept-ids
   [["authority" '[(field ?c :uri ?cu)] '(mint :crm/E55_Type ?cu)]
@@ -190,7 +142,8 @@
      {:id      (keyword "rule.lido.subject" (str slabel "-" clabel "-" mlabel))
       :phase   :infer
       :doc     (str "A subject concept (" clabel ") of a made object (" mlabel "): " slabel ".")
-      :match   (vec (concat '[[?r :lido/subject-concept ?c] (optional (field ?c :label ?cl))] mmatch cmatch smatch))
+      ;; the record first: what is said of it (made) is tested once, not once a subject
+      :match   (vec (concat '[[?r :meta/id ?r]] mmatch '[[?r :lido/subject-concept ?c] (optional (field ?c :label ?cl))] cmatch smatch))
       :produce {:construct (vec (concat
                                  (if (#{"depicted" "shown"} slabel)
                                    [[obj :crm/P62_depicts ctype {:status :asserted}]]

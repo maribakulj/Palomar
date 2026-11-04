@@ -107,24 +107,30 @@
    `merge-status` picks, and `a`'s provenance, when it is a justification not yet
    recorded, joins the first's `[:provenance :also]`. Two rules deriving one fact
    give one assertion with both paths of proof (audit S09)."
-  [record a]
-  (let [as  (vec (:assertions record))
-        k   (assertion-identity a)
-        idx (first (keep-indexed (fn [i x] (when (= k (assertion-identity x)) i)) as))]
-    (if (nil? idx)
-      (assoc record :assertions (conj as a))
-      (let [prev   (:provenance (nth as idx))
-            also   (vec (:also prev))
-            p      (some-> (:provenance a) (dissoc :also))
-            known  (into #{(dissoc prev :also)} also)
-            status (merge-status (:status (nth as idx)) (:status a))]
-        (assoc record :assertions
-               (cond-> as
-                 (not= status (:status (nth as idx)))
-                 (assoc-in [idx :status] status)
+  ([record a] (merge-assertion record a nil))
+  ([record a index]
+   (let [as  (vec (:assertions record))
+         k   (assertion-identity a)
+         ;; `index`, when given, is identity → position of the record's
+         ;; assertions, kept as they are appended: no scan (K4)
+         idx (if index
+               (get @index k)
+               (first (keep-indexed (fn [i x] (when (= k (assertion-identity x)) i)) as)))]
+     (if (nil? idx)
+       (do (when index (vswap! index assoc k (count as)))
+           (assoc record :assertions (conj as a)))
+       (let [prev   (:provenance (nth as idx))
+             also   (vec (:also prev))
+             p      (some-> (:provenance a) (dissoc :also))
+             known  (into #{(dissoc prev :also)} also)
+             status (merge-status (:status (nth as idx)) (:status a))]
+         (assoc record :assertions
+                (cond-> as
+                  (not= status (:status (nth as idx)))
+                  (assoc-in [idx :status] status)
 
-                 (not (or (nil? p) (contains? known p)))
-                 (assoc-in [idx :provenance :also] (conj also p))))))))
+                  (not (or (nil? p) (contains? known p)))
+                  (assoc-in [idx :provenance :also] (conj also p)))))))))
 
 (defn- merge-entity
   "Append entity `e` unless its id is already there (a re-mint, ADR 0016). When
@@ -166,7 +172,22 @@
    rule adds its provenance to `[:provenance :also]`), subsequent ones are no-ops on
    the record. Returns the enriched record."
   [record productions]
-  (reduce merge-production record productions))
+  ;; the record's assertions and entities indexed once, not scanned for each
+  ;; production (post-audit 8, K4): a rule slice of hundreds of productions
+  ;; merged into a record of hundreds of assertions was most of a phase's time
+  (let [record (cond-> record (:assertions record) (update :assertions vec))
+        index  (volatile! (reduce (fn [m [i a]] (let [k (assertion-identity a)] (if (contains? m k) m (assoc m k i))))
+                                  {} (map-indexed vector (:assertions record))))
+        ids    (volatile! (into #{} (map :id) (:entities record)))]
+    (reduce (fn [r p]
+              (case (:kind p)
+                :assertion (merge-assertion r (:value p) index)
+                :entity    (let [e (:value p)]
+                             (if (contains? @ids (:id e))
+                               (merge-entity r e)
+                               (do (vswap! ids conj (:id e)) (update r :entities (fnil conj []) e))))
+                (merge-production r p)))
+            record productions)))
 
 ;; ---------------------------------------------------------------------------
 ;; Phase execution — a single pass over the rules for one phase

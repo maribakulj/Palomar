@@ -1,0 +1,7 @@
+;; The CIDOC CRM class of a LIDO actor, by its type (actor/@lido:type, its 1.0
+;; name or 1.1 code): a group, else a person (post-audit 8, K4).
+{:id      :lido/actor-classes
+ :source  "LIDO Terminology (lido-schema.org, CC BY 4.0)"
+ :map     {"corporation" :crm/E74_Group "family" :crm/E74_Group "group" :crm/E74_Group
+           "group_of_persons" :crm/E74_Group "organization" :crm/E74_Group}
+ :default :crm/E21_Person}
