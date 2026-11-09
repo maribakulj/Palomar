@@ -54,9 +54,11 @@ Records in Palomar are **assertion sets**, not field maps. An assertion is:
  :provenance {:source :xml/sample.xml
               :pass   :ingest
               :rule   :dc/map-title}
- :confidence 1.0
  :status     :asserted}
 ```
+
+`:confidence` is optional: an assertion carries one only when something
+measured it (a reconciliation score, a mapping that states one).
 
 A record wraps an identity, a source pointer, an assertion set, a diagnostic
 set, and fragment pointers back into the raw source tree.

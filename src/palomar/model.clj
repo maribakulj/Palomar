@@ -598,15 +598,18 @@
 
 (defn assertion
   "Construct an Assertion. Required: :subject, :predicate, :value.
-   Defaults: :confidence 1.0, :status :asserted. :provenance is optional."
+   Defaults: :status :asserted. :provenance is optional, and so is
+   :confidence: a score is stated by whoever has one (a reconciliation's,
+   a mapping's), never made up, so that a threshold cannot read a default
+   as a measure (review of 2026-11-09, L2)."
   [{:keys [subject predicate value provenance confidence status]
-    :or   {confidence 1.0 status :asserted}}]
+    :or   {status :asserted}}]
   (cond-> {:subject subject
            :predicate predicate
            :value value
-           :confidence confidence
            :status status}
-    provenance (assoc :provenance provenance)))
+    (some? confidence) (assoc :confidence confidence)
+    provenance         (assoc :provenance provenance)))
 
 (defn repair
   "Construct a Repair proposal. Required: :description, :operation."

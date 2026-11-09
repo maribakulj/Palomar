@@ -37,7 +37,8 @@ Three constraints bound the decision:
    policy.** A minting rule's claims carry `:provenance {:pass :infer …}` (the
    inferred-vs-ingested distinction lives in *provenance*, not status — ADR 0005;
    this also preserves dedup, since assertion identity excludes provenance,
-   ADR 0008) plus a `:confidence`. By the engine default
+   ADR 0008), and a `:confidence` only when the rule states one (amended by
+   ADR 0005, review of 2026-11-09, L2). By the engine default
    (`palomar.rules/default-status-for-phase`), `:infer` / `:repair` productions
    are **`:proposed`** — proposals until confirmed (the conservative,
    precision-first default). The D7 hybrid's *high-confidence auto-commit*

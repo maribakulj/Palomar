@@ -28,7 +28,7 @@
 (deftest the-public-surface-is-pinned
   (is (= '#{source-formats target-formats keeps-history?
             pivot export convert convert-stream collection
-            accept-all reject-all flag-all accept-when curate supersede history
+            accept-all reject-all flag-all accept-when confidence-at-least curate supersede history
             validate valid-record? explain-record audit loss-report manifest
             ir-version ->edn read-edn ir-schema}
          (set (keys (ns-publics 'palomar.api))))

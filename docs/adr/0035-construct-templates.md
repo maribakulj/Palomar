@@ -18,10 +18,12 @@ institution can read, review or adapt as data.
 The rule language gains, without admitting arbitrary functions (ADR 0002):
 
 1. **`:construct`**, a production that is a graph template: a vector of
-   `[s p o]` triples (optionally `[s p o {:status s}]`) and of
+   `[s p o]` triples (optionally `[s p o {:status s :confidence c}]`) and of
    `(mint kind part…)` declarations. Every triple is an assertion with the
    phase's default status (ADR 0005) unless it states one, and the rule's
-   provenance (rule, phase, bindings).
+   provenance (rule, phase, bindings). A confidence is a literal number from
+   0 to 1, checked when the rule compiles, and there is none unless the
+   triple states one (review of 2026-11-09, L2).
 2. **Terms** from a closed `rules/term-stdlib`:
    - `(mint kind part…)` — the content-derived id of an entity of `kind`, keyed
      by the parts joined with `|` (`model/mint-entity-id`, ADR 0016/0017). The

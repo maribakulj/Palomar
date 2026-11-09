@@ -9,6 +9,7 @@
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
             [palomar.curate :as curate]
+            [palomar.ir :as ir]
             [palomar.model :as model]))
 
 (defn- prop
@@ -73,7 +74,7 @@
   (testing "accept-when accepts proposals satisfying the predicate, flags the rest"
     (let [high (prop :p/hi "hi" 0.95)
           low  (prop :p/lo "lo" 0.40)
-          decide (curate/accept-when #(>= (:confidence %) 0.9))
+          decide (curate/accept-when (curate/confidence-at-least 0.9))
           {:keys [record]} (curate/curate-record (rec [high low]) decide)
           [a0 a1] (:assertions record)]
       (is (model/accepted? a0))
@@ -218,3 +219,14 @@
           [h] (curate/history record old)]
       (is (= :supersede (:verdict h)))
       (is (= (model/assertion-id new) (:replaced-by h))))))
+
+(deftest a-threshold-never-accepts-an-assertion-of-no-score
+  (testing "a proposal of no confidence, as the rules make them, is routed to review by a threshold, never accepted (L2)"
+    (let [unscored (model/assertion {:subject :rec/a :predicate :p/u :value "u" :status :proposed})
+          scored   (prop :p/s "s" 0.95)
+          {:keys [record]} (curate/curate-record (rec [unscored scored]) (curate/accept-when (curate/confidence-at-least 0.9)))
+          [a0 a1] (:assertions record)]
+      (is (model/needs-review? a0))
+      (is (model/accepted? a1))
+      (is (not (contains? a0 :confidence)) "curation adds no score")
+      (is (= [record] (ir/read-records (ir/->edn [record]))) "and the EDN pivot reads it back unscored"))))

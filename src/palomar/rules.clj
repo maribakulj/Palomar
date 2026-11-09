@@ -554,8 +554,7 @@
   (let [base (substitute bindings template)]
     {:kind :assertion
      :value (model/assertion
-             (merge {:status (default-status-for-phase phase)
-                     :confidence 1.0}
+             (merge {:status (default-status-for-phase phase)}
                     base
                     {:provenance (merge-provenance (:provenance base)
                                                    rule-id phase bindings)}))}))
@@ -676,7 +675,8 @@
                                          :predicate  p
                                          :value      (if (minted o) (model/reference (::mint o)) o)
                                          :status     (or (:status opts) (default-status-for-phase phase))
-                                         :confidence 1.0
+                                         ;; a score only when the rule states one (L2)
+                                         :confidence (some-> (:confidence opts) double)
                                          :provenance prov})}}))
                    (let [v (eval-term bindings item)]
                      (when-let [e (minted v)] {:mints [e]}))))
@@ -760,12 +760,20 @@
 
 (defn- valid-match-clause? [c] (m/validate MatchClause c))
 
+(def ^:private TripleOpts
+  "What a construct triple may say of its assertion: a literal status, and a
+   confidence only as a stated number from 0 to 1, never a variable (L2
+   review)."
+  [:map {:closed true}
+   [:status {:optional true} model/Status]
+   [:confidence {:optional true} [:and number? [:>= 0] [:<= 1]]]])
+
 (def ConstructItem
-  "One item of a `:construct` template: `[s p o]`, `[s p o {:status s}]`, or a
-   `(mint kind part…)` declaration."
+  "One item of a `:construct` template: `[s p o]`, `[s p o {:status s
+   :confidence c}]`, or a `(mint kind part…)` declaration."
   [:or
-   [:and vector? [:fn {:error/message "a construct triple is [s p o] or [s p o {:status s}]"}
-                  #(or (= 3 (count %)) (and (= 4 (count %)) (map? (peek %))))]]
+   [:and vector? [:fn {:error/message "a construct triple is [s p o] or [s p o {:status s :confidence c}]"}
+                  #(or (= 3 (count %)) (and (= 4 (count %)) (m/validate TripleOpts (peek %))))]]
    [:fn {:error/message "a construct declaration is (mint kind part…)"}
     #(and (seq? %) (= 'mint (first %)) (keyword? (second %)))]])
 
