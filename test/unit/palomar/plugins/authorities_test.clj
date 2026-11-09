@@ -50,7 +50,8 @@
                                          "--from" "dc" "--authorities" (str f)])]
         (is (= 0 exit))
         (is (str/includes? out "\"Alan Kelsey\" → \"Kelsey, Alan\""))
-        (is (str/includes? out "exact")))
+        ;; a name-only proposal is a close match, whatever its score (ADR 0057)
+        (is (str/includes? out "1.00  close")))
       (finally (.delete f)))))
 
 (deftest an-eac-cpf-record-is-an-entry

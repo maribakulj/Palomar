@@ -70,6 +70,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0054](./0054-who-created-a-museum-object.md) | Who created a museum object is said by the role, not by the event | Accepted |
 | [0055](./0055-a-projection-states-what-its-rules-declare.md) | A projection states as facts only the relations its rules declare | Accepted |
 | [0056](./0056-who-did-what-and-what-it-shows-are-rules.md) | Who did what in an event, and what a work shows, are rules | Accepted |
+| [0057](./0057-the-identity-relation-between-persons.md) | Persons are clustered under constraints, and `skos:exactMatch` is written only where its transitivity holds | Accepted |
 
 ## Template
 

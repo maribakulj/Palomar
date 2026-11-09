@@ -769,6 +769,21 @@
         (concat (map :id (:fragments record))
                 (map :id (:entities record)))))
 
+(defn duplicate-assertion-ids
+  "The `assertion-id`s two or more of `record`'s assertions share. A claim a
+   curation step or the clustering writes is one per fact (ADR 0027): its
+   status and its history are those of that one claim, so a copy would
+   split them (`one-claim-per-fact?`). Not part of `record-consistent?`:
+   an importer may state a native value once per source occurrence (two
+   INTERMARC `676 $v 23` give two `:intermarc/f676_v \"23\"` on the record)."
+  [record]
+  (vec (for [[id n] (frequencies (map assertion-id (:assertions record))) :when (< 1 n)] id)))
+
+(defn one-claim-per-fact?
+  "True when no two of `record`'s assertions share an `assertion-id`."
+  [record]
+  (empty? (duplicate-assertion-ids record)))
+
 (defn record-consistent?
   "True if every assertion's `:subject` is either the record's `:id` or
    one of its fragment ids. Diagnostics' `:subject` is checked the same

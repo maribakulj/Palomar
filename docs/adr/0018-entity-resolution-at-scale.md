@@ -417,3 +417,47 @@ by `palomar.agent-match-test` and
 `an-uncalibrated-score-is-never-written-as-a-confidence`,
 `a-calibration-holds-only-for-the-pool-it-was-measured-on`,
 `align-agents-writes-no-confidence-without-its-proof`.
+
+## Amendment (lot M5, 2026-11-09): constrained clustering, and the verdict store's revisions
+
+§2 and §4 said a verdict is an assertion and a wrong merge is retracted, not
+un-merged; they did not say how mentions are grouped into persons. Until
+M5, every grouping closed through an authority (`reconcile-agents`,
+`apply-agent-links`, a reader accepting every top proposal) with no check,
+and SKOS's transitivity of `exactMatch` closes the same way. ADR 0057
+decides:
+
+1. **Constrained clustering** (`agent-cluster/cluster`). Accepted claims
+   (alignments, memberships) are hard must-links; a component of them that
+   holds two cannot-linked items is a conflict, held back and reported,
+   neither side winning. Then greedy agglomeration of the outright
+   proposals by decreasing match weight, a merge refused when it would put
+   two cannot-linked items together — a candidate rejected for its dates
+   (M3), a rejected alignment, two different authorities, two incompatible
+   dated items (an authority's dates included). On a tie the lower id wins,
+   and it is reported. Same-record, different-role mentions are not a
+   constraint (not derivable from the IR).
+2. **Policy**: a curator's decision outranks the machine; besides it, only
+   outright (`:propose`) decisions join; a `:review` decision is a
+   candidate merge, listed, never applied. A curator confirms one with
+   `reconcile/confirm-identity`.
+3. **Revisable, in the IR**: the clusters are `skos:exactMatch` claims
+   from each local agent to a `:reconcile/person` node minted per cluster
+   and batch, `:proposed` until accepted. Re-clustering rejects (through
+   `palomar.curate`, with the reason) the pending memberships that no
+   longer hold and reopens a claim proposed again, never copying it (§4:
+   monotonic accumulation, no deletion; a record holds one claim per
+   fact). An accepted claim is never revised by the machine. A refused
+   alignment goes to `:needs-review` with the reason; a conflict among
+   accepted claims is a diagnostic. Local agent ids never change.
+   Constraints hold within a batch only (§5: no store yet).
+
+Measured on M2 (`docs/eval/person-reconciliation.md`, M5): the naive
+closure of every proposal (outright and for review) makes 464 false
+merges; the constrained clustering of the same links none (M4's top-1
+numbers: 1 113 pairs, 0 false merges); under the policy alone (outright
+only) both give 923 pairs, recall 0.829, the 25 mentions for review left
+alone. 9 synthetic chains (same-surname authorities with incompatible
+dates, bridged by an undated record): the closure merges 9, the
+constrained clustering 0, each refusal a reported tie. Pinned by
+`palomar.agent-cluster-test`.

@@ -5,7 +5,8 @@
    baseline (\"before\"), still asserted by running the name-only matcher; lot
    M3's date-aware numbers are asserted next to them, and lot M4's
    Fellegi-Sunter numbers (with their calibration, an EM comparison and a
-   synthetic stress set) after those. They are
+   synthetic stress set) after those, and lot M5's constrained clustering
+   (with a synthetic chain set) last. They are
    measurements, not a guarantee. Corpus and gold:
    `test/fixtures/er-gold/bnf-persons/README.md`; write-up:
    `docs/eval/person-reconciliation.md`. The corpus readers and the metrics live
@@ -507,3 +508,55 @@
               :accents-removed  {:n 11 :m3-candidate 11 :fs-candidate 11 :fs-top-1 11 :fs-outright 8}
               :typo             {:n 33 :m3-candidate 17 :fs-candidate 33 :fs-top-1 29 :fs-outright 0}}
              (dissoc s :all))))))
+
+;; ---------------------------------------------------------------------------
+;; Lot M5 — constrained clustering
+;; ---------------------------------------------------------------------------
+
+(def ^:private bc (delay (pr/task-b-constrained @c)))
+
+(deftest task-b-with-constrained-clustering
+  (pr/print-task-b-constrained @bc)
+  (is (= 141 (:mentions @bc)))
+  (testing "the inputs: 111 outright proposals, 51 for review, 577 date rejections as cannot-links"
+    (is (= {:propose 111 :review 51} (:links @bc)))
+    (is (= 577 (:cannot-link @bc))))
+  (testing "M4's top-1 rule, for reference (task-b-baseline's :top-1-fs)"
+    (is (= (:top-1-fs @b) (:top-1-fs @bc))))
+  (testing "under the policy (only outright proposals join), the closure and the constrained clustering agree:
+            a mention has at most one outright proposal, so no chain forms; the 25 mentions for review stay alone"
+    (let [expected {:pairwise {:predicted 923 :true 1114 :right 923 :false-merges 0 :missed 191
+                               :precision 1 :recall 923/1114 :f1 1846/2037}
+                    :b-cubed  {:precision 1 :recall 121/141}}]
+      (is (= (assoc expected :violations 0) (:closure @bc)))
+      (is (= (assoc expected :violations 0 :refused 0 :candidates 51) (:constrained @bc)))))
+  (testing "letting every proposal for review join: the naive closure chains Férat to Verne, Stahl to Hetzel,
+            and three \"Víctor Hugo\" authors, through their competing candidates — 464 false merges, 8 broken constraints"
+    (is (= {:pairwise {:predicted 1577 :true 1114 :right 1113 :false-merges 464 :missed 1
+                       :precision 1113/1577 :recall 1113/1114 :f1 742/897}
+            :b-cubed  {:precision 5014/6063 :recall 140/141}
+            :violations 8}
+           (:closure-review @bc))))
+  (testing "the constrained clustering of the same links refuses the 26 weaker ones, and gives M4's top-1 numbers"
+    (is (= {:pairwise {:predicted 1113 :true 1114 :right 1113 :false-merges 0 :missed 1
+                       :precision 1 :recall 1113/1114 :f1 2226/2227}
+            :b-cubed  {:precision 1 :recall 140/141}
+            :violations 0 :refused 26 :candidates 0}
+           (:constrained-review @bc)))))
+
+(deftest a-synthetic-chain-is-merged-by-the-closure-and-not-by-the-constrained-clustering
+  (let [data  (pr/fs-fit-data @c)
+        model (pr/supervised-model data (set (conj pr/families "others")))
+        cases (pr/chain-cases @c model)]
+    (testing "SYNTHETIC: the 9 pairs of same-surname authorities whose dates are incompatible"
+      (is (= [["11901062" "11901063"] ["11901062" "12459839"] ["11901063" "12459839"]
+              ["11907962" "11907966"] ["11907962" "14940601"] ["11907966" "14940601"]
+              ["11928016" "12644615"] ["12008284" "14616004"] ["12112416" "13001793"]]
+             (map (juxt :x :y) cases))))
+    (testing "every one is a chain mx ~ U ~ my, both proposed outright at the same weight"
+      (is (every? #(and (= [:propose :propose] (map :basis (get-in % [:input :links])))
+                        (apply = (map :weight (get-in % [:input :links]))))
+                  cases)))
+    (is (= {:cases 9 :chains 9 :closure-merges 9 :constrained-merges 0 :refused 9 :refused-on-a-tie 9 :bridge-with {:mx 9}}
+           (pr/chain-summary cases))
+        "the closure merges X's and Y's mentions every time, the constrained clustering never; each refusal is a tie, won by the lower id, and says so")))

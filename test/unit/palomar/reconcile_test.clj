@@ -134,6 +134,13 @@
   (model/record {:id rid :kind :doc
                  :assertions [(model/assertion {:subject rid :predicate :canon/agent :value nm})]}))
 
+(defn- confirm
+  "A curator confirms every pending close match of `r` to an authority
+   (`rec/confirm-identity`)."
+  [r]
+  (reduce (fn [r a] (:record (rec/confirm-identity r a "confirmed by the curator")))
+          r (filter #(and (= :skos/closeMatch (:predicate %)) (model/pending? %)) (:assertions r))))
+
 (deftest a-proposal-is-a-proposed-skos-mapping-not-a-merge
   (let [props   [{:name "Gustave Flaubert" :authority-id "https://isni.org/isni/0000000122762442"
                   :authority-label "Flaubert, Gustave" :score 1.0 :certifiable? true :status :proposed}
@@ -141,23 +148,25 @@
                   :authority-label "Flaubert, Gustave" :score 0.5 :certifiable? true :status :proposed}]
         [a b]   (rec/align-agents [(named :doc/a "Gustave Flaubert") (named :doc/b "G. Flaubert")] props)
         preds   (fn [r] (set (keep #(when (= "skos" (namespace (:predicate %))) [(:predicate %) (:status %)]) (:assertions r))))]
-    (testing "an exact, certifiable name is an exactMatch; a partial one a closeMatch; both only proposed"
-      (is (= #{[:skos/exactMatch :proposed]} (preds a)))
+    (testing "a name-only proposal, exact or partial, is a close match (ADR 0057: no model decided it); only proposed"
+      (is (= #{[:skos/closeMatch :proposed]} (preds a)))
       (is (= #{[:skos/closeMatch :proposed]} (preds b))))
-    (testing "nothing is linked until a curator accepts; a close match is never a link"
+    (testing "nothing is linked until a curator confirms the identity; an accepted close match is never a link"
       (is (empty? (rec/accepted-links [a b])))
-      (let [acc (:records (curate/curate [a b] curate/accept-all))]
+      (is (empty? (rec/accepted-links (:records (curate/curate [a b] curate/accept-all)))))
+      (let [acc [(confirm a) b]]
         (is (= ["Gustave Flaubert"] (map :name (rec/accepted-links acc))))
         (testing "and the accepted link rewrites the record onto the authority's agent"
           (is (= 1 (count (:applied (rec/apply-agent-links acc (rec/accepted-links acc)))))))))
     (testing "the alignment reaches RDF as SKOS, never as owl:sameAs"
       (let [nt (export/->ntriples a)]
-        (is (str/includes? nt "skos/core#exactMatch"))
+        (is (str/includes? nt "skos/core#closeMatch"))
+        (is (str/includes? (export/->ntriples (confirm a)) "skos/core#exactMatch"))
         (is (not (str/includes? nt "sameAs")))))
     (testing "a rejected alignment moves to the history graph"
       (let [rej (first (:records (curate/curate [a] curate/reject-all)))
             nq  (dataset/->nquads rej)]
-        (is (some #(and (str/includes? % "exactMatch") (str/includes? % "graph:history")) (str/split-lines nq)))))))
+        (is (some #(and (str/includes? % "closeMatch") (str/includes? % "graph:history")) (str/split-lines nq)))))))
 
 (deftest an-accepted-alignment-does-not-identify-a-homonym
   (testing "accepting \"Gustave Flaubert\" = the authority in one record leaves another record's Gustave Flaubert alone (post-audit test 01)"
@@ -165,7 +174,7 @@
                   :authority-label "Flaubert, Gustave" :score 1.0 :certifiable? true :status :proposed}]
           [a b] (rec/align-agents [(named :doc/a "Gustave Flaubert") (named :doc/b "Gustave Flaubert")] props)
           ;; the curator accepts the alignment in :doc/a only
-          a'    (:record (curate/curate-record a curate/accept-all))
+          a'    (confirm a)
           b'    (:record (curate/curate-record b curate/reject-all))
           links (rec/accepted-links [a' b'])
           {:keys [applied]} (rec/apply-agent-links [a' b'] links)]
@@ -190,7 +199,7 @@
   (testing "a proposal carries the authority's entity type to the alignment and back"
     (let [props (rec/propose-agent-links ["Marist College"] [{:id "http://ex.org/mc" :label "Marist College" :entity-type "corporateBody"}])
           [a]   (rec/align-agents [(named :doc/m "Marist College")] props)
-          acc   (:records (curate/curate [a] curate/accept-all))]
+          acc   [(confirm a)]]
       (is (= "corporateBody" (:entity-type (first props))))
       (is (some #(= :crm/E74_Group (:kind %)) (:entities a)) "the local agent is a Group")
       (is (= ["corporateBody"] (map :entity-type (rec/accepted-links acc)))))))
@@ -321,8 +330,8 @@
   (let [props (rec/propose-agent-links [{:name "Dumas, Alexandre" :dates "1802-1870"}] dumas)
         [r]   (rec/align-agents [(named :doc/d "Dumas, Alexandre")] props)
         maps  (filter #(= "skos" (namespace (:predicate %))) (:assertions r))]
-    (testing "one proposed mapping, to the father; the son, rejected, is no claim"
-      (is (= [[:skos/exactMatch :proposed]] (map (juxt :predicate :status) maps)))
+    (testing "one proposed mapping, to the father (a close match: name-only); the son, rejected, is no claim"
+      (is (= [[:skos/closeMatch :proposed]] (map (juxt :predicate :status) maps)))
       (is (= #{pere} (set (keep :iri (:entities r))))))
     (testing "the mapping's provenance names the name score and the dates verdict and values"
       (is (= {'?label "Dumas, Alexandre" '?name-score 1.0 '?dates :compatible
@@ -517,3 +526,19 @@
         (is (= [:review :review] (map :decision ps)))
         (is (not-any? #(contains? % :confidence) ps))
         (is (= [nil nil] (conf (map #(assoc % :confidence (:score %)) ps))))))))
+
+;; --- constrained clustering's check, in apply-agent-links (lot M5) ------------
+
+(deftest apply-agent-links-never-joins-two-incompatible-mentions-on-one-node
+  (let [link (fn [rid dts] (cond-> {:name "Dumas, Alexandre" :authority-id pere :certifiable? true :status :accepted
+                                    :records #{rid}}
+                             dts (assoc :dates dts)))
+        rs   [(named :doc/a "Dumas, Alexandre") (named :doc/b "Dumas, Alexandre") (named :doc/c "Dumas, Alexandre")]]
+    (testing "two accepted links to one authority whose mentions' dates cannot be one person's: neither is applied"
+      (let [{:keys [applied refused]} (rec/apply-agent-links rs [(link :doc/a "1802-1870") (link :doc/b "1824-1895")
+                                                                 (link :doc/c nil)])]
+        (is (= [:doc/c] (map :record applied)) "an undated mention is no evidence: it still joins")
+        (is (= [[:doc/a :conflict] [:doc/b :conflict]] (map (juxt (comp first :records) :reason) refused)))
+        (is (= [#{:doc/b} #{:doc/a}] (map (comp :records :with :conflict) refused)))))
+    (testing "compatible dates join as before"
+      (is (= 2 (count (:applied (rec/apply-agent-links rs [(link :doc/a "1802-1870") (link :doc/b "1802-1870")]))))))))

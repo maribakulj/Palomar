@@ -23,11 +23,16 @@
    model (lot M4, `palomar.agent-match`) — always `:proposed` (never
    `:asserted`, D7), scored and revisable. A match is `:certifiable?` only when the
    authority entry carries a determinate id; a perfect name match to an id-less
-   entry (the Victor Hugo *metro station*) can never be promoted."
+   entry (the Victor Hugo *metro station*) can never be promoted.
+
+   Grouping the agents into persons across records, from these alignments,
+   is `palomar.agent-cluster` (lot M5, ADR 0057): a constrained clustering,
+   never a closure through the authority."
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [palomar.agent-dates :as dates]
             [palomar.agent-match :as fs]
+            [palomar.curate :as curate]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.lrmoo.ntriples :as nt]))
@@ -287,18 +292,15 @@
                            (format "  %.2f" (double score))
                            (if (exact? p) "  exact" "  close")))))))
 
-(def exact-score
-  "A name-only proposal scoring at least this is put forward as
-   `skos:exactMatch`; below it, `skos:closeMatch` (ADR 0032)."
-  1.0)
-
 (defn- exact?
-  "Whether a proposal is put forward as `skos:exactMatch`: certifiable, and
-   for a scored one (lot M4) proposed outright (`:decision :propose`: one for
-   review is a close match), for a name-only one scoring `exact-score`."
-  [{:keys [certifiable? score decision] :as p}]
-  (boolean (and certifiable?
-                (if (contains? p :decision) (= :propose decision) (>= score exact-score)))))
+  "Whether a proposal is put forward as `skos:exactMatch`: certifiable and
+   proposed outright (`:decision :propose`, lot M4). Anything else — a
+   proposal for review, a name-only proposal (which no model decided,
+   whatever its score) — is a close match (ADR 0057): an exact match a
+   curator has not made is only ever a matcher's outright decision. A
+   curator turns a close match into an identity with `confirm-identity`."
+  [{:keys [certifiable? decision]}]
+  (boolean (and certifiable? (= :propose decision))))
 
 (defn- named-agent
   "The local agent entity standing for the name `nm` on record `rid`: a Person
@@ -348,8 +350,8 @@
    each record naming a proposal's `:name`, a local agent entity for that name
    (labelled with it), the authority entity (its `:iri` the authority id), and a
    `:proposed` assertion between them — `:skos/exactMatch` for a certifiable
-   proposal scoring `exact-score` (name-only) or proposed outright (`:decision
-   :propose`, scored), `:skos/closeMatch` otherwise. The score and the
+   proposal proposed outright (`:decision :propose`, scored), `:skos/closeMatch`
+   otherwise — a proposal for review, and every name-only one (ADR 0057). The score and the
    evidence are its provenance bindings (the authority's label, the name
    score, the dates, and for a scored proposal its probability, weight,
    decision and levels); its `:confidence` is the proposal's `:confidence`
@@ -408,7 +410,10 @@
    agent to an authority entity. A close match is never a link: it says the two
    are alike, not the same. Each link is scoped to the record it was accepted
    in (`:records #{rid}`, ADR 0041): that this record's \"Gustave Flaubert\" is
-   the authority says nothing of another record's."
+   the authority says nothing of another record's. A link carries the
+   `:dates` its mention was matched with, when the alignment states them.
+   A curator's confirmed review candidate (`confirm-identity`) is an
+   accepted exact match like any other."
   [records]
   (vec (distinct
         (for [r records
@@ -422,7 +427,10 @@
               :when (and auth (:iri auth) (names (:subject a)))]
           (cond-> {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted
                    :records #{(:id r)}}
-            (entity-type-of (:kind (ents (:subject a)))) (assoc :entity-type (entity-type-of (:kind (ents (:subject a))))))))))
+            (entity-type-of (:kind (ents (:subject a)))) (assoc :entity-type (entity-type-of (:kind (ents (:subject a)))))
+            ;; the dates the mention was matched with, for `apply-agent-links`' check
+            (get-in a [:provenance :bindings '?mention-dates])
+            (assoc :dates (get-in a [:provenance :bindings '?mention-dates])))))))
 
 (defn apply-agent-links
   "Rewrite `records` onto shared agent nodes from `links`: `propose-agent-links`
@@ -447,8 +455,11 @@
    records: a name alone identifies no one), `:not-accepted` (a bare proposal
    is never applied, D7), `:not-certifiable` (no determinate authority id: the
    metro-station guard), `:invalid-iri` (an authority id that is no IRI, which
-   would corrupt every RDF output) or `:ambiguous` (one name accepted for
-   several authority ids). A usable link a record does not take because the
+   would corrupt every RDF output), `:ambiguous` (one name accepted for
+   several authority ids) or `:conflict` (two links to one authority whose
+   mentions' `:dates` cannot be one person's: joining them on its node would
+   make two persons one, ADR 0057; neither is applied, and each names the
+   other under `:conflict`). A usable link a record does not take because the
    record already identifies that name is listed under `:skipped`, `{:record
    :name :iri :reason :already-identified}`. Returns `{:records [..] :applied
    [{:record :name :iri}] :skipped [..] :refused [link…]}`."
@@ -464,15 +475,29 @@
                                         (or (= :all (:records l)) (= :all (:records %))
                                             (seq (set/intersection (:records l) (:records %)))))
                                   candidates))
-        usable      (remove ambiguous? candidates)
+        profile     #(let [d (:dates %)] (if (string? d) (dates/parse-life-dates d) d))
+        ;; two links that would make two mentions whose dates cannot be one
+        ;; person's one authority node (ADR 0057): neither is applied
+        conflict    (fn [l] (first (for [o (remove ambiguous? candidates)
+                                         :when (and (not= l o) (= (:authority-id l) (:authority-id o))
+                                                    (profile l) (profile o)
+                                                    (= :incompatible (:verdict (dates/compatibility (profile l) (profile o)))))]
+                                     o)))
+        usable      (remove #(or (ambiguous? %) (conflict %)) candidates)
         refused     (vec (for [l links
-                               :let [r (cond (not (accepted? l))      :not-accepted
+                               :let [c (when (and (accepted? l) (scoped? l) (certifiable l) (valid-iri? l)
+                                                  (not (ambiguous? l)))
+                                         (conflict l))
+                                     r (cond (not (accepted? l))      :not-accepted
                                              (not (scoped? l))        :unscoped
                                              (not (certifiable l))    :not-certifiable
                                              (not (valid-iri? l))     :invalid-iri
-                                             (ambiguous? l)           :ambiguous)]
+                                             (ambiguous? l)           :ambiguous
+                                             c                        :conflict)]
                                :when r]
-                           (assoc l :reason r)))
+                           (cond-> (assoc l :reason r)
+                             c (assoc :conflict {:with (select-keys c [:name :records :dates])
+                                                 :because :incompatible-dates}))))
         rewrite     (fn [r]
                       (let [rid   (:id r)
                             known (set (keep :name (agents/identified r)))
@@ -499,3 +524,21 @@
      :applied (vec (mapcat :applied results))
      :skipped (vec (mapcat :skipped results))
      :refused refused}))
+
+(defn confirm-identity
+  "A curator confirms a review candidate (ADR 0057): the close match `close`
+   (`:skos/closeMatch` from a record's local agent to an authority, pending
+   or in force) is superseded by the accepted exact match between the same
+   two (`curate/supersede`), with `reason` and the curator `context`. A
+   pending close match is first accepted (the curator read it), then
+   superseded; both decisions are in its history. Returns `{:record
+   :transitions}`. Clustering and `accepted-links` read the accepted exact
+   match: an accepted close match alone joins nothing."
+  ([record close reason] (confirm-identity record close reason {}))
+  ([record close reason context]
+   (when-not (= :skos/closeMatch (:predicate close))
+     (throw (ex-info "confirm-identity: not a close match" {:assertion close})))
+   (let [{r1 :record t1 :transitions} (curate/decide-one record close :accept reason context)
+         exact (assoc close :predicate :skos/exactMatch)
+         {r2 :record t2 :transitions} (curate/supersede r1 (assoc close :status :accepted) exact reason context)]
+     {:record r2 :transitions (into t1 t2)})))
