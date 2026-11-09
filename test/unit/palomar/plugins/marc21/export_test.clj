@@ -149,3 +149,37 @@
       (is (re-find #"tag=\"260\"[^>]*><subfield code=\"b\">Hugo, Victor</subfield><subfield code=\"c\">1862</subfield></datafield>" out))
       (is (= 1 (count (re-seq #"tag=\"260\"" out))))
       (is (= ["100" "245" "260"] (map second (re-seq #"datafield tag=\"(\d+)\"" out)))))))
+
+(deftest rights-come-back-as-a-540
+  (testing "a rights URI is 540 $u, a rights text 540 $a, and both read back as :canon/rights (M1)"
+    (let [xml (str "<collection xmlns=\"http://www.loc.gov/MARC21/slim\"><record>"
+                   "<controlfield tag=\"001\">7</controlfield>"
+                   "<datafield tag=\"245\" ind1=\"0\" ind2=\"0\"><subfield code=\"a\">T</subfield></datafield>"
+                   "<datafield tag=\"540\" ind1=\" \" ind2=\" \"><subfield code=\"a\">Free to use.</subfield></datafield>"
+                   "<datafield tag=\"540\" ind1=\" \" ind2=\" \"><subfield code=\"u\">http://creativecommons.org/licenses/by/4.0/</subfield></datafield>"
+                   "</record></collection>")
+          c1  (->canonical xml nil)
+          out (mex/->marcxml c1)]
+      (is (= #{"Free to use." "http://creativecommons.org/licenses/by/4.0/"} (floor-literals c1 :canon/rights)))
+      (is (str/includes? out "<datafield tag=\"540\" ind1=\" \" ind2=\" \"><subfield code=\"a\">Free to use.</subfield></datafield>"))
+      (is (str/includes? out "<datafield tag=\"540\" ind1=\" \" ind2=\" \"><subfield code=\"u\">http://creativecommons.org/licenses/by/4.0/</subfield></datafield>"))
+      (is (= #{"Free to use." "http://creativecommons.org/licenses/by/4.0/"} (floor-literals (->canonical out nil) :canon/rights))))))
+
+(deftest digital-reproduction-rights-keep-their-scope
+  (testing "a 540 with $3 digital reproduction reads back as rights of the digital surrogate (M1 review 2)"
+    (let [xml (str "<collection xmlns=\"http://www.loc.gov/MARC21/slim\"><record>"
+                   "<controlfield tag=\"001\">8</controlfield>"
+                   "<datafield tag=\"245\" ind1=\"0\" ind2=\"0\"><subfield code=\"a\">T</subfield></datafield>"
+                   "<datafield tag=\"540\" ind1=\" \" ind2=\" \"><subfield code=\"3\">digital reproduction</subfield>"
+                   "<subfield code=\"u\">http://creativecommons.org/licenses/by/4.0/</subfield></datafield>"
+                   "<datafield tag=\"540\" ind1=\" \" ind2=\" \"><subfield code=\"a\">Free to use.</subfield></datafield>"
+                   "</record></collection>")
+          c   (->canonical xml nil)
+          scope-of (fn [v] (let [s (some #(when (and (= :canon/rights (:predicate %)) (= v (:value %))) (:subject %)) (:assertions c))]
+                             (some #(when (and (= s (:subject %)) (= :canon/rights-scope (:predicate %))) (:value %)) (:assertions c))))
+          out (mex/->marcxml c)]
+      (is (= #{"Free to use." "http://creativecommons.org/licenses/by/4.0/"} (floor-literals c :canon/rights)))
+      (is (= :digital-surrogate (scope-of "http://creativecommons.org/licenses/by/4.0/")))
+      (is (nil? (scope-of "Free to use.")))
+      (is (str/includes? out "<subfield code=\"3\">digital reproduction</subfield><subfield code=\"u\">http://creativecommons.org/licenses/by/4.0/</subfield>"))
+      (is (= out (mex/->marcxml (->canonical out nil))) "idempotent"))))

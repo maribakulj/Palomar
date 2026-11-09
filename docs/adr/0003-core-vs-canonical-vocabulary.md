@@ -83,3 +83,18 @@ canonical plugin alongside their format plugins.
 - Growth discipline: the canonical vocabulary starts at about ten predicates
   and must justify every addition through concrete use cases, not
   anticipated ones.
+
+## Amendment (2026-11-09, lot M1): `:canon/rights`
+
+The documentary vocabulary grows by one predicate under the growth discipline
+above, for a concrete use case: `:canon/rights`, the rights statement a
+resource is under (a URI such as a Creative Commons licence or a
+RightsStatements.org statement, or a text). Four floor spokes have a field for
+it (Dublin Core `dc:rights`, MODS `accessCondition`, MARC21 540, IIIF
+`rights`), and a IIIF manifest's rights were reported as import loss for want
+of a home. The qualifications that came with it — the scope of a rights
+statement (a digital surrogate's, not the work's), the rights of one image or
+its Canvas, an attribution note kind and its label, a provider role and an
+agent's source id — are qualifier coords and coord values, not predicates
+([ADR 0021](./0021-responsibility-kind-and-extent-qualifiers.md), amendment of
+the same date).

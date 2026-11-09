@@ -1,0 +1,79 @@
+{
+  "@context": "http://iiif.io/api/presentation/3/context.json",
+  "id": "https://example.org/iiif/rights-demo/manifest.json",
+  "type": "Manifest",
+  "label": { "en": [ "Two leaves of a herbarium" ] },
+  "rights": "http://creativecommons.org/licenses/by/4.0/",
+  "requiredStatement": {
+    "label": { "en": [ "Attribution" ], "fr": [ "Attribution" ] },
+    "value": { "en": [ "Provided by the Example Herbarium" ], "fr": [ "Fourni par l'Herbier exemple" ] }
+  },
+  "provider": [
+    {
+      "id": "https://example.org/about",
+      "type": "Agent",
+      "label": { "en": [ "Example Herbarium" ] },
+      "homepage": [
+        {
+          "id": "https://example.org/",
+          "type": "Text",
+          "label": { "en": [ "Example Herbarium home page" ] },
+          "format": "text/html"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "https://example.org/iiif/rights-demo/canvas/1",
+      "type": "Canvas",
+      "height": 1000,
+      "width": 750,
+      "items": [
+        {
+          "id": "https://example.org/iiif/rights-demo/canvas/1/page",
+          "type": "AnnotationPage",
+          "items": [
+            {
+              "id": "https://example.org/iiif/rights-demo/canvas/1/annotation",
+              "type": "Annotation",
+              "motivation": "painting",
+              "body": {
+                "id": "https://example.org/images/leaf-1.jpg",
+                "type": "Image",
+                "format": "image/jpeg"
+              },
+              "target": "https://example.org/iiif/rights-demo/canvas/1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://example.org/iiif/rights-demo/canvas/2",
+      "type": "Canvas",
+      "height": 1000,
+      "width": 750,
+      "rights": "http://rightsstatements.org/vocab/InC/1.0/",
+      "items": [
+        {
+          "id": "https://example.org/iiif/rights-demo/canvas/2/page",
+          "type": "AnnotationPage",
+          "items": [
+            {
+              "id": "https://example.org/iiif/rights-demo/canvas/2/annotation",
+              "type": "Annotation",
+              "motivation": "painting",
+              "body": {
+                "id": "https://example.org/images/leaf-2.jpg",
+                "type": "Image",
+                "format": "image/jpeg"
+              },
+              "target": "https://example.org/iiif/rights-demo/canvas/2"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

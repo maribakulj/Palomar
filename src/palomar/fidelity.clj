@@ -108,16 +108,38 @@
    structured value (`field` of `whole`) is reported only by a loss that names
    that field or that value, or names neither (post-audit 4, F5 review): one
    field lost does not account for the others; a loss naming one string
-   value accounts for that value only (post-audit 5, G1)."
+   value accounts for that value only (post-audit 5, G1).
+
+   A native value is also reached through the canonical fields a spoke mapping
+   lifts it to (`export-coverage/native-targets`), but only by a loss naming
+   that very value (trimmed): a value-less loss on a canonical field (a
+   collapse, a role not carried) says nothing of which native was written
+   (M1 review)."
   [losses rid {:keys [subject predicate value field whole]}]
-  (let [fields (into #{predicate} (cov/coord-bases predicate))]
-    (some #(and (contains? fields (dx/loss-source-field %))
-                (or (= subject (:subject %)) (= rid (:subject %)))
-                (let [{fs :loss/fields v :loss/value} (:detail %)]
-                  (and (or (nil? field) (nil? fs) (contains? fs field))
-                       ;; a loss about one value (a string, or a structured
-                       ;; value's fields) accounts for that value only
-                       (or (nil? v) (and (nil? field) (nil? value)) (= v (if field whole value))))))
+  (let [own    (into #{predicate} (cov/coord-bases predicate))
+        lifted (let [l (get cov/native-targets predicate)] (into (set l) (mapcat cov/coord-bases l)))]
+    (some #(and (or (= subject (:subject %)) (= rid (:subject %)))
+                (let [{fs :loss/fields v :loss/value} (:detail %)
+                      sf (dx/loss-source-field %)]
+                  (or (and (contains? own sf)
+                           (or (nil? field) (nil? fs) (contains? fs field))
+                           ;; a loss about one value (a string, or a structured
+                           ;; value's fields) accounts for that value only
+                           (or (nil? v) (and (nil? field) (nil? value)) (= v (if field whole value))))
+                      (and (contains? lifted sf) (nil? field) (string? v) (string? value) (= (norm v) (norm value))))))
+          losses)))
+
+(defn- value-reported?
+  "True when a loss in `losses` names `fact`'s field (its own or one it is lifted
+   to) and one of the string `values`: an attribution's value or label is
+   accounted for by a loss about that statement only, never by a value-less one."
+  [losses rid {:keys [subject predicate]} values]
+  (let [fields (let [l (get cov/native-targets predicate)]
+                 (-> #{predicate} (into (cov/coord-bases predicate)) (into l) (into (mapcat cov/coord-bases l))))
+        vs     (set (map norm values))]
+    (some #(and (or (= subject (:subject %)) (= rid (:subject %)))
+                (contains? fields (dx/loss-source-field %))
+                (let [v (get-in % [:detail :loss/value])] (and (string? v) (contains? vs (norm v)))))
           losses)))
 
 (defn- present?
@@ -201,6 +223,39 @@
     (into {} (for [s (into (set (keys direct)) (keys appells))]
                [s (into (get direct s #{}) (mapcat direct (get appells s)))]))))
 
+(def ^:private attribution-predicates
+  "The predicates of an attribution's value and label, on its fragment."
+  #{:canon/note :iiif/required-statement :canon/note-label :iiif/required-statement-label})
+
+(defn- attribution-pairs
+  "For a IIIF `doc`: the `[label value]` pairs its `requiredStatement`s write,
+   normalised, every label string with every value string of one statement."
+  [doc]
+  (with-open [r (java.io.PushbackReader. (java.io.StringReader. doc) 64)]
+    (loop [acc #{}]
+      (let [m (json/read r :eof-error? false :eof-value ::eof)]
+        (if (= ::eof m)
+          acc
+          (let [rs  (when (map? m) (get m "requiredStatement"))
+                lvs (fn [x] (when (map? x) (mapcat #(if (sequential? %) % [%]) (vals x))))]
+            (recur (into acc (for [l (lvs (get rs "label")) v (lvs (get rs "value"))
+                                   :when (and (string? l) (string? v))]
+                               [(norm l) (norm v)])))))))))
+
+(defn- attributions
+  "`{fragment [label value]}` for each attribution note of `record` with a
+   label: its fragment carries `:canon/note-kind :attribution`."
+  [record]
+  (let [on (fn [s p] (some #(when (and (= s (:subject %)) (= p (:predicate %)) (string? (:value %))) (:value %))
+                           (:assertions record)))]
+    (into {} (for [a (:assertions record)
+                   :when (and (= :canon/note-kind (:predicate a)) (= :attribution (:value a)))
+                   :let [s (:subject a)
+                         l (or (on s :canon/note-label) (on s :iiif/required-statement-label))
+                         v (or (on s :canon/note) (on s :iiif/required-statement))]
+                   :when (and l v)]
+               [s [(norm l) (norm v)]]))))
+
 (defn audit-record
   "Audit one WEMI `record` exported to `to`, against the loss diagnostics it
    carries, the export's own losses and the extra `losses` (e.g. the import edge).
@@ -269,7 +324,16 @@
                            ev (when (contains? (:predicates scopes) predicate) (or (:event whole) (:index whole)))]
                        (some #(re-find re (norm %))
                              (if ev (get-in scopes [:strings ev] #{}) seen))))
-           klass   (group-by #(cond (if (:part? %) (part-in %) (if rdf? (here? %) (present? seen (:predicate %) (:value %)))) :present
+           ;; a IIIF attribution is present only as one requiredStatement
+           ;; holding its label and its value together, not as two strings
+           ;; written anywhere (M1 review)
+           attribs (when (= :iiif to) (attributions record))
+           pairs   (when (and (seq attribs) (not (str/blank? output))) (attribution-pairs output))
+           paired? (fn [{:keys [subject predicate]}]
+                     (and (contains? attribs subject) (contains? attribution-predicates predicate)))
+           klass   (group-by #(cond (if (paired? %) (contains? pairs (attribs (:subject %)))
+                                        (if (:part? %) (part-in %) (if rdf? (here? %) (present? seen (:predicate %) (:value %))))) :present
+                                    (paired? %) (if (value-reported? all (:id record) % (attribs (:subject %))) :reported :unaccounted)
                                     (reported? all (:id record) %)                               :reported
                                     :else                                                        :unaccounted)
                              checked)]

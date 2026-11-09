@@ -80,7 +80,9 @@
    `:mapping/where` (ADR 0036) restricts the rule to source values read in a
    fragment whose locator has, at each key, one of the listed strings — e.g.
    `{:ind2 #{\"1\"}}`, MARC 264 second indicator 1, a publication statement. A
-   value whose fragment is unknown does not satisfy it."
+   value whose fragment is unknown does not satisfy it. `[:not #{…}]` in place
+   of a set is satisfied by a locator whose value at that key is none of them,
+   or which has none (`{:materials [:not #{\"digital reproduction\"}]}`)."
   [:and
    [:map {:closed true}
     [:mapping/id         :keyword]
@@ -94,7 +96,7 @@
      [:fn {:error/message ":mapping/default cannot be nil — it would emit a shape-invalid assertion"}
       some?]]
     [:mapping/confidence {:optional true} model/Confidence]
-    [:mapping/where      {:optional true} [:map-of :keyword [:set :string]]]
+    [:mapping/where      {:optional true} [:map-of :keyword [:or [:set :string] [:tuple [:= :not] [:set :string]]]]]
     [:mapping/doc        {:optional true} :string]]
    [:fn {:error/message
          ":mapping/on-empty :default ⇔ :mapping/default (both or neither)"}
@@ -424,7 +426,10 @@
                 ;; of the listed values (a MARC field's indicators)
                 locs    (into {} (map (juxt :id :locator)) (:fragments record))
                 where?  (fn [t] (some (fn [e] (let [loc (locs (:fragment e))]
-                                                (every? (fn [[k vs]] (contains? vs (get loc k))) where)))
+                                                (every? (fn [[k vs]] (if (vector? vs)
+                                                                       (not (contains? (second vs) (get loc k)))
+                                                                       (contains? vs (get loc k))))
+                                                        where)))
                                       (ev-of t)))
                 triples (if where
                           (filterv #(or (not (from-set (second %))) (where? %)) triples)

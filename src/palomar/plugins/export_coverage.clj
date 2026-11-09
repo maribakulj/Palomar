@@ -22,6 +22,7 @@
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
+            [palomar.plugins.qualified :as qualified]
             [palomar.spokes :as spokes]))
 
 (def native-targets
@@ -44,11 +45,17 @@
 (def coord-bases
   "Qualifier coord → the canonical fields it qualifies. A coord is covered by
    its field's loss when the field is not written."
-  {:canon/lang      #{:canon/title :canon/uniform-title :canon/note}
-   :canon/role      #{:canon/agent}
-   :canon/note-kind #{:canon/note}
-   :canon/width     #{:canon/digital-object}
-   :canon/height    #{:canon/digital-object}})
+  {:canon/lang          #{:canon/title :canon/uniform-title :canon/note :canon/agent :canon/rights}
+   :canon/role          #{:canon/agent}
+   :canon/agent-id      #{:canon/agent}
+   :canon/note-kind     #{:canon/note}
+   :canon/note-label    #{:canon/note}
+   :canon/note-label-lang #{:canon/note}
+   :canon/width         #{:canon/digital-object}
+   :canon/height        #{:canon/digital-object}
+   :canon/image-rights  #{:canon/digital-object}
+   :canon/canvas-rights #{:canon/digital-object}
+   :canon/rights-scope  #{:canon/rights}})
 
 (def structured-derived
   "Fields of a structured native that its importer computed rather than read
@@ -136,3 +143,22 @@
                :edge         :export
                :source-field p
                :message      (str (pr-str p) " is not written by the " target " export")}))))
+
+(defn provider-losses
+  "One `:dropped` export loss per provider of a digital surrogate (`:canon/role
+   :provider`): DC, MODS and MARC21 have no agent element that does not state a
+   role in the work, so it is not written."
+  [record target]
+  (for [nm (distinct (keep #(when (= :provider (:coord %)) (:value %)) (qualified/values record :canon/agent :canon/role)))]
+    (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/agent :value nm
+              :message (str "the provider " (pr-str nm) " of the digital surrogate has no " target
+                            " element that does not state a role in the work; not written")})))
+
+(defn scope-losses
+  "One `:under-specified` loss per rights statement scoped to the digital
+   surrogate written where the scope cannot be said."
+  [record target]
+  (for [o (qualified/occurrences record :canon/rights [:canon/rights-scope]) :when (:canon/rights-scope o)]
+    (dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :canon/rights-scope
+              :value (:value o) :aspect :qualifier
+              :message (str "rights " (pr-str (:value o)) " hold for the digital surrogate only; " target " writes them as the resource's")})))

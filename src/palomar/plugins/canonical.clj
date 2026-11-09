@@ -7,8 +7,8 @@
       format plugins (Dublin Core, MARC, CIDOC, …) map their native
       terms onto so cross-source rules, validation, and projection can
       operate on a commensurable layer (ADR 0003 §Decision). The V1 set of
-      eight has grown by one — `:canon/uniform-title` (see below) — under
-      ADR 0003's growth discipline.
+      eight has grown by two — `:canon/uniform-title` and `:canon/rights`
+      (see below) — under ADR 0003's growth discipline.
    2. The first validation rules over that layer. Sprint 5 stood up the
       ingest → normalize path (native source → `:canon/*` assertions);
       this plugin closes the loop by *enforcing* the canonical layer —
@@ -29,8 +29,9 @@
 
    `:canon/role` is the second qualifier coord (added 2026-10-25, after the
    interoperability audit). It qualifies a `:canon/agent` occurrence with the
-   responsibility the source states — `:creator`, `:contributor` or
-   `:publisher` (`agent-roles`). It is a constant qualifier: the mapping rule
+   responsibility the source states — `:creator`, `:contributor`,
+   `:publisher` or `:provider` (`agent-roles`; `:provider`, added 2026-11-09,
+   is a IIIF `provider`: who makes the digital resource available). It is a constant qualifier: the mapping rule
    knows the role (`dc:publisher` is always a publisher), so normalize mints the
    fragment (ADR 0009 §Qualifier). An agent with no role is one whose source did
    not say; consumers that need a creator (the Work key, Linked Art
@@ -45,9 +46,26 @@
 
    `:canon/note-kind` (added 2026-10-25) is a constant qualifier on a
    `:canon/note` saying what kind of note the source field was: `:abstract`
-   (MODS abstract, MARC 520, UNIMARC 330), `:contents` (MARC 505, UNIMARC 327)
-   or `:credits` (MARC 511). A general note has none. It lets the MARC and MODS
-   exports write each note back to its own field (audit S21/S22).
+   (MODS abstract, MARC 520, UNIMARC 330), `:contents` (MARC 505, UNIMARC 327),
+   `:credits` (MARC 511) or `:attribution` (a IIIF `requiredStatement`, written
+   \"label: value\"; added 2026-11-09). A general note has none. It lets the
+   MARC, MODS and IIIF exports write each note back to its own field (audit
+   S21/S22).
+
+   Rights (added 2026-11-09, lot M1). `:canon/rights` is documentary: a rights
+   statement — a URI (Creative Commons, RightsStatements.org) or a text (DC
+   `dc:rights`, IIIF `rights`, MODS `accessCondition`, MARC 540). A rights
+   statement with no `:canon/rights-scope` is the described resource's own;
+   `:canon/rights-scope :digital-surrogate` (`rights-scopes`) says it holds for
+   the digital surrogate only (a IIIF manifest's rights), not for the work.
+   Rights that hold for one image only qualify that `:canon/digital-object`:
+   `:canon/image-rights` (a IIIF painted Image body's `rights`) and
+   `:canon/canvas-rights` (its Canvas's). An attribution note (a IIIF
+   `requiredStatement`) keeps its label apart, `:canon/note-label`, with the
+   label's language, `:canon/note-label-lang`.
+   `:canon/agent-id` qualifies a `:canon/agent` with the URI its source
+   identifies it by (a IIIF Agent's `id`, which an Agent MUST have); it is the
+   source's own identifier, not a reconciled authority.
 
    ## The core stays vocabulary-blind
 
@@ -84,9 +102,15 @@
    that unifies an edition's transcribed-title variants — the floor projection
    keys the Work on it when present, raising recall against an independent gold
    (`docs/eval/bibr-work-clustering.md`). It describes *what the work is*, distinct
-   from `:canon/title` (the manifestation's transcribed title)."
+   from `:canon/title` (the manifestation's transcribed title).
+
+   `:canon/rights` is the tenth, added 2026-11-09 (lot M1): every floor spoke
+   but one has a field for the rights a resource is under (DC `dc:rights`, MODS
+   `accessCondition`, MARC 540, IIIF `rights`), and a IIIF manifest's rights
+   were reported as import loss for want of a home."
   #{:canon/title
     :canon/uniform-title
+    :canon/rights
     :canon/identifier
     :canon/agent
     :canon/date
@@ -98,15 +122,23 @@
 (def qualifier-coords
   "The canonical qualifier coords (ADR 0011): predicates that ride on a
    fragment to qualify a documentary value, never documentary themselves."
-  #{:canon/lang :canon/role :canon/width :canon/height :canon/note-kind})
+  #{:canon/lang :canon/role :canon/width :canon/height :canon/note-kind
+    :canon/image-rights :canon/canvas-rights :canon/agent-id :canon/rights-scope
+    :canon/note-label :canon/note-label-lang})
+
+(def rights-scopes
+  "The values a `:canon/rights-scope` coord takes on a `:canon/rights` fragment:
+   `:digital-surrogate`, rights of the digital reproduction (a IIIF manifest's),
+   not of the work. A rights statement with no scope is the resource's own."
+  #{:digital-surrogate})
 
 (def agent-roles
   "The values a `:canon/role` coord takes on a `:canon/agent` fragment."
-  #{:creator :contributor :publisher})
+  #{:creator :contributor :publisher :provider})
 
 (def note-kinds
   "The values a `:canon/note-kind` coord takes on a `:canon/note` fragment."
-  #{:abstract :contents :credits})
+  #{:abstract :contents :credits :attribution})
 
 (defn documentary?
   "True if `predicate` is one of the canonical documentary
@@ -162,7 +194,7 @@
    :produce {:diagnostic {:severity :warning
                           :code     :unknown-agent-role
                           :subject  '?f
-                          :message  "agent role is not :creator, :contributor or :publisher"}}
+                          :message  "agent role is not :creator, :contributor, :publisher or :provider"}}
    :doc     "Warn on a :canon/role outside the agent-role vocabulary."})
 
 (def note-kind-known-rule
@@ -175,7 +207,7 @@
    :produce {:diagnostic {:severity :warning
                           :code     :unknown-note-kind
                           :subject  '?f
-                          :message  "note kind is not :abstract, :contents or :credits"}}
+                          :message  "note kind is not :abstract, :contents, :credits or :attribution"}}
    :doc     "Warn on a :canon/note-kind outside the note-kind vocabulary."})
 
 (def no-blank-value-rule
@@ -185,7 +217,7 @@
    :phase   :validate
    :match   '[[?s ?p ?v]
               (in? ?p [:canon/title :canon/uniform-title :canon/identifier :canon/agent
-                       :canon/date :canon/relation :canon/note :canon/digital-object])
+                       :canon/date :canon/relation :canon/note :canon/digital-object :canon/rights])
               (matches? ?v "^[\\s\u00A0]*$")]
    :produce {:diagnostic {:severity :warning
                           :code     :blank-value

@@ -15,7 +15,7 @@
      reported as `:under-specified`;
    - `dc:relation` and `dc:source` both import to `:canon/relation`, so export
      cannot tell them apart and emits `dc:relation`.
-   The six DCMES elements with no canonical home (subject, type, …) were already
+   The five DCMES elements with no canonical home (subject, type, …) were already
    dropped at import; they simply do not reappear — the round-trip's hard loss.
 
    Output is built as a string (correct XML escaping, a stable `dc:` prefix, the
@@ -40,16 +40,21 @@
    [:canon/date       "date"]
    [:canon/identifier "identifier"]
    [:canon/relation   "relation"]       ; source also -> relation (lossy)
-   [:canon/note       "description"]])
+   [:canon/note       "description"]
+   [:canon/rights     "rights"]])
 
 (def ^:private role->dc
-  "DC element for an agent with a stated `:canon/role`."
+  "DC element for an agent with a stated `:canon/role`. A IIIF provider (of the
+   digital surrogate) has none: every DC agent element states a role in the
+   resource described, so it is not written (`export-coverage/provider-losses`)."
   {:creator "creator" :contributor "contributor" :publisher "publisher"})
 
 (defn- occurrences
-  "`{:value :canon/lang :canon/role}` for each `p` literal of `record`."
+  "`{:value :canon/lang :canon/role …}` for each `p` literal of `record`; the
+   providers among the agents are left out (`role->dc`)."
   [record p]
-  (qualified/occurrences record p [:canon/lang :canon/role]))
+  (cond->> (qualified/occurrences record p [:canon/lang :canon/role :canon/rights-scope])
+    (= :canon/agent p) (remove #(= :provider (:canon/role %)))))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -79,8 +84,9 @@
            "\n</metadata>"))))
 
 (def ^:private written
-  "The canonical fields and coords the DC export writes."
-  (into #{:canon/role :canon/lang} (map first) canon->dc))
+  "The canonical fields and coords the DC export writes (a rights scope is
+   reported: `dc:rights` cannot say it)."
+  (into #{:canon/role :canon/lang :canon/rights-scope} (map first) canon->dc))
 
 (defn export-losses
   "Export-edge loss (ADR 0015) for the canonical→DC projection: agents whose role
@@ -103,7 +109,9 @@
                           :edge         :export
                           :source-field :canon/relation
                           :message      "relation/source distinction not recoverable — emitted as dc:relation"})))
-        (cov/unexpressed record written "Dublin Core")))
+        (concat (cov/unexpressed record written "Dublin Core")
+                (cov/provider-losses record "Dublin Core")
+                (cov/scope-losses record "dc:rights"))))
 
 (defn exporter
   "ADR 0007 exporter: render the canonical view of `records` as Dublin Core XML

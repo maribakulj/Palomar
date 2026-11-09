@@ -262,3 +262,66 @@
     (is (nil? (get-in d ["identified_by" 0 "language"])))
     (is (some #(and (= :lido/title-name (get-in % [:detail :loss/source-field])) (str/includes? (:message %) "\"la\"")) loss))
     (is (= [] (errors-against object-schema (json/write-str d))))))
+
+(def ^:private aat-rights-statement "http://vocab.getty.edu/aat/300435434")
+
+(defn- classified? [stmt aat] (some #(= aat (get % "id")) (get stmt "classified_as")))
+
+(deftest a-iiif-manifest-carries-its-rights
+  (testing "the DigitalObject of a manifest states its rights and attribution, and still validates (M1)"
+    (let [{:keys [output loss]} (convert/convert {:from :iiif :to :linked-art
+                                                  :source (slurp "test/fixtures/documentary/iiif/manifest_rights.json")})
+          doc   (json/read-str output)
+          stmts (get doc "referred_to_by")]
+      (is (= [] (errors-against digital-schema output)) "it validates strictly against digital.json")
+      (testing "the rights URI is a rights statement (digital.json has no subject_to for a DigitalObject)"
+        (is (some #(and (classified? % aat-rights-statement)
+                        (= "http://creativecommons.org/licenses/by/4.0/" (get % "content")))
+                  stmts)))
+      (testing "the requiredStatement is a credit line named by its label"
+        (is (some #(and (classified? % "http://vocab.getty.edu/aat/300026687")
+                        (= "Provided by the Example Herbarium" (get % "content"))
+                        (= "Attribution" (get % "_label")))
+                  stmts)))
+      (testing "what is written as a statement is not reported as dropped (M1 review)"
+        (let [recs (:records (convert/to-wemi :iiif {} (slurp "test/fixtures/documentary/iiif/manifest_rights.json")))
+              fs   (set (map #(get-in % [:detail :loss/source-field]) (mapcat linked-art/export-losses recs)))]
+          (is (not-any? fs [:iiif/rights :iiif/required-statement :iiif/canvas-rights :canon/rights]))))
+      (testing "the second image's own rights ride on its representation"
+        (let [rep (first (filter #(str/includes? (json/write-str %) "leaf-2.jpg") (get doc "representation")))]
+          (is (some #(and (classified? % aat-rights-statement)
+                          (= "http://rightsstatements.org/vocab/InC/1.0/" (get % "content")))
+                    (get rep "referred_to_by")))))
+      (testing "the provider has no place in a Linked Art DigitalObject: reported"
+        (is (some #{:canon/agent} (:source-fields loss)))
+        (is (not (str/includes? output "\"_label\":\"Example Herbarium\"")))))))
+
+(deftest a-text-s-rights-uri-is-a-right
+  (testing "a rights URI on a text is a Right it is subject to, classified by the URI; it validates (M1)"
+    (let [xml (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:title>T</dc:title>"
+                   "<dc:rights>http://creativecommons.org/licenses/by/4.0/</dc:rights>"
+                   "<dc:rights>Some rights reserved.</dc:rights></metadata>")
+          {:keys [output]} (convert/convert {:from :dc :opts {:record-id :dc/r} :to :linked-art :source xml})
+          doc (json/read-str output)]
+      (is (= "LinguisticObject" (get doc "type")))
+      (is (= [] (text-errors output)))
+      (is (= "http://creativecommons.org/licenses/by/4.0/" (get-in doc ["subject_to" 0 "classified_as" 0 "id"])))
+      (is (= "Right" (get-in doc ["subject_to" 0 "type"])))
+      (testing "a rights text is a rights statement"
+        (is (some #(and (classified? % aat-rights-statement) (= "Some rights reserved." (get % "content")))
+                  (get doc "referred_to_by")))))))
+
+(deftest a-surrogate-s-rights-are-not-the-text-s
+  (testing "rights of a digital reproduction (IIIF -> MODS or MARC21 -> re-import) are not put on the text's
+            LinguisticObject (M1 review)"
+    (doseq [via [:mods :marc21]]
+      (testing via
+        (let [mid (:output (convert/convert {:from :iiif :to via
+                                             :source (slurp "test/fixtures/documentary/iiif/manifest_rights.json")}))
+              {:keys [output loss]} (convert/convert {:from via :to :linked-art :source mid})
+              doc (json/read-str (first (str/split-lines output)))]
+          (is (= "LinguisticObject" (get doc "type")))
+          (is (nil? (get doc "subject_to")))
+          (is (not (str/includes? output "creativecommons.org/licenses/by/4.0")))
+          (is (some #{:canon/rights} (:source-fields loss)) "they are reported")
+          (is (= [] (text-errors (first (str/split-lines output))))))))))

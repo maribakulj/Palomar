@@ -95,6 +95,46 @@
       (is (str/includes? out "<abstract>What the book argues.</abstract>"))
       (is (str/includes? out "<note>Includes index.</note>")))))
 
+(deftest rights-come-back-as-an-access-condition
+  (testing "a rights statement is a use-and-reproduction accessCondition, and reads back as one (M1)"
+    (let [src (str "<mods xmlns=\"http://www.loc.gov/mods/v3\">"
+                   "<titleInfo><title>T</title></titleInfo>"
+                   "<accessCondition type=\"use and reproduction\">http://creativecommons.org/licenses/by/4.0/</accessCondition>"
+                   "<accessCondition type=\"restriction on access\">Reading room only.</accessCondition>"
+                   "<recordInfo><recordIdentifier>r1</recordIdentifier></recordInfo></mods>")
+          {:keys [diagnostics]} (mods/importer {} src)
+          c1  (->canonical src :mods/rr1)
+          out (mex/->mods-xml c1)]
+      (is (= #{"http://creativecommons.org/licenses/by/4.0/"} (floor-literals c1 :canon/rights)))
+      (is (str/includes? out "<accessCondition type=\"use and reproduction\">http://creativecommons.org/licenses/by/4.0/</accessCondition>"))
+      (is (= out (mex/->mods-xml (->canonical out nil))) "the trip is idempotent")
+      (testing "an access restriction is no rights statement: it is reported"
+        (is (some #(= :mods/accessCondition (dx/loss-source-field %)) (dx/losses diagnostics)))))))
+
+(deftest rights-given-as-xlink-href-are-read
+  (testing "an accessCondition's xlink:href is a rights URI, kept beside its text; an empty one is reported (M1 review)"
+    (let [src (str "<mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">"
+                   "<titleInfo><title>T</title></titleInfo>"
+                   "<accessCondition type=\"use and reproduction\" xlink:href=\"http://rightsstatements.org/vocab/InC/1.0/\">In Copyright</accessCondition>"
+                   "<accessCondition type=\"use and reproduction\" xlink:href=\"http://creativecommons.org/publicdomain/mark/1.0/\"/>"
+                   "<accessCondition>   </accessCondition>"
+                   "<recordInfo><recordIdentifier>x1</recordIdentifier></recordInfo></mods>")
+          {:keys [diagnostics]} (mods/importer {} src)
+          c (->canonical src :mods/rx1)]
+      (is (= #{"http://rightsstatements.org/vocab/InC/1.0/" "In Copyright" "http://creativecommons.org/publicdomain/mark/1.0/"}
+             (floor-literals c :canon/rights)))
+      (is (some #(and (= :mods/accessCondition (dx/loss-source-field %)) (re-find #"neither" (:message %)))
+                (dx/losses diagnostics)))))
+  (testing "the rights of a digital reproduction keep their scope through MODS"
+    (let [src (str "<mods xmlns=\"http://www.loc.gov/mods/v3\"><titleInfo><title>T</title></titleInfo>"
+                   "<accessCondition type=\"use and reproduction\" displayLabel=\"digital reproduction\">http://creativecommons.org/licenses/by/4.0/</accessCondition>"
+                   "<recordInfo><recordIdentifier>x2</recordIdentifier></recordInfo></mods>")
+          c   (->canonical src :mods/rx2)
+          out (mex/->mods-xml c)]
+      (is (some #(and (= :canon/rights-scope (:predicate %)) (= :digital-surrogate (:value %))) (:assertions c)))
+      (is (str/includes? out "displayLabel=\"digital reproduction\">http://creativecommons.org/licenses/by/4.0/<"))
+      (is (= out (mex/->mods-xml (->canonical out nil)))))))
+
 (deftest a-canonless-record-renders-nothing
   (testing "a record with no canonical content and no :source renders nil"
     (is (nil? (mex/->mods-xml (model/record {:id :mods/empty :kind :mods/record}))))))

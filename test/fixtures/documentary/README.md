@@ -4,9 +4,12 @@ Curated real-world metadata samples spanning the universal V1 scope
 (IIIF ↔ INTERMARC) plus the pivot ontologies and identity authorities. Used by
 the WP-0 WEMI-derivation spike (`dev/spike/`) and, later, by spoke tests (WP-4).
 
-**These are third-party samples, not Palomar's own work.** Every file is traced
-to its upstream source in [`MANIFEST.tsv`](./MANIFEST.tsv) (fixture path → source
-URL). Keep that file as the attribution record.
+**These are third-party samples, not Palomar's own work**, with one exception:
+`iiif/manifest_rights.json` was written for Palomar (rights, `requiredStatement`
+and `provider` at manifest and Canvas level; no cookbook recipe combines them).
+Every file is traced to its upstream source in [`MANIFEST.tsv`](./MANIFEST.tsv)
+(fixture path → source URL, or the note that it was authored here). Keep that
+file as the attribution record.
 
 ## What's here
 
@@ -16,7 +19,7 @@ URL). Keep that file as the attribution record.
 | `bnf-rdf/` | a real data.bnf.fr record (Machiavelli, ARK cb119137957) in 5 RDF serialisations | authority resolver #2 (D5) |
 | `lrm/lrmoo/`, `cidoc-crm/` | LRMoo v1.0 OWL, CIDOC-CRM v7.1.3 RDF | the pivot vocabulary (WP-2) |
 | `marc21/`, `mods/`, `dublin-core/` | LoC MARCXML, MODS, W3C DC | bibliographic spokes (WP-4) |
-| `iiif/` | image, book, newspaper-OCR manifests | IIIF spoke; `:canon/digital-object` |
+| `iiif/` | image, book, newspaper-OCR manifests; a rights manifest written here | IIIF spoke; `:canon/digital-object`, `:canon/rights` |
 | `ead/`, `eac-cpf/`, `mads/` | EAD 2002 + EAD3, EAC-CPF, MADS | archival / authority spokes |
 | `mets/`, `gallica/` | METS, Gallica ALTO + plain text | digitisation / structure |
 

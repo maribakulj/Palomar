@@ -55,7 +55,8 @@
    [:canon/date           "<originInfo><dateIssued>"   "</dateIssued></originInfo>"]
    [:canon/identifier     "<identifier>"               "</identifier>"]
    [:canon/note           "<note>"                     "</note>"]                     ; per :canon/note-kind, see `note-elements`
-   [:canon/digital-object "<location><url>"            "</url></location>"]])
+   [:canon/digital-object "<location><url>"            "</url></location>"]
+   [:canon/rights         "<accessCondition type=\"use and reproduction\">" "</accessCondition>"]])
 
 (defn- canon-literals
   "Record floor literal values for canonical `pred` (string assertions). The MODS
@@ -84,13 +85,31 @@
   "`[open close value]` for each of `record`'s agents: a publisher is
    `originInfo/publisher`, every other agent a `name` (`open`/`close`). One
    element per name and kind: a name credited as creator and contributor is one
-   `<name>`, as `<name>` carries no role here."
+   `<name>`, as `<name>` carries no role here. A provider of a digital surrogate
+   is not written (`export-coverage/provider-losses`)."
   [record open close]
   (distinct
-   (for [{nm :name role :role} (agents/occurrences record)]
+   (for [{nm :name role :role} (agents/occurrences record)
+         :when (not= :provider role)]
      (if (= :publisher role)
        ["<originInfo><publisher>" "</publisher></originInfo>" nm]
        [open close nm]))))
+
+(def digital-reproduction
+  "The `displayLabel` of an `accessCondition` whose rights hold for the digital
+   reproduction only (`:canon/rights-scope :digital-surrogate`); the importer
+   reads it back as that scope."
+  "digital reproduction")
+
+(defn- rights-elements
+  "`[open close value]` for each rights statement: a use-and-reproduction
+   `accessCondition`, labelled `digital reproduction` when it is the digital
+   surrogate's."
+  [record open close]
+  (for [o (qualified/occurrences record :canon/rights [:canon/rights-scope])]
+    (if (:canon/rights-scope o)
+      [(str "<accessCondition type=\"use and reproduction\" displayLabel=\"" digital-reproduction "\">") close (:value o)]
+      [open close (:value o)])))
 
 (defn ->mods-xml
   "Render `record`'s canonical content as a MODS v3 `<mods>` document, or `nil` if
@@ -102,6 +121,7 @@
                     [open close v] (case p
                                      :canon/agent (agent-elements record open close)
                                      :canon/note  (note-elements record open close)
+                                     :canon/rights (rights-elements record open close)
                                      (for [v (canon-literals record p)] [open close v]))]
                 (element-line open close v))
         lines (cond-> (vec body)
@@ -123,6 +143,8 @@
        (group-by :mapping/to)
        (keep (fn [[to rules]]
                (when (> (count (distinct (map :mapping/from rules))) 1) to)))
+       ;; a rights statement's scope brings its accessCondition back
+       (remove #{:canon/rights})
        set))
 
 (def ^:private mapped-natives
@@ -149,7 +171,17 @@
 (def ^:private written-canon
   "The canonical fields and coords the MODS export writes (`canon->mods`; the role
    picks name vs originInfo/publisher)."
-  (into #{:canon/role :canon/note-kind} (map first) canon->mods))
+  (into #{:canon/role :canon/note-kind :canon/rights-scope} (map first) canon->mods))
+
+(defn- unplaced-note-kinds
+  "One `:dropped` loss per note kind MODS has no field for (an attribution):
+   such a note is written as a general <note>, its kind is not."
+  [record]
+  (for [k (distinct (keep :coord (qualified/values record :canon/note :canon/note-kind)))
+        :when (not (contains? note-kind->element k))]
+    (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/note-kind
+              :value k :aspect :qualifier
+              :message (str "a " (name k) " note is written as a general <note>; its kind is not")})))
 
 (defn export-losses
   "Loss for the canonical→MODS round-trip (ADR 0015): the captured-but-unmapped
@@ -160,6 +192,8 @@
   [record]
   (concat
    (cov/unexpressed record written-canon "mods" "MODS")
+   (unplaced-note-kinds record)
+   (cov/provider-losses record "MODS")
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

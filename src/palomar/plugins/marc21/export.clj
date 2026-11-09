@@ -49,7 +49,8 @@
    [:canon/date           "260" "c"]    ; 264 also -> date
    [:canon/identifier     "010" "a"]    ; 020/022/035 also -> identifier
    [:canon/digital-object "856" "u"]
-   [:canon/note           "500" "a"]])  ; per :canon/note-kind, see `note-fields`
+   [:canon/note           "500" "a"]    ; per :canon/note-kind, see `note-fields`
+   [:canon/rights         "540" "a"]])  ; a URI in $u, see `rights-fields`
 
 (defn- canon-literals
   "Record floor literal values for canonical `pred` (record- or fragment-level
@@ -69,8 +70,10 @@
     (distinct
      (concat
       (when main [["100" "a" main]])
+      ;; a provider of a digital surrogate is not written
+      ;; (`export-coverage/provider-losses`)
       (for [{nm :name role :role} (agents/occurrences record)
-            :when (or (= :publisher role) (not= nm main))]
+            :when (and (not= :provider role) (or (= :publisher role) (not= nm main)))]
         (if (= :publisher role) ["260" "b" nm] ["700" "a" nm]))))))
 
 (def ^:private note-kind->tag
@@ -82,6 +85,16 @@
   [record]
   (for [{:keys [value coord]} (qualified/values record :canon/note :canon/note-kind)]
     [(get note-kind->tag coord "500") "a" value]))
+
+(defn- rights-fields
+  "`[tag code value pre]` for each of `record`'s rights statements: 540, the
+   terms governing use and reproduction, `$u` for a URI and `$a` for a text;
+   rights of the digital surrogate only are preceded by `$3 digital
+   reproduction` (materials specified)."
+  [record]
+  (for [{v :value scope :canon/rights-scope} (qualified/occurrences record :canon/rights [:canon/rights-scope])]
+    (cond-> ["540" (if (re-matches #"(?i)https?://\S+" v) "u" "a") v]
+      scope (conj [["3" "digital reproduction"]]))))
 
 (defn- xml-escape [s]
   (-> (str s)
@@ -104,11 +117,12 @@
                      f (case p
                          :canon/agent (agent-fields record)
                          :canon/note  (note-fields record)
+                         :canon/rights (rights-fields record)
                          (for [v (canon-literals record p)] [tag code v]))]
                  f)
         imprint (->> fields (filter #(= "260" (first %))) (sort-by second) (mapv (fn [[_ c v]] [c v])))]
     (sort-by first
-             (cond-> (vec (for [[tag code v] fields :when (not= "260" tag)] [tag [[code v]]]))
+             (cond-> (vec (for [[tag code v pre] fields :when (not= "260" tag)] [tag (conj (vec pre) [code v])]))
                (seq imprint) (conj ["260" imprint])))))
 
 (defn ->marcxml
@@ -135,12 +149,13 @@
   "Canonical predicates several MARC fields collapsed onto at import (derived from
    the marc21 mapping's many-to-one structure) — their MARC tag/flavour is not
    recoverable on export. `:canon/note` is not among them any more: each note
-   field's kind travels as `:canon/note-kind`, so 500/505/511/520 come back."
+   field's kind travels as `:canon/note-kind`, so 500/505/511/520 come back;
+   nor is `:canon/rights`: a URI is written to 540 $u, a text to 540 $a."
   (->> marc21/mapping
        (group-by :mapping/to)
        (keep (fn [[to rules]]
                (when (> (count (distinct (map :mapping/from rules))) 1) to)))
-       (remove #{:canon/note})
+       (remove #{:canon/note :canon/rights})
        set))
 
 (def ^:private mapped-natives
@@ -168,7 +183,17 @@
 (def ^:private written-canon
   "The canonical fields and coords the MARC21 export writes (`canon->marc`; the
    role picks 100/700/260 $b)."
-  (into #{:canon/role :canon/note-kind} (map first) canon->marc))
+  (into #{:canon/role :canon/note-kind :canon/rights-scope} (map first) canon->marc))
+
+(defn- unplaced-note-kinds
+  "One `:dropped` loss per note kind MARC21 has no field for (an attribution):
+   such a note is written as a 500 general note, its kind is not."
+  [record]
+  (for [k (distinct (keep :coord (qualified/values record :canon/note :canon/note-kind)))
+        :when (not (contains? note-kind->tag k))]
+    (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/note-kind
+              :value k :aspect :qualifier
+              :message (str "a " (name k) " note is written as a 500 general note; its kind is not")})))
 
 (defn export-losses
   "Loss for the canonical→MARC round-trip (ADR 0015): the floor-coverage drops
@@ -180,6 +205,7 @@
   [record]
   (concat
    (cov/unexpressed record written-canon "marc21" "MARC21")
+   (unplaced-note-kinds record)
    (when (some #(some (fn [k] (not (str/blank? (get-in % [:locator k])))) [:ind1 :ind2])
                (:fragments record))
      [(dx/loss {:category     :dropped
@@ -188,6 +214,7 @@
                 :source-field :marc21/indicators
                 :aspect       :qualifier
                 :message      "field indicators are not carried by the floor; every datafield is written with blank indicators"})])
+   (cov/provider-losses record "MARC21")
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

@@ -131,7 +131,20 @@
     :mapping/qualifier {:value :credits :as :canon/note-kind}}
    {:mapping/id :map/marc21-summary-520 :mapping/from :marc21/f520_a :mapping/to :canon/note
     :mapping/transform [:trim]
-    :mapping/qualifier {:value :abstract :as :canon/note-kind}}])
+    :mapping/qualifier {:value :abstract :as :canon/note-kind}}
+   ;; 540 Terms Governing Use and Reproduction: the terms ($a) or their URI
+   ;; ($u); with `$3 digital reproduction` (materials specified) they are the
+   ;; digital surrogate's, not the work's
+   {:mapping/id :map/marc21-rights-540 :mapping/from :marc21/f540_a :mapping/to :canon/rights
+    :mapping/transform [:trim] :mapping/where {:materials [:not #{"digital reproduction"}]}}
+   {:mapping/id :map/marc21-rights-uri-540 :mapping/from :marc21/f540_u :mapping/to :canon/rights
+    :mapping/transform [:trim] :mapping/where {:materials [:not #{"digital reproduction"}]}}
+   {:mapping/id :map/marc21-rights-540-digital :mapping/from :marc21/f540_a :mapping/to :canon/rights
+    :mapping/transform [:trim] :mapping/where {:materials #{"digital reproduction"}}
+    :mapping/qualifier {:value :digital-surrogate :as :canon/rights-scope}}
+   {:mapping/id :map/marc21-rights-uri-540-digital :mapping/from :marc21/f540_u :mapping/to :canon/rights
+    :mapping/transform [:trim] :mapping/where {:materials #{"digital reproduction"}}
+    :mapping/qualifier {:value :digital-surrogate :as :canon/rights-scope}}])
 
 ;; ---------------------------------------------------------------------------
 ;; Importer (ADR 0007)

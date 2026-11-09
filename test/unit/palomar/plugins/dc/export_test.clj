@@ -1,7 +1,7 @@
 (ns palomar.plugins.dc.export-test
   "Round-trip tests (WP-4): DC → canonical → DC. The real W3C fixture imports to
    the canonical floor, exports back to Dublin Core XML, and the test pins down
-   exactly what survived and what the floor cost (ADR 0015): the six unmodelled
+   exactly what survived and what the floor cost (ADR 0015): the five unmodelled
    elements gone, relation/source collapsed, the agent roles kept — then proves
    the trip is stable on a second pass."
   (:require [clojure.string :as str]
@@ -45,12 +45,44 @@
         (is (= 2 (count (re-seq #"<dc:relation>" out))))
         (is (not (str/includes? out "<dc:source>")))))))
 
-(deftest the-six-unmodelled-elements-do-not-survive-the-trip
-  (testing "subject/type/format/language/coverage/rights are gone from the output"
+(deftest the-five-unmodelled-elements-do-not-survive-the-trip
+  (testing "subject/type/format/language/coverage are gone from the output"
     (let [{:keys [canon]} (->canonical fixture :dc/rt)
           out             (dce/->dc-xml canon)]
-      (doseq [el ["subject" "type" "format" "language" "coverage" "rights"]]
+      (doseq [el ["subject" "type" "format" "language" "coverage"]]
         (is (not (str/includes? out (str "<dc:" el))) (str "dc:" el " should be dropped"))))))
+
+(deftest rights-come-back-as-dc-rights
+  (testing "dc:rights reaches the floor as :canon/rights and is written back (M1)"
+    (let [{:keys [canon]} (->canonical fixture :dc/rt)
+          out             (dce/->dc-xml canon)]
+      (is (str/includes? out "<dc:rights>Copyright 2007, Alan Kelsey, Ltd. All rights reserved.</dc:rights>"))))
+  (testing "a provider of a digital surrogate is not written: DC has no element that states no role in the work (M1 review)"
+    (let [r (model/record {:id :dc/p :kind :document
+                           :fragments  [(model/fragment {:id :frag/p.0 :source [:test]})]
+                           :assertions [(model/assertion {:subject :dc/p :predicate :canon/title :value "T"})
+                                        (model/assertion {:subject :dc/p :predicate :canon/agent
+                                                          :value (model/reference :frag/p.0)})
+                                        (model/assertion {:subject :frag/p.0 :predicate :canon/agent :value "Example Herbarium"})
+                                        (model/assertion {:subject :frag/p.0 :predicate :canon/role :value :provider})]})]
+      (is (not (str/includes? (dce/->dc-xml r) "Example Herbarium")))
+      (is (some #(and (= :canon/agent (get-in % [:detail :loss/source-field]))
+                      (= "Example Herbarium" (get-in % [:detail :loss/value]))
+                      (= :loss/dropped (:code %)))
+                (dce/export-losses r))))))
+
+(deftest rights-given-as-a-uri-attribute-are-read
+  (testing "dcterms:license / dc:rights with rdf:resource carry the URI; text and URI are both kept; an empty element is reported (M1 review)"
+    (let [xml (str "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\""
+                   " xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><dc:title>T</dc:title>"
+                   "<dcterms:license rdf:resource=\"https://creativecommons.org/licenses/by/4.0/\"/>"
+                   "<dc:rights rdf:resource=\"http://rightsstatements.org/vocab/InC/1.0/\">In Copyright</dc:rights>"
+                   "<dc:rights>   </dc:rights></metadata>")
+          {:keys [canon ingest]} (->canonical xml :dc/u)
+          rights (set (keep #(when (and (= :canon/rights (:predicate %)) (string? (:value %))) (:value %)) (:assertions canon)))]
+      (is (= #{"https://creativecommons.org/licenses/by/4.0/" "http://rightsstatements.org/vocab/InC/1.0/" "In Copyright"} rights))
+      (is (some #(= :dc/rights (get-in % [:detail :loss/source-field])) ingest) "the empty dc:rights is reported")
+      (is (str/includes? (dce/->dc-xml canon) "<dc:rights>https://creativecommons.org/licenses/by/4.0/</dc:rights>")))))
 
 (deftest export-reports-the-collapse-as-under-specified
   (testing "the relation/source collapse is :export :under-specified loss; role-qualified agents are not"
@@ -92,14 +124,14 @@
           (is (= #{"Alan Kelsey" "The Dublin Core Task Force" "Alan Kelsey, Ltd."} agents)))))))
 
 (deftest the-round-trip-loss-report-accounts-for-the-whole-gap
-  (testing "import (6 dropped) + export (1 under-specified) is the round-trip's full loss"
+  (testing "import (5 dropped) + export (1 under-specified) is the round-trip's full loss"
     (let [{:keys [canon ingest]} (->canonical fixture :dc/rt)
           export-loss (dce/export-losses canon)
           report      (lr/conversion-report (concat ingest export-loss) {:records 1})]
-      (is (= 6 (get-in report [:by-edge :import :total])))
+      (is (= 5 (get-in report [:by-edge :import :total])))
       (is (= 1 (get-in report [:by-edge :export :total])))
       (is (= 1 (get-in report [:by-category :under-specified])))
-      (is (= 6 (get-in report [:by-category :dropped])))
+      (is (= 5 (get-in report [:by-category :dropped])))
       (testing "renders for an institutional audit"
         (let [text (lr/format-conversion-report report)]
           (is (str/includes? text "import edge"))
