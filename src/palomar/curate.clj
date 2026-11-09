@@ -139,7 +139,10 @@
    supersession, an explicit step since the core models no cardinality and so
    cannot tell a correction from an addition). The record's matching assertion
    becomes `:superseded`; `new` is added `:accepted`, built through
-   `model/assertion` with provenance naming this step. Returns
+   `model/assertion` with provenance naming this step — or, when the record
+   already holds that fact out of force (a claim rejected or superseded
+   earlier), that claim is put back `:accepted`, never copied: a record holds
+   one claim per fact (`model/duplicate-assertion-ids`). Returns
    `{:record record' :transitions [..]}`, the log naming the replacement and the
    `reason` (ADR 0023); the decision is also kept as an annotation about `old`
    (ADR 0028), with the optional `context` (`:by`, `:at`). Throws when `old` is
@@ -148,19 +151,24 @@
   ([record old new reason context]
    (let [same? #(and (= (:subject %) (:subject old)) (= (:predicate %) (:predicate old))
                      (= (:value %) (:value old)) (model/in-force? %))
-         found (first (filter same? (:assertions record)))]
+         found (first (filter same? (:assertions record)))
+         new-id (model/assertion-id new)
+         again (first (filter #(= new-id (model/assertion-id %)) (:assertions record)))]
      (when-not found
        (throw (ex-info "supersede: no such in-force assertion" {:assertion old})))
-     (when (= (model/assertion-id old) (model/assertion-id new))
+     (when (= (model/assertion-id old) new-id)
        (throw (ex-info "supersede: the replacement is the same fact (same subject, predicate and value)"
                        {:assertion old})))
      {:record      (-> record
                        (update :assertions (partial mapv #(if (same? %) (assoc % :status :superseded) %)))
-                       (update :assertions conj
-                               (model/assertion
-                                (assoc (select-keys new [:subject :predicate :value :confidence])
-                                       :status     :accepted
-                                       :provenance (model/provenance {:rule :curate/supersede}))))
+                       (update :assertions
+                               (fn [as]
+                                 (if again
+                                   (mapv #(if (= new-id (model/assertion-id %)) (assoc % :status :accepted) %) as)
+                                   (conj as (model/assertion
+                                             (assoc (select-keys new [:subject :predicate :value :confidence])
+                                                    :status     :accepted
+                                                    :provenance (model/provenance {:rule :curate/supersede})))))))
                        (update :annotations (fnil conj [])
                                (decision-annotation found {:verdict :supersede :from (:status found)
                                                            :to :superseded :reason reason :replaced-by new}
@@ -172,6 +180,45 @@
                      :verdict     :supersede
                      :replaced-by (select-keys new [:subject :predicate :value])
                      :reason      reason}]})))
+
+(defn decide-one
+  "Apply `verdict` (`:accept`, `:reject` or `:review`), with `reason`, to the
+   one pending assertion of `record` that is the fact `a` (`curate-record`'s
+   transition, annotation and log), every other assertion left as it is.
+   Returns `{:record :transitions}`; a fact that is not pending is left as
+   it is, with no transition."
+  ([record a verdict reason] (decide-one record a verdict reason {}))
+  ([record a verdict reason context]
+   (let [id     (model/assertion-id a)
+         target (first (filter #(= id (model/assertion-id %)) (:assertions record)))]
+     (if-not (and target (model/pending? target))
+       {:record record :transitions []}
+       (let [{cur :record ts :transitions}
+             (curate-record (assoc record :assertions [target] :annotations []) (constantly [verdict reason]) context)]
+         {:record      (-> record
+                           (update :assertions (partial mapv #(if (= id (model/assertion-id %)) (first (:assertions cur)) %)))
+                           (update :annotations (fnil into []) (:annotations cur)))
+          :transitions ts})))))
+
+(defn reopen
+  "Put the out-of-force assertion of `record` that is the fact `a` (rejected,
+   superseded or retracted) back to `:proposed`, with `reason`: a claim
+   proposed again is the same claim, never a copy, and its history says it
+   was reopened (`:verdict :reopen`, an annotation like any decision, with
+   the optional `context`). Returns `{:record :transitions}`; throws when
+   the record holds no such out-of-force assertion."
+  ([record a reason] (reopen record a reason {}))
+  ([record a reason context]
+   (let [id    (model/assertion-id a)
+         found (first (filter #(and (= id (model/assertion-id %)) (model/out-of-force? %)) (:assertions record)))]
+     (when-not found
+       (throw (ex-info "reopen: no such out-of-force assertion" {:assertion a})))
+     (let [t {:subject (:subject found) :predicate (:predicate found) :from (:status found) :to :proposed
+              :verdict :reopen :reason reason}]
+       {:record      (-> record
+                         (update :assertions (partial mapv #(if (= id (model/assertion-id %)) (assoc % :status :proposed) %)))
+                         (update :annotations (fnil conj []) (decision-annotation found t context)))
+        :transitions [t]}))))
 
 (defn curate
   "Curate a batch of `records` with one decision function `decide`, and the

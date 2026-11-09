@@ -42,9 +42,15 @@
    confidence. A **stress set**, synthetic and labelled so (`stress-set`),
    perturbs the gold mentions' names to measure candidate recall.
 
+   Lot M5 clusters the determined mentions from their Fellegi-Sunter
+   decisions with `palomar.agent-cluster` (`task-b-constrained`), against
+   the naive transitive closure of the same links, and on a synthetic set of
+   chains derived from the pool (`chain-cases`).
+
    The metrics are pure functions of plain maps, so they are tested on
    hand-made inputs."
   (:require [clojure.string :as str]
+            [palomar.agent-cluster :as ac]
             [palomar.agent-dates :as dates]
             [palomar.agent-match :as fs]
             [palomar.plugins :as plug]
@@ -576,6 +582,145 @@
             [nm {:pairwise (pairwise xs) :b-cubed (b-cubed xs)}]))))
 
 ;; ---------------------------------------------------------------------------
+;; Lot M5 — constrained clustering
+;; ---------------------------------------------------------------------------
+
+(defn fs-links
+  "One mention's pairwise decisions as `agent-cluster/cluster` links and
+   cannot-links: the Fellegi-Sunter `candidates` (`reconcile/agent-candidates`
+   with a model) of the mention item `id`, an outright proposal a `:propose`
+   link, one for review a `:review` link, each of its match weight, and a
+   candidate rejected for its dates (M3) a cannot-link."
+  [id {:keys [proposals rejected]}]
+  {:links       (vec (for [p proposals]
+                       {:a id :b (:authority-id p) :basis (if (= :propose (:decision p)) :propose :review)
+                        :weight (:match-weight p)}))
+   :cannot-link (vec (for [r rejected] {:a id :b (:authority-id r) :reason :incompatible-dates}))})
+
+(defn cluster-input
+  "The clustering input of the determined mentions of corpus `c` (task B's
+   141): an item per mention (`[:mention i]`, its dates) and per pool entry
+   (an authority, its dates), the mentions' Fellegi-Sunter decisions, each
+   from its family's held-out model (`models`, `fold-models`), as links, and
+   their date rejections as cannot-links (`fs-links`). `:mentions` the
+   determined mentions, in item order."
+  [{:keys [mentions pool]} models]
+  (let [ms    (vec (filter :truth mentions))
+        es    (dated-entries pool)
+        per-m (for [[i m] (map-indexed vector ms)]
+                (fs-links [:mention i] (reconcile/agent-candidates [(select-keys m [:name :dates])] es
+                                                                   {:model (models (:family m))})))]
+    {:mentions    ms
+     :items       (merge (into {} (for [e es] [(:id e) (cond-> {:authority? true} (:dates e) (assoc :dates (:dates e)))]))
+                         (into {} (for [[i m] (map-indexed vector ms)]
+                                    [[:mention i] (cond-> {} (dates/dated? (:dates m)) (assoc :dates (:dates m)))])))
+     :links       (vec (mapcat :links per-m))
+     :cannot-link (vec (mapcat :cannot-link per-m))}))
+
+(defn- score-clustering
+  [ms cluster-of]
+  (let [xs (map-indexed (fn [i m] {:truth (:truth m) :cluster (cluster-of [:mention i])}) ms)]
+    {:pairwise (pairwise xs) :b-cubed (b-cubed xs)}))
+
+(def m5-rule-order [:top-1-fs :closure :constrained :closure-review :constrained-review])
+
+(defn task-b-constrained
+  "Task B (lot M5) on corpus `c`: the determined mentions clustered from
+   their Fellegi-Sunter decisions (`cluster-input`) — `:closure` the naive
+   transitive closure of the outright proposals, `:constrained` the
+   constrained clustering under its policy (only outright proposals join;
+   no curated link exists in this eval), `:closure-review` and
+   `:constrained-review` the same when every proposal for review joins too,
+   at its weight, as a proposal would (a what-if, not curation: a review
+   candidate a curator confirmed, `reconcile/confirm-identity`, would be an
+   accepted must-link, and two confirmed for one mention a conflict) — each scored pairwise and by B-cubed,
+   with `:top-1-fs` (M4's rule) for reference. Per rule, `:violations` (the
+   cannot-linked pairs it puts in one cluster); for the constrained ones,
+   `:refused` (the links refused) and `:candidates` (the review links left
+   to a curator)."
+  [c]
+  (let [models (fold-models (fs-fit-data c))
+        input  (cluster-input c models)
+        ms     (:mentions input)
+        as-res (fn [cl] {:cluster-of cl :clusters (for [[_ g] (group-by cl (keys cl))] {:members (set g)})})
+        run    (fn [join]
+                 (let [res (ac/cluster (assoc input :join join))]
+                   (assoc (score-clustering ms (:cluster-of res))
+                          :violations (count (ac/violations input res))
+                          :refused (count (:refused res))
+                          :candidates (count (:candidates res)))))
+        naive  (fn [join]
+                 (let [cl (ac/transitive-closure (assoc input :join join))]
+                   (assoc (score-clustering ms cl) :violations (count (ac/violations input (as-res cl))))))
+        top-1  (let [tops (into {} (for [[i m] (map-indexed vector ms)
+                                         :let [p (first (reconcile/propose-agent-links
+                                                         [(select-keys m [:name :dates])] (dated-entries (:pool c))
+                                                         {:model (models (:family m))}))]]
+                                     [[:mention i] (or (:authority-id p) [:alone i])]))]
+                 (score-clustering ms tops))
+        all    #{:accepted :propose :review}]
+    {:mentions           (count ms)
+     :links              (frequencies (map :basis (:links input)))
+     :cannot-link        (count (:cannot-link input))
+     :top-1-fs           top-1
+     :closure            (naive ac/default-join)
+     :constrained        (run ac/default-join)
+     :closure-review     (naive all)
+     :constrained-review (run all)}))
+
+(defn chain-cases
+  "SYNTHETIC, derived from the pool of corpus `c`: one chain per pair of
+   authorities X, Y (X first by id) with one surname whose dates are
+   incompatible. A bridge U, an undated authority record with X's heading
+   (`bridge:` X); a mention mx, X's heading with X's dates; a mention my, X's
+   heading with Y's dates (a homonym of X, born when Y was). Each mention is
+   scored against [U] alone by `model`; mx ~ U ~ my is a chain when both are
+   proposed outright, and mx ⊥ my by their dates. `[{:x :y :links :input}]`."
+  [{:keys [pool]} model]
+  (let [es (dated-entries pool)]
+    (vec (for [x es y es
+               :let [sx (surname-of (:label x)) sy (surname-of (:label y))]
+               :when (and (neg? (compare (:id x) (:id y))) (= sx sy) (:dates x) (:dates y)
+                          (= :incompatible (:verdict (dates/compatibility (:dates x) (:dates y)))))
+               :let [u     {:id (str "bridge:" (:id x)) :label (:label x)}
+                     score (fn [id dts] (fs-links id (reconcile/agent-candidates [{:name (:label x) :dates dts}] [u]
+                                                                                 {:model model})))
+                     lx    (score :mx (:dates x))
+                     ly    (score :my (:dates y))]]
+           {:x (:id x) :y (:id y) :label (:label x)
+            :input {:items {:mx {:dates (:dates x)} :my {:dates (:dates y)} (:id u) {:authority? true}}
+                    :links (into (:links lx) (:links ly))}}))))
+
+(defn chain-summary
+  "Over `chain-cases`: the cases, the chains (both mentions proposed
+   outright), and the cases where the naive closure (`:closure`) and the
+   constrained clustering (`:constrained`) put mx and my in one cluster (a
+   false merge: they are X and Y, two persons), the links refused and those
+   refused on a tie (`:refused-on-a-tie`: equal weights, the lower id wins),
+   and the bridge's side under the constrained one (`:bridge-with`, counts
+   of `:mx` / `:my`)."
+  [cases]
+  (let [rows (for [{:keys [input]} cases
+                   :let [chain? (= #{:propose} (set (map :basis (:links input))))
+                         cl     (ac/transitive-closure input)
+                         res    (ac/cluster input)
+                         co     (:cluster-of res)
+                         bridge (first (filter string? (keys (:items input))))]]
+               {:chain?      chain?
+                :closure     (= (cl :mx) (cl :my))
+                :constrained (= (co :mx) (co :my))
+                :refused     (count (:refused res))
+                :ties        (count (filter :tie? (:refused res)))
+                :bridge-with (cond (= (co bridge) (co :mx)) :mx (= (co bridge) (co :my)) :my :else :alone)})]
+    {:cases                (count rows)
+     :chains               (count (filter :chain? rows))
+     :closure-merges       (count (filter :closure rows))
+     :constrained-merges   (count (filter :constrained rows))
+     :refused              (reduce + (map :refused rows))
+     :refused-on-a-tie     (reduce + (map :ties rows))
+     :bridge-with          (frequencies (map :bridge-with (filter :chain? rows)))}))
+
+;; ---------------------------------------------------------------------------
 ;; Printing
 ;; ---------------------------------------------------------------------------
 
@@ -600,6 +745,15 @@
     (println (format "%-14s %6d %6d %6d %6s %6s %6s %s/%s" (name k) (:predicted p) (:right p) (:false-merges p)
                      (fmt (:precision p)) (fmt (:recall p)) (fmt (:f1 p)) (fmt (:precision b3)) (fmt (:recall b3)))))
   (doseq [[k fq] (:mixed b)] (println "  same-name cluster" (pr-str k) "spans" fq)))
+
+(defn print-task-b-constrained [b]
+  (println "\nTask B (M5) — constrained clustering of the FS decisions," (:mentions b) "mentions; links"
+           (pr-str (:links b)) "cannot-links" (:cannot-link b))
+  (println (format "%-20s %6s %6s %6s %6s %6s %6s %6s %s" "rule" "pairs" "right" "false" "P" "R" "F1" "viol" "B3 P/R"))
+  (doseq [k m5-rule-order
+          :let [{p :pairwise b3 :b-cubed v :violations} (get b k)]]
+    (println (format "%-20s %6d %6d %6d %6s %6s %6s %6s %s/%s" (name k) (:predicted p) (:right p) (:false-merges p)
+                     (fmt (:precision p)) (fmt (:recall p)) (fmt (:f1 p)) (str v) (fmt (:precision b3)) (fmt (:recall b3))))))
 
 (defn print-fs [{:keys [calibration task-a]}]
   (print-task-a task-a)

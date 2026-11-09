@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-25
 - Amends: [ADR 0018](./0018-entity-resolution-at-scale.md) §2 (the equivalence predicate)
+- Amended by: [ADR 0057](./0057-the-identity-relation-between-persons.md) (what `exactMatch` commits to; cluster memberships)
 
 ## Context
 
@@ -18,7 +19,8 @@ name-similarity score cannot justify.
 1. An alignment is an ordinary claim of the IR, between a record's local agent
    (an `E21_Person` scoped to that record) and the authority it may be:
    - `:skos/exactMatch` for a certifiable proposal scoring `reconcile/exact-score`
-     (1.0), `:skos/closeMatch` below it; status `:proposed`, the score as
+     (1.0; amended by ADR 0057: a name-only proposal is now always a close
+     match), `:skos/closeMatch` below it; status `:proposed`, the score as
      confidence (`reconcile/align-agents`) — amended by lot M4 (ADR 0018):
      a scored proposal is an exact match only when proposed outright, and the
      score is a confidence only when a calibrated model's posterior, on the
@@ -52,3 +54,30 @@ name-similarity score cannot justify.
   shared authority node), proposed equivalence (`exactMatch`, proposed),
   approximate correspondence (`closeMatch`), related distinct entities
   (`relatedMatch`), rejected alignment (any of these, out of force).
+
+## Amendment (lot M5, ADR 0057, 2026-11-09): what `exactMatch` commits to
+
+SKOS makes `skos:exactMatch` transitive (SKOS Reference S45): two local
+agents exactMatch one authority are, for a reasoner, exactMatch each other.
+ADR 0057 amends §1 and §2:
+
+- **A name-only proposal is a `skos:closeMatch`**, whatever its score
+  (`reconcile/exact-score` is gone): no model decided it. An `exactMatch`
+  Palomar writes without a curator is only an outright `:decision
+  :propose`. A curator makes a close match an identity with
+  `reconcile/confirm-identity`, which supersedes it by an accepted
+  `exactMatch` (§2 then applies to that one).
+- Palomar's code never closes the alignments: persons are grouped by the
+  constrained clustering of ADR 0057 (`palomar.agent-cluster`), which never
+  puts two cannot-linked agents (incompatible dates, two authorities, a
+  rejected alignment) in one cluster, treats accepted claims as hard
+  must-links, and joins besides them only outright proposals. Its result
+  is a second kind of claim, `local-agent skos:exactMatch person-node`
+  (`:reconcile/person`, no IRI, one per cluster and batch), `:proposed`
+  until accepted, revised by rejection or reopening with its history kept
+  — the one place where `exactMatch`'s transitivity is true by
+  construction. A review candidate is never a membership. §2 holds for it
+  too: a person node is no authority and never becomes a shared node.
+- §2's shared node is refused (`apply-agent-links`, `:conflict`) for two
+  accepted links to one authority whose mentions' dates cannot be one
+  person's.

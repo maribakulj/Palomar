@@ -14,10 +14,13 @@ are the **baseline** later lots will be measured against (dates as contrary
 evidence, a Fellegi-Sunter score, constrained clustering). Lot M3 (dates as
 contrary evidence) is measured in [After dates (M3)](#after-dates-m3), lot M4
 (a Fellegi-Sunter score, abstention, calibration) in
-[A Fellegi-Sunter score (M4)](#a-fellegi-sunter-score-m4). The
+[A Fellegi-Sunter score (M4)](#a-fellegi-sunter-score-m4), lot M5
+(constrained clustering) in
+[Constrained clustering (M5)](#constrained-clustering-m5). The
 numbers are measurements, not a guarantee: no row in `guarantees.md` cites
 them (the behaviour of the date block, of abstention and of the confidence
-rule is guaranteed, by unit tests).
+rule, and of the clustering's constraints and revisions, is guaranteed, by
+unit tests).
 
 ## The corpus
 
@@ -422,6 +425,105 @@ alike the model cannot choose ("Hugo, V." scores Victor and Georges-Victor
 alike, both abstained). The ranking the first version reported here rested
 on weights read from pseudo-counts; those are now 0.
 
+## Constrained clustering (M5)
+
+Lot M5 groups mentions into persons with a constrained clustering
+(`palomar.agent-cluster`, ADR 0057) instead of closing through the
+authority. Measured by `task-b-constrained` and `chain-cases`
+(`palomar.eval.person-reconciliation-test/task-b-with-constrained-clustering`,
+`a-synthetic-chain-is-merged-by-the-closure-and-not-by-the-constrained-clustering`).
+
+### Method
+
+- **Items**: the 141 determined mentions (task B's) and the 33 pool
+  entries, each with its dates.
+- **Links**: each mention's M4 decisions under its family's held-out model:
+  111 outright proposals (`:propose`, weighted by their match weight) and
+  51 for review. No curated link exists in this eval, so the clustering's
+  first phase (accepted claims as must-links, ADR 0057) is empty here.
+- **Cannot-links**: the 577 candidates rejected for their dates (M3),
+  and, derived on every merge, two different authorities and two dated
+  items whose dates are incompatible.
+- **Rules**: `closure`, the connected components of the outright proposals
+  (no constraint read); `constrained`, the clustering under its policy
+  (outright proposals join, review links are candidates for a curator);
+  `closure-review` and `constrained-review`, the same when every review
+  link joins too, at its weight, as a proposal would. That is a what-if,
+  not curation: a curator who confirmed a review candidate
+  (`reconcile/confirm-identity`) would make it an accepted must-link, and
+  two confirmed for one mention (Férat to Férat and to Verne) a conflict,
+  held back and reported. M4's `top-1-fs` (each
+  mention's top proposal, outright or for review) for reference.
+  `violations` counts the cannot-linked pairs a rule puts in one cluster.
+
+### Task B, M4 and M5
+
+| rule               | merged pairs | right | false merges | precision | recall | F1    | B-cubed P | B-cubed R | violations |
+|--------------------|-------------:|------:|-------------:|----------:|-------:|------:|----------:|----------:|-----------:|
+| top-1 M4           | 1 113 | 1 113 | 0   | 1.000 | 0.999 | 1.000 | 1.000 | 0.993 | — |
+| closure            | 923   | 923   | 0   | 1.000 | 0.829 | 0.906 | 1.000 | 0.858 | 0 |
+| constrained        | 923   | 923   | 0   | 1.000 | 0.829 | 0.906 | 1.000 | 0.858 | 0 |
+| closure + review   | 1 577 | 1 113 | 464 | 0.706 | 0.999 | 0.827 | 0.827 | 0.993 | 8 |
+| constrained + review | 1 113 | 1 113 | 0 | 1.000 | 0.999 | 1.000 | 1.000 | 0.993 | 0 |
+
+- **Under the policy, closure and constraints agree.** A mention has at
+  most one outright proposal (M4), so the outright links form stars around
+  authorities and no chain: nothing to refuse. The 25 mentions whose top
+  proposal is for review (20 Férat, three "Víctor Hugo" authors, Hetzel and
+  Stahl) stay alone, as do the two Paltsits (abstained, as in M4): 191 true
+  pairs missed (190 among the Férat mentions, 1 the Paltsits pair), recall
+  0.829. That is the policy's cost: what a curator has not
+  decided is not merged. The 51 review links are listed as candidate
+  merges.
+- **With every review link joining, the closure chains.** The competing
+  candidates are the bridges: each Férat mention is for review to Férat
+  and to Verne, so the closure makes Férat's 20 mentions and Verne's 23
+  one cluster (460 false merges), Stahl and Hetzel one (1), and the three
+  "Víctor Hugo" authors one (3), breaking 8 constraints: 5 pairs of
+  authorities in one cluster, and 3 pairs of incompatible dates in the
+  Víctor Hugo cluster.
+- **The constrained clustering of the same links makes none.** It refuses
+  the 26 weaker links (each `:distinct-authorities`: 20 Férat → Verne, the
+  Víctor Hugo competitors, Hetzel ↔ Stahl), and gives exactly M4's top-1
+  numbers: taking the strongest link first is what the top-1 rule does
+  mention by mention, and on this corpus no constraint needs more. None of
+  the 26 refusals is a tie (no two competing links weigh the same).
+
+### Chains (synthetic)
+
+**Synthetic, derived from the pool**: for each pair of authorities X, Y
+with one surname whose dates are incompatible (9 pairs: the three Dumas,
+the three Hugo, the two Verne, the two Hetzel, the two Robert-Dumas), a
+bridge U, an undated authority record with X's heading; a mention mx, X's
+heading with X's dates; a mention my, X's heading with Y's dates (a
+homonym born when Y was). Each is scored against [U] by the model fitted
+on all five families: both are proposed outright, at the same weight
+(exact heading, dates unknown against U), so mx ~ U ~ my is a chain, and
+mx ⊥ my by their dates.
+
+| | cases | chains | mx and my merged | links refused | of which on a tie |
+|-|------:|-------:|-----------------:|--------------:|------------------:|
+| closure (= accepting every top proposal) | 9 | 9 | 9 | — | — |
+| constrained | 9 | 9 | 0 | 9 | 9 |
+
+The constrained clustering puts U with mx in all 9: the two links weigh
+the same, the lower id wins, and each refusal says it was a tie (`:tie?
+true`, on the refused link and on the one that won). With different
+weights the stronger side wins
+(`agent-cluster-test/a-chain-goes-with-its-stronger-side`).
+
+### Revision
+
+Not measured here, guaranteed by unit tests
+(`palomar.agent-cluster-test`): a cluster in the IR is a set of
+`:proposed` `skos:exactMatch` claims from each local agent to a person
+node minted per cluster and batch; a re-clustering after a new date or a
+rejected link rejects the pending memberships that no longer hold, with
+the reason, and reopens a claim proposed again rather than copying it; a
+refused alignment goes to `:needs-review` with the reason; an accepted
+claim is never revised by the machine, and a contradiction among accepted
+claims is a conflict diagnostic on the records it involves.
+
 ## Limits
 
 - One institution, 150 records from three author queries: the families are
@@ -454,3 +556,10 @@ on weights read from pseudo-counts; those are now 0.
   stand for "two different persons". A real pool, with distractors, would
   give other u, and a calibration measured on one pool says nothing of
   another (the code refuses to carry it over).
+- M5's clustering numbers rest on a star topology: every link is a mention
+  to an authority, and a mention has at most one outright proposal. The
+  constraints only matter where links compete (the review band) or where
+  a pool holds an undated duplicate (the synthetic chains). Two authority
+  records for one person (Stahl, a pseudonym of Hetzel; perhaps the two
+  Hayat) are a cannot-link by rule: an authority file's duplicates are the
+  authority's to merge, not the clustering's.
