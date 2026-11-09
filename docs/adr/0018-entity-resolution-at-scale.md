@@ -461,3 +461,111 @@ alone. 9 synthetic chains (same-surname authorities with incompatible
 dates, bridged by an undated record): the closure merges 9, the
 constrained clustering 0, each refusal a reported tie. Pinned by
 `palomar.agent-cluster-test`.
+
+## Amendment (lot M7, 2026-11-09): typed events as contrary evidence, beyond life dates
+
+M3 compared life dates with life dates. A record says more: that its
+person made a work at a date, or that an edition of it appeared at another.
+Read without types, those dates would block the right authority. The rule is
+the M3 one: **a false block is worse than a missed one**. This amendment
+was revised after a contradictory review: its first version also blocked a
+creation dated after the candidate's death, and posthumous making
+catalogued under the artist's name made that rule unsafe.
+
+1. **A typed event** is `{:kind :role :date :source}` (`palomar.agent-events`),
+   `:date` an interval of years (`agent-dates`, absent when not read),
+   `:source` the record, field or event and the evidence it was read from.
+   A small namespace, because the types already exist in two places and
+   only need reading, not deciding again:
+   - **LIDO** (`lido-mentions`): the importer's event kind
+     (`plugins.lido/event-kinds`, ADR 0056 §7: still code) and the actor's
+     responsibility (creator or participant, ADR 0054, by role and
+     attribution qualifier, K2). A production or design the actor carried
+     out as its maker is a `:creation`; "after" an `:influence`; a former,
+     related or uncertain attribution, or a later making (a posthumous cast
+     or impression, a restrike, a replica, a reproduction, a version, a
+     forgery: the qualifier vocabulary's new `:attribution/later-making`) an
+     `:attribution`; any other actor of it (a printer, a publisher, a
+     colourist, a caster or founder, "Text by", "Hand colored by", "Cast
+     by", "Impression by", "Reissued by") an `:activity`; another event an
+     `:acquisition` by its kind, an `:exhibition` or a `:publication` (about
+     the object) by the LIDO event-types vocabulary, data, else an
+     `:activity`. An actor is its occurrence (ADR 0056 §3): a mention
+     carries the one event it is named in, and its own vital dates as
+     `:dates`. A group (a group type, an institution, a manufacturer's
+     role) is flagged: it has no life.
+   - **MARC21, INTERMARC, UNIMARC** (`edition-events`): the fields
+     `plugins.events/field-events` (ADR 0036) says state a Manifestation's
+     publication or production (260/264 `$c`, INTERMARC 260 `$d`, UNIMARC
+     210/214 `$d`), and MARC21 008 Date 1 for a published resource: each a
+     `:publication`, the edition's date. No importer reads a work's creation
+     date (046, a dated F28) yet, and the INTERMARC 008 is not read: no
+     bibliographic record gives a creation.
+   - **An event date is read no narrower than the source**: the earliest
+     and latest (one end open when only one is given), widened by the
+     20-year margin when the display date says "ca.", "c1775", "1775 c.",
+     "um", "gegen" or "etwa", an end opened when it says "after" / "nach" or
+     "before" / "vor"; else the display date (a point, a span, `1880-85`
+     read 1880-1885). Unread when a given part is not read, when any part
+     carries an era marker before the common era, when the display names
+     two dates it does not read as one span ("Modell um 1881, Guss 1922":
+     which is the event, it does not say), when it says the work is undated
+     ("undated", "n.d.", "o.J.", "s.d.", "ohne Jahr", "sans date",
+     "undatiert": the earliest and latest that come with it are the
+     museum's derivation from the artist's life, circular), or when it ends
+     before it begins.
+2. **The constraint, one-sided** (`agent-events/compatibility`): a creation
+   blocks only when it ends **more than 10 years before the candidate's
+   birth** (`birth-margin`, not the 2-year tolerance: a date read from a
+   model, a plate or a design may precede a namesake's birth by a few
+   years). **A creation after death is never evidence.** The asymmetry is
+   the corpus's: museums catalogue a bronze cast in 1925 under Rodin
+   (1840-1917) as the production's sculptor, a Rembrandt impression pulled
+   in 1906, an Atget printed in 1956, a Thonet chair reissued in 1985, a
+   19th-century copy under Raphael, often with no qualifier and the cast's
+   or impression's date as the event's; nothing reads that reliably. Making
+   before one's birth has no such reading. Nothing else blocks: a
+   publication, an exhibition or an acquisition (after death is common); an
+   edition date, even before a birth; "after X"; an activity; a group's
+   event, or any event against a group candidate; a floruit; an undated or
+   untyped event; an undated candidate; two mentions' events between
+   themselves (`:unknown`).
+3. **Self-contradiction is no evidence.** An event incompatible with the
+   mention's own stated `:dates` (a LIDO record's vital dates for its
+   actor) is dropped before matching and clustering
+   (`consistent-events`): a record that contradicts itself says nothing of
+   anyone else.
+4. **Where they apply.** `reconcile/agent-candidates` takes a mention's
+   `:events`; a candidate whose birth they precede is rejected like an M3
+   date block, never weighed (name-only or scored): `:reason
+   :incompatible-events` (dates first when both are), the evidence `:events
+   {:verdict :checks}` with the event, the interval and the birth compared;
+   the proposal's evidence and `align-agents`' bindings (`?events`) state
+   the verdict. In `agent-cluster`, an item's consistent `:events` against
+   another's `:dates` is a derived cannot-link `:incompatible-events`
+   (`clustering-input` takes the events as `extra :events`). **It
+   constrains proposals only: a curator wins** (as in M5). Accepted links
+   whose cluster holds an events constraint are applied, not held back as
+   a conflict; the constraint is reported (`:event-conflicts`, and a
+   `:reconcile/identity-events-conflict` warning on each record involved).
+   A dates conflict among accepted links is still a conflict.
+5. **Where a mention's events come from**: the record it is in, typed for
+   its own role there. A LIDO actor's own production, carried out as its
+   maker, is the only one that can constrain; a bibliographic record's
+   edition dates say only that its author may be dead. No spoke and no CLI
+   command passes events yet, as for dates (M3): the evals do.
+
+Measured (`docs/eval/person-reconciliation.md`, M7): on the BnF gold every
+mention carries an edition event (135 dated, 62 after its authority's
+death) and they reject nothing: task A is M3's. On a synthetic set built on
+the 21 pool authorities with a birth and a death, a creation 30 years
+before birth is blocked 21 of 21 times (a cannot-link each); a creation 8
+years before birth, in life, 30 years after death, a posthumous edition and
+an edition before birth 0 of 21. On five YCBA LIDO records nothing is
+blocked; on 500 (not committed, run once), none. That last measure is
+weak: 72 of those records' productions are displayed "undated", their
+earliest and latest derived by the museum from the artist's life, and are
+now no date; the one rejection an earlier run made rested on one. The risk the narrow rule leaves: a creation dated long
+before the birth of the right person, by a source that misreads a model's
+or a design's date as the namesake's work. Pinned by
+`palomar.agent-events-test`.

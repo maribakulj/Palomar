@@ -4,10 +4,10 @@
 ;; Works of Art (CDWA) and their German and French counterparts, and those of
 ;; the corpora Palomar reads. Patterns are Java regexes found in the lowercased
 ;; qualifier. When a qualifier names several, the first of these wins: former,
-;; related hand, influence, uncertain, then a role. A qualifier none names
-;; leaves the actor's roles to decide.
+;; related hand, influence, uncertain, a later making, then a role. A
+;; qualifier none names leaves the actor's roles to decide.
 {:id     :lido/attribution-qualifiers
- :source "CDWA attribution qualifiers (Getty Research Institute); the qualifiers of the Yale Center for British Art and the Städel Museum"
+ :source "CDWA attribution qualifiers (Getty Research Institute); the qualifiers of the Yale Center for British Art and the Städel Museum; for a later making (lot M7, review), the Getty AAT's terms for posthumous casts, restrikes, replicas, reproductions, versions and forgeries, and their German counterparts (Nachguss, Reproduktion, Fälschung)"
  :concepts
  {:attribution/former
   {:doc      "A former attribution: no longer held to be the maker."
@@ -28,6 +28,11 @@
   {:doc      "An attribution held uncertain: the actor may be the maker."
    :patterns ["(?<!\\p{L})(?:attributed|possibly|probably|doubtful|questionable|uncertain|zugeschrieben|vermutlich|wohl|fraglich|unsicher|zweifelhaft|attribué|attribuée|peut-être|douteux|incertain)(?!\\p{L})"
               "^\\?$"]}
+  :attribution/later-making
+  {:doc      "A making that is not the actor's own act, though it names the actor: a posthumous cast or impression, a restrike, a replica, a reproduction, a version, a forgery (lot M7, review). The actor did not carry it out."
+   :patterns ["(?<!\\p{L})(?:posthumous|posthumously|restrike|restruck|replica|replicas|reproduction|reproductions|version|forgery|forged|fake|counterfeit|pastiche)(?!\\p{L})"
+              "(?<!\\p{L})(?:posthum\\p{L}*|nachguss|nachgüsse|abguss|abgüsse|neuguss|nachdruck|reproduktion|replik|fälschung\\p{L}*|gefälscht)(?!\\p{L})"
+              "(?<!\\p{L})(?:posthume|réplique|reproduction|faux|contrefaçon|retirage)(?!\\p{L})"]}
   :attribution/maker-role
   {:doc      "A role that makes the actor the maker, in the qualifier's place."
    :patterns ["^(?:print made|drawn|engraved|etched|painted|sculpted|carved|photographed|made|created|designed and made) by$"
@@ -35,4 +40,7 @@
               "^(?:and )?(?:the )?(?:figures?|landscape|portrait) by$"]}
   :attribution/other-role
   {:doc      "A role that is not the maker's: the actor took part."
-   :patterns ["^(?:text|published|printed|sold|lettered|edited|dedicated|commissioned|written) by$"]}}}
+   :patterns ["^(?:text|published|printed|sold|lettered|edited|dedicated|commissioned|written) by$"
+              ;; who coloured, cast, pulled or reissued it (lot M7, review)
+              "^(?:hand[- ])?colou?red by$"
+              "^(?:cast|founded|impression|impressions|impressions printed|reissued|re-issued|restruck|retouched|manufactured|produced) by$"]}}}

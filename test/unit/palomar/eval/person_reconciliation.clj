@@ -47,11 +47,20 @@
    the naive transitive closure of the same links, and on a synthetic set of
    chains derived from the pool (`chain-cases`).
 
+   Lot M7 gives each mention the typed events of its record
+   (`palomar.agent-events`): on this corpus, the edition's dates (INTERMARC
+   260 `$d`), `:publication` events that constrain nothing (`task-a-events`,
+   with a what-if that reads them as creations); a synthetic set of events
+   around the pool's own authorities (`event-cases`); and, on LIDO, the
+   actors of a museum's records against the authorities their ULAN ids name
+   (`lido-event-run`).
+
    The metrics are pure functions of plain maps, so they are tested on
    hand-made inputs."
   (:require [clojure.string :as str]
             [palomar.agent-cluster :as ac]
             [palomar.agent-dates :as dates]
+            [palomar.agent-events :as ae]
             [palomar.agent-match :as fs]
             [palomar.plugins :as plug]
             [palomar.plugins.agents :as agents]
@@ -116,6 +125,7 @@
      :surname   (sub sfs "a")
      :family    (family (sub sfs "a"))
      :truth     (sub sfs "3")
+     :role      (or (sub sfs "4") tag)
      :dates     (dates/parse-life-dates (sub sfs "d"))
      :subfields sfs}))
 
@@ -590,12 +600,13 @@
    cannot-links: the Fellegi-Sunter `candidates` (`reconcile/agent-candidates`
    with a model) of the mention item `id`, an outright proposal a `:propose`
    link, one for review a `:review` link, each of its match weight, and a
-   candidate rejected for its dates (M3) a cannot-link."
+   candidate rejected (for its dates, M3, or the mention's events, M7) a
+   cannot-link, with the rejection's reason."
   [id {:keys [proposals rejected]}]
   {:links       (vec (for [p proposals]
                        {:a id :b (:authority-id p) :basis (if (= :propose (:decision p)) :propose :review)
                         :weight (:match-weight p)}))
-   :cannot-link (vec (for [r rejected] {:a id :b (:authority-id r) :reason :incompatible-dates}))})
+   :cannot-link (vec (for [r rejected] {:a id :b (:authority-id r) :reason (:reason r)}))})
 
 (defn cluster-input
   "The clustering input of the determined mentions of corpus `c` (task B's
@@ -719,6 +730,129 @@
      :refused              (reduce + (map :refused rows))
      :refused-on-a-tie     (reduce + (map :ties rows))
      :bridge-with          (frequencies (map :bridge-with (filter :chain? rows)))}))
+
+;; ---------------------------------------------------------------------------
+;; Lot M7 — typed events
+;; ---------------------------------------------------------------------------
+
+(defn with-edition-events
+  "The mentions of corpus `c`, each with `:events`: its record's edition
+   events (`agent-events/edition-events`), typed for its role."
+  [{:keys [records mentions]}]
+  (let [by-id (into {} (map (juxt :id identity)) records)]
+    (mapv #(assoc % :events (ae/edition-events (by-id (:record %)) (:role %))) mentions)))
+
+(defn- event-rejections
+  "Over task-A `scored` mentions: the candidates rejected for the mention's
+   events, and the mentions whose truth was."
+  [scored]
+  (let [ev? #(= :incompatible-events (:reason %))]
+    {:rejected       (reduce + (map #(count (filter ev? (:rejected %))) scored))
+     :truth-rejected (count (filter (fn [m] (some #(and (ev? %) (= (:truth m) (:authority-id %))) (:rejected m))) scored))}))
+
+(defn task-a-events
+  "Task A (lot M7) with each mention's edition events: `:with-dates`, the
+   mention `{:name :dates :events}` (to compare with `task-a-dated`);
+   `:events-only`, `{:name :events}` (what the events alone reject); and
+   `:as-creation`, a what-if that reads every edition date as a creation the
+   mention carried out (the reading M7 refuses), `{:name :events}`. Each
+   with `:rejections` and `:event-rejections`. `:events` counts the
+   mentions with an edition event, the events, those with a date, and the
+   determined mentions with an edition after their authority's death."
+  [c]
+  (let [ms     (with-edition-events c)
+        c'     (assoc c :mentions ms)
+        run    (fn [ks f]
+                 (let [res (run-task-a c' {:mention #(f (select-keys % ks)) :entries dated-entries
+                                           :candidates reconcile/agent-candidates})]
+                   (assoc res :rejections (rejection-summary (:mentions res))
+                          :event-rejections (event-rejections (:mentions res)))))
+        as-cr  (fn [m] (update m :events (partial mapv #(assoc % :kind :creation))))
+        deaths (into {} (for [e (:pool c) :let [d (:to (:death (:dates e)))] :when d] [(:id e) d]))]
+    {:events      {:mentions   (count (filter (comp seq :events) ms))
+                   :events     (reduce + (map (comp count :events) ms))
+                   :dated      (count (filter :date (mapcat :events ms)))
+                   :posthumous (count (filter (fn [m] (some #(when-let [d (deaths (:truth m))]
+                                                               (some-> % :date :from (> (+ d dates/tolerance))))
+                                                            (:events m)))
+                                              ms))}
+     :with-dates  (run [:name :dates :events] identity)
+     :events-only (run [:name :events] identity)
+     :as-creation (run [:name :events] as-cr)}))
+
+(defn event-cases
+  "SYNTHETIC, built from the real authorities of corpus `c`'s pool: for each
+   entry stating a birth and a death, six mentions of its heading carrying
+   one event each and no dates — a creation 30 years after the death, a
+   creation 30 years and one 8 years before the birth, a creation in
+   mid-life, an edition
+   30 years after the death (posthumous) and an edition 30 years before the
+   birth — each matched against the whole dated pool. `[{:case :entry
+   :blocked?}]`, `:blocked?` true when the entry the event was built from is
+   rejected for the events."
+  [{:keys [pool]}]
+  (let [es (dated-entries pool)]
+    (vec (for [e es
+               :let [b (:from (:birth (:dates e))) d (:to (:death (:dates e)))]
+               :when (and b d)
+               [k kind year] [[:creation-after-death :creation (+ d 30)]
+                              [:creation-before-birth :creation (- b 30)]
+                              [:creation-just-before-birth :creation (- b 8)]
+                              [:creation-in-life :creation (quot (+ b d) 2)]
+                              [:posthumous-edition :publication (+ d 30)]
+                              [:edition-before-birth :publication (- b 30)]]
+               :let [m   {:name (:label e) :events [{:kind kind :role "author" :date {:from year :to year}}]}
+                     res (reconcile/agent-candidates [m] es)]]
+           {:case k :entry (:id e)
+            :blocked? (boolean (some #(and (= (:id e) (:authority-id %)) (= :incompatible-events (:reason %)))
+                                     (:rejected res)))
+            :cannot-link? (= :incompatible-events
+                             (ac/cannot-link-reason {:m {:events (:events m)} :e {:authority? true :dates (:dates e)}}
+                                                    {} :m :e))}))))
+
+(defn event-case-summary
+  "Per case of `event-cases`: `[cases blocked cannot-linked]`."
+  [cases]
+  (into (sorted-map) (for [[k rs] (group-by :case cases)]
+                       [k [(count rs) (count (filter :blocked? rs)) (count (filter :cannot-link? rs))]])))
+
+(def ulan-prefix "http://vocab.getty.edu/ulan/")
+
+(defn lido-event-run
+  "Lot M7 on LIDO `records` (a museum's objects): the person-level truth is
+   the ULAN id an actor carries. The pool is one entry per ULAN id of a
+   person actor, its label the name most of its occurrences give, its dates
+   the vital dates they state (the most frequent). Each person actor
+   occurrence with a ULAN id is a mention `{:name :events}` (its life dates
+   withheld: what its events alone say), matched name-only against the pool.
+   `:as-creation` reads every event as a creation (the what-if M7 refuses).
+   Returns `{:mentions :pool :kinds :rejected :truth-rejected
+   :as-creation {:rejected :truth-rejected :by-kind}}`."
+  [records]
+  (let [ms    (for [m (mapcat ae/lido-mentions records)
+                    :let [u (first (filter #(str/starts-with? % ulan-prefix) (:ids m)))]
+                    :when (and u (= "person" (:type m)))]
+                (assoc m :truth u))
+        mode  (fn [xs] (key (first (sort-by (juxt (comp - val) (comp str key)) (frequencies xs)))))
+        pool  (vec (for [[u xs] (sort-by key (group-by :truth ms))
+                         :let [ds (remove nil? (map :dates xs))]]
+                     (cond-> {:id u :label (mode (map :name xs))}
+                       (seq ds) (assoc :dates (mode ds)))))
+        run   (fn [f]
+                (let [rs (for [m ms]
+                           (assoc m :rejected (:rejected (reconcile/agent-candidates [(f (select-keys m [:name :events]))] pool))))
+                      ev? #(= :incompatible-events (:reason %))
+                      tr  (filter (fn [m] (some #(and (ev? %) (= (:truth m) (:authority-id %))) (:rejected m))) rs)]
+                  {:rejected       (reduce + (map #(count (filter ev? (:rejected %))) rs))
+                   :truth-rejected (count tr)
+                   :by-kind        (frequencies (mapcat #(map :kind (:events %)) tr))}))]
+    {:mentions    (count ms)
+     :pool        (count pool)
+     :dated-pool  (count (filter :dates pool))
+     :kinds       (frequencies (map :kind (mapcat :events ms)))
+     :creations   (count (filter #(and (= :creation (:kind %)) (:date %)) (mapcat :events ms)))
+     :run         (run identity)
+     :as-creation (run (fn [m] (update m :events (partial mapv #(assoc % :kind :creation)))))}))
 
 ;; ---------------------------------------------------------------------------
 ;; Printing

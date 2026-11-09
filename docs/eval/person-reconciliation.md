@@ -18,11 +18,12 @@ contrary evidence) is measured in [After dates (M3)](#after-dates-m3), lot M4
 (constrained clustering) in
 [Constrained clustering (M5)](#constrained-clustering-m5), and the same
 mentions against a GND snapshot (lot M6) in
-[On a GND snapshot (M6)](#on-a-gnd-snapshot-m6). The
+[On a GND snapshot (M6)](#on-a-gnd-snapshot-m6), and typed events as
+contrary evidence (lot M7) in [Typed events (M7)](#typed-events-m7). The
 numbers are measurements, not a guarantee: no row in `guarantees.md` cites
 them (the behaviour of the date block, of abstention and of the confidence
-rule, and of the clustering's constraints and revisions, is guaranteed, by
-unit tests).
+rule, of the clustering's constraints and revisions, and of the events'
+constraints, is guaranteed, by unit tests).
 
 ## The corpus
 
@@ -637,6 +638,120 @@ from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
 - The bridges are not independent of each other nor always right: the
   Hetzel/Stahl ISNIs show identity and pseudonym records crossed between two
   national files.
+
+## Typed events (M7)
+
+Lot M7 gives a mention the typed events of the record it is in
+(`palomar.agent-events`, ADR 0018 amendment M7). It was revised after a
+contradictory review. Its first version also blocked a creation dated
+after the candidate's death. Posthumous making catalogued under the
+artist's name made that unsafe: a Rodin cast in 1925, a Rembrandt
+impression of 1906, a Thonet chair reissued in 1985, a 19th-century copy
+under Raphael all blocked the artist they name.
+
+**The rule now:**
+- Only a **creation** the mention carried out (a LIDO production or design
+  whose actor is its maker) can block, and only when it ends **more than
+  10 years before the candidate's birth**. A creation after death is never
+  evidence.
+- An event that contradicts the mention's own stated life is dropped.
+- A group (a corporation, an institution, a family, a manufacturer) has no
+  life to constrain.
+- A publication or edition, an exhibition, an acquisition, an influence
+  ("after X"), an attribution to another hand or a later making (cast,
+  impression, restrike, replica, reproduction, version, forgery), any
+  other activity (printer, colourist, caster, "Text by"), and an undated or
+  untyped event constrain nothing.
+
+A blocked candidate is rejected as in M3, with `:reason
+:incompatible-events` and the values compared. It is a cannot-link for the
+clustering's proposals; a curator's accepted link is kept and the
+constraint reported. Measured by
+`palomar.eval.person-reconciliation-test/a-bibliographic-record-gives-edition-events-and-no-new-evidence`,
+`a-synthetic-set-of-events-on-real-authorities` and
+`the-actors-of-lido-records-against-their-ulan-ids`; the reviewer's cases
+are `palomar.agent-events-test/posthumous-making-never-blocks-the-artist`.
+
+### On the BnF records (M2): editions only
+
+A mention's events are its record's edition dates (INTERMARC 260 `$d`),
+typed for its role. The INTERMARC 008 is not read, and no importer reads a
+work's creation date.
+
+- **142 mentions, 142 edition events**: 135 dated. **62** mentions have an
+  edition after their authority's death (beyond the tolerance): posthumous,
+  allowed.
+- **With the dates and the events**, task A is M3's, figure for figure.
+  The events reject nothing (0 candidates, 0 truths). **With the events
+  alone** (dates withheld), the numbers are the name-only baseline:
+  recall@1 101/136, 35 false links, 36 ties.
+- **What-if: an edition read as the author's creation**: 20 rejections
+  (editions more than 10 years before another candidate's birth), none of
+  them a mention's own authority. Under the first version's two-sided
+  rule, the same what-if blocked 62 mentions' own authority. The
+  one-sided rule makes the typing matter less here, not more.
+
+A bibliographic corpus gives no new evidence and no false block.
+
+### Synthetic: events around real authorities
+
+**Synthetic, built on the pool**: for each of the 21 BnF authorities that
+state a birth and a death, six mentions of its heading carry one event
+each and no dates. Each is matched name-only against the whole dated pool.
+
+| event | cases | the authority rejected | cannot-link |
+|-------|------:|-----------------------:|------------:|
+| creation 30 years before birth | 21 | 21 | 21 |
+| creation 8 years before birth (within the 10-year margin) | 21 | 0 | 0 |
+| creation in mid-life           | 21 | 0  | 0  |
+| creation 30 years after death (a cast, a reissue) | 21 | 0 | 0 |
+| edition 30 years after death (posthumous) | 21 | 0 | 0 |
+| edition 30 years before birth  | 21 | 0  | 0  |
+
+### On LIDO: the actors of a museum's records
+
+The person-level truth is the ULAN id a YCBA actor carries. The pool has
+one entry per ULAN id of a person actor: the name most of its occurrences
+give, and the vital dates they state. These dates are the YCBA's own, from
+the same records, not the ULAN's. Each occurrence is a mention with its
+one event and its life dates withheld. It is matched name-only (Jaccard
+>= 0.5) against the pool.
+
+- **The five committed records** (`ycba-oai-lido.xml`, asserted): 8
+  occurrences, 8 ULAN persons, all dated, 4 dated creations (the others an
+  attribution ×2, an influence, an activity). No rejection, no truth
+  blocked.
+- **500 records** (the scratchpad harvest of `docs/eval/ycba.md`, not
+  committed; run once, not asserted by a test): 615 occurrences, 276 ULAN
+  persons (263 dated), 350 dated creations.
+  - **No rejection, and no ULAN's own authority blocked.** Reading every
+    event as a creation gives none either.
+- **That measure is weak.** 72 of the 500 records' productions are
+  displayed "undated". Their earliest and latest are the museum's, derived
+  from the artist's life: circular as evidence on who the artist is. So an
+  undated display ("undated", "n.d.", "o.J.", "s.d.", "ohne Jahr", "sans
+  date", "undatiert") is now no date, whatever bounds come with it. The one
+  rejection an earlier run made (a Bunbury, 1760-1811 by those bounds,
+  against William Henry Millais, born 1828) rested on such an event and is
+  gone. What is left is 350 dated creations, none earlier than 10 years
+  before a namesake's birth.
+- The YCBA holds paintings, drawings and prints. It has no casts and no
+  posthumous impressions, so it cannot measure the risk the review found.
+  That risk was answered by narrowing the rule, not by a measure.
+
+### What it shows, and what it does not
+
+- **What is left is narrow.** A creation by an actor recorded as its maker,
+  dated more than 10 years before a namesake's birth. This is the one
+  reading posthumous making cannot produce.
+- **The risk that remains**: a source that dates a model, a plate or a
+  design long before the right person's birth, and names that person as
+  the work's maker.
+- On both real corpora the events add almost nothing that dates do not
+  already say. A LIDO actor states its vital dates on the same record, and
+  a MARC edition constrains nothing.
+- **No spoke and no CLI command passes events yet**, as for dates: the
+  evals do.
 
 ## Limits
 

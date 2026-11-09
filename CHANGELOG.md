@@ -18,6 +18,25 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Typed events as contrary evidence** (lot M7; ADR 0018 and 0056
+  amendments): `palomar.agent-events` types what a record says a person
+  did — a LIDO production or design carried out as its maker a creation;
+  "after", a former attribution or a later making (posthumous cast,
+  restrike, replica, reproduction, forgery), a printer, colourist or caster
+  not; acquisitions, exhibitions and publications by their kind; a MARC21,
+  INTERMARC or UNIMARC edition date (260/264/210, MARC21 008) a
+  publication, never a creation. In `reconcile/agent-candidates` a
+  mention's `:events` reject a candidate only for a creation that ends more
+  than 10 years before the candidate's birth (`:reason
+  :incompatible-events`); a creation after death never does (posthumous
+  making is catalogued under the artist), nor a group's, nor one that
+  contradicts the record's own dates. In `agent-cluster` it is a cannot-link
+  for proposals; a curator's accepted link is kept and the constraint
+  reported. Event dates are read no narrower than the source (`1880-85`,
+  "after", "c1775", two dates named). Measured in
+  `docs/eval/person-reconciliation.md`: no new evidence and no false block
+  on the BnF editions; a synthetic creation 30 years before birth blocked
+  21/21, after death 0/21, a posthumous edition 0/21.
 - **Authority snapshots** (lot M6; ADR 0038 and 0030 amendments): a GND dump
   in the lobid JSON lines format (`palomar.plugins.gnd`, optionally gzipped)
   is indexed once by `palomar authorities index <dump> --out <index>`
