@@ -30,6 +30,7 @@
    | `identifier`                    | `:canon/identifier`  |
    | `abstract`, `tableOfContents`, `note` | `:canon/note` (`:canon/note-kind` `:abstract`, `:contents`; a `note[@type=performers]` `:credits`) |
    | `location/url`                  | `:canon/digital-object` |
+   | `accessCondition` (use and reproduction, or untyped): its text, its `xlink:href` | `:canon/rights` (`displayLabel=\"digital reproduction\"`: `:canon/rights-scope :digital-surrogate`) |
 
    `titleInfo/subTitle` is captured as native `:mods/subtitle` but not mapped (it
    surfaces as loss downstream). Every rule trims.
@@ -39,6 +40,8 @@
    Unmodelled top-level MODS elements (subject, genre, typeOfResource,
    classification, language, physicalDescription, relatedItem, …) are reported as
    import-edge `:loss/dropped` (ADR 0015) — report-at-ingest, like Dublin Core.
+   An `accessCondition` of another type (a restriction on access) is no rights
+   statement and is reported too.
    Within handled containers only the core leaves are lifted; finer sub-element
    loss (originInfo/place, name/role) is a documented V1 limitation.
 
@@ -97,7 +100,24 @@
   "Top-level MODS elements this V1 parser reads; every other top-level element is
    reported as import loss rather than silently dropped."
   #{"titleInfo" "name" "originInfo" "identifier" "abstract" "tableOfContents" "note" "location"
-    "recordInfo"})
+    "recordInfo" "accessCondition"})
+
+(defn- href-of
+  "The `xlink:href` of element `e`, if any."
+  [e]
+  (some (fn [[k v]] (when (and (= "href" (name k)) (str/includes? (str (namespace k)) "xlink")) v)) (:attrs e)))
+
+(defn- digital-reproduction?
+  "True for an `accessCondition` labelled as the digital reproduction's (as
+   `palomar.plugins.mods.export` writes the rights of a digital surrogate)."
+  [ac]
+  (= "digital reproduction" (get-in ac [:attrs :displayLabel])))
+
+(defn- use-and-reproduction?
+  "True for an `accessCondition` that states the rights to use the resource:
+   typed \"use and reproduction\" (or the older `useAndReproduction`), or untyped."
+  [ac]
+  (contains? #{nil "use and reproduction" "useAndReproduction"} (get-in ac [:attrs :type])))
 
 (defn- performers-note?
   "True for a `<note type=\"performers\">`, the MODS form of a MARC 511 credits note."
@@ -168,18 +188,42 @@
    (for [[i loc] (indexed-children mods "location")
          [j u]   (indexed-children loc "url")
          :let [v (text-of u)] :when v]
-     (assertion rid "url" v (str (step "location" i) "/" (step "url" j))))))
+     (assertion rid "url" v (str (step "location" i) "/" (step "url" j))))
+   ;; a rights statement's text and its URI (xlink:href) are each a value; a
+   ;; blank text is none
+   (for [[i ac] (indexed-children mods "accessCondition")
+         :when (use-and-reproduction? ac)
+         :let  [pred (if (digital-reproduction? ac) "digital-access-condition" "access-condition")]
+         [v xp] [[(some-> (text-of ac) str/trim not-empty) (step "accessCondition" i)]
+                 [(some-> (href-of ac) str/trim not-empty) (str (step "accessCondition" i) "/@*[local-name()='href']")]]
+         :when v]
+     (assertion rid pred v xp))))
 
 (defn- ingest-losses
   "One import-edge `:loss/dropped` per distinct unmodelled top-level MODS element."
   [rid mods]
-  (for [nm (distinct (map local-name (child-elems mods)))
-        :when (not (contains? handled-elements nm))]
-    (dx/loss {:category     :dropped
-              :subject      rid
-              :edge         :import
-              :source-field (keyword "mods" nm)
-              :message      (str nm " not modelled by the MODS floor mapping (ADR 0003)")})))
+  (concat
+   (for [nm (distinct (map local-name (child-elems mods)))
+         :when (not (contains? handled-elements nm))]
+     (dx/loss {:category     :dropped
+               :subject      rid
+               :edge         :import
+               :source-field (keyword "mods" nm)
+               :message      (str nm " not modelled by the MODS floor mapping (ADR 0003)")}))
+   (for [t (distinct (keep #(when-not (use-and-reproduction? %) (get-in % [:attrs :type]))
+                           (children-named mods "accessCondition")))]
+     (dx/loss {:category     :dropped
+               :subject      rid
+               :edge         :import
+               :source-field :mods/accessCondition
+               :message      (str "accessCondition of type " (pr-str t) " is no rights statement; not carried")}))
+   (when (some #(and (use-and-reproduction? %) (str/blank? (text-of %)) (str/blank? (href-of %)))
+               (children-named mods "accessCondition"))
+     [(dx/loss {:category     :dropped
+                :subject      rid
+                :edge         :import
+                :source-field :mods/accessCondition
+                :message      "an accessCondition with neither text nor xlink:href states nothing; not carried"})])))
 
 ;; ---------------------------------------------------------------------------
 ;; Record identity
@@ -263,7 +307,11 @@
    {:mapping/id :map/mods-note :mapping/from :mods/note :mapping/to :canon/note
     :mapping/transform [:trim]}
    {:mapping/id :map/mods-url :mapping/from :mods/url :mapping/to :canon/digital-object
-    :mapping/transform [:trim]}])
+    :mapping/transform [:trim]}
+   {:mapping/id :map/mods-access-condition :mapping/from :mods/access-condition :mapping/to :canon/rights
+    :mapping/transform [:trim]}
+   {:mapping/id :map/mods-digital-access-condition :mapping/from :mods/digital-access-condition :mapping/to :canon/rights
+    :mapping/transform [:trim] :mapping/qualifier {:value :digital-surrogate :as :canon/rights-scope}}])
 
 (def plugin
   "The MODS (LoC) XML importer plugin (ADR 0007)."

@@ -18,6 +18,16 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Rights through the floor** (lot M1; ADR 0003 and 0021 amendments): a
+  IIIF manifest's `rights` (scoped to the digital surrogate),
+  `requiredStatement` (value and label apart), `provider` (with its id), and a
+  painted Image's and its Canvas's `rights` are carried instead of reported as
+  lost, and written back by the IIIF export; rights are also
+  `dc:rights`/`dcterms:rights`/`dcterms:license` (text or `rdf:resource`),
+  MODS `accessCondition` (text or `xlink:href`) and MARC21 540 both ways, and
+  in Linked Art a `Right` (`subject_to`) or a rights statement. A provider is
+  not written by DC, MODS or MARC21, and never becomes an agent of the work.
+
 - **EAC-CPF spoke and collectivities** (ADR 0045): `--from eac-cpf` reads an
   authority record as a RiC-O Person, CorporateBody or Family (names,
   existence dates, history; its `entityId` as IRI only when it is one;

@@ -31,8 +31,13 @@
    - a publication event (ADR 0036) -> a Publishing `used_for` Activity with its
      actors, `took_place_at` Place and `timespan` (named by the date as
      transcribed); with events, they replace the publishers' bare activity.
-   - note (`:canon/note`)      -> `referred_to_by` LinguisticObject (Description / Brief Text)
-   - digital (`:canon/digital-object`) -> `representation` VisualItem digitally_shown_by DigitalObject
+   - note (`:canon/note`)      -> `referred_to_by` LinguisticObject (Description / Brief Text);
+     an attribution (`:canon/note-kind :attribution`) a Credit Line (aat:300026687)
+   - digital (`:canon/digital-object`) -> `representation` VisualItem digitally_shown_by DigitalObject;
+     the image's own rights (`:canon/image-rights`) a rights statement about that VisualItem
+   - rights (`:canon/rights`)  -> a URI: `subject_to` Right classified_as the URI; a text, or any
+     rights of a IIIF manifest's DigitalObject (which has no `subject_to`): `referred_to_by`
+     LinguisticObject classified aat:300435434 (Copyright/License Statement)
 
    Honest scope (V1): a Linked Art-*profile* serialisation, **not** conformance-
    validated against a Linked Art processor. INTERMARC's creator lives in
@@ -51,7 +56,8 @@
             [palomar.plugins.lido-rules :as lido-rules]
             [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.ntriples :as nt]
-            [palomar.plugins.lrmoo.view :as view]))
+            [palomar.plugins.lrmoo.view :as view]
+            [palomar.plugins.qualified :as qualified]))
 
 (def context "https://linked.art/ns/v1/linked-art.json")
 
@@ -62,8 +68,19 @@
 (def ^:private aat-brief-text    "http://vocab.getty.edu/aat/300418049")
 (def ^:private aat-digital-image "http://vocab.getty.edu/aat/300215302")
 (def ^:private aat-publishing    "http://vocab.getty.edu/aat/300054686")
+(def ^:private aat-credit        "http://vocab.getty.edu/aat/300026687")
+(def ^:private aat-rights        "http://vocab.getty.edu/aat/300435434")
 
 (defn- type-obj [aat label] {"id" aat "type" "Type" "_label" label})
+(defn- statement [content aat label]
+  {"type" "LinguisticObject" "content" content "classified_as" [(type-obj aat label)]})
+(defn- rights-statement [content] (statement content aat-rights "Copyright/License Statement"))
+(defn- rights-uri? [s] (boolean (re-matches #"(?i)https?://\S+" (str s))))
+(defn- right-obj
+  "A Linked Art `Right` the resource is subject to, classified by the rights
+   URI (a Creative Commons licence, a RightsStatements.org statement)."
+  [uri]
+  {"type" "Right" "classified_as" [{"id" uri "type" "Type" "_label" uri}]})
 (defn- name-obj [content] {"type" "Name"
                            "classified_as" [(type-obj aat-primary-name "Primary Name")]
                            "content" content})
@@ -125,17 +142,25 @@
     (seq dates)  (assoc "timespan" {"type" "TimeSpan"
                                     "identified_by" (mapv (fn [d] {"type" "Name" "content" d}) dates)})))
 
-(defn- digital-obj [url] {"type" "VisualItem"
-                          "digitally_shown_by" [{"type" "DigitalObject"
-                                                 "classified_as" [(type-obj aat-digital-image "Digital Image")]
-                                                 "access_point" [{"id" url "type" "DigitalObject"}]}]})
+(defn- digital-obj
+  "The `VisualItem` an image shows, digitally shown by the image; the rights of
+   that image alone (`:canon/image-rights`), when given, are a rights statement
+   about it (an embedded VisualItem has no `subject_to`)."
+  ([url] (digital-obj url nil))
+  ([url rights]
+   (cond-> {"type" "VisualItem"
+            "digitally_shown_by" [{"type" "DigitalObject"
+                                   "classified_as" [(type-obj aat-digital-image "Digital Image")]
+                                   "access_point" [{"id" url "type" "DigitalObject"}]}]}
+     (seq rights) (assoc "referred_to_by" (mapv rights-statement rights)))))
 
 ;; --- reads off the WEMI record ----------------------------------------------
 
 (def ^:private expressed
   "Predicates the Linked Art profile expresses (everything else is export loss)."
   #{:lrmoo/R33_has_string :lrmoo/R3_is_realised_in :lrmoo/R4_embodies :lrmoo/R7_exemplifies
-    :canon/agent :canon/role :canon/note :canon/digital-object :canon/identifier})
+    :canon/agent :canon/role :canon/note :canon/digital-object :canon/identifier
+    :canon/rights :canon/image-rights :canon/canvas-rights :canon/rights-scope :canon/note-label})
 
 (defn- titles-of
   "The distinct R33 strings of `subject`, in assertion order."
@@ -154,6 +179,40 @@
   (->> (:assertions record)
        (filter #(and (= pred (:predicate %)) (string? (:value %))))
        (map :value) distinct vec))
+
+(defn- by-value
+  "`[[value occurrences] …]` of `pred` in `record` with `coords`, one per
+   distinct value, in the order of first occurrence."
+  [record pred coords]
+  (let [occs (qualified/occurrences record pred coords)]
+    (for [v (distinct (map :value occs))]
+      [v (filter #(= v (:value %)) occs)])))
+
+(defn- note-objs
+  "The statements of `record`'s notes, in order, one per distinct text: an
+   attribution (a IIIF `requiredStatement`) is a Credit Line named by its label,
+   any other note a Description."
+  [record]
+  (vec (for [[v occs] (by-value record :canon/note [:canon/note-kind :canon/note-label])]
+         (if-let [a (first (filter #(= :attribution (:canon/note-kind %)) occs))]
+           (cond-> (statement v aat-credit "Credit Line")
+             (:canon/note-label a) (assoc "_label" (:canon/note-label a)))
+           (note-obj v)))))
+
+(defn- digital-objs
+  "The `representation` of `record`'s images, one per distinct image, each with
+   the rights of that image (its own, its Canvas's)."
+  [record]
+  (vec (for [[url occs] (by-value record :canon/digital-object [:canon/image-rights :canon/canvas-rights])]
+         (digital-obj url (distinct (keep identity (mapcat (juxt :canon/image-rights :canon/canvas-rights) occs)))))))
+
+(defn- own-rights
+  "`record`'s rights statements with no scope: the described resource's own,
+   which a text may be subject to. Those of a digital surrogate are not the
+   text's (`surrogate-rights-losses`)."
+  [record]
+  (vec (distinct (keep #(when-not (:canon/rights-scope %) (:value %))
+                       (qualified/occurrences record :canon/rights [:canon/rights-scope])))))
 
 (def ^:private event-predicates
   "The predicates of a publication event (ADR 0036), which `event-activity` writes."
@@ -214,8 +273,11 @@
         creators   (when record-fields? (agents/creators record))
         publishers (when record-fields? (agents/with-role record :publisher))
         events     (events-of record (:id manif))
-        notes      (when record-fields? (canon-vals record :canon/note))
-        digis      (when record-fields? (canon-vals record :canon/digital-object))
+        ;; the notes, and the rights stated as text; a rights URI is a Right
+        ;; the text is subject to
+        rights     (when record-fields? (own-rights record))
+        notes      (when record-fields? (into (note-objs record) (map rights-statement (remove rights-uri? rights))))
+        digis      (when record-fields? (digital-objs record))
         idents     (cond-> []
                      (:iri manif)   (conj (identifier-obj (:iri manif)))
                      record-fields? (into (map identifier-obj (canon-vals record :canon/identifier))))]
@@ -235,8 +297,9 @@
       work                    (assoc "part_of" [(cond-> {"id" (text-iri (or (view/entity-by-id record work) {:id work}))
                                                          "type" "PropositionalObject"}
                                                   work-title (assoc "_label" work-title))])
-      (seq notes)             (assoc "referred_to_by" (mapv note-obj notes))
-      (seq digis)             (assoc "representation" (mapv digital-obj digis)))))
+      (some rights-uri? rights) (assoc "subject_to" (mapv right-obj (filter rights-uri? rights)))
+      (seq notes)             (assoc "referred_to_by" notes)
+      (seq digis)             (assoc "representation" digis))))
 
 (defn- item-doc
   "The Linked Art `HumanMadeObject` for one F5 Item: a physical copy that
@@ -263,15 +326,20 @@
    API and is retrieved at its own URL. What it presents — a book, a painting,
    a sculpture — the manifest does not say, so no `LinguisticObject` or
    `HumanMadeObject` is asserted; its labels are the presentation's names, its
-   summary a statement about it, its images its representations. Its
+   summary a statement about it, its images its representations. Its rights
+   and its `requiredStatement` are statements about it too (a rights statement,
+   a credit line): the DigitalObject schema has no `subject_to`. Its providers
+   have no place in it and are reported. Its
    metadata's agents are the presented thing's, not the manifest's, and are
    reported as loss (`export-losses`)."
   [record]
   (let [ms     (view/manifestations record)
         names  (distinct (mapcat #(titles-of record (:id %)) ms))
         url    (let [s (:source record)] (when (and (string? s) (re-find #"^https?://" s)) s))
-        notes  (canon-vals record :canon/note)
-        digis  (canon-vals record :canon/digital-object)
+        ;; a DigitalObject has no `subject_to` (digital.json): its rights, a
+        ;; URI or a text, are a rights statement about it
+        notes  (into (note-objs record) (map rights-statement (canon-vals record :canon/rights)))
+        digis  (digital-objs record)
         idents (canon-vals record :canon/identifier)]
     (cond-> {"@context"    context
              "id"          (or url (some-> (first ms) text-iri) (export/entity-iri (:id record)))
@@ -282,8 +350,8 @@
                                                                (into (map #(dissoc (name-obj %) "classified_as") (rest names)))
                                                                (into (map identifier-obj idents))))
       url             (assoc "access_point" [{"id" url "type" "DigitalObject"}])
-      (seq notes)     (assoc "referred_to_by" (mapv note-obj notes))
-      (seq digis)     (assoc "representation" (mapv digital-obj digis)))))
+      (seq notes)     (assoc "referred_to_by" notes)
+      (seq digis)     (assoc "representation" digis))))
 
 ;; --- a museum object (LIDO, ADR 0052) -----------------------------------------
 
@@ -292,7 +360,6 @@
 (def ^:private aat-dimensions  "http://vocab.getty.edu/aat/300435430")
 (def ^:private aat-provenance  "http://vocab.getty.edu/aat/300444174")
 (def ^:private aat-inscription "http://vocab.getty.edu/aat/300028702")
-(def ^:private aat-credit      "http://vocab.getty.edu/aat/300026687")
 
 (def ^:private dimension-types
   "A LIDO measurement type → its AAT dimension type."
@@ -341,9 +408,6 @@
   [{:keys [type label]}]
   (boolean (or (some-> type (str/ends-with? "lido00227"))
                (#{"provenance" "provenienz"} (some-> label str/lower-case)))))
-
-(defn- statement [content aat label]
-  {"type" "LinguisticObject" "content" content "classified_as" [(type-obj aat label)]})
 
 (defn- type-ref [{:keys [uri label]} kind]
   (cond-> {"id" uri "type" kind} label (assoc "_label" label)))
@@ -631,6 +695,14 @@
                 :message      (str "agent " (pr-str nm) " (" (if role (name role) "no role")
                                    ") is neither creator nor publisher; not expressed in the Linked Art profile (V1)")}))))
 
+(defn- surrogate-rights-losses
+  "One `:dropped` loss per rights statement of a digital surrogate on a record
+   exported as a text: they are not the text's, so it is not subject to them."
+  [record]
+  (for [o (qualified/occurrences record :canon/rights [:canon/rights-scope]) :when (:canon/rights-scope o)]
+    (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/rights :value (:value o)
+              :message (str "rights " (pr-str (:value o)) " hold for a digital surrogate, not for the text; not written on its LinguisticObject")})))
+
 (defn- structure-losses
   "Losses of the WEMI → Linked Art structure: each Expression folded into its
    Manifestation's LinguisticObject (`:under-specified` — Linked Art has no
@@ -655,7 +727,7 @@
        (loss :dropped (:id e) (:kind e)
              (str (name (:kind e)) " is reached by no Manifestation or Item; not exported")))
      (when (not= 1 (count ts))
-       (for [p [:canon/agent :canon/role :canon/note :canon/digital-object :canon/identifier]
+       (for [p [:canon/agent :canon/role :canon/note :canon/digital-object :canon/identifier :canon/rights]
              :when (some #(= p (:predicate %)) (:assertions record))]
          (loss (if (empty? ts) :dropped :under-specified) (:id record) p
                (str (name p) " is record-level but the record has " (count ts)
@@ -668,10 +740,13 @@
    presentation is not."
   [record]
   (concat
-   (for [nm (distinct (map :name (agents/occurrences record)))]
+   (for [nm (distinct (map :name (remove #(= :provider (:role %)) (agents/occurrences record))))]
      (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/agent
                :message (str "agent " (pr-str nm) " is the presented thing's, not the IIIF manifest's;"
                              " not attributed to the DigitalObject")}))
+   (for [nm (agents/with-role record :provider)]
+     (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/agent :value nm
+               :message (str "provider " (pr-str nm) " of the IIIF manifest: the Linked Art DigitalObject has no place for who provides it")}))
    (for [e (:entities record)
          :when (#{:lrmoo/F1_Work :lrmoo/F2_Expression :lrmoo/F3_Manifestation :lrmoo/F5_Item} (:kind e))]
      (dx/loss {:category :dropped :subject (:id e) :edge :export :source-field (:kind e) :aspect :class
@@ -833,6 +908,15 @@
   [record]
   (-> (->> (:assertions record)
            (remove #(contains? expressed (:predicate %)))
+           ;; an attribution is written as a Credit Line: its kind is said
+           (remove #(and (= :canon/note-kind (:predicate %)) (= :attribution (:value %))))
+           ;; a IIIF manifest's rights, attribution and image rights are written
+           ;; as statements: their natives are not lost (their canonical
+           ;; fields' own losses name any value that is)
+           (remove #(and (= "iiif" (namespace (:predicate %)))
+                         (seq (cov/native-targets (:predicate %)))
+                         (every? #{:canon/rights :canon/note :canon/image-rights :canon/canvas-rights}
+                                 (cov/native-targets (:predicate %)))))
            (remove (let [written (into #{} (comp (mapcat #(events-of record (:id (:manif %)))) (mapcat :nodes))
                                        (texts record))]
                      #(and (written (:subject %))
@@ -846,7 +930,7 @@
                              :edge         :export
                              :source-field p
                              :message      (str (pr-str p) " not expressed in the Linked Art profile (V1)")}))))
-      (into (if (manifest? record) (manifest-losses record) (non-creator-losses record)))
+      (into (if (manifest? record) (manifest-losses record) (concat (non-creator-losses record) (surrogate-rights-losses record))))
       (into (when-not (manifest? record) (structure-losses record)))))
 
 (defn exporter

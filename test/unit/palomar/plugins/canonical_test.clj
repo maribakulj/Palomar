@@ -16,11 +16,18 @@
 ;; ---------------------------------------------------------------------------
 
 (deftest documentary-vocabulary-is-the-adr-0003-set
-  (testing "exactly the documentary predicates from ADR 0003 §Decision (eight + the disciplined uniform-title addition)"
-    (is (= #{:canon/title :canon/uniform-title :canon/identifier :canon/agent
+  (testing "exactly the documentary predicates from ADR 0003 §Decision (eight + the disciplined uniform-title and rights additions)"
+    (is (= #{:canon/title :canon/uniform-title :canon/identifier :canon/agent :canon/rights
              :canon/date :canon/relation :canon/note :canon/digital-object :canon/loss-marker}
            canonical/documentary-vocabulary))
-    (is (= 9 (count canonical/documentary-vocabulary))))
+    (is (= 10 (count canonical/documentary-vocabulary))))
+  (testing "rights is documentary; the rights of one image and an agent's source id are qualifier coords (M1)"
+    (is (canonical/documentary? :canon/rights))
+    (is (not (canonical/documentary? :canon/image-rights)))
+    (is (contains? canonical/qualifier-coords :canon/image-rights))
+    (is (contains? canonical/qualifier-coords :canon/agent-id))
+    (is (contains? canonical/agent-roles :provider))
+    (is (contains? canonical/note-kinds :attribution)))
   (testing "uniform-title is documentary (the work's controlled title), distinct from the transcribed title"
     (is (canonical/documentary? :canon/uniform-title))))
 

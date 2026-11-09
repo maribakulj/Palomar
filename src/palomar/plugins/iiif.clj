@@ -17,6 +17,11 @@
    | each painted Image body (see below)    | `:canon/digital-object` + `:canon/width`/`:canon/height` |
    | `summary`, every string, per language  | `:canon/note` + `:canon/lang` |
    | `metadata` (label: value)              | `:canon/note`           |
+   | `rights` (a URI)                       | `:canon/rights` + `:canon/rights-scope :digital-surrogate` |
+   | `requiredStatement` value / label      | `:canon/note` (`:canon/note-kind :attribution`) + `:canon/lang`; `:canon/note-label` + `:canon/note-label-lang` |
+   | `provider`, each Agent's label         | `:canon/agent`, `:canon/role :provider` + `:canon/agent-id` (its `id`) + `:canon/lang` |
+   | a painted Image body's `rights`        | `:canon/image-rights` on the image's `:canon/digital-object` |
+   | its Canvas's `rights`                  | `:canon/canvas-rights` on the same           |
 
    Language maps are kept, not flattened: each string becomes a fragment
    carrying its `:canon/lang` (the IIIF `none` key means no language), the same
@@ -34,17 +39,32 @@
    (the spec is explicit they are not machine-actionable), so they map to notes,
    not to structured agent/date.
 
+   Rights are read at their levels (lot M1): the manifest's `rights` is the
+   record's `:canon/rights`, scoped to the digital surrogate (they are the
+   manifest's, not the work's); a painted Image body's `rights` and its
+   Canvas's qualify that image, each apart, so each goes back where it was.
+   The `requiredStatement` is an attribution note: its value with the value's
+   language, its label apart (`:canon/note-label`) with the label's own
+   language — no joined string is split again. Each `provider` Agent is an
+   agent of role `:provider` carrying its `id`, so the exporter can rebuild the
+   Agent it MUST be. A blank string is no value.
+
    ## Loss (no silent drop)
 
-   Unmodelled top-level manifest keys (`behavior`, `rights`, `provider`, `navDate`,
+   Unmodelled top-level manifest keys (`behavior`, `navDate`,
    `seeAlso`, `structures`, …) are reported as import-edge `:loss/dropped`
    (ADR 0015); JSON-LD machinery (`@context`, `type`) is not content and is
    ignored. Inside `items`, every unmodelled Canvas key (`label`, `thumbnail`,
    `annotations`, `duration`, …), every non-painting Annotation and every painted
    body that is not an Image (Text, Sound, Video) is reported too, one loss per
    distinct kind, so the flattening of the Canvas tree is never silent.
-   `metadata` keeps its first string per label and value; a pair with several
-   languages is reported as `:coerced`.
+   `metadata` and `requiredStatement` keep their first string per label and
+   value, and a provider its first label; one with several languages is
+   reported as `:coerced`; a requiredStatement with no label (invalid) is
+   reported. A provider's `homepage`, `logo` and `seeAlso` are not on the floor
+   and are reported, one loss per key; so is a `rights` that is not a string or
+   is blank, and a Canvas's `rights` that no carried image takes (it paints no
+   Image, or only one painted earlier).
 
    ## Scope (V1)
 
@@ -83,6 +103,11 @@
   [v]
   (< 1 (count (lang-entries v))))
 
+(defn- filled-entries
+  "`lang-entries` of `v` whose string is not blank: an empty string is no value."
+  [v]
+  (remove #(str/blank? (second %)) (lang-entries v)))
+
 (defn- as-seq [v] (cond (sequential? v) v (some? v) [v] :else []))
 
 (defn- painting? [anno]
@@ -109,11 +134,18 @@
         t (if (map? t) (get t "id") t)]
     (when (string? t) (second (re-find #"#(xywh=[^&]+)" t)))))
 
+(defn- rights-of
+  "The `rights` of `x` when it is a string that is not blank, else nil."
+  [x]
+  (let [r (get x "rights")] (when (and (string? r) (not (str/blank? r))) r)))
+
 (defn- painting-occurrences
-  "`{:id :width :height :canvas :region}` for every painting of an Image on the
-   manifest's canvases, in canvas order, repeats included. `:width`/`:height`
-   are the Canvas's extent, `:canvas` its id and `:region` the painted `xywh`
-   when the annotation targets part of it."
+  "`{:id :width :height :canvas :region :body-rights :canvas-rights}` for every
+   painting of an Image on the manifest's canvases, in canvas order, repeats
+   included. `:width`/`:height` are the Canvas's extent, `:canvas` its id,
+   `:region` the painted `xywh` when the annotation targets part of it,
+   `:body-rights` the Image body's own `rights` and `:canvas-rights` its
+   Canvas's."
   [m]
   (for [canvas (canvases m)
         anno   (annotations canvas)
@@ -121,7 +153,8 @@
         body   (bodies anno)
         :when  (and (= "Image" (get body "type")) (string? (get body "id")))]
     {:id (get body "id") :width (get canvas "width") :height (get canvas "height")
-     :canvas (get canvas "id") :region (target-region anno)}))
+     :canvas (get canvas "id") :region (target-region anno)
+     :body-rights (rights-of body) :canvas-rights (rights-of canvas)}))
 
 (defn- painted-images
   "The paintings of `painting-occurrences`, first occurrence of an image id
@@ -154,11 +187,15 @@
 
 (def ^:private handled-keys
   "Top-level manifest keys this V1 parser reads."
-  #{"id" "label" "items" "summary" "metadata"})
+  #{"id" "label" "items" "summary" "metadata" "rights" "requiredStatement" "provider"})
 
 (def ^:private handled-canvas-keys
-  "Canvas keys this V1 parser reads (the extent and the painted content)."
-  #{"id" "items" "width" "height"})
+  "Canvas keys this V1 parser reads (the extent, the painted content, the rights)."
+  #{"id" "items" "width" "height" "rights"})
+
+(def ^:private handled-agent-keys
+  "Keys of a `provider` Agent this parser reads."
+  #{"id" "label"})
 
 (defn- assertion [rid pred v]
   (model/assertion {:subject    rid
@@ -194,15 +231,32 @@
   [rid m]
   (let [langs  (fn [pred v] (map-indexed (fn [i [lang s]] (qualified rid pred i s {"lang" lang}))
                                          (lang-entries v)))
-        images (map-indexed (fn [i {:keys [id width height] :as img}]
+        images (map-indexed (fn [i {:keys [id width height body-rights canvas-rights] :as img}]
                               (qualified rid "image" i id
-                                         {"width"  (when (pos-int? width) width)
-                                          "height" (when (pos-int? height) height)}
+                                         {"width"         (when (pos-int? width) width)
+                                          "height"        (when (pos-int? height) height)
+                                          "image-rights"  body-rights
+                                          "canvas-rights" canvas-rights}
                                          (image-evidence img)))
                             (painted-images m))
-        quals  (concat (langs "label" (get m "label")) (langs "summary" (get m "summary")) images)
+        ;; the requiredStatement: one attribution, its value with its
+        ;; language, its label apart with the label's own language (no
+        ;; joined string to split again)
+        attrib (let [rs (get m "requiredStatement")
+                     [llang l] (when (map? rs) (first (filled-entries (get rs "label"))))
+                     [vlang v] (when (map? rs) (first (filled-entries (get rs "value"))))]
+                 (when v [(qualified rid "required-statement" 0 v
+                                     {"lang" vlang "required-statement-label" l "required-statement-label-lang" llang})]))
+        provs  (keep-indexed (fn [i agent]
+                               (when-let [[lang nm] (when (map? agent) (first (filled-entries (get agent "label"))))]
+                                 (qualified rid "provider" i nm
+                                            {"provider-id" (let [id (get agent "id")] (when (string? id) id))
+                                             "lang"        lang})))
+                             (as-seq (get m "provider")))
+        quals  (concat (langs "label" (get m "label")) (langs "summary" (get m "summary")) images attrib provs)
         flat   (concat
                 (when-let [id (get m "id")] [(assertion rid "id" id)])
+                (when-let [r (rights-of m)] [(assertion rid "rights" r)])
                 (for [pair (get m "metadata")
                       :let  [l (first-lang (get pair "label"))
                              v (first-lang (get pair "value"))]
@@ -213,6 +267,27 @@
 
 (defn- loss [rid field message]
   (dx/loss {:category :dropped :subject rid :edge :import :source-field field :message message}))
+
+(defn- rights-losses
+  "Import-edge losses of the rights: a `rights` (of the manifest, a Canvas or a
+   body) that is not a string or is blank, and a Canvas's `rights` no carried
+   image takes (the Canvas paints no Image the floor carries: none, or only a
+   repeat of an image painted earlier)."
+  [rid m]
+  (let [cs     (canvases m)
+        taken  (set (keep (fn [{:keys [canvas canvas-rights]}] (when canvas-rights [canvas canvas-rights])) (painted-images m)))
+        bs     (for [c cs, a (annotations c) :when (painting? a), b (bodies a)] b)
+        holders (concat [m] cs bs)]
+    (concat
+     (when (some #(and (some? (get % "rights")) (not (string? (get % "rights")))) holders)
+       [(loss rid :iiif/rights "a rights that is not a string (a URI) is not carried")])
+     (when (some #(and (string? (get % "rights")) (str/blank? (get % "rights"))) holders)
+       [(loss rid :iiif/rights "an empty rights is no value; not carried")])
+     (for [c cs
+           :let  [r (rights-of c)]
+           :when (and r (not (contains? taken [(get c "id") r])))]
+       (loss rid :iiif/canvas-rights
+             (str "Canvas " (get c "id") " rights " r " is not carried: the Canvas paints no image the floor carries"))))))
 
 (defn- canvas-losses
   "Import-edge losses inside `items`: one per distinct unmodelled Canvas key, per
@@ -239,7 +314,39 @@
                  (for [c cs, a (annotations c) :when (painting? a), b (bodies a)] b))
        [(loss rid :iiif/image "a painted Image with no id cannot be carried")])
      (when (some (fn [c] (some #(and (some? (get c %)) (not (pos-int? (get c %)))) ["width" "height"])) cs)
-       [(loss rid :iiif/canvas-extent "a Canvas width or height that is not a positive integer is not carried")]))))
+       [(loss rid :iiif/canvas-extent "a Canvas width or height that is not a positive integer is not carried")])
+     (rights-losses rid m))))
+
+(defn- attribution-losses
+  "The losses of the `requiredStatement`: none carried when it has no value
+   string, a `:coerced` one when its label or value holds several strings."
+  [rid m]
+  (when-let [rs (get m "requiredStatement")]
+    (if-not (and (map? rs) (seq (filled-entries (get rs "value"))))
+      [(loss rid :iiif/requiredStatement "a requiredStatement with no value string is not carried")]
+      (concat
+       (when (empty? (filled-entries (get rs "label")))
+         [(dx/loss {:category :under-specified :subject rid :edge :import :source-field :iiif/required-statement
+                    :message "a requiredStatement with no label (Presentation 3.0 requires one): its value is carried as an attribution with no label"})])
+       (when (or (several-strings? (get rs "label")) (several-strings? (get rs "value")))
+         [(dx/loss {:category :coerced :subject rid :edge :import :source-field :iiif/required-statement
+                    :message "requiredStatement kept one string for its label and one for its value, each with its own language; the others are not carried"})])))))
+
+(defn- provider-losses
+  "The losses of the `provider` Agents: an Agent with no label is not carried,
+   one with several label strings keeps one (`:coerced`), and each other key of
+   an Agent (`homepage`, `logo`, `seeAlso`, …) is reported once."
+  [rid m]
+  (let [agents (as-seq (get m "provider"))]
+    (concat
+     (when (some #(not (and (map? %) (seq (filled-entries (get % "label"))))) agents)
+       [(loss rid :iiif/provider "a provider with no label is not carried")])
+     (when (some #(and (map? %) (several-strings? (get % "label"))) agents)
+       [(dx/loss {:category :coerced :subject rid :edge :import :source-field :iiif/provider
+                  :message "a provider kept one label string; the others are not carried"})])
+     (for [k     (distinct (mapcat #(when (map? %) (keys %)) agents))
+           :when (not (or (contains? machinery-keys k) (contains? handled-agent-keys k)))]
+       (loss rid (keyword "iiif" (str "provider-" k)) (str "provider " k " not modelled by the IIIF floor mapping"))))))
 
 (defn- ingest-losses
   "Import-edge losses (ADR 0015): one `:dropped` per unmodelled top-level content
@@ -255,7 +362,9 @@
    (repeated-image-losses rid m)
    (when (some #(or (several-strings? (get % "label")) (several-strings? (get % "value"))) (get m "metadata"))
      [(dx/loss {:category :coerced :subject rid :edge :import :source-field :iiif/metadata
-                :message "metadata kept one string per label and value; the others are not carried"})])))
+                :message "metadata kept one string per label and value; the others are not carried"})])
+   (attribution-losses rid m)
+   (provider-losses rid m)))
 
 ;; ---------------------------------------------------------------------------
 ;; Record identity
@@ -325,9 +434,11 @@
      :diagnostics (vec (ingest-losses (record-id-of opts m) m))}))
 
 (def mapping
-  "Declarative IIIF→canonical mapping for the manifest core. An image has two
-   coords (width, height) and a rule carries one qualifier, so it takes two rules;
-   their identical value renames collapse at merge (ADR 0008)."
+  "Declarative IIIF→canonical mapping for the manifest core. An image has three
+   coords (width, height, rights) and a rule carries one qualifier, so it takes
+   three rules; their identical value renames collapse at merge (ADR 0008). So
+   do the attribution (its kind, its language) and a provider (its role, its
+   id, its language)."
   [{:mapping/id :map/iiif-label :mapping/from :iiif/label :mapping/to :canon/title
     :mapping/transform [:trim] :mapping/qualifier {:from :iiif/lang :as :canon/lang}}
    {:mapping/id :map/iiif-id :mapping/from :iiif/id :mapping/to :canon/identifier
@@ -339,7 +450,29 @@
    {:mapping/id :map/iiif-summary :mapping/from :iiif/summary :mapping/to :canon/note
     :mapping/transform [:trim] :mapping/qualifier {:from :iiif/lang :as :canon/lang}}
    {:mapping/id :map/iiif-metadata :mapping/from :iiif/metadata :mapping/to :canon/note
-    :mapping/transform [:trim]}])
+    :mapping/transform [:trim]}
+   ;; rights at their levels, the attribution and the provider (lot M1)
+   ;; a manifest's rights are the digital surrogate's, not the work's
+   {:mapping/id :map/iiif-rights :mapping/from :iiif/rights :mapping/to :canon/rights
+    :mapping/transform [:trim] :mapping/qualifier {:value :digital-surrogate :as :canon/rights-scope}}
+   {:mapping/id :map/iiif-image-rights :mapping/from :iiif/image :mapping/to :canon/digital-object
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/image-rights :as :canon/image-rights}}
+   {:mapping/id :map/iiif-canvas-rights :mapping/from :iiif/image :mapping/to :canon/digital-object
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/canvas-rights :as :canon/canvas-rights}}
+   {:mapping/id :map/iiif-required-statement :mapping/from :iiif/required-statement :mapping/to :canon/note
+    :mapping/transform [:trim] :mapping/qualifier {:value :attribution :as :canon/note-kind}}
+   {:mapping/id :map/iiif-required-statement-lang :mapping/from :iiif/required-statement :mapping/to :canon/note
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/lang :as :canon/lang}}
+   {:mapping/id :map/iiif-required-statement-label :mapping/from :iiif/required-statement :mapping/to :canon/note
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/required-statement-label :as :canon/note-label}}
+   {:mapping/id :map/iiif-required-statement-label-lang :mapping/from :iiif/required-statement :mapping/to :canon/note
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/required-statement-label-lang :as :canon/note-label-lang}}
+   {:mapping/id :map/iiif-provider :mapping/from :iiif/provider :mapping/to :canon/agent
+    :mapping/transform [:trim] :mapping/qualifier {:value :provider :as :canon/role}}
+   {:mapping/id :map/iiif-provider-id :mapping/from :iiif/provider :mapping/to :canon/agent
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/provider-id :as :canon/agent-id}}
+   {:mapping/id :map/iiif-provider-lang :mapping/from :iiif/provider :mapping/to :canon/agent
+    :mapping/transform [:trim] :mapping/qualifier {:from :iiif/lang :as :canon/lang}}])
 
 (def plugin
   "The IIIF Presentation 3.0 manifest importer plugin (ADR 0007)."
@@ -348,4 +481,4 @@
    :input-format        :json
    :mapping             mapping
    :importer            importer
-   :doc                 "IIIF Presentation 3.0 manifest importer — label/id/images onto the canonical floor; unmodelled top-level keys reported as import loss."})
+   :doc                 "IIIF Presentation 3.0 manifest importer — label/id/images, rights, attribution and provider onto the canonical floor; unmodelled keys reported as import loss."})

@@ -16,7 +16,7 @@ decision from being read as shipped code (an audit honesty rule).
 |---|---|---|
 | [0001](./0001-assertion-based-ir.md) | Assertion-based internal representation | Accepted |
 | [0002](./0002-edn-as-dsl.md) | EDN as the rule DSL, no parser | Accepted (extended by 0035) |
-| [0003](./0003-core-vs-canonical-vocabulary.md) | Structural vocabulary at core, documentary vocabulary in a plugin | Accepted (extended by 0013, 0021) |
+| [0003](./0003-core-vs-canonical-vocabulary.md) | Structural vocabulary at core, documentary vocabulary in a plugin | Accepted (extended by 0013, 0021; `:canon/rights` added 2026-11-09) |
 | [0004](./0004-fixed-passes-over-fixpoint.md) | Fixed passes in V1, fixpoint deferred | Superseded by 0020 |
 | [0005](./0005-status-model.md) | Dual status model: machine truth and human workflow | Accepted (extended by 0023, 0028) |
 | [0006](./0006-deps-resolution-and-sandbox.md) | Maven coordinates by default, git override alias for restricted networks | Accepted |
@@ -34,7 +34,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0018](./0018-entity-resolution-at-scale.md) | Entity resolution at scale: reconcile-to-authority, equivalence as assertion, revisability | Accepted (partially implemented — see ADR; §2 amended by 0032) |
 | [0019](./0019-conversion-directionality.md) | Conversion directionality: spokes bidirectional, hub a target, CRM→LRM a downcast | Accepted (partially implemented — see ADR; partially superseded by 0022) |
 | [0020](./0020-single-pass-and-retire-project-phase.md) | Single pass per phase; retire the `:project` phase and `:cycles` | Accepted |
-| [0021](./0021-responsibility-kind-and-extent-qualifiers.md) | Responsibility, note kind and extent as qualifier coords; constant qualifiers | Accepted |
+| [0021](./0021-responsibility-kind-and-extent-qualifiers.md) | Responsibility, note kind and extent as qualifier coords; constant qualifiers | Accepted (amended 2026-11-09: rights, attribution, provider) |
 | [0022](./0022-domain-faithful-serialisation.md) | Domain-faithful serialisation: no super-class downcast, titles through a Nomen, editions are texts | Accepted |
 | [0023](./0023-justifications-and-status-at-export.md) | Every justification is kept; out-of-force claims are never read or written | Accepted (amended by 0025) |
 | [0024](./0024-observed-loss.md) | Observed loss: occurrence-level fidelity audit, exports name what they omit | Accepted |

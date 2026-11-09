@@ -1,7 +1,8 @@
 (ns palomar.fidelity-test
   "The occurrence-level fidelity audit (audit S11/S12, test 15): every value a
    conversion does not write must be reported, and a silent omission is caught."
-  (:require [clojure.string :as str]
+  (:require [clojure.data.json :as json]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.convert :as convert]
             [palomar.fidelity :as fidelity]
@@ -34,6 +35,113 @@
         (is (empty? unaccounted)
             (str from " -> " to ": silent loss of " (pr-str (take 5 unaccounted))))
         (is (<= present checked))))))
+
+(defn- iiif-variant
+  "A one-canvas manifest with `extra` top-level keys, `canvas-extra` Canvas
+   keys and `body-extra` Image body keys."
+  [extra canvas-extra body-extra]
+  (json/write-str
+   (merge {"@context" "http://iiif.io/api/presentation/3/context.json"
+           "id" "https://e.org/m/manifest.json" "type" "Manifest" "label" {"en" ["L"]}
+           "items" [(merge {"id" "https://e.org/m/canvas/1" "type" "Canvas" "height" 10 "width" 10
+                            "items" [{"id" "https://e.org/m/canvas/1/p" "type" "AnnotationPage"
+                                      "items" [{"id" "https://e.org/m/canvas/1/a" "type" "Annotation" "motivation" "painting"
+                                                "target" "https://e.org/m/canvas/1"
+                                                "body" (merge {"id" "https://e.org/i1.jpg" "type" "Image"} body-extra)}]}]}
+                           canvas-extra)]}
+          extra)))
+
+(def ^:private rights-manifests
+  "The rights fixture and variants of it an ordinary IIIF source gives (M1 review)."
+  {"the fixture"                 (slurp "test/fixtures/documentary/iiif/manifest_rights.json")
+   "non-URI rights"              (iiif-variant {"rights" "All rights reserved"} {"rights" "Some text"} {})
+   "empty rights"                (iiif-variant {"rights" ""} {"rights" ""} {})
+   "body and Canvas rights"      (iiif-variant {} {"rights" "http://rightsstatements.org/vocab/InC/1.0/"}
+                                               {"rights" "http://creativecommons.org/publicdomain/zero/1.0/"})
+   "provider without id"         (iiif-variant {"provider" [{"type" "Agent" "label" {"en" ["X"]}}]} {} {})
+   "mixed-language statement"    (iiif-variant {"requiredStatement" {"label" {"en" ["Attribution"]} "value" {"fr" ["Fourni par X"]}}} {} {})
+   "statement with no label"     (iiif-variant {"requiredStatement" {"value" {"en" ["Provided by: X"]}}} {} {})
+   "label holding a colon"       (iiif-variant {"requiredStatement" {"label" {"en" ["Credit: line"]} "value" {"en" ["X"]}}} {} {})})
+
+(deftest rights-attribution-and-provider-are-accounted-for
+  (testing "manifests with rights, a requiredStatement, a provider and Canvas or body rights, valid or not: every
+            value of every conversion is written or reported (M1)"
+    (doseq [[label src] rights-manifests
+            to (sort (fidelity/decodable-targets))
+            :when (convert/accepts? to (convert/source-resource-type :iiif))]
+      (let [{:keys [checked unaccounted]} (fidelity/audit {:from :iiif :to to :source src})]
+        (is (pos? checked) (str label ": iiif -> " to " checked something"))
+        (is (empty? unaccounted) (str label ": iiif -> " to ": silent loss of " (pr-str (take 5 unaccounted))))))))
+
+(deftest a-required-statement-written-apart-is-caught
+  (testing "an export that drops the requiredStatement's value is caught although the same string is written as the
+            provider's name, and its label as well (M1 review, p5)"
+    (let [src    (iiif-variant {"requiredStatement" {"label" {"en" ["Attribution"]} "value" {"en" ["Example Herbarium"]}}
+                                "provider" [{"id" "https://example.org/about" "type" "Agent" "label" {"en" ["Example Herbarium"]}}]}
+                               {} {})
+          real   @#'convert/exporters
+          broken (update real :iiif assoc :render
+                         (fn [r] (json/write-str (update (json/read-str ((get-in real [:iiif :render]) r))
+                                                         "requiredStatement" dissoc "value"))))
+          {:keys [unaccounted]} (with-redefs-fn {#'convert/exporters broken}
+                                  #(fidelity/audit {:from :iiif :to :iiif :source src}))]
+      (is (seq unaccounted))
+      (is (every? #(contains? #{:canon/note :iiif/required-statement :canon/note-label :iiif/required-statement-label}
+                              (:predicate %))
+                  unaccounted)))))
+
+(defn- caught?
+  "The audit of `from` -> `to` on `src`, with the `to` exporter's output
+   stripped of the matches of `re`, finds something unaccounted."
+  [from to src re]
+  (let [real   @#'convert/exporters
+        broken (update real to assoc :render (fn [r] (str/replace ((get-in real [to :render]) r) re "")))
+        opts   (if (= from :dc) {:record-id :dc/x} {})]
+    (seq (:unaccounted (with-redefs-fn {#'convert/exporters broken}
+                         #(fidelity/audit {:from from :to to :source src :opts opts}))))))
+
+(deftest a-collapse-loss-does-not-hide-a-dropped-native
+  (testing "a value-less loss on a canonical field (agents collapsed, a role not carried, relation/source) does not
+            account for a native value an exporter silently drops (M1 review 2, repro1; DC writes dc:source as
+            dc:relation, so dropping dc:relation drops both)"
+    (let [dc   (slurp (fixtures :dc))
+          mods (slurp (fixtures :mods))
+          marc (slurp (fixtures :marc21))
+          im   (slurp (fixtures :intermarc))]
+      (doseq [[label from to src re]
+              [["DC -> MARC21, the 100/700 fields" :dc :marc21 dc #"(?s)<datafield tag=\"[17]00\".*?</datafield>"]
+               ["DC -> MODS, every name" :dc :mods dc #"(?s)<name\b.*?</name>"]
+               ["DC -> DC, dc:relation" :dc :dc dc #"(?s)<dc:relation[^>]*>.*?</dc:relation>"]
+               ["MODS -> DC, dc:creator" :mods :dc mods #"(?s)<dc:creator[^>]*>.*?</dc:creator>"]
+               ["MODS -> MARC21, 260/264" :mods :marc21 mods #"(?s)<datafield tag=\"26[04]\".*?</datafield>"]
+               ["MARC21 -> MARC21, 700" :marc21 :marc21 marc #"(?s)<datafield tag=\"700\".*?</datafield>"]
+               ["MARC21 -> MARC21, 010" :marc21 :marc21 marc #"(?s)<datafield tag=\"010\".*?</datafield>"]
+               ["INTERMARC -> MODS, every name" :intermarc :mods im #"(?s)<name\b.*?</name>"]]]
+        (testing label (is (caught? from to src re)))))))
+
+(defn- iiif-broken-audit
+  "The iiif -> iiif audit of `src` with the exporter's manifest passed through `f`."
+  [src f]
+  (let [real   @#'convert/exporters
+        broken (update real :iiif assoc :render (fn [r] (json/write-str (f (json/read-str ((get-in real [:iiif :render]) r))))))]
+    (:unaccounted (with-redefs-fn {#'convert/exporters broken} #(fidelity/audit {:from :iiif :to :iiif :source src})))))
+
+(deftest a-notes-loss-does-not-hide-a-title-s-language
+  (testing "a title's language rewritten away is caught although the summary's notes are reported (M1 review 2, repro3)"
+    (let [src (iiif-variant {"label" {"fr" ["Titre"]} "summary" {"en" ["S"]}} {} {})]
+      (is (seq (iiif-broken-audit src #(assoc % "label" {"none" ["Titre"]})))))))
+
+(deftest a-required-statement-is-checked-beside-a-summary
+  (testing "with a summary present, an attribution dropped, cut to its label or moved into the summary is caught
+            (M1 review 2, repro2)"
+    (let [src (iiif-variant {"requiredStatement" {"label" {"en" ["Attribution"]} "value" {"en" ["Example Herbarium"]}}
+                             "summary" {"en" ["A summary"]}} {} {})]
+      (is (empty? (:unaccounted (fidelity/audit {:from :iiif :to :iiif :source src}))) "the honest export accounts for all")
+      (is (seq (iiif-broken-audit src #(dissoc % "requiredStatement"))) "dropped")
+      (is (seq (iiif-broken-audit src #(update % "requiredStatement" dissoc "value"))) "only the label kept")
+      (is (seq (iiif-broken-audit src #(-> % (dissoc "requiredStatement")
+                                           (assoc "summary" {"en" ["A summary" "Attribution" "Example Herbarium"]}))))
+          "label and value written into the summary"))))
 
 (deftest a-silent-omission-is-caught
   (testing "an exporter that drops one note without reporting it fails the audit (audit test 15)"

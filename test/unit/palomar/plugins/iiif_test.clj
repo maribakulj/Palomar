@@ -124,7 +124,7 @@
   (testing "IIIF is a well-formed plugin; its mapping ids don't collide with the XML spokes"
     (is (= :palomar/iiif (:id iiif/plugin)))
     (is (= :json (:input-format iiif/plugin)))
-    (is (= 6 (count (:mapping iiif/plugin))))
+    (is (= 16 (count (:mapping iiif/plugin))))
     (let [reg (reduce plug/register plug/empty-registry
                       [iiif/plugin dc/plugin marc21/plugin mods/plugin])]
       (is (some? (mapping/compile-mappings (plug/all-mappings reg)
@@ -144,3 +144,90 @@
       (is (= 1 (count (filter #(= "https://ex.org/img.jpg" (:value %)) (:assertions (first records))))))
       (is (= 2 (count repeats)) "one loss per repeated painting")
       (is (str/includes? (:message (first repeats)) "https://ex.org/c2")))))
+
+(defn- coord-of
+  "The `coord` of the fragment carrying `pred` literal `v` in `record`."
+  [record pred v coord]
+  (let [subj (some #(when (and (= pred (:predicate %)) (= v (:value %))) (:subject %)) (:assertions record))]
+    (some #(when (and (= subj (:subject %)) (= coord (:predicate %))) (:value %)) (:assertions record))))
+
+(deftest rights-attribution-and-provider-are-carried-not-lost
+  (testing "manifest rights, requiredStatement and provider, and a Canvas's rights, reach the floor (M1)"
+    (let [{:keys [record canon ingest]} (ingest+normalize "manifest_rights")
+          fields (set (map dx/loss-source-field (dx/losses ingest)))
+          note   "Provided by the Example Herbarium"]
+      (testing "as native :iiif/* assertions, the requiredStatement's label and value apart"
+        (is (= #{"http://creativecommons.org/licenses/by/4.0/"} (literals record :iiif/rights)))
+        (is (= #{note} (literals record :iiif/required-statement)))
+        (is (= "Attribution" (coord-of record :iiif/required-statement note :iiif/required-statement-label)))
+        (is (= #{"Example Herbarium"} (literals record :iiif/provider)))
+        (is (= "https://example.org/about" (coord-of record :iiif/provider "Example Herbarium" :iiif/provider-id)))
+        (is (= "http://rightsstatements.org/vocab/InC/1.0/"
+               (coord-of record :iiif/image "https://example.org/images/leaf-2.jpg" :iiif/canvas-rights))))
+      (testing "and as canonical assertions"
+        (is (= #{"http://creativecommons.org/licenses/by/4.0/"} (literals canon :canon/rights)))
+        (is (= :digital-surrogate (coord-of canon :canon/rights "http://creativecommons.org/licenses/by/4.0/" :canon/rights-scope))
+            "a manifest's rights are the digital surrogate's, not the work's")
+        (is (= :attribution (coord-of canon :canon/note note :canon/note-kind)))
+        (is (= "en" (coord-of canon :canon/note note :canon/lang)))
+        (is (= "Attribution" (coord-of canon :canon/note note :canon/note-label)))
+        (is (= "en" (coord-of canon :canon/note note :canon/note-label-lang)))
+        (is (= :provider (coord-of canon :canon/agent "Example Herbarium" :canon/role)))
+        (is (= "https://example.org/about" (coord-of canon :canon/agent "Example Herbarium" :canon/agent-id)))
+        (is (= "http://rightsstatements.org/vocab/InC/1.0/"
+               (coord-of canon :canon/digital-object "https://example.org/images/leaf-2.jpg" :canon/canvas-rights)))
+        (is (nil? (coord-of canon :canon/digital-object "https://example.org/images/leaf-1.jpg" :canon/canvas-rights))
+            "a Canvas without rights gives its image none"))
+      (testing "they are no longer reported as lost"
+        (is (not-any? fields [:iiif/rights :iiif/requiredStatement :iiif/provider :iiif/canvas-rights])))
+      (testing "what is still not carried is reported: the French strings, the provider's homepage"
+        (is (= :coerced (some #(when (= :iiif/required-statement (dx/loss-source-field %)) (dx/loss-category %))
+                              (dx/losses ingest))))
+        (is (contains? fields :iiif/provider-homepage)))
+      (testing "a provider is not a creator: the manifest still keys no Work"
+        (is (= 0 (count (view/works (project/project canon)))))))))
+
+(defn- one-canvas-manifest [extra canvas-extra body-extra]
+  (json/write-str
+   (merge {"id" "https://ex/r/manifest.json" "type" "Manifest" "label" {"en" ["R"]}
+           "items" [(merge {"id" "https://ex/r/c1" "type" "Canvas" "height" 20 "width" 10
+                            "items" [{"id" "https://ex/r/p1" "type" "AnnotationPage"
+                                      "items" [{"id" "https://ex/r/a1" "type" "Annotation" "motivation" "painting"
+                                                "body" (merge {"id" "https://ex/r/1.jpg" "type" "Image"} body-extra)}]}]}
+                           canvas-extra)]}
+          extra)))
+
+(deftest a-body-s-and-its-canvas-s-rights-are-both-kept
+  (testing "rights on the painted Image body and on its Canvas are each kept, apart (M1 review)"
+    (let [{:keys [records diagnostics]}
+          (iiif/importer {} (one-canvas-manifest {} {"rights" "http://rightsstatements.org/vocab/InC/1.0/"}
+                                                 {"rights" "http://creativecommons.org/publicdomain/zero/1.0/"}))]
+      (is (= "http://creativecommons.org/publicdomain/zero/1.0/"
+             (coord-of (first records) :iiif/image "https://ex/r/1.jpg" :iiif/image-rights)))
+      (is (= "http://rightsstatements.org/vocab/InC/1.0/"
+             (coord-of (first records) :iiif/image "https://ex/r/1.jpg" :iiif/canvas-rights)))
+      (is (not-any? #(= :iiif/canvas-rights (dx/loss-source-field %)) (dx/losses diagnostics))))))
+
+(deftest a-blank-string-is-no-value
+  (testing "an empty rights, an empty requiredStatement value, are reported, not carried as \"\" (M1 review)"
+    (let [{:keys [records diagnostics]}
+          (iiif/importer {} (one-canvas-manifest {"rights" "" "requiredStatement" {"label" {"en" ["A"]} "value" {"en" [" "]}}}
+                                                 {"rights" ""} {}))
+          vals (set (keep #(when (#{:iiif/rights :iiif/canvas-rights :iiif/required-statement} (:predicate %)) (:value %))
+                          (:assertions (first records))))
+          fields (set (map dx/loss-source-field (dx/losses diagnostics)))]
+      (is (empty? (filter string? vals)))
+      (is (contains? fields :iiif/rights))
+      (is (contains? fields :iiif/requiredStatement)))))
+
+(deftest a-required-statement-keeps-the-languages-of-its-label-and-value
+  (testing "the label's language is its own, not the value's; a label-less statement is reported (M1 review)"
+    (let [{:keys [records]} (iiif/importer {} (one-canvas-manifest {"requiredStatement" {"label" {"en" ["Attribution"]}
+                                                                                         "value" {"fr" ["Fourni par X"]}}} {} {}))]
+      (is (= "en" (coord-of (first records) :iiif/required-statement "Fourni par X" :iiif/required-statement-label-lang)))
+      (is (= "fr" (coord-of (first records) :iiif/required-statement "Fourni par X" :iiif/lang))))
+    (let [{:keys [records diagnostics]} (iiif/importer {} (one-canvas-manifest {"requiredStatement" {"value" {"en" ["Provided by: X"]}}} {} {}))]
+      (is (= #{"Provided by: X"} (literals (first records) :iiif/required-statement)))
+      (is (nil? (coord-of (first records) :iiif/required-statement "Provided by: X" :iiif/required-statement-label)))
+      (is (some #(and (= :iiif/required-statement (dx/loss-source-field %)) (= :under-specified (dx/loss-category %)))
+                (dx/losses diagnostics))))))

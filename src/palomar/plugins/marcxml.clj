@@ -119,7 +119,9 @@
 (defn- field-fragment
   "The fragment for the `n`-th occurrence of `field` (a control or data field):
    its `:locator` is `{:tag :occurrence}` plus, for a controlfield, `:value`, and
-   for a datafield, `:ind1`/`:ind2` and the ordered `:subfields` `[[code value] …]`."
+   for a datafield, `:ind1`/`:ind2`, the ordered `:subfields` `[[code value] …]`
+   and, when it has a `$3` (materials specified), `:materials`, its first `$3`
+   trimmed, which a mapping can be restricted by (`:mapping/where`)."
   [ns record-id field n]
   (let [tag (attr field "tag")]
     (model/fragment
@@ -127,13 +129,16 @@
       :source  [:marcxml tag n]
       :locator (if (= "controlfield" (local-name field))
                  {:tag tag :occurrence n :value (text-of field)}
-                 {:tag        tag
-                  :occurrence n
-                  :ind1       (attr field "ind1")
-                  :ind2       (attr field "ind2")
-                  :subfields  (vec (for [sf (:content field)
-                                         :when (= "subfield" (local-name sf))]
-                                     [(attr sf "code") (text-of sf)]))})})))
+                 (let [sfs (vec (for [sf (:content field)
+                                      :when (= "subfield" (local-name sf))]
+                                  [(attr sf "code") (text-of sf)]))
+                       m3  (some (fn [[c v]] (when (= "3" c) (some-> v str/trim))) sfs)]
+                   (cond-> {:tag        tag
+                            :occurrence n
+                            :ind1       (attr field "ind1")
+                            :ind2       (attr field "ind2")
+                            :subfields  sfs}
+                     m3 (assoc :materials m3))))})))
 
 (defn- field-fragments
   "One `field-fragment` per control/data field of `elem`, numbered per tag in

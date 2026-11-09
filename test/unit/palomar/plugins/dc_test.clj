@@ -56,13 +56,13 @@
       (is (contains? (literals canon :canon/lang) "en")))))
 
 (deftest unmodelled-dc-elements-are-reported-not-silently-dropped
-  (testing "the six DCMES elements with no canonical home become :import :dropped loss"
+  (testing "the five DCMES elements with no canonical home become :import :dropped loss"
     (let [{:keys [ingest-diagnostics]} (ingest+normalize)
           ls (dx/losses ingest-diagnostics)]
-      (is (= 6 (count ls)))
+      (is (= 5 (count ls)))
       (is (every? #(= :loss/dropped (:code %)) ls))
       (is (every? #(= :import (get-in % [:detail :loss/edge])) ls))
-      (is (= #{:dc/subject :dc/type :dc/format :dc/language :dc/coverage :dc/rights}
+      (is (= #{:dc/subject :dc/type :dc/format :dc/language :dc/coverage}
              (set (map #(get-in % [:detail :loss/source-field]) ls))))
       (testing "and the mapped elements are NOT reported as loss"
         (is (not-any? #(contains? #{:dc/title :dc/creator :dc/date}
@@ -98,8 +98,8 @@
   (testing "DC is a well-formed ADR 0007 plugin whose mapping compiles cleanly"
     (is (= :palomar/dublin-core (:id dc/plugin)))
     (is (fn? (:importer dc/plugin)))
-    (is (= 26 (count (:mapping dc/plugin))))   ; 9 DCMES + 17 DCMI Terms (ADR 0037)
-    (is (= #{:dc/subject :dc/type :dc/format :dc/language :dc/coverage :dc/rights}
+    (is (= 29 (count (:mapping dc/plugin))))   ; 10 DCMES + 19 DCMI Terms (ADR 0037; rights, M1)
+    (is (= #{:dc/subject :dc/type :dc/format :dc/language :dc/coverage}
            dc/unmodelled-elements))
     (let [reg (plug/register plug/empty-registry dc/plugin)]
       (is (some? (mapping/compile-mappings (plug/all-mappings reg)
@@ -133,3 +133,16 @@
         (is (contains? canon [:canon/date "1928"]))
         (is (contains? canon [:canon/relation "Collection blanche"]))
         (is (contains? canon [:canon/note-kind :abstract]))))))
+
+(deftest dc-rights-is-a-canonical-rights-statement
+  (testing "dc:rights (and dcterms:rights / dcterms:license) map to :canon/rights (M1)"
+    (let [{:keys [canon]} (ingest+normalize)]
+      (is (= #{"Copyright 2007, Alan Kelsey, Ltd. All rights reserved."} (literals canon :canon/rights))))
+    (let [reg      (plug/register plug/empty-registry dc/plugin)
+          compiled (mapping/compile-mappings (plug/all-mappings reg) (plug/effective-transforms reg))
+          src      (str "<metadata xmlns:dcterms=\"http://purl.org/dc/terms/\"><dcterms:title>T</dcterms:title>"
+                        "<dcterms:license>http://creativecommons.org/licenses/by/4.0/</dcterms:license></metadata>")
+          {:keys [records diagnostics]} (dc/importer {:record-id :dc/lic} src)
+          canon    (:record (runtime/run-phase (first records) compiled :normalize))]
+      (is (= #{"http://creativecommons.org/licenses/by/4.0/"} (literals canon :canon/rights)))
+      (is (empty? (dx/losses diagnostics))))))
