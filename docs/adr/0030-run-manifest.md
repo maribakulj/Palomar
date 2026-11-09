@@ -55,3 +55,25 @@ For reproducible research a conversion has to say what it was.
   data that decide what the rules and the code state, so they are part of
   what a run ran. When the resources are packed in a jar they are not listed.
 
+
+## Amendment (review of 2026-11-09, L1): three files, published in order
+
+- `convert` refuses a run two of whose paths, the input, `--out` and
+  `--manifest`, name one file, in batch and in stream. Two paths that exist are
+  compared by the file system (`Files/isSameFile`: a symbolic or a hard link is
+  the same file), others by their canonical paths. A refusal writes nothing.
+  Before, `--manifest` naming the input replaced the source with the manifest,
+  and `--manifest` naming `--out` replaced one with the other, both with exit 0.
+  Where a directory folds case (macOS, Windows), two names that differ only
+  in case are one file, even before either exists.
+- The output and the manifest are written beside the files they replace,
+  followed through their links, then moved, the output first, keeping the
+  permissions and, where the user may, the owner of the file replaced. A link
+  is written through and stays a link. A device or a pipe, or an existing file
+  whose directory takes no new file, is written into, as before: no move is
+  possible there, so a failed write may leave it in part. A hard link to the
+  file replaced keeps the earlier bytes. The manifest fingerprints the
+  output's staged file, so it names the bytes published.
+- Two files cannot be replaced at once. When the output is published and the
+  manifest cannot be, the run exits 2 and says so: the output is new, and no
+  manifest describes it.

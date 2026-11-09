@@ -157,11 +157,6 @@
                        :started-at  started-at
                        :finished-at (java.util.Date.)})))
 
-(defn- write-manifest!
-  "Write the run manifest of a `convert` (ADR 0030) to `path`."
-  [path run]
-  (spit path (manifest-edn run)))
-
 (defn- invalid-note
   "The report's line on the records that are not valid, or nil (post-audit 6, H3)."
   [{n :records es :errors}]
@@ -178,6 +173,103 @@
                                (str/join "\n" (map #(str "  " (:subject %) " " (:message %)) (:errors (ex-data e)))))}
     {:exit 2 :out "" :err (str "error: " (.getMessage e) " " (pr-str (ex-data e)))}))
 
+(declare replace-file!)
+
+(def ^:private no-links (make-array java.nio.file.LinkOption 0))
+
+(defn- case-folded?
+  "Whether the directory of `f` folds case: a name differing only in case
+   names the same file. Probed with a temp file of its own, else false."
+  [^java.io.File f]
+  (try
+    (let [t (java.io.File/createTempFile "palomar-case-" ".probe" (.getParentFile f))]
+      (try (.exists (java.io.File. (.getParentFile t) (str/upper-case (.getName t))))
+           (finally (.delete t))))
+    (catch java.io.IOException _ false)))
+
+(defn- same-file?
+  "Whether paths `a` and `b` name one file: by the file system when both
+   exist (a symbolic link, a hard link), else by their canonical paths, and,
+   where the directory folds case, by their canonical paths in any case
+   (review of 2026-11-09, L1)."
+  [a b]
+  (let [fa (.getAbsoluteFile (io/file a))
+        fb (.getAbsoluteFile (io/file b))]
+    (if (and (.exists fa) (.exists fb))
+      (java.nio.file.Files/isSameFile (.toPath fa) (.toPath fb))
+      (let [ca (.getCanonicalPath fa) cb (.getCanonicalPath fb)]
+        (or (= ca cb)
+            (and (= (str/lower-case ca) (str/lower-case cb)) (case-folded? (io/file ca))))))))
+
+(defn- path-collision
+  "The refusal of a conversion two of whose paths, the input, `--out` and
+   `--manifest`, name one file, or nil. The output or the manifest would
+   replace the source, or one another, after a run said to succeed (L1)."
+  [{:strs [out manifest]} input]
+  (first (for [[an a bn b] [["--out" out "the input file" input]
+                            ["--manifest" manifest "the input file" input]
+                            ["--manifest" manifest "--out" out]]
+               :when (and a b (same-file? a b))]
+           {:exit 2 :out "" :err (str "convert: " an " is " bn " (" a "); choose another path")})))
+
+(defn- staging
+  "Where to write what will be published at `path`: `{:tmp :dst :move?}`.
+   A file that is or will be a regular file, followed through its links, is
+   written beside it and moved over it, so a failed run leaves it as it was.
+   A device or a pipe, or a file whose directory takes no new file, is
+   written into, as before L1 (L1 review)."
+  [path prefix]
+  (let [p        (.toPath (.getAbsoluteFile (io/file path)))
+        exists?  (java.nio.file.Files/exists p (make-array java.nio.file.LinkOption 0))
+        regular? (and exists? (java.nio.file.Files/isRegularFile p (make-array java.nio.file.LinkOption 0)))
+        dst      (if exists? (.toRealPath p (make-array java.nio.file.LinkOption 0)) p)
+        ;; a new file is written beside it or not at all: its directory
+        ;; refuses it before anything is published (K6 review)
+        beside   (cond
+                   (not exists?) (java.io.File/createTempFile prefix ".part" (.toFile (.getParent dst)))
+                   regular?      (try (java.io.File/createTempFile prefix ".part" (.toFile (.getParent dst)))
+                                      (catch java.io.IOException _ nil)))]
+    (if beside
+      {:tmp beside :dst dst :move? true}
+      {:tmp (java.io.File/createTempFile prefix ".part") :dst dst :move? false})))
+
+(defn- keep-attributes!
+  "Give `tmp` the permissions and owner of the file it replaces, so a private
+   output stays private; best effort where the file system or the user
+   cannot."
+  [^java.nio.file.Path dst ^java.io.File tmp]
+  (when (java.nio.file.Files/exists dst no-links)
+    (let [t (.toPath tmp)]
+      (try (java.nio.file.Files/setPosixFilePermissions t (java.nio.file.Files/getPosixFilePermissions dst no-links))
+           (catch UnsupportedOperationException _ nil) (catch java.io.IOException _ nil))
+      (try (java.nio.file.Files/setOwner t (java.nio.file.Files/getOwner dst no-links))
+           (catch UnsupportedOperationException _ nil) (catch java.io.IOException _ nil)))))
+
+(defn- publish-one!
+  "Put the bytes staged in `tmp` at `dst`; true on success."
+  [{:keys [^java.io.File tmp ^java.nio.file.Path dst move?]}]
+  (if move?
+    (do (keep-attributes! dst tmp) (replace-file! tmp (.toFile dst)))
+    (try (with-open [o (java.nio.file.Files/newOutputStream dst (make-array java.nio.file.OpenOption 0))]
+           (java.nio.file.Files/copy (.toPath tmp) o))
+         true
+         (catch java.io.IOException _ false))))
+
+(defn- publish!
+  "Publish the staged output `o` at `out`, then the staged manifest `m` at
+   `mpath` (either may be nil). nil on success, else the error, which says
+   what was published: two files cannot be replaced at once, so a manifest
+   that fails after its output is reported, never a success (L1)."
+  [o out m mpath]
+  (cond
+    (and o (not (publish-one! o)))
+    (str "error: could not move the output to " out "; nothing was published")
+
+    (and m (not (publish-one! m)))
+    (str "error: " (when o (str "the output was published to " out ", but "))
+         "the manifest could not be written to " mpath "; no manifest describes this run"
+         " (a file already there describes an earlier one)")))
+
 (defn- do-convert [{:strs [from to record-id out with-proposals] :as flags} input]
   (cond
     (not (and from to input))
@@ -187,40 +279,52 @@
     {:exit 2 :out "" :err (str "input file not found: " input)}
 
     :else
-    (try
-      (let [started (java.util.Date.)
-            rid    (cond record-id      (->record-id record-id)
-                         (= from "dc")   (keyword "doc" (file-stem input))
-                         :else           nil)
-            opts   (cond-> {}
-                     rid                         (assoc :record-id rid)
-                     (get flags "metadata-prefix") (assoc :metadata-prefix (get flags "metadata-prefix")))
-            result (convert/convert {:from   (keyword from)
-                                     :to     (keyword to)
-                                     :source (slurp input)
-                                     :with-proposals? (boolean with-proposals)
-                                     :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
-                                     :opts   opts})
-            _      (when-let [mpath (get flags "manifest")]
-                     (write-manifest! mpath {:from (keyword from) :to (keyword to) :input input :out out
-                                             :result result :started-at started
-                                             :opts (cond-> opts with-proposals (assoc :with-proposals? true))}))
-            report (str (lr/format-conversion-report (:loss result))
-                        "\n(" (:records result) " record"
-                        (when (not= 1 (:records result)) "s") " converted)"
-                        (when (seq (:deleted result))
-                          (str "\n(" (count (:deleted result)) " record"
-                               (when (not= 1 (count (:deleted result))) "s")
-                               " deleted at the source: " (str/join " " (:deleted result)) ")"))
-                        (invalid-note (:invalid result))
-                        (zero-records-note (:records result) from input))]
-        (if out
-          (do (spit out (:output result)) {:exit 0 :out "" :err (str "wrote " out "\n" report)})
-          {:exit 0 :out (:output result) :err report}))
-      (catch clojure.lang.ExceptionInfo e
-        (refused-or-error e))
-      (catch Exception e
-        {:exit 2 :out "" :err (str "error: " (.getMessage e))}))))
+    (or
+     (path-collision flags input)
+     (let [tmps (atom [])]
+       (try
+         (let [started (java.util.Date.)
+               rid    (cond record-id      (->record-id record-id)
+                            (= from "dc")   (keyword "doc" (file-stem input))
+                            :else           nil)
+               opts   (cond-> {}
+                        rid                         (assoc :record-id rid)
+                        (get flags "metadata-prefix") (assoc :metadata-prefix (get flags "metadata-prefix")))
+               result (convert/convert {:from   (keyword from)
+                                        :to     (keyword to)
+                                        :source (slurp input)
+                                        :with-proposals? (boolean with-proposals)
+                                        :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
+                                        :opts   opts})
+               mpath  (get flags "manifest")
+              ;; written beside their paths, then moved: the manifest names
+              ;; the output as it is published, byte for byte (L1)
+               o      (when out (doto (staging out "palomar-out-") (#(swap! tmps conj (:tmp %))) (#(spit (:tmp %) (:output result)))))
+               m      (when mpath
+                        (doto (staging mpath "palomar-manifest-") (#(swap! tmps conj (:tmp %)))
+                              (#(spit (:tmp %) (manifest-edn {:from (keyword from) :to (keyword to) :input input :out out
+                                                              :result (cond-> result o (assoc :output (:tmp o))) :started-at started
+                                                              :opts (cond-> opts with-proposals (assoc :with-proposals? true))})))))
+               report (str (lr/format-conversion-report (:loss result))
+                           "\n(" (:records result) " record"
+                           (when (not= 1 (:records result)) "s") " converted)"
+                           (when (seq (:deleted result))
+                             (str "\n(" (count (:deleted result)) " record"
+                                  (when (not= 1 (count (:deleted result))) "s")
+                                  " deleted at the source: " (str/join " " (:deleted result)) ")"))
+                           (invalid-note (:invalid result))
+                           (zero-records-note (:records result) from input))]
+           (if-let [err (publish! o out m mpath)]
+             {:exit 2 :out "" :err err}
+             (if out
+               {:exit 0 :out "" :err (str "wrote " out "\n" report)}
+               {:exit 0 :out (:output result) :err report})))
+         (catch clojure.lang.ExceptionInfo e
+           (refused-or-error e))
+         (catch Exception e
+           {:exit 2 :out "" :err (str "error: " (.getMessage e))})
+         (finally
+           (doseq [^java.io.File t @tmps :when (.exists t)] (.delete t))))))))
 
 (defn- do-validate [{:strs [from policy record-id]} input]
   (cond
@@ -324,75 +428,71 @@
     (not (.exists (java.io.File. ^String input)))
     {:exit 2 :out "" :err (str "input file not found: " input)}
 
-    ;; the stream is read while --out is written: the same file would be replaced
-    ;; by the output at the end, losing the source (audit S40)
-    (= (.getCanonicalPath (java.io.File. ^String input)) (.getCanonicalPath (java.io.File. ^String out)))
-    {:exit 2 :out "" :err (str "convert --stream: --out is the input file (" input "); choose another path")}
-
     (not (convert/streamable? (keyword from)))
     {:exit 2 :out "" :err (str "--stream is not supported for " from
                                " (streamable: " (str/join " " (map name (convert/streamable-sources))) ")")}
 
+    ;; the stream is read while --out is written: the same file would be replaced
+    ;; by the output at the end, losing the source (audit S40); nor may the
+    ;; manifest name either (L1)
     :else
+    (or
+     (path-collision flags input)
     ;; Stream to a sibling temp file and atomically rename on success, so a
     ;; mid-stream failure (e.g. a malformed input) leaves NO partial --out — the
     ;; same all-or-nothing guarantee the batch path gives (it spits only at the end).
     ;; Everything that can throw — including creating the temp file (a bad --out
     ;; directory) — is inside the try, so the verb always returns a clean exit, and
     ;; the `finally` deletes the temp in every failure path (on success it was renamed away).
-    (let [fromk (keyword from)
-          opts  (cond-> {} record-id (assoc :record-id (->record-id record-id)))
-          sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest input))
-          outf  (.getAbsoluteFile (java.io.File. ^String out))
-          started (java.util.Date.)
-          tmp   (atom nil)
-          mtmp  (atom nil)]
-      (try
-        (reset! tmp (java.io.File/createTempFile "palomar-stream-" ".part" (.getParentFile outf)))
-        (let [[open close] (convert/collection (keyword to))
-              res (with-open [r (io/reader input)
-                              w (io/writer @tmp)]
-                    (when open (.write w open) (.write w "\n"))
-                    (let [res (convert/convert-stream
-                               {:from fromk :to (keyword to)
-                                :with-proposals? (boolean (get flags "with-proposals"))
-                                :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
+     (let [fromk (keyword from)
+           opts  (cond-> {} record-id (assoc :record-id (->record-id record-id)))
+           sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest input))
+           started (java.util.Date.)
+           o     (atom nil)
+           m     (atom nil)]
+       (try
+         (reset! o (staging out "palomar-stream-"))
+         (let [[open close] (convert/collection (keyword to))
+               res (with-open [r (io/reader input)
+                               w (io/writer (:tmp @o))]
+                     (when open (.write w open) (.write w "\n"))
+                     (let [res (convert/convert-stream
+                                {:from fromk :to (keyword to)
+                                 :with-proposals? (boolean (get flags "with-proposals"))
+                                 :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
                                 ;; one more read, in constant memory: the same
                                 ;; document digest as batch (post-audit 7, I2);
                                 ;; a pipe can be read but once (I2 review)
-                                :source-sha256 sha
-                                :records (convert/stream-source fromk opts r)}
-                               (fn [doc] (.write w doc) (.write w "\n")))]
-                      (when close (.write w close) (.write w "\n"))
-                      res))]
+                                 :source-sha256 sha
+                                 :records (convert/stream-source fromk opts r)}
+                                (fn [doc] (.write w doc) (.write w "\n")))]
+                       (when close (.write w close) (.write w "\n"))
+                       res))]
           ;; the run manifest, as batch writes it: the output is the file
           ;; written, fingerprinted as it is read (post-audit 8, K6). It is
           ;; written beside its path first, so a manifest that cannot be
           ;; written leaves --out as it was (K6 review)
-          (when-let [mpath (get flags "manifest")]
-            (reset! mtmp (java.io.File/createTempFile "palomar-manifest-" ".part"
-                                                      (.getParentFile (.getAbsoluteFile (io/file mpath)))))
-            (spit @mtmp (manifest-edn {:from fromk :to (keyword to) :input input :out out
-                                       :result (assoc res :output @tmp) :started-at started
-                                       :opts (cond-> (assoc opts :stream? true)
-                                               (get flags "with-proposals") (assoc :with-proposals? true))})))
-          (if (and (replace-file! @tmp outf)
-                   (or (nil? @mtmp) (replace-file! @mtmp (.getAbsoluteFile (io/file (get flags "manifest"))))))
-            {:exit 0 :out ""
-             :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")
-                        " streamed (bounded memory)\n"
-                        (lr/format-conversion-report (:loss res))
-                        (invalid-note (:invalid res))
-                        (when-not sha "\nnote: the input is no regular file (a pipe): it is read once, so no record names its document by a digest\n")
-                        (zero-records-note (:records res) from input))}
-            {:exit 2 :out "" :err (str "error: could not move streamed output to " out
-                                       (when @mtmp (str " or its manifest to " (get flags "manifest"))))}))
-        (catch clojure.lang.ExceptionInfo e
-          (refused-or-error e))
-        (catch Exception e
-          {:exit 2 :out "" :err (str "error: " (.getMessage e))})
-        (finally
-          (doseq [t [@tmp @mtmp] :when (and t (.exists ^java.io.File t))] (.delete ^java.io.File t)))))))
+           (when-let [mpath (get flags "manifest")]
+             (reset! m (staging mpath "palomar-manifest-"))
+             (spit (:tmp @m) (manifest-edn {:from fromk :to (keyword to) :input input :out out
+                                            :result (assoc res :output (:tmp @o)) :started-at started
+                                            :opts (cond-> (assoc opts :stream? true)
+                                                    (get flags "with-proposals") (assoc :with-proposals? true))})))
+           (if-let [err (publish! @o out @m (get flags "manifest"))]
+             {:exit 2 :out "" :err err}
+             {:exit 0 :out ""
+              :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")
+                         " streamed (bounded memory)\n"
+                         (lr/format-conversion-report (:loss res))
+                         (invalid-note (:invalid res))
+                         (when-not sha "\nnote: the input is no regular file (a pipe): it is read once, so no record names its document by a digest\n")
+                         (zero-records-note (:records res) from input))}))
+         (catch clojure.lang.ExceptionInfo e
+           (refused-or-error e))
+         (catch Exception e
+           {:exit 2 :out "" :err (str "error: " (.getMessage e))})
+         (finally
+           (doseq [{t :tmp} [@o @m] :when (and t (.exists ^java.io.File t))] (.delete ^java.io.File t))))))))
 
 (defn- jsonable
   "Render a value as JSON-safe data for the loss report: every keyword — whether a
