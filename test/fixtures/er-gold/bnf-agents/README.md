@@ -29,7 +29,7 @@ Of the 100 records, **43 carry a main-entry (100 `$1`) ISNI**; they reconcile to
   appear as a main-entry agent in this slice — an honest coverage observation
   (his works carry him elsewhere / without a 100 `$1` here).
 
-A name-string matcher would have conflated all of these into one blob; by ISNI,
+A name-string matcher would have conflated all of these into one blob[^m2]; by ISNI,
 precision is perfect by construction (distinct id ⇒ distinct person). This is the
 measured precision/recall lesson (`entity-resolution.md`) on the *agent* axis.
 
@@ -42,3 +42,12 @@ perfect concrete proof of why reconciliation must key on a *determinate id*: a
 name string can match a namesake, a descendant, **or a non-person**. The eval uses
 it as the negative case — a name-only "Victor Hugo" never enters the
 ISNI-certified set and is never merged.
+
+[^m2]: Not borne out on the catalogued headings (corrected 2026-11-09). Measured
+on the `100`/`700 $a, $m` of these records plus 50 Dumas records, a same-name rule
+merges only Alexandre Dumas père and fils, and the token-Jaccard matcher's top
+proposal is never wrong outside that pair: Jules / Jean Jules Verne, the Hugo
+family and the "Víctor Hugo …" authors stay apart
+([`docs/eval/person-reconciliation.md`](../../../../docs/eval/person-reconciliation.md)).
+The search string `"victor hugo"` does match them all; a name matcher on the
+headings does not.

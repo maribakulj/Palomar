@@ -79,8 +79,12 @@ The point is **precision by construction**. "Victor Hugo" / "Jules Verne" as a
 *search string* match a dozen distinct people — the novelist **Jules Verne** vs his
 biographer **Jean Jules-Verne**; Victor Hugo's grandson (the painter Georges-Victor)
 and son (the translator François-Victor); a cohort of Latin-American authors *named*
-"Víctor Hugo …". Keying on the ISNI keeps every one of them apart; a name match
-would have conflated them into a single blob. (The writer Victor Hugo himself does
+"Víctor Hugo …". Keying on the ISNI keeps every one of them apart. *(Corrected
+2026-11-09: an earlier version said a name match would have conflated them into a
+single blob. Measured on the catalogued `$a, $m` headings it does not: a same-name
+rule merges only Alexandre Dumas père and fils, and the token-Jaccard matcher's top
+proposal is never wrong outside that pair — [`person-reconciliation.md`](./person-reconciliation.md).
+It is the search string that matches them all.)* (The writer Victor Hugo himself does
 not even surface as a main-entry agent in this slice — honest coverage, not a merge.)
 
 And the negative pole, the perfect illustration of why a *determinate* id is
@@ -89,3 +93,7 @@ resolved to **`Q1459231` — the Victor Hugo *metro station* in Paris** (no ISNI
 name string can match a namesake, a descendant, **or a non-person**. So a name-only
 agent never enters the certified set; only an authority id earns `:asserted` (D7).
 This is reconcile-to-authority (ADR 0018) shown true on real data.
+
+Person identity off the authority id — the name-based proposal path on real
+homonyms (Dumas père and fils) — is measured separately, as a baseline:
+[`person-reconciliation.md`](./person-reconciliation.md).
