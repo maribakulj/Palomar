@@ -152,7 +152,10 @@
                               "Da Zhong ma" "大仲馬"]
               :dates         dumas-pere-life
               :entity-type   "person"
-              :isni          "0000000121012885"}
+              :isni          "0000000121012885"
+              :relations     [{:record-number "16258491" :tag "320" :kind :agent}
+                              {:record-number "12306195" :tag "320" :kind :agent}
+                              {:record-number "11901062" :tag "320" :kind :agent}]}
              (by-n "11901063"))))
     (testing "an ISNI the record cancels ($z) is not the ISNI; a VIAF number is none"
       (is (= "0000000444583295" (:isni (by-n "11901062"))))
@@ -167,3 +170,22 @@
         (is (= "http://catalogue.bnf.fr/ark:/12148/cb11901062n" (:authority-id (first proposals))))
         (is (some #{"http://catalogue.bnf.fr/ark:/12148/cb119010630"} (map :authority-id rejected)))
         (is (every? #(= :incompatible-dates (:reason %)) rejected))))))
+
+(deftest an-intermarc-authority-states-its-relations
+  (let [{:keys [entries unread]} (authorities/read-pool :intermarc @bnf-authorities)
+        by-n (into {} (map (juxt :record-number identity)) entries)]
+    (testing "a 331 is another identity of the person (Hetzel's pseudonym Stahl, and back); a 5xx a related agent; a 321 a work"
+      (is (= [{:record-number "16492882" :tag "331" :kind :pseudonym} {:record-number "15072723" :tag "511" :kind :agent}]
+             (:relations (by-n "12008284"))))
+      (is (= [{:record-number "12008284" :tag "331" :kind :pseudonym}] (:relations (by-n "16492882"))))
+      (is (= {:record-number "18021044" :tag "321" :kind :work}
+             (first (filter #(= "321" (:tag %)) (:relations (by-n "11928016")))))))
+    (testing "a 320 links an agent only with its relation code: Verne's museum, holding his manuscripts, is none"
+      (is (not-any? #(= "17855010" (:record-number %)) (:relations (by-n "11928016"))))
+      (is (= ["11901063"] (map :record-number (filter #(= "320" (:tag %)) (:relations (by-n "11901062")))))
+          "the Académie française (no $3) links nothing; the father, with code 6, does"))
+    (testing "a relation field read only in part (no $3, no relation code) stays unread; the others are read"
+      (is (some #{"320"} unread))
+      (is (not-any? #{"321" "331" "504" "511"} unread)))
+    (testing "an entry that states none has no :relations"
+      (is (not (contains? (by-n "11902539") :relations))))))

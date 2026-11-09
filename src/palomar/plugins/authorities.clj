@@ -231,8 +231,39 @@
     (when (seq parts) (str/join ", " parts))))
 
 (def intermarc-read-tags
-  "The INTERMARC authority tags an entry reads (and the leader)."
+  "The INTERMARC authority tags an entry reads (and the leader); the
+   relation fields (`intermarc-relation-kind`) are read too."
   #{"001" "003" "031" "100" "400"})
+
+(defn intermarc-relation-kind
+  "The kind of relation an INTERMARC authority field states to another
+   authority record (lot M8): `:pseudonym` for a 331 (another identity of
+   the same person), `:work` for a 321 (a work), `:agent` for a 320 or a 5xx
+   (a related person, family or body); nil for any other tag."
+  [tag]
+  (cond (= "331" tag)                                 :pseudonym
+        (= "321" tag)                                 :work
+        (or (= "320" tag) (re-matches #"5\d\d" (str tag))) :agent))
+
+(defn- intermarc-relation
+  "The relation INTERMARC authority field `f` states, `{:record-number :tag
+   :kind}`, or nil: a relation field (`intermarc-relation-kind`) that links
+   a record by `$3`; a 320 only with its `$0` relation code, a relation
+   between two agents (a 320 without one, such as a museum holding the
+   person's manuscripts, says where, not who)."
+  [f]
+  (let [tag (get-in f [:locator :tag])
+        sfs (subfields-of f)
+        k   (intermarc-relation-kind tag)
+        n   (when k (first-sub sfs "3"))]
+    (when (and n (or (not= "320" tag) (first-sub sfs "0")))
+      {:record-number n :tag tag :kind k})))
+
+(defn- intermarc-relations
+  "The relations a record's `fragments` state to other authority records,
+   by their `$3` record number (`intermarc-relation`)."
+  [fragments]
+  (vec (distinct (keep intermarc-relation fragments))))
 
 (def ^:private intermarc-kinds
   "The kinds the INTERMARC authority leader's position 9 states, as entity
@@ -242,7 +273,11 @@
 (defn intermarc-pool
   "The reconciliation pool of BnF INTERMARC authority records `xml` (see the ns
    doc): `{:entries [{:id :record-number :label :variants :dates :entity-type
-   :isni}] :unread [tag…]}`. A record without a `100` is no entry."
+   :isni :relations}] :unread [tag…]}`. A record without a `100` is no
+   entry. `:relations` (lot M8), when the record states any, are the other
+   authority records its 320, 321, 331 and 5xx fields link by `$3`
+   (`intermarc-relation`). A relation field that states none (no `$3`, a
+   320 with no relation code) stays listed as unread."
   [xml]
   (let [records (intermarc/ingest xml {})
         fields  (fn [r tag] (filter #(= tag (get-in % [:locator :tag])) (:fragments r)))
@@ -259,18 +294,20 @@
                       isni  (some #(let [sfs (subfields-of %)]
                                      (when (some-> (first-sub sfs "2") (str/starts-with? "ISNI")) (first-sub sfs "a")))
                                   (fields r "031"))
-                      kind  (some-> (leader r) (as-> l (when (< 9 (count l)) (intermarc-kinds (nth l 9)))))]]
+                      kind  (some-> (leader r) (as-> l (when (< 9 (count l)) (intermarc-kinds (nth l 9)))))
+                      rels  (intermarc-relations (:fragments r))]]
             (cond-> {:id       (when (and ark (nil? (nt/iri-problem ark))) ark)
                      :label    label
                      :variants (vec (distinct (keep #(heading (subfields-of %)) (fields r "400"))))}
               n    (assoc :record-number n)
               life (assoc :dates life)
               kind (assoc :entity-type kind)
-              isni (assoc :isni isni))))
+              isni (assoc :isni isni)
+              (seq rels) (assoc :relations rels))))
      :unread (vec (sort (distinct (for [r records
                                         f (:fragments r)
                                         :let [t (get-in f [:locator :tag])]
-                                        :when (and t (not (intermarc-read-tags t)))]
+                                        :when (and t (not (intermarc-read-tags t)) (not (intermarc-relation f)))]
                                     t))))}))
 
 (defn read-pool

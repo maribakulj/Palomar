@@ -18,8 +18,10 @@ contrary evidence) is measured in [After dates (M3)](#after-dates-m3), lot M4
 (constrained clustering) in
 [Constrained clustering (M5)](#constrained-clustering-m5), and the same
 mentions against a GND snapshot (lot M6) in
-[On a GND snapshot (M6)](#on-a-gnd-snapshot-m6), and typed events as
-contrary evidence (lot M7) in [Typed events (M7)](#typed-events-m7). The
+[On a GND snapshot (M6)](#on-a-gnd-snapshot-m6), typed events as
+contrary evidence (lot M7) in [Typed events (M7)](#typed-events-m7), and a
+mention's relational neighbourhood as evidence (lot M8) in
+[Collective reconciliation (M8)](#collective-reconciliation-m8). The
 numbers are measurements, not a guarantee: no row in `guarantees.md` cites
 them (the behaviour of the date block, of abstention and of the confidence
 rule, of the clustering's constraints and revisions, and of the events'
@@ -753,6 +755,138 @@ one event and its life dates withheld. It is matched name-only (Jaccard
 - **No spoke and no CLI command passes events yet**, as for dates: the
   evals do.
 
+## Collective reconciliation (M8)
+
+Lot M8 lets the other agents of a mention's record be evidence
+(`palomar.agent-relations`, ADR 0018 amendment M8), read from **validated
+links only**: anchors frozen before scoring, never the judged mention's own
+link nor one whose validation used it. It was revised after a
+contradictory review; the numbers below are the revised ones. Measured by
+`palomar.eval.person-reconciliation-test/without-anchors-the-relational-matcher-is-m4-exactly`,
+`the-realistic-anchors-come-through-palomar-s-curation-path`,
+`relational-evidence-on-the-m2-gold`, `the-relational-levels-and-weights-on-m2`,
+`the-judged-mention-s-own-gold-never-enters-its-features` and
+`task-b-with-relational-evidence`; the rules by `palomar.agent-relations-test`.
+
+**The result: on M2 the relational evidence changes no decision, in any
+setting.** Férat stays for review.
+
+### Method
+
+- **A mention** is `{:id :name :dates :record :role}`, `:role` its field's
+  `$4` (none when the field has none). The codes, as the fixtures' own
+  records use them: `0070` author of the text (every `100`); `0440`
+  illustrator (Férat, ×20); `0330` publishing director (Macé, Stahl,
+  Verne for the *Magasin d'éducation et de récréation*, "publié par Jean
+  Macé, P.-J. Stahl, Jules Verne"; "collection dirigée par"); `0360`
+  scientific editor ("textes réunis par", "editor"; Lacassin, Schopp,
+  Acuña Ortega, Dumas for Garibaldi's *Mémoires*); `0550` prefacer;
+  `0680` translator (Roger Greaves, of Jean Jules-Verne's biography);
+  `0170` a contributor to a collective work. No `0730` occurs.
+- **The pool** is M4's dated entries with the relations Palomar's INTERMARC
+  authority reader states, resolved to pool entries by record number in
+  the matcher. Between pool members: Dumas père / fils (320, both ways)
+  and Hetzel / Stahl (331, a pseudonym: not context).
+- **Anchor settings**:
+  - **none**;
+  - **leave-one-record-out** (oracle): the gold (`$3`) of every mention
+    outside the judged mention's record;
+  - **leave-one-mention-out** (oracle): the gold of every other mention;
+  - **outright-correct** (realistic): every mention matched by its fold's
+    M4 model, the proposals aligned into the records (`align-agents`; the
+    eval adds each `700` name as a `:canon/agent`, as the INTERMARC-NG
+    spoke does, since the classic mapping carries only the `100`), the
+    curator accepting the outright exact matches that are right
+    (`curate/decide-one`), then `accepted-links` and `freeze-anchors`;
+  - **outright + one confirmed** (realistic): the same, and for each of the
+    7 names whose M4 top proposal is for review, the curator confirms the
+    mention whose id prints first — a rule that reads no gold — to its true
+    authority when that is a candidate (`confirm-identity`). **The curator
+    decided 117 links**: 111 accepted, 6 confirmed (the undetermined Dumas,
+    the seventh, has no truth). For all 6, M4's top proposal was the truth,
+    checked after the choice. The 6 confirmed mentions are curator work:
+    they are left out of the measured set (136 mentions).
+- **Features and weights** as in ADR 0018 M8: `:role` and `:neighbours`
+  (`:unknown` and `:not-shared` 0 by rule; hubs, in more than 10 % of the
+  anchors' records, no neighbour). m and u per setting on the four other
+  families' scored pairs, whose features read no anchor of the held-out
+  family; added to each fold's M4 weight.
+
+### Task A, per setting
+
+| anchors | per mention (at most) | measured | outright right | false links | in pool abstained (outright only) | not in pool linked | for review | top right |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| none (M4)                | 0   | 142 | 111 | 0 | 25 | 0 | 26 | 136 |
+| leave-one-record-out     | 141 | 142 | 111 | 0 | 25 | 0 | 26 | 136 |
+| leave-one-mention-out    | 141 | 142 | 111 | 0 | 25 | 0 | 26 | 136 |
+| outright-correct         | 111 | 142 | 111 | 0 | 25 | 0 | 26 | 136 |
+| outright + one confirmed | 117 | 136 | 111 | 0 | 19 | 0 | 20 | 130 |
+
+With no anchor, every candidate of every mention has M4's id, decision,
+score, weight and evidence. In every setting, no candidate of any measured
+mention changes its decision. The last row differs from M4 only by the 6
+confirmed mentions taken out: 19 Férat mentions and the undated Dumas are
+for review. The dates reject what they rejected; no confidence is written.
+
+### Why nothing moves
+
+- **Férat's fold cannot measure a different role.** Férat is in the
+  "others" family; its fold is trained on Dumas, Hugo, Hetzel and Verne,
+  and their features read no link of an "others" mention. Leaving a record
+  out, its training pairs reach `:other-role` once among the same persons
+  and once among different ones (`{[true :other-role] 1, [false :other-role] 1}`):
+  below 5 on both sides, so the weight is 0. Verne's validated role as an
+  author, against an illustrator, then weighs nothing, and Verne stays
+  above 0.5 for every Férat mention. The first version of this lot moved
+  the 20 Férat mentions out of review; its training features read the
+  held-out family's own links (the other Férat mentions), which made the
+  measure of `:other-role` partly the held-out family's.
+- **Where it is measured, a different role weighs against**: -1.48 (Verne
+  fold), -2.80 (Dumas), -2.98 (Hugo), -3.09 (Hetzel) leaving a record out;
+  a shared role little (+0.02 to +0.82). Too little to change a decision
+  on these mentions: every decision M4 made outright stays outright, and
+  every competitor stays above or below 0.5 as it was.
+- **A shared neighbour** is measured only when the judged record's
+  co-mentions are anchors (leave one mention out, and the realistic
+  settings): up to +2.35, +1.21 in Férat's fold, 0 where unmeasured.
+  With hubs left out and not sharing a neighbour at 0, it moves no
+  decision either.
+
+### Leakage
+
+For each determined mention (141), in each setting with anchors, its gold
+is replaced by another authority **at the source the anchors are built
+from** — the oracle's gold, or the gold the curator reads in the curated
+path, rebuilt end to end — and its relational evidence over every entry
+is the same: 0 changed, in every setting. Its support never names it;
+leaving its record out, no mention of its record. The check can fail: the
+same mention, its own link not recognised as its own, reads its faked
+gold (tested). **Same-person anchors** (other mentions of the judged
+mention's truth) are read by 117 mentions in each oracle setting, all the
+oracle's; in the realistic ones by 95 and 114, all accepted claims of the
+curated records.
+
+### Task B
+
+In every setting the constrained clustering of the decisions is M5's (923
+right pairs, no false merge; with review links joining, 1 113 and no false
+merge, against the closure's 464). Without the 6 confirmed mentions (135
+determined), 923 / 0, and with review links 1 094 / 0 against the
+closure's 437.
+
+### What it shows, and what it does not
+
+- The rules hold by construction and are tested: validated, frozen
+  anchors; the judged link and what depends on it excluded, through the
+  curation path; no anchors, M4 exactly.
+- On M2 the evidence is too thin to measure where it would matter: one
+  illustrator, one author family, each in one fold. Held out truly, the
+  feature that separates Férat from Verne is not measured in Férat's fold.
+- Not tested here: a corpus with several illustrators, translators or
+  editors in each fold, where `:other-role` would be measured for every
+  family.
+- No spoke and no CLI command passes anchors yet.
+
 ## Limits
 
 - One institution, 150 records from three author queries: the families are
@@ -792,3 +926,7 @@ one event and its life dates withheld. It is matched name-only (Jaccard
   records for one person (Stahl, a pseudonym of Hetzel; perhaps the two
   Hayat) are a cannot-link by rule: an authority file's duplicates are the
   authority's to merge, not the clustering's.
+- M8's relational weights are learnt from few distinct persons in each
+  role (one Férat, one Verne, one Hetzel); held out by family, the role
+  that would separate Férat from Verne is unmeasured in Férat's fold, and
+  the evidence changes no decision here.
