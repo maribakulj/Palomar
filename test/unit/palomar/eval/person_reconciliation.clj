@@ -18,14 +18,26 @@
      `$1` (ISNI) or `$d` (dates).
    - The **pool** is one `{:id :label :variants}` entry per authority record:
      id the BnF record number (`001` without `FRBNF` and its check character, the
-     form of `$3`), label the `100` heading `$a, $m`, variants the `400`s. A
-     test reader only: a proper INTERMARC authority reader is a later lot (M3).
+     form of `$3`), label the `100` heading `$a, $m`, variants the `400`s. Since
+     lot M3 it is read by Palomar's INTERMARC authority reader
+     (`authorities/read-pool :intermarc`), which also gives each entry its
+     `:dates` (the `100 $d`); M2's test-side reader is kept as
+     `legacy-authority-pool`, and a test checks the two give the same pool.
+   - Lot M3 adds a mention's **dates**: its field's `$d`, parsed
+     (`palomar.agent-dates`). They live in the IR as the importer's natives
+     (the field fragment's subfields, the `:intermarc/f100_d` / `f700_d`
+     assertions) and are read here, as M2 reads a 700's name: the canonical
+     `:canon/agent` is a name, and no canonical coordinate carries a date.
+     `task-a` and `task-b`'s `:top-1` are the name-only baseline (no dates on
+     either side); `task-a-dated` and `:top-1-dated` pass them.
 
    The metrics are pure functions of plain maps, so they are tested on
    hand-made inputs."
   (:require [clojure.string :as str]
+            [palomar.agent-dates :as dates]
             [palomar.plugins :as plug]
             [palomar.plugins.agents :as agents]
+            [palomar.plugins.authorities :as authorities]
             [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.mapping :as mapping]
             [palomar.reconcile :as reconcile]
@@ -86,11 +98,13 @@
      :surname   (sub sfs "a")
      :family    (family (sub sfs "a"))
      :truth     (sub sfs "3")
+     :dates     (dates/parse-life-dates (sub sfs "d"))
      :subfields sfs}))
 
-(defn authority-pool
-  "The pool entries of the authority records in `xml` (see the ns doc), with
-   each entry's `:surname` (the `100 $a`)."
+(defn legacy-authority-pool
+  "M2's test-side reader of the authority records in `xml`, kept to check
+   that Palomar's own reader (`authority-pool`) gives the same pool: each
+   entry `{:id :label :surname :variants}`, `:surname` the `100 $a`."
   [xml]
   (vec (for [r (intermarc/ingest xml {})
              :let [f001 (get-in (first (fields r "001")) [:locator :value])
@@ -99,6 +113,24 @@
           :label    (heading h)
           :surname  (sub h "a")
           :variants (vec (distinct (keep #(heading (get-in % [:locator :subfields])) (fields r "400"))))})))
+
+(defn- surname-of
+  "The surname of a `$a, $m` heading: what precedes its first comma."
+  [label]
+  (first (str/split label #", " 2)))
+
+(defn authority-pool
+  "The pool entries of the authority records in `xml`, read by
+   `authorities/read-pool :intermarc`: `{:id :label :variants :surname
+   :dates}`, `:id` the record number (the form of `$3`), `:surname` the
+   heading's (`$a`), `:dates` when the `100 $d` states any."
+  [xml]
+  (vec (for [e (:entries (authorities/read-pool (authorities/sniff-format "authorities.xml" xml) xml))]
+         (cond-> {:id       (:record-number e)
+                  :label    (:label e)
+                  :surname  (surname-of (:label e))
+                  :variants (:variants e)}
+           (:dates e) (assoc :dates (:dates e))))))
 
 (defn corpus
   "`{:records [..] :mentions [..] :pool [..]}`."
@@ -214,26 +246,58 @@
 ;; ---------------------------------------------------------------------------
 
 (defn matcher-entries
-  "The pool as the matcher receives it: `{:id :label :variants}` only."
+  "The pool as the name-only matcher receives it: `{:id :label :variants}` only."
   [pool]
   (mapv #(select-keys % [:id :label :variants]) pool))
 
+(defn dated-entries
+  "The pool as the date-aware matcher receives it: `{:id :label :variants
+   :dates}` (`:dates` when the authority states any)."
+  [pool]
+  (mapv #(select-keys % [:id :label :variants :dates]) pool))
+
+(defn- run-task-a
+  [{:keys [mentions pool]} {:keys [mention entries candidates]}]
+  (let [ids      (set (map :id pool))
+        surnames (into {} (map (juxt :id :surname)) pool)
+        es       (entries pool)
+        scored   (vec (for [m mentions
+                            :let [{ps :proposals rs :rejected} (candidates [(mention m)] es)]]
+                        (merge m {:proposals ps :rejected (vec rs)} (link-outcome (:truth m) ps ids surnames))))]
+    {:all       (link-summary scored)
+     :by-family (into (sorted-map) (for [[f ms] (group-by :family scored)] [f (link-summary ms)]))
+     :mentions  scored}))
+
 (defn task-a
-  "Task A: every mention's name through `propose` (by default
-   `reconcile/propose-agent-links`, default threshold) against the pool, as
-   `(propose [name] entries)`. `{:all summary :by-family {family summary}
-   :mentions [mention + :proposals :outcome…]}`."
+  "Task A, the name-only baseline: every mention's name through `propose` (by
+   default `reconcile/propose-agent-links`, default threshold) against the
+   pool, as `(propose [name] entries)`, the entries `{:id :label :variants}`
+   only — the matcher of M2, which sees no date. `{:all summary :by-family
+   {family summary} :mentions [mention + :proposals :outcome…]}`."
   ([c] (task-a c reconcile/propose-agent-links))
-  ([{:keys [mentions pool]} propose]
-   (let [ids      (set (map :id pool))
-         surnames (into {} (map (juxt :id :surname)) pool)
-         entries  (matcher-entries pool)
-         scored   (vec (for [m mentions
-                             :let [ps (propose [(:name m)] entries)]]
-                         (merge m {:proposals ps} (link-outcome (:truth m) ps ids surnames))))]
-     {:all       (link-summary scored)
-      :by-family (into (sorted-map) (for [[f ms] (group-by :family scored)] [f (link-summary ms)]))
-      :mentions  scored})))
+  ([c propose]
+   (run-task-a c {:mention :name :entries matcher-entries
+                  :candidates (fn [ms es] {:proposals (propose ms es)})})))
+
+(defn rejection-summary
+  "Over task-A `scored` mentions: the mentions with a candidate rejected for
+   its dates, the candidates rejected, and the mentions whose own authority
+   (the truth) was rejected — a wrong block."
+  [scored]
+  {:mentions-with-rejections (count (filter (comp seq :rejected) scored))
+   :rejected                 (reduce + (map (comp count :rejected) scored))
+   :truth-rejected           (count (filter (fn [m] (some #(= (:truth m) (:authority-id %)) (:rejected m))) scored))})
+
+(defn task-a-dated
+  "Task A with the date-aware matcher (lot M3): each mention as `{:name
+   :dates}` through `candidates` (by default `reconcile/agent-candidates`)
+   against the entries with their `:dates`. As `task-a`, each mention also
+   carrying its `:rejected` candidates, plus `:rejections`
+   (`rejection-summary`)."
+  ([c] (task-a-dated c reconcile/agent-candidates))
+  ([c candidates]
+   (let [res (run-task-a c {:mention #(select-keys % [:name :dates]) :entries dated-entries :candidates candidates})]
+     (assoc res :rejections (rejection-summary (:mentions res))))))
 
 (def clusterings
   "Task B's clusterings of a mention, by key. `:record-scoped` is what Palomar
@@ -245,21 +309,26 @@
   {:record-scoped (juxt :record :name)
    :same-name     (comp text/norm :name)})
 
-(def rule-order [:record-scoped :same-name :top-1])
+(def rule-order [:record-scoped :same-name :top-1 :top-1-dated])
 
 (defn task-b
   "Task B: the determined mentions (those with a `$3`) clustered by each of
    `clusterings`, and by `:top-1` — the clustering a curator would get by
    accepting every mention's top `propose-agent-links` proposal (pool in id
    order): mentions with one top authority are one person, a mention with no
-   proposal is alone. Each is scored pairwise and by B-cubed. `:mixed` lists,
-   for the same-name rule, the clusters spanning several authorities."
+   proposal is alone — and by `:top-1-dated`, the same with the date-aware
+   matcher (lot M3: the mention's dates, the entries'). Each is scored
+   pairwise and by B-cubed. `:mixed` lists, for the same-name rule, the
+   clusters spanning several authorities."
   [{:keys [mentions pool]}]
   (let [ms      (filter :truth mentions)
+        alone   (fn [m] [:alone (:record m) (:tag m) (:occurrence m)])
         entries (matcher-entries pool)
-        top-1   (fn [m] (or (:authority-id (first (reconcile/propose-agent-links [(:name m)] entries)))
-                            [:alone (:record m) (:tag m) (:occurrence m)]))
-        rules   (assoc clusterings :top-1 top-1)]
+        dated   (dated-entries pool)
+        top-1   (fn [m] (or (:authority-id (first (reconcile/propose-agent-links [(:name m)] entries))) (alone m)))
+        top-1-d (fn [m] (or (:authority-id (first (reconcile/propose-agent-links [(select-keys m [:name :dates])] dated)))
+                            (alone m)))
+        rules   (assoc clusterings :top-1 top-1 :top-1-dated top-1-d)]
     (into {:mentions (count ms)
            :mixed    (into (sorted-map)
                            (for [[k g] (group-by (:same-name clusterings) ms)
@@ -276,8 +345,9 @@
 
 (defn- fmt [x] (if (nil? x) "n/a" (format "%.3f" (double x))))
 
-(defn print-task-a [{:keys [all by-family]}]
-  (println "\nTask A — mention -> authority, reconcile/propose-agent-links (Jaccard >= 0.5)")
+(defn print-task-a [{:keys [all by-family rejections]}]
+  (println "\nTask A — mention -> authority, reconcile/propose-agent-links (Jaccard >= 0.5)"
+           (if rejections (str "with dates; rejected " (pr-str rejections)) "names only"))
   (println (format "%-8s %4s %4s %6s %6s %6s %5s %5s %5s %5s %5s %5s %5s"
                    "family" "ment" "pool" "R@1" "R@5" "P@1" "false" "homon" "other" "abst" "tied" "nip" "nip+"))
   (doseq [[f s] (concat by-family [["all" all]])]

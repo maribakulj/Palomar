@@ -3,6 +3,7 @@
    identified-agent entities by authority id, on hand-built records."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [palomar.agent-dates :as dates]
             [palomar.curate :as curate]
             [palomar.model :as model]
             [palomar.plugins.lrmoo.dataset :as dataset]
@@ -252,3 +253,107 @@
           doc  (first (linked-art/documents out))]
       (is (= {"Marx, Karl" marx "Engels, Friedrich" engels}
              (into {} (map (juxt #(get % "_label") #(get % "id"))) (get-in doc ["created_by" "carried_out_by"])))))))
+
+;; --- dates as contrary evidence (lot M3) ------------------------------------
+
+(def ^:private dumas
+  "Dumas père and fils, both headed \"Dumas, Alexandre\" (BnF 11901063, 11901062)."
+  [{:id "http://catalogue.bnf.fr/ark:/12148/cb11901062n" :label "Dumas, Alexandre" :variants ["Dumas fils, Alexandre"]
+    :dates (dates/parse-life-dates "1824-1895")}
+   {:id "http://catalogue.bnf.fr/ark:/12148/cb11901063z" :label "Dumas, Alexandre" :variants ["Dumas père, Alexandre"]
+    :dates (dates/parse-life-dates "1802-1870")}])
+
+(def ^:private fils "http://catalogue.bnf.fr/ark:/12148/cb11901062n")
+(def ^:private pere "http://catalogue.bnf.fr/ark:/12148/cb11901063z")
+
+(deftest a-candidate-whose-dates-are-incompatible-is-never-proposed
+  (let [{:keys [proposals rejected]} (rec/agent-candidates [{:name "Dumas, Alexandre" :dates "1802-1870"}] dumas)]
+    (testing "the father's dates block the son: one proposal, the father"
+      (is (= [pere] (map :authority-id proposals)))
+      (is (= {:name-score 1.0 :dates :compatible} (-> (first proposals) :evidence (update :dates :verdict))))
+      (is (= :proposed (:status (first proposals))) "still only a proposal (D7)"))
+    (testing "the son is not dropped silently: rejected, with the reason and the dates compared"
+      (is (= [[fils :incompatible-dates]] (map (juxt :authority-id :reason) rejected)))
+      (let [{:keys [name-score dates]} (:evidence (first rejected))]
+        (is (= 1.0 name-score) "the name alone would have tied")
+        (is (= :incompatible (:verdict dates)))
+        (is (= "1802-1870" (:text (:mention dates))))
+        (is (= "1824-1895" (:text (:candidate dates))))
+        (is (= {:compared [:birth :birth] :a {:from 1802 :to 1802 :text "1802"} :b {:from 1824 :to 1824 :text "1824"} :ok? false}
+               (first (:checks dates)))))))
+  (testing "the son's mention gets the son"
+    (is (= [fils] (map :authority-id (rec/propose-agent-links [{:name "Dumas, Alexandre" :dates "1824-1895"}] dumas)))))
+  (testing "a mention dated 18.. is compatible with both: the tie stays, nothing is rejected"
+    (let [{:keys [proposals rejected]} (rec/agent-candidates [{:name "Dumas, Alexandre" :dates "18..-18.."}] dumas)]
+      (is (= #{fils pere} (set (map :authority-id proposals))))
+      (is (every? #(= :compatible (get-in % [:evidence :dates :verdict])) proposals))
+      (is (empty? rejected)))))
+
+(deftest missing-dates-are-no-evidence
+  (testing "an undated mention, or an undated candidate, is unknown, never incompatible"
+    (let [{:keys [proposals rejected]} (rec/agent-candidates [{:name "Dumas, Alexandre"}] dumas)]
+      (is (= 2 (count proposals)))
+      (is (every? #(= :unknown (get-in % [:evidence :dates :verdict])) proposals))
+      (is (empty? rejected)))
+    (let [undated (mapv #(dissoc % :dates) dumas)]
+      (is (= 2 (count (rec/propose-agent-links [{:name "Dumas, Alexandre" :dates "1802-1870"}] undated))))))
+  (testing "an unreadable date is kept as text and blocks nothing"
+    (let [[p] (rec/propose-agent-links [{:name "Dumas, Alexandre" :dates "XIXe siècle"}] (take 1 dumas))]
+      (is (= :unknown (get-in p [:evidence :dates :verdict])))
+      (is (= {:text "XIXe siècle"} (get-in p [:evidence :dates :mention]))))))
+
+(deftest a-plain-name-is-still-a-mention
+  (testing "a string mention is matched as before: same proposals, the evidence added"
+    (let [[p & more] (rec/propose-agent-links ["Gustave Flaubert"] pool)]
+      (is (empty? more))
+      (is (= {:name "Gustave Flaubert" :authority-id "isni:flaubert" :authority-label "Gustave Flaubert" :score 1.0
+              :certifiable? true :status :proposed
+              :evidence {:name-score 1.0 :dates {:verdict :unknown :checks []}}}
+             p))))
+  (testing "a map mention reports its name as the proposal's :name, so alignments find it in the record"
+    (is (= ["Gustave Flaubert"] (map :name (rec/propose-agent-links [{:name "Gustave Flaubert" :dates "1821-1880"}] pool)))))
+  (testing "the same mentions, as strings or as undated maps, give the same proposals"
+    (is (= (rec/propose-agent-links ["Dumas, Alexandre" "Balzac"] (concat dumas pool))
+           (rec/propose-agent-links [{:name "Dumas, Alexandre"} {:name "Balzac"}] (concat dumas pool))))))
+
+(deftest a-proposal-carries-its-evidence-into-the-ir
+  (let [props (rec/propose-agent-links [{:name "Dumas, Alexandre" :dates "1802-1870"}] dumas)
+        [r]   (rec/align-agents [(named :doc/d "Dumas, Alexandre")] props)
+        maps  (filter #(= "skos" (namespace (:predicate %))) (:assertions r))]
+    (testing "one proposed mapping, to the father; the son, rejected, is no claim"
+      (is (= [[:skos/exactMatch :proposed]] (map (juxt :predicate :status) maps)))
+      (is (= #{pere} (set (keep :iri (:entities r))))))
+    (testing "the mapping's provenance names the name score and the dates verdict and values"
+      (is (= {'?label "Dumas, Alexandre" '?name-score 1.0 '?dates :compatible
+              '?mention-dates "1802-1870" '?authority-dates "1802-1870"}
+             (get-in (first maps) [:provenance :bindings]))))))
+
+(defn- mappings [r] (filter #(= "skos" (namespace (:predicate %))) (:assertions r)))
+
+(deftest a-proposal-stays-with-the-mention-that-made-it
+  (let [pere-m {:name "Dumas, Alexandre" :dates "1802-1870"}
+        fils-m {:name "Dumas, Alexandre" :dates "1824-1895"}]
+    (testing "two dated mentions of one name in a batch: a record that does not say which it is takes neither"
+      (let [props (rec/propose-agent-links [pere-m fils-m] dumas)
+            [r]   (rec/align-agents [(named :doc/t "Dumas, Alexandre")] props)]
+        (is (= #{pere fils} (set (map :authority-id props))))
+        (is (empty? (mappings r)) "never both père and fils, never one mention's evidence on the other's")))
+    (testing "scoped to its record, each mention gives that record its own authority and its own evidence"
+      (let [props (rec/propose-agent-links [(assoc pere-m :record :doc/a) (assoc fils-m :record :doc/b)] dumas)
+            [a b] (rec/align-agents [(named :doc/a "Dumas, Alexandre") (named :doc/b "Dumas, Alexandre")] props)
+            one   (fn [r] (map (juxt (comp :value/target :value) #(get-in % [:provenance :bindings '?mention-dates])) (mappings r)))
+            iris  (fn [r] (set (keep :iri (:entities r))))]
+        (is (= #{pere} (iris a)) "the son, rejected for :doc/a's mention, is no assertion there")
+        (is (= #{fils} (iris b)))
+        (is (= ["1802-1870"] (map second (one a))))
+        (is (= ["1824-1895"] (map second (one b))))))
+    (testing "the same mention given twice is one mention"
+      (let [props (rec/propose-agent-links [pere-m pere-m] dumas)
+            [r]   (rec/align-agents [(named :doc/t "Dumas, Alexandre")] props)]
+        (is (= 1 (count (mappings r))))))))
+
+(deftest an-undated-mention-states-no-dates-verdict
+  (testing "a plain name's mapping names its score, not a dates verdict it never had"
+    (let [[r] (rec/align-agents [(named :doc/d "Dumas, Alexandre")] (rec/propose-agent-links ["Dumas, Alexandre"] dumas))]
+      (is (= 2 (count (mappings r))))
+      (is (every? #(= {'?label "Dumas, Alexandre" '?name-score 1.0} (get-in % [:provenance :bindings])) (mappings r))))))

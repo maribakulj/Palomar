@@ -49,3 +49,43 @@ RDF/XML. Palomar reads N-Triples only.
   (e.g. with Jena `riot`) is the workaround.
 - The pool is a list scanned per name: right for a vocabulary of thousands,
   not for the full LCNAF, which needs an index. That is outside this step.
+
+## Amendment (lot M3, 2026-11-09): authority profiles, and INTERMARC authority records
+
+A pool entry is a profile of the agent, not only its names, so that a matcher
+can use what the authority says against a mention (ADR 0018 amendment, dates
+as contrary evidence).
+
+1. **`:dates`**, a life-dates profile (`palomar.agent-dates`: birth, death,
+   activity as intervals of years that keep their uncertainty), present only
+   when the source states dates:
+   - EAC-CPF `existDates`: a `dateRange`'s `fromDate` is the birth (a body's
+     start), its `toDate` the death (its end), `@standardDate` read before the
+     text, yet kept approximate when the text says so (`ca. 1802`), and
+     widened to `@notBefore` / `@notAfter`; a single `date` is read as a span;
+     a `dateSet`'s members are alternatives, each role the interval holding
+     them all, and dropped when a member does not state it — never narrower
+     than the source. `existDates` leaves `:unread` only when a date of it is
+     read; otherwise its text is kept under `:dates :text` and it stays listed
+     as unread;
+   - MADS/RDF `madsrdf:birthDate` / `deathDate`, on the authority or on the
+     real-world object it `identifiesRWO`, as a literal or a node's
+     `rdfs:label`;
+   - SKOS states none;
+   - INTERMARC `100 $d`.
+2. **`:entity-type`** stays the kind key ("person", "corporateBody",
+   "family"): MADS's name class, EAC-CPF's `entityType`, the INTERMARC
+   authority leader's position 9 (`p`, a person). A kind the source does not
+   state is left out. It is the key `align-agents` already reads; no second
+   key is added.
+3. **BnF INTERMARC authority records** (`read-pool :intermarc`, sniffed by a
+   MARCXChange record of format INTERMARC and type Authority), read through
+   the INTERMARC importer: `:id` the `003` ARK, `:record-number` the `001`
+   without `FRBNF` and its check character (the form a bibliographic `$3`
+   cites), label the `100 $a, $m`, variants the `400`s, `:dates` the `100 $d`,
+   `:isni` the `031 $a` whose `$2` says ISNI (a cancelled `$z` is not read,
+   a VIAF number is no ISNI). The tags not read are listed under `:unread`
+   (among them the `008`, which also holds dates for some records).
+
+The person-reconciliation eval reads its pool with this reader; a test checks
+it gives the pool M2's test-side reader gave.

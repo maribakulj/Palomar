@@ -1,14 +1,17 @@
 (ns palomar.eval.person-reconciliation-test
-  "Person-level reconciliation, measured (lot M2): Palomar's *current* agent
+  "Person-level reconciliation, measured (lot M2): Palomar's agent
    reconciliation scored on 150 real BnF INTERMARC records against the BnF
-   cataloguers' own links (`100`/`700 $3`). The numbers asserted here are the
-   baseline later lots must move; they are not a guarantee. Corpus and gold:
+   cataloguers' own links (`100`/`700 $3`). The name-only numbers are the M2
+   baseline (\"before\"), still asserted by running the name-only matcher; lot
+   M3's date-aware numbers (\"after\") are asserted next to them. They are
+   measurements, not a guarantee. Corpus and gold:
    `test/fixtures/er-gold/bnf-persons/README.md`; write-up:
    `docs/eval/person-reconciliation.md`. The corpus readers and the metrics live
    in `palomar.eval.person-reconciliation`; the metrics are tested here on
    hand-made inputs first."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [palomar.agent-dates :as dates]
             [palomar.eval.person-reconciliation :as pr]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.intermarc :as intermarc]
@@ -107,6 +110,24 @@
         (is (some #{"Dumas père, Alexandre"} (:variants pere)))
         (is (some #{"Aramis"} (:variants pere)))))))
 
+(deftest the-pool-is-read-by-palomar-s-intermarc-authority-reader
+  (testing "Palomar's reader gives the pool M2's test-side reader gave, entry for entry"
+    (is (= (sort-by :id (pr/legacy-authority-pool (slurp pr/authority-file)))
+           (map #(dissoc % :dates) (:pool @c)))))
+  (testing "and each entry's 100 $d as its dates"
+    (is (= 29 (count (filter :dates (:pool @c)))) "four headings state no $d")
+    (is (= {"11901063" (dates/parse-life-dates "1802-1870") "11901062" (dates/parse-life-dates "1824-1895")}
+           (into {} (for [e (:pool @c) :when (#{"11901063" "11901062"} (:id e))] [(:id e) (:dates e)]))))))
+
+(deftest a-mention-s-dates-are-its-field-s-d
+  (let [{:keys [mentions]} @c]
+    (is (= 131 (count (filter #(dates/dated? (:dates %)) mentions))) "11 mentions state no $d")
+    (is (every? (fn [m] (= (:dates m) (dates/parse-life-dates (some (fn [[k v]] (when (= "d" k) v)) (:subfields m)))))
+                mentions))
+    (is (= {(dates/parse-life-dates "1802-1870") 35 (dates/parse-life-dates "1824-1895") 1 nil 1}
+           (frequencies (map :dates (filter #(= "Dumas, Alexandre" (:name %)) mentions))))
+        "the 36 Alexandre Dumas mentions with a $3 carry their dates; the undetermined one has none")))
+
 (deftest a-main-entry-mention-is-the-agent-palomar-produces
   (testing "for every 100, the name the eval matches is Palomar's own :canon/agent"
     (let [{:keys [records mentions]} @c
@@ -155,6 +176,30 @@
       (is (some #{"1802-1870"} gold))
       (is (empty? (for [t texts g gold :when (str/includes? t g)] [t g]))))))
 
+(deftest the-date-aware-matcher-sees-the-dates-and-no-other-gold
+  (let [calls (atom [])
+        spy   (fn [ms entries]
+                (swap! calls conj [ms entries])
+                (reconcile/agent-candidates ms entries))
+        res   (pr/task-a-dated @c spy)
+        gold  (set (remove (set (for [m (:mentions @c) [code v] (:subfields m) :when (= "d" code)] (str/trim v)))
+                           (gold-strings @c)))
+        texts (distinct (concat (map :name (mapcat first @calls))
+                                (for [[_ es] @calls e es t (cons (:label e) (:variants e))] t)))]
+    (testing "one mention per call, as {:name :dates}; the result is what the default matcher returns"
+      (is (= 142 (count @calls)))
+      (is (every? #(and (= 1 (count (first %))) (= #{:name :dates} (set (keys (ffirst %))))) @calls))
+      (is (= (:all (pr/task-a-dated @c)) (:all res))))
+    (testing "the entries carry :id :label :variants, and :dates when the authority states any, nothing else"
+      (is (every? #(= (cond-> #{:id :label :variants} (:dates %) (conj :dates)) (set (keys %))) (mapcat second @calls)))
+      (is (= 29 (count (filter :dates (second (first @calls)))))))
+    (testing "the dates are the parsed $d of the mention and of the authority's 100, nothing else"
+      (is (= (set (map :dates (:mentions @c))) (set (map :dates (mapcat first @calls)))))
+      (is (= (set (map :dates (:pool @c))) (set (map :dates (second (first @calls)))))))
+    (testing "no $3, $1, ISNI or authority number appears in a name, a label or a variant"
+      (is (some #{"11901063"} gold))
+      (is (empty? (for [t texts g gold :when (str/includes? t g)] [t g]))))))
+
 ;; ---------------------------------------------------------------------------
 ;; Task A — mention -> authority (reconcile/propose-agent-links)
 ;; ---------------------------------------------------------------------------
@@ -194,6 +239,43 @@
            (set (for [m (:mentions @a) :when (= :not-in-pool/proposed (:outcome m))]
                   [(:name m) (:authority-id (first (:proposals m)))]))))))
 
+(def ^:private ad (delay (pr/task-a-dated @c)))
+
+(deftest task-a-with-dates
+  (pr/print-task-a @ad)
+  (testing "all 142 mentions: no false link, no tie, whatever the pool order"
+    (let [after (summary {:mentions 142 :in-pool 136 :correct 136 :at5 136 :not-in-pool 5 :not-in-pool-proposed 2
+                          :undetermined 1 :recall-1 1 :recall-5 1 :precision-1 68/69})]
+      (is (= after (:all @ad)))
+      (is (= after (:all (pr/task-a-dated (update @c :pool reverse)))))))
+  (testing "per family: Dumas goes from 15/50 to 50/50; the others do not move"
+    (is (= {"Dumas"  (summary {:mentions 51 :in-pool 50 :correct 50 :at5 50 :undetermined 1
+                               :recall-1 1 :recall-5 1 :precision-1 1})
+            "Hetzel" (summary {:mentions 2 :in-pool 2 :correct 2 :at5 2 :recall-1 1 :recall-5 1 :precision-1 1})
+            "Hugo"   (summary {:mentions 8 :in-pool 8 :correct 8 :at5 8 :recall-1 1 :recall-5 1 :precision-1 1})
+            "Verne"  (summary {:mentions 29 :in-pool 29 :correct 29 :at5 29 :recall-1 1 :recall-5 1 :precision-1 1})
+            "others" (summary {:mentions 52 :in-pool 47 :correct 47 :at5 47 :not-in-pool 5 :not-in-pool-proposed 2
+                               :recall-1 1 :recall-5 1 :precision-1 47/49})}
+           (:by-family @ad))))
+  (testing "166 candidates rejected for their dates, on 93 mentions; never a mention's own authority"
+    (is (= {:mentions-with-rejections 93 :rejected 166 :truth-rejected 0} (:rejections @ad))))
+  (testing "Dumas père's mention: the son is rejected, with the births compared"
+    (let [m (first (filter #(= "11901063" (:truth %)) (:mentions @ad)))
+          r (first (filter #(= "11901062" (:authority-id %)) (:rejected m)))]
+      (is (= ["11901063" 1.0] ((juxt :authority-id :score) (first (:proposals m)))))
+      (is (= :incompatible-dates (:reason r)))
+      (is (= {:compared [:birth :birth] :a {:from 1802 :to 1802 :text "1802"} :b {:from 1824 :to 1824 :text "1824"} :ok? false}
+             (first (get-in r [:evidence :dates :checks]))))))
+  (testing "what dates cannot change: the undetermined, undated Dumas mention still ties père and fils"
+    (let [m (first (filter #(nil? (:truth %)) (:mentions @ad)))]
+      (is (nil? (:dates m)))
+      (is (= #{"11901062" "11901063"} (set (map :authority-id (take 2 (:proposals m))))))
+      (is (:tied? m))))
+  (testing "nor the mentions outside the pool: undated, Paltsits is still linked to Victor Hugo"
+    (is (= #{["Paltsits, Victor Hugo" "11907966" nil]}
+           (set (for [m (:mentions @ad) :when (= :not-in-pool/proposed (:outcome m))]
+                  [(:name m) (:authority-id (first (:proposals m))) (:dates m)]))))))
+
 ;; ---------------------------------------------------------------------------
 ;; Task B — mention <-> mention clustering, no pool
 ;; ---------------------------------------------------------------------------
@@ -219,4 +301,9 @@
     (is (= {:pairwise {:predicted 1151 :true 1114 :right 1114 :false-merges 37 :missed 0
                        :precision 1114/1151 :recall 1 :f1 2228/2265}
             :b-cubed  {:precision 2479/2538 :recall 1}}
-           (:top-1 @b)))))
+           (:top-1 @b))))
+  (testing "with dates (M3): père and fils apart; only the two Paltsits x Victor Hugo pairs remain"
+    (is (= {:pairwise {:predicted 1116 :true 1114 :right 1114 :false-merges 2 :missed 0
+                       :precision 557/558 :recall 1 :f1 1114/1115}
+            :b-cubed  {:precision 419/423 :recall 1}}
+           (:top-1-dated @b)))))

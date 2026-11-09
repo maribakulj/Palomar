@@ -25,6 +25,7 @@
    entry (the Victor Hugo *metro station*) can never be promoted."
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [palomar.agent-dates :as dates]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.lrmoo.ntriples :as nt]
@@ -110,32 +111,94 @@
     (apply max 0.0 (map #(jaccard nt (tokens %))
                         (remove str/blank? (cons (:label candidate) (:variants candidate)))))))
 
+(defn- mention
+  "A mention as the matcher reads it: `{:name :dates :record}`, from a plain
+   name or a map whose `:dates` is a life-dates string (parsed) or a parsed
+   profile, and whose `:record` (optional) is the record it was read in."
+  [m]
+  (if (map? m)
+    (cond-> {:name (:name m) :dates (let [d (:dates m)] (if (string? d) (dates/parse-life-dates d) d))}
+      (:record m) (assoc :record (:record m)))
+    {:name m :dates nil}))
+
+(defn- mention-key
+  "What identifies a mention beyond its name — its dates and its record —
+   as a proposal carries it under `:mention`; nil for a bare name."
+  [m]
+  (let [k (cond-> {:name (:name m)}
+            (:dates m)  (assoc :dates (:dates m))
+            (:record m) (assoc :record (:record m)))]
+    (when (< 1 (count k)) k)))
+
+(defn- dates-evidence
+  "The dates verdict of a mention against a candidate, with the values compared."
+  [mention-dates candidate-dates]
+  (cond-> (dates/compatibility mention-dates candidate-dates)
+    mention-dates   (assoc :mention mention-dates)
+    candidate-dates (assoc :candidate candidate-dates)))
+
+(defn agent-candidates
+  "Fuzzy tier (ADR 0018 d.3/4, amended by lot M3): for each free agent mention
+   — a name, or `{:name :dates :record}` whose dates are a life-dates string or
+   a profile (`palomar.agent-dates`) and whose optional `:record` is the record
+   it was read in — the entries of the `authority` pool —
+   `[{:id :label :variants [..] :dates}]` — whose label or variants match by
+   token-set similarity >= `threshold` (default 0.5), and whose dates are not
+   incompatible with the mention's. Returns `{:proposals [..] :rejected [..]}`.
+
+   A proposal, best name score first:
+
+     {:name :authority-id :authority-label :score :certifiable? :status :proposed
+      :evidence {:name-score s :dates {:verdict :compatible|:unknown :checks [..] :mention :candidate}}}
+
+   A candidate the name admits but whose dates cannot be the mention's
+   (`dates/compatibility` is `:incompatible`) is never proposed: it is listed
+   under `:rejected`, with `:reason :incompatible-dates` and the same evidence,
+   so a curator sees why. Missing dates on either side are no evidence
+   (`:unknown`): the candidate stays, as before dates were read. Dates block;
+   they do not add to the score.
+
+   A proposal or rejection of a mention given as a map with dates or a record
+   carries it under `:mention` (`{:name :dates :record}`), so `align-agents`
+   keeps each proposal with the mention that made it.
+
+   Every proposal is `:proposed` — never `:asserted` (D7). `:certifiable?` is
+   true only when the matched entry has a determinate `:id`; a high-scoring
+   match to an id-less entry can never be promoted (the metro-station guard)."
+  ([mentions authority] (agent-candidates mentions authority 0.5))
+  ([mentions authority threshold]
+   (let [scored (for [m    (map mention mentions)
+                      cand authority
+                      :let [score (name-score (:name m) cand)]
+                      :when (>= score threshold)
+                      :let [ev {:name-score score :dates (dates-evidence (:dates m) (:dates cand))}]]
+                  (cond-> {:name            (:name m)
+                           :authority-id    (:id cand)
+                           :authority-label (:label cand)
+                           :score           score}
+                    true                (assoc ::ev ev)
+                    (mention-key m)     (assoc :mention (mention-key m))
+                    (:entity-type cand) (assoc :entity-type (:entity-type cand))))
+         incompatible? #(= :incompatible (get-in % [::ev :dates :verdict]))
+         by-score #(vec (sort-by (comp - :score) %))]
+     {:proposals (by-score (for [c (remove incompatible? scored)]
+                             (-> c
+                                 (assoc :certifiable? (boolean (:authority-id c)) :status :proposed :evidence (::ev c))
+                                 (dissoc ::ev))))
+      :rejected  (by-score (for [c (filter incompatible? scored)]
+                             (-> c (assoc :reason :incompatible-dates :evidence (::ev c)) (dissoc ::ev))))})))
+
 (defn propose-agent-links
-  "Fuzzy tier (ADR 0018 d.3/4): for each free agent `name` (no authority id),
-   propose equivalences to entries of the `authority` pool — `[{:id :label
-   :variants [..]}]` — whose label/variants match by token-set similarity ≥
-   `threshold` (default 0.5). Returns proposals sorted by score desc:
-
-     {:name :authority-id :authority-label :score :certifiable? :status :proposed}
-
-   Every proposal is `:proposed` — never `:asserted` (D7). `:certifiable?` is true
-   only when the matched entry has a determinate `:id`; a high-scoring match to an
-   id-less entry can never be promoted (the metro-station guard)."
+  "The proposals of `agent-candidates` (which see): `[{:name :authority-id
+   :authority-label :score :certifiable? :status :proposed :evidence} ..]`,
+   best first. A mention is a name or `{:name :dates}`; a candidate whose dates
+   are incompatible with the mention's is not among them — `agent-candidates`
+   reports it under `:rejected`, with the reason. With plain names, or
+   undated entries, nothing is rejected and the proposals are those of the
+   name match alone."
   ([names authority] (propose-agent-links names authority 0.5))
   ([names authority threshold]
-   (->> (for [name names
-              cand authority
-              :let [score (name-score name cand)]
-              :when (>= score threshold)]
-          (cond-> {:name            name
-                   :authority-id    (:id cand)
-                   :authority-label (:label cand)
-                   :score           score
-                   :certifiable?    (boolean (:id cand))
-                   :status          :proposed}
-            (:entity-type cand) (assoc :entity-type (:entity-type cand))))
-        (sort-by (comp - :score))
-        vec)))
+   (:proposals (agent-candidates names authority threshold))))
 
 ;; ---------------------------------------------------------------------------
 ;; Alignments in the IR (ADR 0032) — proposals as SKOS mapping assertions
@@ -168,6 +231,37 @@
   (model/entity {:id   (model/mint-entity-id kind [rid nm])
                  :kind kind}))
 
+(defn- evidence-bindings
+  "A proposal's evidence as the bindings of its mapping's provenance: the
+   authority's label, the name score, the dates verdict and the date texts
+   compared — values a curator reads, and that PROV-O writes."
+  [authority-label {:keys [name-score dates]}]
+  (let [text (fn [p] (or (:text p)
+                         (some->> (for [role [:birth :death :active] :let [t (:text (get p role))] :when t]
+                                    (str (name role) " " t))
+                                  seq
+                                  (str/join ", "))))]
+    (cond-> {}
+      authority-label             (assoc '?label authority-label)
+      name-score                  (assoc '?name-score name-score)
+      ;; an undated mention had no dates to compare: no verdict is stated
+      (:mention dates)            (assoc '?dates (:verdict dates))
+      (text (:mention dates))     (assoc '?mention-dates (text (:mention dates)))
+      (and (:mention dates) (text (:candidate dates))) (assoc '?authority-dates (text (:candidate dates))))))
+
+(defn- proposals-for
+  "The proposals among `ps` (one name's) that record `rid` takes: those of the
+   mention made in it (`:mention :record`) when there is one, else those of
+   the one mention that names no record. A record that cannot tell which of
+   several mentions of its name it is takes none: one mention's candidates
+   and evidence never reach another's record."
+  [rid ps]
+  (let [key-of  #(or (:mention %) {:name (:name %)})
+        groups  (group-by key-of (filter #(contains? #{nil rid} (:record (key-of %))) ps))
+        scoped  (filter #(= rid (:record (key %))) groups)
+        chosen  (if (seq scoped) scoped groups)]
+    (when (= 1 (count chosen)) (distinct (val (first chosen))))))
+
 (defn align-agents
   "Put `propose-agent-links` proposals into `records` as data (ADR 0032): for
    each record naming a proposal's `:name`, a local agent entity for that name
@@ -178,18 +272,24 @@
    the mapping's target, not an identified person: it is no `:crm/E21_Person`
    until a curator accepts the match and `apply-agent-links` applies it. Curation then accepts or rejects it like any claim; nothing is
    ever an `owl:sameAs`, and a rejected alignment stays in the record's history.
-   Returns the records."
+
+   A proposal stays with the mention that made it (`:mention`, lot M3): a
+   record takes the proposals of the mention scoped to it (`:record`), else of
+   the one unscoped mention of its name; when several dated mentions of one
+   name could be its own, it takes none (`proposals-for`), so a record never
+   gets two homonyms' authorities or another mention's evidence, and a
+   candidate rejected for its mention is no assertion. Returns the records."
   [records proposals]
   (let [by-name (group-by :name proposals)]
     (mapv
      (fn [r]
        (let [rid   (:id r)
-             hits  (for [{nm :name} (agents/occurrences r)
-                         p (get by-name nm)
+             hits  (for [nm (distinct (map :name (agents/occurrences r)))
+                         p (proposals-for rid (get by-name nm))
                          :when (and (:authority-id p) (nil? (nt/iri-problem (:authority-id p))))]
                      p)]
          (reduce
-          (fn [r {:keys [name authority-id authority-label score certifiable? entity-type]}]
+          (fn [r {:keys [name authority-id authority-label score certifiable? entity-type evidence]}]
             (let [local (named-agent rid name (agent-kind entity-type))
                   ;; the authority as the alignment's target only: not an E21,
                   ;; since a proposal must not make an identified person
@@ -207,7 +307,9 @@
                            (model/assertion {:subject (:id local) :predicate pred
                                              :value (model/reference (:id auth)) :status :proposed
                                              :confidence (double score)
-                                             :provenance (cond-> prov authority-label (assoc :bindings {'?label authority-label}))})]))))
+                                             :provenance (cond-> prov
+                                                           (or authority-label evidence)
+                                                           (assoc :bindings (evidence-bindings authority-label evidence)))})]))))
           r hits)))
      records)))
 
