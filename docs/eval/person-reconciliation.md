@@ -1,4 +1,4 @@
-# Person reconciliation — the baseline (measured)
+# Person reconciliation — the baseline, and dates as contrary evidence (measured)
 
 `palomar.eval.person-reconciliation-test`, on 150 real BnF records. Corpus and
 gold: [`test/fixtures/er-gold/bnf-persons/`](../../test/fixtures/er-gold/bnf-persons/README.md).
@@ -11,8 +11,10 @@ by ISNI keeps people apart, which holds by construction. Nothing so far says how
 Palomar's name-based reconciliation, the path for a name with no authority id,
 does on real homonyms. This eval measures it as the code stands. Its numbers
 are the **baseline** later lots will be measured against (dates as contrary
-evidence, a Fellegi-Sunter score, constrained clustering). It is a measurement,
-not a guarantee: no row in `guarantees.md`.
+evidence, a Fellegi-Sunter score, constrained clustering). Lot M3 (dates as
+contrary evidence) is measured in [After dates (M3)](#after-dates-m3). The
+numbers are measurements, not a guarantee: no row in `guarantees.md` cites
+them (the behaviour of the date block itself is guaranteed, by unit tests).
 
 ## The corpus
 
@@ -57,13 +59,16 @@ a `100`, Palomar's own `:canon/agent`; for a `700`, which the classic INTERMARC
 main entry only; the INTERMARC-NG spoke does carry its `700 A pour créateur`),
 the same
 recombination, read from the field the importer keeps. `$3` is kept as the
-truth and never reaches a matcher, nor does `$1` (ISNI) or `$d` (dates): a test
-spies on what task A passes to `propose-agent-links` and checks that no `$3`,
-`$1`, ISNI, date or authority number appears in a name, label or variant, and
-that pool entries carry only `:id :label :variants`. The
-authority records go through the same importer. A small reader in the test
-tree builds the pool from them: a proper INTERMARC authority reader is a later
-lot. The metrics are pure functions, tested on hand-made inputs
+truth and never reaches a matcher, nor does `$1` (ISNI); the name-only
+baseline does not see `$d` (dates) either: a test spies on what task A passes
+to `propose-agent-links` and checks that no `$3`, `$1`, ISNI, date or
+authority number appears in a name, label or variant, and that pool entries
+carry only `:id :label :variants`. The authority records go through the same
+importer. In M2 a small reader in the test tree built the pool from them;
+since M3 it is Palomar's INTERMARC authority reader
+(`authorities/read-pool :intermarc`), and a test checks that it gives the
+same pool, entry for entry (`the-pool-is-read-by-palomar-s-intermarc-authority-reader`).
+The metrics are pure functions, tested on hand-made inputs
 (`palomar.eval.person-reconciliation`).
 
 ### Task A — mention → authority
@@ -165,6 +170,98 @@ same 35 (all 36 Alexandre Dumas mentions go to the son, first in id order) and
   transcribed statement of responsibility, a search string), which this eval
   does not test.
 
+## After dates (M3)
+
+Lot M3 gives the matcher the dates. A mention is `{:name :dates}`, its dates
+the field's `$d` parsed (`palomar.agent-dates`); an authority entry carries
+the `100 $d` of its record. A candidate whose dates are **incompatible** with
+the mention's (no overlap of births, of deaths, a birth after the other's
+death, an activity outside the other's life, each with its uncertainty) is
+not proposed: `reconcile/agent-candidates` lists it under `:rejected`, with
+the reason and the dates compared. Missing dates are no evidence. Dates block;
+they add nothing to the name score. The test runs both matchers: the
+name-only one (`task-a`, `:top-1`, the "before") and the date-aware one
+(`task-a-dated`, `:top-1-dated`, the "after").
+
+The policy errs towards no evidence, since a false rejection is worse than a
+missed one: every comparison allows a **tolerance of 2 years** (sources
+disagree; Julian and Gregorian calendars), an approximate or uncertain year
+(`ca.`, `?`, EDTF `~`) is widened by **20 years**, and a date the parser does
+not read, reads only in part, or that is before the common era, blocks
+nothing. Dumas père and fils, born 22 years apart, are still separated. On
+this corpus the numbers below are the same as under a first measure with a
+10-year margin and no tolerance: every `$d` here is an exact year or an open
+end.
+
+Only this eval passes dated mentions. **No spoke and no CLI command does
+yet**: `palomar reconcile --authorities` passes the records' names as
+strings, so it rejects nothing.
+
+Where a mention's dates live: in the IR as the importer's natives (the field
+fragment's subfields, the `:intermarc/f100_d` and `f700_d` assertions), read
+by the eval at match time as it reads a `700`'s name. No canonical coordinate
+carries a date: `:canon/agent` is a name string, and a dated agent there
+would change the canonical floor and every exporter that reads it. The
+compiler is untouched; the parse is a pure function of the `$d` text. The
+classic INTERMARC `700`s are still not carried to `:canon/agent`: the
+`:mapping/combine` rule joins the record's first `$a` and first `$m` (the
+flat natives are on the record, not on each field), so a `700` mapping would
+make one contributor per record, not one per field. Doing it needs a
+per-occurrence combine, a change of its own.
+
+131 of the 142 mentions have a `$d`, and 29 of the 33 authorities. The 36
+determined "Dumas, Alexandre" mentions all carry theirs (35 `1802-1870`, 1
+`1824-1895`).
+
+### Task A, before and after
+
+| family  | R@1 before | R@1 after | P@1 before | P@1 after | false links before | after | tied top before | after |
+|---------|-----------:|----------:|-----------:|----------:|-------------------:|------:|----------------:|------:|
+| Dumas   | 0.300 | 1.000 | 0.300 | 1.000 | 35 | 0 | 36 | 0 |
+| Hugo    | 1.000 | 1.000 | 1.000 | 1.000 | 0  | 0 | 0  | 0 |
+| Hetzel  | 1.000 | 1.000 | 1.000 | 1.000 | 0  | 0 | 0  | 0 |
+| Verne   | 1.000 | 1.000 | 1.000 | 1.000 | 0  | 0 | 0  | 0 |
+| others  | 1.000 | 1.000 | 0.959 | 0.959 | 0  | 0 | 0  | 0 |
+| **all** | 0.743 | 1.000 | 0.732 | 0.986 | 35 | 0 | 36 | 0 |
+
+Recall@5 stays 1.000 everywhere; abstention stays 0 in the pool. The pool in
+reverse order now gives the same numbers (before: recall@1 0.993): with
+dates, nothing in the pool is decided by its order. 166 candidates are
+rejected for their dates, on 93 mentions; none is the mention's own authority
+(no wrong block on this corpus).
+
+### Task B, before and after
+
+| rule                  | merged pairs | right | false merges | precision | recall | F1    | B-cubed P | B-cubed R |
+|-----------------------|-------------:|------:|-------------:|----------:|-------:|------:|----------:|----------:|
+| top-1 (before)        | 1 151        | 1 114 | 37           | 0.968     | 1.000  | 0.984 | 0.977     | 1.000     |
+| top-1 with dates      | 1 116        | 1 114 | 2            | 0.998     | 1.000  | 0.999 | 0.991     | 1.000     |
+
+The record-scoped and same-name rules use no matcher and do not move.
+
+### What changed, and what did not
+
+- **The Dumas pair is resolved.** Every one of the 35 father mentions is
+  proposed the father only, the son's mention the son: births 1802 and 1824
+  cannot overlap. The 35 false links and the 36 ties go to 0, and task B's 35
+  père × fils false merges with them.
+- **Outside the pool, nothing changes.** The two "Paltsits, Victor Hugo"
+  mentions carry no `$d`: no evidence, so they are still linked to Victor
+  Hugo, and are task B's 2 remaining false merges. Abstention for a mention
+  whose authority is not in the pool is the matcher's threshold, not dates.
+- **An undated mention keeps its tie.** The one undetermined "Dumas,
+  Alexandre" (no `$3`) has no `$d` either: it still scores 1.0 for both, and
+  is still tied.
+- **Dates block, they do not rank.** Of the 166 rejections, 36 are the
+  Dumas père × fils pair (35 + 1) and change the top proposal. The other 130
+  remove near-namesakes that were already below the top — Alexandre Dumas /
+  Robert-Dumas Alexandre / Charles, Jules / Jean Jules Verne, the Hugo family and
+  the "Víctor Hugo …" authors, Pierre-Jules / Louis-Jules Hetzel — which
+  recall@1 does not see; a curator's list of candidates is shorter.
+- **The easy case still.** The mentions' dates are the BnF's own controlled
+  `$d`, written like the authorities'; a transcribed or approximate date
+  would test the uncertainty rules, which this corpus barely does.
+
 ## Limits
 
 - One institution, 150 records from three author queries: the families are
@@ -183,4 +280,7 @@ same 35 (all 36 Alexandre Dumas mentions go to the son, first in id order) and
   (`600`, each with a `$3`) name persons too, but as what a work is about, not
   who made it; they are not measured here.
 - Task A's top-1 numbers depend on pool order wherever scores tie; both orders
-  are reported.
+  are reported. With dates, no in-pool score ties any more.
+- The dates compared are each heading's `$d`. The INTERMARC authority `008`
+  also carries full birth and death dates for some records; the reader does
+  not read it yet (it is listed as unread).

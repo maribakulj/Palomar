@@ -22,7 +22,8 @@ it keep two people with one name apart? Used by
   one query per record (`aut.recordid any "<id>"`). Each `<srw:record>` is copied
   verbatim from its response; they are concatenated, sorted by id, under one
   `searchRetrieveResponse` wrapper written for this fixture, so Palomar's own
-  INTERMARC importer reads them in one call. One file rather than 33: the reader
+  INTERMARC importer reads them in one call. Since lot M3 the pool is read by
+  `authorities/read-pool :intermarc` (heading, variants, `100 $d` dates, ISNI). One file rather than 33: the reader
   reads one document, and a reviewer sees the whole pool in one place.
 
 Four cited authorities return no record from the SRU (`numberOfRecords` 0):

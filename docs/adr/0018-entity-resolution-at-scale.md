@@ -192,3 +192,74 @@ Two findings sharpen this ADR:
 - Blocking-key design, the confidence-threshold value, and homonym-disambiguation
   policy — tuned later, on data.
 - Subjects / events reconciliation (ADR 0016 D11, Tier 3 / 4).
+
+## Amendment (lot M3, 2026-11-09): dates as contrary evidence, and the evidence on a proposal
+
+Measured on real BnF homonyms (`docs/eval/person-reconciliation.md`), the
+name-only fuzzy tier could not tell Alexandre Dumas père (1802-1870) from his
+son (1824-1895), both headed "Dumas, Alexandre": 35 false links on 136, all
+that pair. The mentions carried the dates; the matcher did not read them.
+
+**Policy: blocking evidence errs towards no evidence.** A false rejection —
+the right authority withheld — is worse than a missed one, so everything
+below widens rather than narrows, and what is not read blocks nothing.
+
+1. **A mention is a name or `{:name :dates :record}`**, its dates a
+   life-dates string or profile (`palomar.agent-dates`), its optional
+   `:record` the record it was read in; a plain string is still accepted and
+   matched as before. An authority entry may carry `:dates` (ADR 0038
+   amendment). **No spoke and no CLI command passes dated mentions yet**:
+   `palomar reconcile` passes the records' names as strings, and only the
+   person-reconciliation eval passes dates (read from the INTERMARC natives).
+2. **Dates are intervals that keep their uncertainty.** A point is an interval
+   of years: `18..` is 1800-1899, `182X` 1820-1829; `ca. 1830` and EDTF
+   `1830?`/`1830~` are widened by `agent-dates/margin` (**20 years**); `av.
+   1850` and `1933-....` leave an end open; an alternative `1488/90` is
+   1488-1490. A trailing ISBD period is dropped (`735-804.`). Text the parser
+   does not read, a string read only in part (one side of a span), a
+   self-contradicting one (birth after death) and any date before the common
+   era (`B.C.`, `av. J.-C.`, `v. Chr.`, EDTF `-0384`, GND `v384`) are kept as
+   text and contribute nothing: never a year of the common era.
+3. **Compatibility is "can overlap", within a tolerance.** Two profiles are
+   incompatible when an interval check fails: births do not overlap, deaths do
+   not overlap, one is born after the other's death, or an activity falls
+   outside the other's life — every comparison allowing
+   `agent-dates/tolerance` (**2 years**: sources disagree, a birth is
+   registered late, the Julian and Gregorian calendars differ). Dumas père and
+   fils, 22 years apart, stay apart. With no check possible — dates missing on
+   either side — the verdict is `:unknown`: no evidence, never
+   incompatibility.
+4. **Dates block; they do not score.** `reconcile/agent-candidates` returns
+   `{:proposals :rejected}`. A candidate the name admits but whose dates are
+   incompatible is never proposed: it is listed under `:rejected` with
+   `:reason :incompatible-dates` and its evidence, so a curator sees why.
+   `propose-agent-links` returns the proposals of it, as before. The name
+   score is unchanged by dates; a scored combination (Fellegi-Sunter) is a
+   later lot.
+5. **Each proposal carries its evidence**: `:evidence {:name-score :dates
+   {:verdict :checks :mention :candidate}}`, the checks naming the roles and
+   intervals compared, and, for a dated or record-scoped mention, the
+   `:mention` that made it. `align-agents` writes the evidence on the
+   `:proposed` SKOS mapping assertion's provenance bindings (`?name-score`,
+   and for a dated mention `?dates`, `?mention-dates`, `?authority-dates`,
+   beside `?label`), which PROV-O writes: the same assertion as before,
+   curated the same way, no parallel model.
+6. **A proposal stays with its mention.** `align-agents` gives a record the
+   proposals of the mention scoped to it (`:record`), else of the one
+   unscoped mention of its name; when several mentions of one name (two
+   dates) could be its own, the record takes none. So a record never holds
+   two homonyms' authorities or another mention's evidence, and a candidate
+   rejected for a mention is no assertion in that mention's record.
+
+Measured (`palomar.eval.person-reconciliation-test`): false links 35 → 0,
+recall@1 0.743 → 1.000, precision@1 0.732 → 0.986, ties 36 → 0, whatever the
+pool order; abstention outside the pool unchanged (the undated Paltsits
+mentions are still linked to Victor Hugo). The margin of 20 and tolerance of
+2 give the same numbers as a first measure with a margin of 10 and no
+tolerance: every date on that corpus is an exact year. Pinned by
+`palomar.agent-dates-test` and
+`palomar.reconcile-test/a-candidate-whose-dates-are-incompatible-is-never-proposed`,
+`missing-dates-are-no-evidence`, `a-plain-name-is-still-a-mention`,
+`a-proposal-carries-its-evidence-into-the-ir`,
+`a-proposal-stays-with-the-mention-that-made-it`,
+`an-undated-mention-states-no-dates-verdict`.

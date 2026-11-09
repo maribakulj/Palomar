@@ -24,8 +24,26 @@
    id is its `entityId` when that is an IRI, else none — a local `recordId`
    such as `001` identifies nothing outside the file, so a match to it is
    never certifiable (ADR 0018). What the entry leaves out (functions,
-   relations, biography…) is listed under `:unread`."
+   relations, biography…) is listed under `:unread`.
+
+   A BnF INTERMARC authority record (`format=\"INTERMARC\" type=\"Authority\"`,
+   as the SRU serves it) is one entry: its `003` ARK as `:id`, its record
+   number (the `001` without `FRBNF` and its check character, the form a
+   bibliographic `$3` cites) as `:record-number`, the `100` `$a, $m` as label,
+   the `400`s as variants, the `100 $d` as dates, the `031 $a` whose `$2` says
+   ISNI as `:isni`, and the leader's position 9 as its kind (`p`: a person).
+   The tags it does not read are listed under `:unread`.
+
+   **Profiles** (lot M3, ADR 0038 amendment): an entry carries `:dates`, a
+   `palomar.agent-dates` life-dates profile, when its source states dates —
+   EAC-CPF `existDates`, MADS `birthDate`/`deathDate` (on the authority or the
+   real-world object it `identifiesRWO`), INTERMARC `100 $d`; SKOS has none —
+   and `:entity-type` (\"person\", \"corporateBody\", \"family\") when its source
+   states the kind. A date the parser cannot read is kept as text and
+   contributes nothing."
   (:require [clojure.string :as str]
+            [palomar.agent-dates :as dates]
+            [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.rdfxml :as rdfxml]
             [palomar.xml :as rx]))
@@ -55,6 +73,31 @@
       (some #(when (nil? (:lang %)) (:lit %)) ls)
       (:lit (first ls))))
 
+(def ^:private rdfs-label "http://www.w3.org/2000/01/rdf-schema#label")
+
+(defn- date-values
+  "The date texts of `s`'s `preds`: a literal, or a node's `rdfs:label` (as
+   id.loc.gov writes the dates of a real-world object)."
+  [idx s preds]
+  (distinct (for [o (objs idx s preds)
+                  t (if (:lit o) [(:lit o)] (lits idx (nt/term-key o) [rdfs-label]))]
+              t)))
+
+(defn- mads-dates
+  "The life-dates profile of MADS authority `s`: its `birthDate` and
+   `deathDate`, else those of the real-world objects it `identifiesRWO`; nil
+   when it states none."
+  [idx s]
+  (let [subjects (cons s (map nt/term-key (objs idx s (mads "identifiesRWO"))))
+        point    (fn [p] (some #(dates/parse-point %) (mapcat #(date-values idx % (mads p)) subjects)))
+        texts    (mapcat #(date-values idx % (into (mads "birthDate") (mads "deathDate"))) subjects)
+        profile  (cond-> {}
+                   (point "birthDate") (assoc :birth (point "birthDate"))
+                   (point "deathDate") (assoc :death (point "deathDate")))]
+    (cond
+      (seq profile) profile
+      (seq texts)   {:text (str/join ", " texts)})))
+
 (defn pool
   "The reconciliation pool of an authority graph `triples` (see the ns doc):
    `{:entries [{:id :label :variants}] :deprecated [{:id :label :replaced-by}]}`.
@@ -82,7 +125,8 @@
                ;; the MADS name class says what kind of agent it is (C7)
                (typed? idx s (into (mads "CorporateName") (mads "ConferenceName"))) (assoc :entity-type "corporateBody")
                (typed? idx s (mads "FamilyName"))                                  (assoc :entity-type "family")
-               (typed? idx s (mads "PersonalName"))                                (assoc :entity-type "person"))))
+               (typed? idx s (mads "PersonalName"))                                (assoc :entity-type "person")
+               (mads-dates idx s)                                                  (assoc :dates (mads-dates idx s)))))
       :deprecated
       (vec (for [s iri-subj
                  :when (and (typed? idx s (mads "Variant")) (not (typed? idx s authority)))]
@@ -100,6 +144,45 @@
   (some-> (str/join " " (map str/trim (filter string? (tree-seq map? :content el)))) (str/replace #"\s+" " ") str/trim not-empty))
 
 (defn- xattr [el nm] (some (fn [[k v]] (when (= nm (name k)) v)) (:attrs el)))
+
+(defn- eac-interval
+  "The interval of an EAC-CPF date element: its `@standardDate` (else its
+   text) as a point, kept approximate when its text says so, widened to its
+   `@notBefore` / `@notAfter` — never narrower than any of them."
+  [el]
+  (when el
+    (let [txt (xtext el)
+          std (xattr el "standardDate")
+          p   (if std (dates/qualify (dates/parse-point std) txt) (some-> txt dates/parse-point))
+          nb  (some-> (xattr el "notBefore") dates/parse-point)
+          na  (some-> (xattr el "notAfter") dates/parse-point)]
+      (cond
+        p           (dates/hull [p nb na])
+        (or nb na)  (cond-> {:from (:from nb) :to (:to na)} (or std txt) (assoc :text (or std txt)))))))
+
+(defn- eac-member
+  "The profile of one member of an `existDates`: a `dateRange`'s `fromDate` is
+   the birth (a body's start), its `toDate` the death (its end); a `date` is
+   read as a span (`1802-1870`)."
+  [el]
+  (case (local (:tag el))
+    "dateRange" (let [b (eac-interval (first (kids el "fromDate")))
+                      d (eac-interval (first (kids el "toDate")))]
+                  (cond-> {} b (assoc :birth b) d (assoc :death d)))
+    "date"      (dissoc (dates/parse-life-dates (or (xattr el "standardDate") (xtext el))) :text)
+    nil))
+
+(defn- eac-dates
+  "The life-dates profile of an EAC-CPF `existDates` element (see
+   `eac-member`); a `dateSet`'s members are alternatives
+   (`dates/alternatives`). Nil without `existDates`; `{:text}` alone when
+   nothing is read."
+  [el]
+  (when el
+    (let [inner   (or (first (kids el "dateSet")) el)
+          members (keep eac-member (kids inner))
+          read    (if (seq (kids el "dateSet")) (dates/alternatives members) (first members))]
+      (merge (when-let [t (xtext el)] {:text t}) read))))
 
 (defn eac-pool
   "The reconciliation pool of EAC-CPF document `xml` (EAC-CPF 1.x or 2.0):
@@ -121,33 +204,97 @@
                      :lang       (or (xattr n "languageOfElement") (some #(xattr % "languageOfElement") parts) (xattr n "lang"))})
          auth     (filter :authorized named)
          label    (:name (or (some #(when (and lang (= lang (:lang %))) %) auth) (first auth) (first named)))
-         eid      (some xtext (kids identity "entityId"))]
+         eid      (some xtext (kids identity "entityId"))
+         desc     (first (kids cpf "description"))
+         life     (eac-dates (first (kids desc "existDates")))]
      {:entries (if label
-                 [{:id          (when (and eid (nil? (nt/iri-problem eid))) eid)
-                   :label       label
-                   :variants    (vec (remove #{label} (distinct (map :name named))))
-                   :entity-type (some #(or (xattr % "value") (xtext %)) (kids identity "entityType"))}]
+                 [(cond-> {:id          (when (and eid (nil? (nt/iri-problem eid))) eid)
+                           :label       label
+                           :variants    (vec (remove #{label} (distinct (map :name named))))
+                           :entity-type (some #(or (xattr % "value") (xtext %)) (kids identity "entityType"))}
+                    life (assoc :dates life))]
                  [])
-      :unread  (vec (concat (map (comp local :tag) (kids (first (kids cpf "description"))))
+      ;; existDates is read when the parser reads a date of it
+      :unread  (vec (concat (remove #(and (= "existDates" %) (dates/dated? life))
+                                    (map (comp local :tag) (kids desc)))
                             (when (seq (kids cpf "relations")) ["relations"])))})))
+
+(defn- subfields-of [fragment] (get-in fragment [:locator :subfields]))
+
+(defn- first-sub [sfs code] (some (fn [[c v]] (when (= code c) (some-> v str/trim not-empty))) sfs))
+
+(defn- heading
+  "The name `$a, $m` of an INTERMARC heading's subfields (the first of each),
+   as the bibliographic `:map/intermarc-agent` mapping recombines a 100."
+  [sfs]
+  (let [parts (keep #(first-sub sfs %) ["a" "m"])]
+    (when (seq parts) (str/join ", " parts))))
+
+(def intermarc-read-tags
+  "The INTERMARC authority tags an entry reads (and the leader)."
+  #{"001" "003" "031" "100" "400"})
+
+(def ^:private intermarc-kinds
+  "The kinds the INTERMARC authority leader's position 9 states, as entity
+   types: only a person here. A kind it does not name is left unstated."
+  {\p "person"})
+
+(defn intermarc-pool
+  "The reconciliation pool of BnF INTERMARC authority records `xml` (see the ns
+   doc): `{:entries [{:id :record-number :label :variants :dates :entity-type
+   :isni}] :unread [tag…]}`. A record without a `100` is no entry."
+  [xml]
+  (let [records (intermarc/ingest xml {})
+        fields  (fn [r tag] (filter #(= tag (get-in % [:locator :tag])) (:fragments r)))
+        value   (fn [r tag] (some-> (first (fields r tag)) (get-in [:locator :value]) str/trim))
+        leader  (fn [r] (some #(when (= :intermarc/leader (:predicate %)) (:value %)) (:assertions r)))]
+    {:entries
+     (vec (for [r records
+                :let [h     (subfields-of (first (fields r "100")))
+                      label (heading h)]
+                :when label
+                :let [ark   (value r "003")
+                      n     (some->> (value r "001") (re-find #"^FRBNF(\d{8})") second)
+                      life  (dates/parse-life-dates (first-sub h "d"))
+                      isni  (some #(let [sfs (subfields-of %)]
+                                     (when (some-> (first-sub sfs "2") (str/starts-with? "ISNI")) (first-sub sfs "a")))
+                                  (fields r "031"))
+                      kind  (some-> (leader r) (as-> l (when (< 9 (count l)) (intermarc-kinds (nth l 9)))))]]
+            (cond-> {:id       (when (and ark (nil? (nt/iri-problem ark))) ark)
+                     :label    label
+                     :variants (vec (distinct (keep #(heading (subfields-of %)) (fields r "400"))))}
+              n    (assoc :record-number n)
+              life (assoc :dates life)
+              kind (assoc :entity-type kind)
+              isni (assoc :isni isni))))
+     :unread (vec (sort (distinct (for [r records
+                                        f (:fragments r)
+                                        :let [t (get-in f [:locator :tag])]
+                                        :when (and t (not (intermarc-read-tags t)))]
+                                    t))))}))
 
 (defn read-pool
   "The reconciliation pool of authority file `s` in `format` (`:rdfxml` or
-   `:ntriples`), or an EAC-CPF record (`:eac-cpf`)."
+   `:ntriples`), an EAC-CPF record (`:eac-cpf`), or BnF INTERMARC authority
+   records (`:intermarc`)."
   ([format s] (read-pool format s {}))
   ([format s opts]
    (case format
      :rdfxml   (pool (rdfxml/parse s) opts)
      :ntriples (pool (nt/parse s) opts)
      :eac-cpf  (eac-pool s opts)
-     (throw (ex-info (str "authorities: cannot read " (pr-str format) " (rdfxml, ntriples or eac-cpf)")
+     :intermarc (intermarc-pool s)
+     (throw (ex-info (str "authorities: cannot read " (pr-str format) " (rdfxml, ntriples, eac-cpf or intermarc)")
                      {:format format})))))
 
 (defn sniff-format
   "The format of authority file `s` named `path`: N-Triples by its `.nt`
-   extension, EAC-CPF by its root element, else RDF/XML."
+   extension, EAC-CPF by its root element, INTERMARC authority records by a
+   MARCXChange record of format INTERMARC and type Authority, else RDF/XML."
   [path s]
-  (cond
-    (str/ends-with? (str path) ".nt")                     :ntriples
-    (re-find #"<(eac|eac-cpf)[\s>]" (subs s 0 (min 4000 (count s)))) :eac-cpf
-    :else                                                 :rdfxml))
+  (let [head (subs s 0 (min 4000 (count s)))]
+    (cond
+      (str/ends-with? (str path) ".nt")                                    :ntriples
+      (re-find #"<(eac|eac-cpf)[\s>]" head)                                :eac-cpf
+      (re-find #"<(?:\w+:)?record\b[^>]*format=\"INTERMARC\"[^>]*type=\"Authority\"" s) :intermarc
+      :else                                                                :rdfxml)))
