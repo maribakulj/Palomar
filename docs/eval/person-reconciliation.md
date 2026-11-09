@@ -1,4 +1,4 @@
-# Person reconciliation — the baseline, and dates as contrary evidence (measured)
+# Person reconciliation — the baseline, dates as contrary evidence, and a Fellegi-Sunter score (measured)
 
 `palomar.eval.person-reconciliation-test`, on 150 real BnF records. Corpus and
 gold: [`test/fixtures/er-gold/bnf-persons/`](../../test/fixtures/er-gold/bnf-persons/README.md).
@@ -12,9 +12,12 @@ Palomar's name-based reconciliation, the path for a name with no authority id,
 does on real homonyms. This eval measures it as the code stands. Its numbers
 are the **baseline** later lots will be measured against (dates as contrary
 evidence, a Fellegi-Sunter score, constrained clustering). Lot M3 (dates as
-contrary evidence) is measured in [After dates (M3)](#after-dates-m3). The
+contrary evidence) is measured in [After dates (M3)](#after-dates-m3), lot M4
+(a Fellegi-Sunter score, abstention, calibration) in
+[A Fellegi-Sunter score (M4)](#a-fellegi-sunter-score-m4). The
 numbers are measurements, not a guarantee: no row in `guarantees.md` cites
-them (the behaviour of the date block itself is guaranteed, by unit tests).
+them (the behaviour of the date block, of abstention and of the confidence
+rule is guaranteed, by unit tests).
 
 ## The corpus
 
@@ -262,6 +265,163 @@ The record-scoped and same-name rules use no matcher and do not move.
   `$d`, written like the authorities'; a transcribed or approximate date
   would test the uncertainty rules, which this corpus barely does.
 
+## A Fellegi-Sunter score (M4)
+
+Lot M4 replaces the Jaccard decision with a Fellegi-Sunter score
+(`palomar.agent-match`; ADR 0018 amendment M4), run through
+`reconcile/agent-candidates` with `{:model m}` (`task-a-fs`, `:top-1-fs`). The
+date block of M3 is kept as it is: an incompatible candidate is rejected,
+never weighed. The numbers below are those of the revised model (after a
+contradictory review of a first version, whose confidence claims did not
+hold).
+
+### Method
+
+- **Comparison vector.** Per (mention, entry): a `:name` level (the best over
+  the entry's heading and variants: exact heading; same surname with
+  forenames compatible as initials; same tokens in another order; a surname
+  one edit away; same surname with overlapping, missing or different
+  forenames; then, surnames differing, Jaccard >= 0.5, > 0, none), a `:form`
+  (heading, or a variant only), and a `:dates` level (agree within the
+  tolerance, compatible, unknown). An entry whose name level is `:none` is no
+  candidate.
+- **u**, label-free, from the pool against itself: the 1 056 ordered pairs
+  of two distinct authorities for the name and form, the 264 the dates do
+  not block for the dates. Transductive: the pool is the gold's own
+  authorities.
+- **m**, from the true pairs (entry = `$3`), **leave-one-family-out**: a
+  mention is scored by the model fitted on the four other families. The
+  prior is the training folds' share of true pairs among unblocked pairs
+  (0.111 to 0.179).
+- **Only what was measured weighs**: a level reached by fewer than 5 pairs
+  on both sides weighs 0; on one side only, its weight is the bound 5/N
+  gives for the other, in the direction it proves; unknown dates weigh 0 by
+  rule (the estimate, -4.6, measures that BnF headings carry `$d` and that
+  the block removed dated non-matches); name weights never increase along
+  the order of agreement, and a disagreement never weighs for.
+- **Term frequency**, from the pool matched against: log2(ū / u_s), u_s the
+  surname's share of the pool's headings, ū = Σn³/(NΣn²) (2/34 on M2: Dumas
+  and Hugo, 3 headings, -0.63; a surname held once, +0.96), on a positive
+  agreement only.
+- **Decision**: posterior >= 0.95 proposed, 0.5 to 0.95 for review, below 0.5
+  abstained; a mention with several candidates at or above 0.5 has them all
+  for review.
+- **EM** (m and λ unsupervised, u fixed) for comparison.
+
+The weights of the model fitted on all five families (prior 0.129, weight
+-2.76; each fold's, fitted on four, differ only in the dates and the
+bounds of the last two name levels):
+
+| feature | level | same persons (of 136) | different persons | weight |
+|---------|-------|---:|---:|-------:|
+| name  | exact | 136 | 2 of 1 056 | +7.72 (u bounded by 5/1 056) |
+| name  | initials, same tokens, typo, surname only | 0 | 0 | 0 (unmeasured) |
+| name  | forename overlap, forenames differ, Jaccard >= 0.5 other surname | 0 | 12, 10, 30 | 0 (bound proves nothing) |
+| name  | Jaccard > 0, other surname | 0 | 146 | at most -1.91 |
+| name  | none | 0 | 856 | at most -4.46 |
+| form  | heading / variant | 136 / 0 | 1 042 / 14 | +0.02 / 0 |
+| dates | agree / compatible / unknown | 131 / 0 / 5 | 20 / 0 / 244 of 264 | +3.67 / 0 / 0 (by rule) |
+
+Every true pair on this corpus is an exact heading: the model can identify
+an exact heading and nothing else.
+
+### Task A, M3 and M4
+
+| family  | R@1 M3 | R@1 M4 | P@1 M3 | P@1 M4 | false links M3 / M4 | in-pool ties M3 / M4 | abstained in pool M4 (outright only) | not in pool linked M3 / M4 |
+|---------|------:|------:|------:|------:|:---:|:---:|:---:|:---:|
+| Dumas   | 1.000 | 1.000 | 1.000 | 1.000 | 0 / 0 | 0 / 0 | 0 (0)  | 0 / 0 |
+| Hugo    | 1.000 | 1.000 | 1.000 | 1.000 | 0 / 0 | 0 / 0 | 0 (0)  | 0 / 0 |
+| Hetzel  | 1.000 | 1.000 | 1.000 | 1.000 | 0 / 0 | 0 / 0 | 0 (1)  | 0 / 0 |
+| Verne   | 1.000 | 1.000 | 1.000 | 1.000 | 0 / 0 | 0 / 0 | 0 (0)  | 0 / 0 |
+| others  | 1.000 | 1.000 | 0.959 | 1.000 | 0 / 0 | 0 / 0 | 0 (24) | 2 / 0 |
+| **all** | 1.000 | 1.000 | 0.986 | 1.000 | 0 / 0 | 0 / 0 | 0 (25) | 2 / 0 |
+
+M4 counts a proposal for review as the top proposal. Counting only outright
+proposals, recall@1 is 111/136 (0.816), precision@1 still 1.000. The 26
+mentions whose top proposal is for review all have a competitor above 0.5:
+20 "Férat, Jules" (1829-1906) against Jules Verne (1828-1905, Jaccard > 0
+with another surname, at most -1.91, against +3.67 for dates that agree);
+three "Víctor Hugo" authors born 1948-1951, each against the others; Hetzel
+and his pseudonym Stahl, each against the other; and the undetermined,
+undated "Dumas, Alexandre", tied between père and fils (the one tie, as in
+M3). The 5 in-pool undated mentions are proposed outright: missing dates
+weigh nothing. The 5 mentions whose authority is not in the pool are all
+abstained (Paltsits at 0.18). 577 candidates are rejected for their dates,
+never a mention's own authority.
+
+### Task B, M3 and M4
+
+| rule             | merged pairs | right | false merges | precision | recall | F1    | B-cubed P | B-cubed R |
+|------------------|-------------:|------:|-------------:|----------:|-------:|------:|----------:|----------:|
+| top-1 with dates | 1 116        | 1 114 | 2            | 0.998     | 1.000  | 0.999 | 0.991     | 1.000     |
+| top-1 M4         | 1 113        | 1 113 | 0            | 1.000     | 0.999  | 1.000 | 1.000     | 0.993     |
+
+The two Paltsits mentions, abstained, stay apart: their pair is the one true
+pair missed, and no false merge is left.
+
+### Calibration
+
+The held-out predictions: every scored candidate (proposed, for review or
+abstained) of the 141 determined mentions, each from its family's held-out
+model. 351 predictions, but **125 distinct (mention, candidate) pairs and
+33 distinct true mentions** (35 identical "Dumas, Alexandre" mentions are
+one), 7 distinct pairs in the review band. **Brier 0.0360, ECE 0.1082,
+largest bin gap 0.740.**
+
+| bin | predictions | mean predicted | observed |
+|-----|------:|---------------:|---------:|
+| [0.0, 0.1) | 113 | 0.0697 | 0.000 |
+| [0.1, 0.2) | 53  | 0.1285 | 0.000 |
+| [0.3, 0.4) | 23  | 0.3716 | 0.000 |
+| [0.5, 0.6) | 24  | 0.5397 | 0.000 |
+| [0.6, 0.7) | 1   | 0.6517 | 0.000 |
+| [0.7, 0.8) | 1   | 0.7401 | 0.000 |
+| [0.9, 1.0] | 136 | 0.9969 | 1.000 |
+
+**The bar is not met, so no confidence is written.** The rule (ADR 0018
+amendment M4, ADR 0005 L2): a posterior is an alignment's `:confidence` only
+when the model's held-out calibration, on the same pool, meets ECE <= 0.05,
+no bin off by more than 0.1, at least 300 distinct pairs and 100 distinct
+true mentions (and, for a review decision, 30 distinct pairs in the review
+band). M2 has 33 distinct true mentions, an ECE of 0.108 and an empty review
+band. The five fold models are not calibrated; none of the 164 proposals
+states a confidence. One report, pooled over the folds, is attached to every
+fold model; the per-fold reports (distinct pairs / true mentions: Dumas
+17 / 6, Hetzel 3 / 2, Hugo 12 / 3, Verne 3 / 2, others 90 / 20) meet the bar
+no better.
+
+What the table shows: the model is right where it is sure (136 at 0.997,
+all true) and does not know elsewhere — its negatives sit at 0.07 to 0.54
+because the weights that would push them down (different surnames, different
+forenames) rest on bounds, not measures. EM, measured the same way, gives
+the same top proposals, 88 outright, Brier 0.0832 and ECE 0.1776.
+
+### Stress set (synthetic)
+
+**Synthetic, derived from the gold**: each distinct (heading, dates, truth)
+of the in-pool determined mentions (33) perturbed five ways — forenames as
+initials ("Hetzel, P.-J."), forenames dropped ("Hetzel"), order reversed
+("Pierre-Jules Hetzel"), accents removed (only the 11 headings that have
+some), a typo (the surname's 2nd and 3rd letters swapped, "Htezel,
+Pierre-Jules"); the dates kept. Not a sample of real cataloguing.
+
+| perturbation | n | truth a candidate, M3 (Jaccard >= 0.5) | truth a candidate, M4 | top proposal right, M4 | proposed outright, M4 |
+|--------------|--:|---:|---:|---:|---:|
+| initials         | 33  | 7  | 33  | 29  | 1  |
+| dropped forename | 33  | 29 | 33  | 29  | 1  |
+| reversed         | 33  | 33 | 33  | 29  | 0  |
+| accents removed  | 11  | 11 | 11  | 11  | 8  |
+| typo             | 33  | 17 | 33  | 29  | 0  |
+| **all**          | 143 | 97 | 143 | 127 | 10 |
+
+The model's candidates hold every truth; the Jaccard misses initials and
+typos. Every perturbed level but accents (which `text/norm` undoes) weighs
+0, unmeasured: what ranks the truth first within a surname is the dates and
+the surname frequency, not the name level, and with two namesakes dated
+alike the model cannot choose ("Hugo, V." scores Victor and Georges-Victor
+alike, both abstained). The ranking the first version reported here rested
+on weights read from pseudo-counts; those are now 0.
+
 ## Limits
 
 - One institution, 150 records from three author queries: the families are
@@ -284,3 +444,13 @@ The record-scoped and same-name rules use no matcher and do not move.
 - The dates compared are each heading's `$d`. The INTERMARC authority `008`
   also carries full birth and death dates for some records; the reader does
   not read it yet (it is listed as unread).
+- The M4 model is learnt from 136 true pairs that are all exact headings,
+  33 distinct: it measures one level of agreement, and its calibration bar
+  is not met (33 distinct true mentions against 100, an empty review band).
+  The thresholds (0.95, 0.5) and the bar were set before measuring, not
+  tuned, and nothing here shows they are right elsewhere.
+- u and the surname frequencies are read from the pool, which is the gold's
+  own authorities (transductive): 33 headings compared with each other
+  stand for "two different persons". A real pool, with distractors, would
+  give other u, and a calibration measured on one pool says nothing of
+  another (the code refuses to carry it over).

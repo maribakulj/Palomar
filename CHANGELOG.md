@@ -18,6 +18,18 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **A Fellegi-Sunter score for agent reconciliation** (lot M4; ADR 0018
+  amendment): `palomar.agent-match` compares a mention with a candidate into
+  name, form and dates levels, weighs each by log2(m/u) from observed pairs
+  only (unmeasured levels and unknown dates weigh 0, disagreements never
+  weigh for), with a surname term-frequency adjustment from the pool matched
+  against, and decides by posterior: proposed (at most one per mention), for
+  review, or abstained (`reconcile/agent-candidates` with `{:model m}`).
+  Incompatible dates still block. A posterior is written as an alignment's
+  `:confidence` only with a proof that the model's held-out calibration, on
+  the same pool, meets its bar; on the BnF person gold it does not, so none
+  is written. The name-only Jaccard is no longer written as a confidence.
+  Measured in `docs/eval/person-reconciliation.md`.
 - **Rights through the floor** (lot M1; ADR 0003 and 0021 amendments): a
   IIIF manifest's `rights` (scoped to the digital surrogate),
   `requiredStatement` (value and label apart), `provider` (with its id), and a
