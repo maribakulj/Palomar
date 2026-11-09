@@ -67,3 +67,21 @@ Origin information (source, pass, rule) lives in `provenance`, not in
   first-class operation.
 - Status transitions are small and auditable; the provenance trail records
   every transition with its rule and timestamp.
+
+## Amendment (review of 2026-11-09, L2): status, confidence, justification
+
+Three things an assertion may say about itself, kept apart:
+- `:status` is where the assertion stands in curation (`:proposed`,
+  `:accepted`, …);
+- `:confidence` is a measure, present only when something measured it: a
+  reconciliation's score, a mapping or a rule that states one. Neither
+  `model/assertion`, nor a rule of the DSL (`:assert`, `:construct`), nor a
+  mapping gives one by default; before, each gave 1.0, so a proposal said to
+  be uncertain (a transfer of title, an attribution "attributed to") carried
+  the highest score;
+- the justification is its provenance: the rule, the evidence, the derivation.
+
+`curate/confidence-at-least` is the guard for a threshold: an assertion of
+no confidence never passes it. `(accept-when (confidence-at-least 0.9))`
+accepts what was scored 0.9 or more and routes the rest, unscored included,
+to review.

@@ -75,7 +75,7 @@ this shape:
                        :as   :language}
  :mapping/on-empty    :skip               ; optional, :skip (default) | :diagnostic | :default
  :mapping/default     nil                 ; required iff :on-empty is :default
- :mapping/confidence  1.0                 ; optional, default 1.0
+ :mapping/confidence  1.0                 ; optional; none when absent (L2)
  :mapping/doc         "..."}              ; optional
 ```
 
@@ -322,3 +322,8 @@ not a runtime one.
   colliding `:mapping/id`s — the registry-level uniqueness-check option.
   Embedding the plugin id in the derived rule id remains available if
   same-named mappings across plugins ever become a legitimate need.
+
+## Amendment (review of 2026-11-09, L2): no default confidence
+
+A mapping that states no `:mapping/confidence` gives its assertions none.
+The default of 1.0 was no measure, and a threshold read it as one.

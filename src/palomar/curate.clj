@@ -206,10 +206,17 @@
 
 (defn accept-when
   "Policy: accept proposals satisfying `pred`, route the rest to review. Composes
-   a promotion guard (ADR 0018) — e.g. `(accept-when #(>= (:confidence %) 0.9))`
+   a promotion guard (ADR 0018) — e.g. `(accept-when (confidence-at-least 0.9))`
    auto-accepts high-confidence claims and flags the rest, never auto-rejecting."
   [pred]
   (fn [a] (if (pred a) :accept :review)))
+
+(defn confidence-at-least
+  "A guard for `accept-when`: the assertion states a confidence of at least
+   `x`. One that states none is not scored, so it never passes: a threshold
+   accepts a measure, never its absence (review of 2026-11-09, L2)."
+  [x]
+  (fn [a] (boolean (some-> (:confidence a) (>= x)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Reporting

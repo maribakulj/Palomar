@@ -119,7 +119,7 @@
     (is (= :record/r1 (:subject a)))
     (is (= :canon/title (:predicate a)))
     (is (= "Les Misérables" (:value a)))
-    (is (= 1.0 (:confidence a)))
+    (is (not (contains? a :confidence)) "no confidence is made up (L2)")
     (is (= :asserted (:status a)))
     (is (not (contains? a :provenance)))
     (is (model/valid-assertion? a))))

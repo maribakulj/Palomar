@@ -105,7 +105,8 @@
   "Append assertion `a`, unless the same fact (`assertion-identity`, ADR 0008/0027)
    is already there: then the first stays the fact, with the status
    `merge-status` picks, and `a`'s provenance, when it is a justification not yet
-   recorded, joins the first's `[:provenance :also]`. Two rules deriving one fact
+   recorded, joins the first's `[:provenance :also]`; `a`'s confidence, when the
+   first has none, becomes its. Two rules deriving one fact
    give one assertion with both paths of proof (audit S09)."
   ([record a] (merge-assertion record a nil))
   ([record a index]
@@ -128,6 +129,11 @@
                 (cond-> as
                   (not= status (:status (nth as idx)))
                   (assoc-in [idx :status] status)
+
+                  ;; a score is a measure: a duplicate that brings one gives it
+                  ;; to the fact that had none, whichever came first (L2 review)
+                  (and (nil? (:confidence (nth as idx))) (some? (:confidence a)))
+                  (assoc-in [idx :confidence] (:confidence a))
 
                   (not (or (nil? p) (contains? known p)))
                   (assoc-in [idx :provenance :also] (conj also p)))))))))

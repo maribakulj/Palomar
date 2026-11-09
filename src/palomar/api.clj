@@ -91,6 +91,12 @@
   [pred]
   (curate/accept-when pred))
 
+(defn confidence-at-least
+  "A guard for `accept-when`: the claim states a confidence of at least `x`.
+   A claim of no confidence never passes (review of 2026-11-09, L2)."
+  [x]
+  (curate/confidence-at-least x))
+
 (defn curate
   "Decide the pending claims of `records` with `decide` (a policy, or a
    function of a claim returning `:accept`, `:reject`, `:review` or `[verdict

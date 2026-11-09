@@ -225,10 +225,10 @@
           cr   (mapping/compile-mapping m stdlib)
           prod (first (rules/apply-rule cr (record-with :native/x ["v"])))]
       (is (= 0.5 (:confidence (:value prod))))))
-  (testing "default confidence is 1.0"
+  (testing "a mapping of no stated confidence states none (L2)"
     (let [cr   (mapping/compile-mapping minimal-mapping stdlib)
           prod (first (rules/apply-rule cr (record-with :native/x ["v"])))]
-      (is (= 1.0 (:confidence (:value prod)))))))
+      (is (not (contains? (:value prod) :confidence))))))
 
 (deftest flat-mapping-provenance-has-rule-and-phase
   (let [cr   (mapping/compile-mapping minimal-mapping stdlib)

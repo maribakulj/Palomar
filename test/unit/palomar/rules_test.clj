@@ -907,3 +907,38 @@
                             (filter #(= :entity (:kind %))) (map :value)))]
       (is (= ["http://d-nb.info/gnd/118512374"] (map :iri (ents "http://d-nb.info/gnd/118512374"))))
       (is (= [nil] (map :iri (ents ":lido/x|1.1|1.1"))) "a local key names no IRI"))))
+
+;; ---------------------------------------------------------------------------
+;; Confidence: stated, never made up (review of 2026-11-09, L2)
+;; ---------------------------------------------------------------------------
+
+(deftest a-rule-states-no-confidence-it-was-not-given
+  (testing "an :assert or a :construct carries no :confidence unless the rule states one; a proposal is not 1.0"
+    (let [asserted (produce {:id :r/a :phase :infer
+                             :match '[[?r :canon/title ?t]]
+                             :produce {:assert {:subject '?r :predicate :x/seen :value '?t}}}
+                            book)
+          built    (produce {:id :r/c :phase :infer
+                             :match '[[?r :canon/title ?t]]
+                             :produce {:construct '[[?r :x/maybe ?t {:status :proposed}]
+                                                    [?r :x/scored ?t {:status :proposed :confidence 0.6}]]}}
+                            book)
+          as       (map :value (filter #(= :assertion (:kind %)) (concat asserted built)))]
+      (is (= 3 (count as)))
+      (is (not-any? #(contains? % :confidence) (remove #(= :x/scored (:predicate %)) as)))
+      (is (= [0.6] (keep #(when (= :x/scored (:predicate %)) (:confidence %)) as)) "a stated confidence is kept")
+      (is (every? model/valid-assertion? as)))))
+
+(deftest a-construct-confidence-is-a-stated-measure
+  (testing "a :construct triple's :confidence is a number from 0 to 1, refused at compile time otherwise (L2 review)"
+    (doseq [bad ['{:confidence ?t} '{:confidence 1.5} '{:confidence "high"} '{:certainty 0.5}]]
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (rules/compile-rule {:id :r/bad :phase :infer :match '[[?r :canon/title ?t]]
+                                        :produce {:construct [['?r :x/v '?t bad]]}}))
+          (pr-str bad)))
+    (let [[a] (map :value (filter #(= :assertion (:kind %))
+                                  (produce {:id :r/one :phase :infer :match '[[?r :canon/title ?t]]
+                                            :produce {:construct '[[?r :x/v ?t {:confidence 1}]]}}
+                                           book)))]
+      (is (= 1.0 (:confidence a)) "a whole number is read as the double it means")
+      (is (model/valid-assertion? a)))))

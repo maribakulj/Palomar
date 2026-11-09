@@ -338,3 +338,14 @@
           out (rt/merge-productions (book :r/e) [{:kind :entity :value e} {:kind :entity :value e}])]
       (is (= [e] (:entities out)))
       (is (empty? (:diagnostics out))))))
+
+(deftest a-merge-keeps-the-score-a-duplicate-brings
+  (testing "one fact derived unscored, then scored: the merged fact keeps the score, in either order (L2 review)"
+    (let [r   (model/record {:id :rec/a :kind :test})
+          u   (model/assertion {:subject :rec/a :predicate :p/x :value "v" :status :proposed
+                                :provenance (model/provenance {:rule :r/u :pass :infer})})
+          s   (model/assertion {:subject :rec/a :predicate :p/x :value "v" :status :proposed :confidence 0.95
+                                :provenance (model/provenance {:rule :r/s :pass :infer})})
+          one (fn [xs] (:assertions (rt/merge-productions r (map #(hash-map :kind :assertion :value %) xs))))]
+      (is (= [0.95] (map :confidence (one [u s]))))
+      (is (= [0.95] (map :confidence (one [s u])))))))
