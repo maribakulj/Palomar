@@ -108,15 +108,45 @@
     (let [bytes (if (bytes? content) content (.getBytes (str content) "UTF-8"))]
       {:sha256 (model/sha256-hex bytes 64) :bytes (alength ^bytes bytes)})))
 
+(def ^:private vocab-anchor
+  "A vocabulary every build carries: where the vocabularies are found."
+  "palomar/vocab/lido/event-types.edn")
+
+(defn- vocab-paths
+  "The classpath paths of the vocabularies, found beside the anchor: in a
+   source tree, or in the jar that carries it, under whatever prefix the
+   jar's classpath root has (`WEB-INF/classes/`, `BOOT-INF/classes/`)."
+  [^java.net.URL url]
+  (case (.getProtocol url)
+    "file" (let [root (.getParentFile (.getParentFile (io/file url)))
+                 base (.toPath (.getParentFile (.getParentFile root)))]
+             (for [f (file-seq root) :when (.isFile ^java.io.File f)]
+               (str/replace (str (.relativize base (.toPath ^java.io.File f))) java.io.File/separator "/")))
+    "jar"  (let [conn   (doto ^java.net.JarURLConnection (.openConnection url) (.setUseCaches false))
+                 entry  (.getEntryName conn)
+                 prefix (subs entry 0 (- (count entry) (count vocab-anchor)))]
+             (with-open [jar (.getJarFile conn)]
+               (doall (for [e (enumeration-seq (.entries jar))
+                            :let [path (.getName ^java.util.jar.JarEntry e)]
+                            :when (and (str/starts-with? path (str prefix "palomar/vocab/"))
+                                       (not (.isDirectory ^java.util.jar.JarEntry e)))]
+                        (subs path (count prefix))))))
+    (throw (ex-info "manifest: cannot read the vocabularies" {:url (str url)}))))
+
 (defn- vocabularies
   "The vocabularies and lookup tables the rules and the code decide by, each
-   fingerprinted: data now, so part of what a run ran (post-audit 8, K6)."
+   fingerprinted by its bytes and named by its classpath path: data now, so
+   part of what a run ran (post-audit 8, K6). Listed from the source tree or
+   from the jar that carries them (review of 2026-11-09, L3), and each read
+   as the code reads it, by its path on the classpath: a file another root
+   puts first is the one fingerprinted (L3 review)."
   []
-  (when-let [root (io/resource "palomar/vocab")]
-    (when (= "file" (.getProtocol root))
-      (vec (for [f (sort-by str (file-seq (io/file root))) :when (.isFile ^java.io.File f)]
-             (assoc (fingerprint f) :path (str "palomar/vocab/" (str/replace (str (.relativize (.toPath (io/file root)) (.toPath ^java.io.File f)))
-                                                                             java.io.File/separator "/"))))))))
+  (when-let [url (io/resource vocab-anchor)]
+    (let [vs (vec (for [p (sort (distinct (vocab-paths url)))]
+                    (assoc (with-open [in (io/input-stream (io/resource p))] (fingerprint (.readAllBytes in))) :path p)))]
+      (when (empty? vs)
+        (throw (ex-info "manifest: the vocabularies were not found beside their anchor" {:url (str url)})))
+      vs)))
 
 (defn- plugin-entry [plugin]
   (cond-> {:id           (:id plugin)
@@ -136,7 +166,8 @@
   [{:keys [from to opts inputs outputs loss started-at finished-at external]}]
   (let [onto  (for [p ontology/vendored :let [f (io/file p)] :when (.exists f)]
                 (assoc (fingerprint f) :path p))
-        rules (concat (map :mapping/id (:mapping (spokes/plugin from))) (map :id (:rules canonical/plugin)))]
+        rules (concat (map :mapping/id (:mapping (spokes/plugin from))) (map :id (:rules canonical/plugin)))
+        vocabs (vocabularies)]
     (cond-> {:manifest/version manifest-version
              :palomar          (cond-> (assoc (build-info) :code (code-fingerprint) :runtime (runtime-info))
                                  (dependencies) (assoc :dependencies (dependencies)))
@@ -153,7 +184,7 @@
              :outputs          (mapv #(assoc (fingerprint (:content %)) :path (:path %)) outputs)
              :options          (or opts {})}
       (seq rules)  (assoc :rules (vec (sort rules)))
-      (seq (vocabularies)) (assoc :vocabularies (vocabularies))
+      (seq vocabs) (assoc :vocabularies vocabs)
       loss         (assoc :loss (loss-summary loss))
       started-at   (assoc :started-at started-at)
       finished-at  (assoc :finished-at finished-at)

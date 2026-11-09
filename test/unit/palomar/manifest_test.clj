@@ -90,3 +90,51 @@
   (testing "a pipe is read once: the manifest names it and reads it no more (post-audit 8, K6 review)"
     (is (= {:path "-" :fingerprinted? false}
            (first (:inputs (manifest/manifest {:from :dc :to :ntriples :inputs [{:path "-" :content nil}]})))))))
+
+(defn- vocab-jar
+  "A jar of `resources/palomar/vocab` under `prefix` (\"\" or a classpath
+   root inside the jar, `WEB-INF/classes/`), as a packaged Palomar carries it."
+  ^java.io.File [prefix]
+  (let [jar  (java.io.File/createTempFile "palomar-vocab-" ".jar")
+        root (java.io.File. "resources")]
+    (with-open [out (java.util.jar.JarOutputStream. (java.io.FileOutputStream. jar))]
+      (doseq [f (sort-by str (file-seq (java.io.File. root "palomar/vocab")))
+              :when (.isFile ^java.io.File f)
+              :let [p (str/replace (str (.relativize (.toPath root) (.toPath ^java.io.File f))) java.io.File/separator "/")]]
+        (.putNextEntry out (java.util.jar.JarEntry. (str prefix p)))
+        (.write out (java.nio.file.Files/readAllBytes (.toPath ^java.io.File f)))
+        (.closeEntry out)))
+    jar))
+
+(defn- vocabularies-from
+  "`manifest`'s vocabularies, read with the classpath `urls` alone."
+  [urls]
+  (let [t (Thread/currentThread) before (.getContextClassLoader t)]
+    (with-open [cl (java.net.URLClassLoader. (into-array java.net.URL urls) nil)]
+      (try (.setContextClassLoader t cl) (#'manifest/vocabularies)
+           (finally (.setContextClassLoader t before))))))
+
+(deftest the-vocabularies-are-listed-from-a-jar-as-from-a-checkout
+  (testing "packaged in a jar, at its top or under a classpath root inside it, the vocabularies are fingerprinted as from the source tree: same paths, same digests (review of 2026-11-09, L3)"
+    (let [checkout (:vocabularies (manifest/manifest {:from :dc :to :ntriples}))]
+      (is (some #(str/ends-with? (:path %) "attribution-qualifiers.edn") checkout))
+      (doseq [prefix ["" "WEB-INF/classes/"]]
+        (let [jar (vocab-jar prefix)
+              url (if (= "" prefix) (.toURL (.toURI jar)) (java.net.URL. (str "jar:" (.toURI jar) "!/" prefix)))]
+          (try (is (= checkout (vocabularies-from [url])) prefix)
+               (finally (.delete jar))))))))
+
+(deftest a-vocabulary-is-fingerprinted-as-the-code-reads-it
+  (testing "a root that puts a vocabulary first, before the jar, is the one fingerprinted (L3 review)"
+    (let [jar  (vocab-jar "")
+          over (.toFile (java.nio.file.Files/createTempDirectory "palomar-over-" (make-array java.nio.file.attribute.FileAttribute 0)))
+          f    (io/file over "palomar/vocab/lido/actor-roles.edn")]
+      (try
+        (io/make-parents f)
+        (spit f "{:changed true}")
+        (let [vs (vocabularies-from [(.toURL (.toURI over)) (.toURL (.toURI jar))])]
+          (is (= (:sha256 (manifest/fingerprint "{:changed true}"))
+                 (:sha256 (first (filter #(= "palomar/vocab/lido/actor-roles.edn" (:path %)) vs)))))
+          (is (= 10 (count vs)) "listed from the anchor's root, the jar"))
+        (finally (.delete f) (.delete (.getParentFile f)) (.delete (.getParentFile (.getParentFile f)))
+                 (.delete (io/file over "palomar")) (.delete over) (.delete jar))))))

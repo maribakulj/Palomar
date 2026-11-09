@@ -53,7 +53,15 @@ For reproducible research a conversion has to say what it was.
 - The manifest lists the vocabularies and lookup tables
   (`resources/palomar/vocab`), each fingerprinted (`:vocabularies`). They are
   data that decide what the rules and the code state, so they are part of
-  what a run ran. When the resources are packed in a jar they are not listed.
+  what a run ran. When the resources are packed in a jar they were not
+  listed; since L3 (review of 2026-11-09) they are found from the jar as from
+  the source tree, beside an anchor (`palomar/vocab/lido/event-types.edn`),
+  under whatever classpath root the jar has (`WEB-INF/classes/`), each named
+  by its classpath path. Each is fingerprinted as the code reads it, through
+  the classpath: a root that puts a vocabulary first is the one listed. A
+  packaged run and a checkout list the same `:vocabularies`; their
+  `[:palomar :code]` may differ, since a jar counts its resources as source.
+  No vocabulary found beside the anchor is an error, never an empty list.
 
 
 ## Amendment (review of 2026-11-09, L1): three files, published in order
