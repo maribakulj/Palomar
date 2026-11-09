@@ -217,7 +217,7 @@ plugin (ADR 0013), never the core.
 │   └── junit/palomar/       # JUnit XML runner (CI)
 ├── docs/
 │   ├── adr/                 # Architecture Decision Records (0001–0056)
-│   ├── eval/                # Measured evals (WEMI derivation, BIB-R, scale, …)
+│   ├── eval/                # Measured evals (WEMI derivation, BIB-R, person reconciliation, scale, …)
 │   ├── cleanup/             # Audit + remediation passes
 │   ├── roadmap-2026-2027.md # The plan now: maturity levels, what is guaranteed, phase 3
 │   └── roadmap-v1.md        # The V1 work-package roadmap (superseded as the plan)

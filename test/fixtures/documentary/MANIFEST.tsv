@@ -38,3 +38,4 @@ ead\ead3\ead3_single_level_optimum.xml	https://raw.githubusercontent.com/saa-ead
 ead\ead3\ead3_multi_level_optimum.xml	https://raw.githubusercontent.com/saa-ead-roundtable/ead3-toolkit/master/ead3_multi_level_optimum.xml
 eac-cpf\example_eac_cpf.xml	https://raw.githubusercontent.com/SAA-SDT/TS-EAS-subteam-notes/master/functions-subteam/WhitePaper_examples/Example%20EAC-CPF.xml
 rico\RiC-O_1-1.rdf	https://raw.githubusercontent.com/ICA-EGAD/RiC-O/master/ontology/current-version/RiC-O_1-1.rdf
+intermarc\sru\intermarcXchange\bnf-sru-alexandre-dumas-50.xml	https://catalogue.bnf.fr/api/SRU?version=1.2&operation=searchRetrieve&recordSchema=intermarcXchange&maximumRecords=50&query=(bib.author%20all%20%22alexandre%20dumas%22)%20and%20(bib.recordtype%20any%20%22mon%22)
