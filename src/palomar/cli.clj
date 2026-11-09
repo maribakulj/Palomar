@@ -9,7 +9,8 @@
      palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]
      palomar report        <input-file> --from <fmt> --to <fmt> [--record-id <id>]
      palomar inspect       <input-file> --from <fmt> [--record-id <id>]
-     palomar reconcile     <input-file> --from <fmt> [--record-id <id>]
+     palomar reconcile     <input-file> --from <fmt> [--authorities <file|index>] [--manifest <file>] [--record-id <id>]
+     palomar authorities index <dump> --out <index> [--built YYYY-MM-DD]
      palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]
      palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]
      palomar formats
@@ -20,6 +21,9 @@
    - `inspect`       — what the source parses to: the canonical floor + minted
                        WEMI/agent entities (the developer's view).
    - `reconcile`     — cross-record agent reconciliation by authority id (ADR 0018).
+   - `authorities index` — prepare an authority dump (lobid GND JSON lines) once
+                       into a local index that `reconcile --authorities` reads
+                       offline (lot M6, ADR 0038).
    - `apply-repairs` — curate the `:proposed` claims a pipeline run emits (ADR 0005):
                        accept / reject / flag-for-review the inferred WEMI proposals.
                        With `--to`, export the curated records (rejected claims are
@@ -39,6 +43,7 @@
             [palomar.curate :as curate]
             [palomar.diagnostics :as dx]
             [palomar.plugins.agents :as agents]
+            [palomar.authority-index :as index]
             [palomar.plugins.authorities :as authorities]
             [palomar.ir :as ir]
             [palomar.loss-report :as lr]
@@ -57,7 +62,8 @@
     "  palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]"
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
     "  palomar inspect       <input-file> --from <fmt> [--record-id <id>]"
-    "  palomar reconcile     <input-file> --from <fmt> [--authorities <file.rdf|file.nt>] [--record-id <id>]"
+    "  palomar reconcile     <input-file> --from <fmt> [--authorities <file.rdf|file.nt|index>] [--manifest <file>] [--record-id <id>]"
+    "  palomar authorities index <dump.jsonl[.gz]> --out <index> [--built YYYY-MM-DD]"
     "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]"
     "  palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]"
     "  palomar formats          list the supported source and target formats"
@@ -70,7 +76,9 @@
     "  --policy      validate / conformance: errors-only (default), errors-and-warnings, strict, never"
     "                apply-repairs: flag (default), accept, reject"
     "  --record-id   record id for single-record spokes (Dublin Core; default: from the filename)"
-    "  --authorities reconcile: a MADS or SKOS authority file (RDF/XML, or N-Triples as .nt), an EAC-CPF record or BnF INTERMARC authority records to match names against"
+    "  --authorities reconcile: a MADS or SKOS authority file (RDF/XML, or N-Triples as .nt), an EAC-CPF record, BnF INTERMARC authority records,"
+    "                or an authority index (palomar authorities index) to match names against; a dump is never read here"
+    "  --built       authorities index: the build date the index records (default: today, UTC); same dump and date, same bytes"
     "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
     "  --out         write the output to a file instead of stdout (convert)"
     "  --stream      convert in bounded memory, streaming a large MARC dump or LIDO lidoWrap to --out (WP-7)"
@@ -78,7 +86,8 @@
     "                    (one that carries an error: today a LIDO record its XSD rejects; the wrap is not checked)"
     "  --with-proposals  convert: also state the proposed claims (uncurated inferences) as facts; by default a"
     "                plain RDF or record export holds facts only, and trig/nquads/prov keep each claim with its status"
-    "  --manifest    convert: write the run manifest (versions, digests, options, loss) as EDN"
+    "  --manifest    convert: write the run manifest (versions, digests, options, loss) as EDN;"
+    "                reconcile: the same, naming each authority file or index matched against"
     "  --format      report output: text (default), edn or json (the raw loss-report map, ADR 0015)"
     ""
     "convert writes the document to stdout, the loss report to stderr;"
@@ -86,6 +95,7 @@
     "report writes the X→Y loss report to stdout (no document; --format edn|json for the raw map);"
     "inspect writes what the source parses to (the canonical floor + minted entities) to stdout;"
     "reconcile writes the cross-record agent reconciliation (by authority id) to stdout;"
+    "authorities index writes the index to --out and a summary to stderr;"
     "apply-repairs curates the inferred :proposed claims (ADR 0005) and writes the outcome to stdout;"
     "conformance reports profile diagnostics to stderr and exits non-zero under the acceptance policy."]))
 
@@ -292,7 +302,7 @@
                         (get flags "metadata-prefix") (assoc :metadata-prefix (get flags "metadata-prefix")))
                result (convert/convert {:from   (keyword from)
                                         :to     (keyword to)
-                                        :source (slurp input)
+                                        :source (slurp (io/file input))
                                         :with-proposals? (boolean with-proposals)
                                         :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
                                         :opts   opts})
@@ -342,7 +352,7 @@
             pol (if policy (keyword policy) :errors-only)
             {:keys [records diagnostics summary failed?]}
             (validate/validate {:from   (keyword from)
-                                :source (slurp input)
+                                :source (slurp (io/file input))
                                 :opts   (cond-> {} rid (assoc :record-id rid))
                                 :policy pol})
             verdict (str (if failed? "INVALID" "VALID")
@@ -376,7 +386,7 @@
                     (= from "dc") (keyword "doc" (file-stem input))
                     :else         nil)]
       {:from   (keyword from)
-       :source (slurp input)
+       :source (slurp (io/file input))
        :opts   (cond-> {} rid (assoc :record-id rid))})))
 
 (defn- guard
@@ -446,14 +456,14 @@
     ;; the `finally` deletes the temp in every failure path (on success it was renamed away).
      (let [fromk (keyword from)
            opts  (cond-> {} record-id (assoc :record-id (->record-id record-id)))
-           sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest input))
+           sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest (io/file input)))
            started (java.util.Date.)
            o     (atom nil)
            m     (atom nil)]
        (try
          (reset! o (staging out "palomar-stream-"))
          (let [[open close] (convert/collection (keyword to))
-               res (with-open [r (io/reader input)
+               res (with-open [r (io/reader (io/file input))
                                w (io/writer (:tmp @o))]
                      (when open (.write w open) (.write w "\n"))
                      (let [res (convert/convert-stream
@@ -569,29 +579,113 @@
       (guard #(let [{:keys [records ingest]} (convert/to-wemi from opts source)]
                 {:exit 0 :out (format-inspect records ingest) :err ""})))))
 
+(defn- dump-file?
+  "Whether `f` looks like an authority dump, which `reconcile` never reads (a
+   dump is indexed first, lot M6): a compressed file (`.gz`, `.bz2`, `.xz`,
+   `.zst`, `.zip`), or JSON — a first character, after a byte-order mark and
+   blank lines, that opens a JSON object with a key or an array. Only the
+   first 4096 characters are read."
+  [^java.io.File f]
+  (or (boolean (re-find #"(?i)\.(gz|bz2|xz|zst|zip)$" (.getName f)))
+      (with-open [r (io/reader f :encoding "UTF-8")]
+        (let [buf  (char-array 4096)
+              n    (.read r buf)
+              head (str/triml (str/replace-first (String. buf 0 (max 0 n)) #"^\uFEFF" ""))]
+          (boolean (re-find #"^(?:\{\s*\"|\[)" head))))))
+
+(defn- authority-pool
+  "The pool of `--authorities` file `path`: `{:entries :block :manifest}`, an
+   authority index read with its blocking lookup, else an authority file
+   read whole; `:manifest` what the run manifest says of it."
+  [path]
+  (let [f (io/file path)]
+    (cond
+      (index/index-file? f)
+      (let [idx (index/read-index f)]
+        {:entries (:entries idx) :block (index/block idx) :manifest (index/manifest-entry path)})
+
+      (dump-file? f)
+      (throw (ex-info (str path " is an authority dump, which is not read during a reconciliation:"
+                           " build an index first with `palomar authorities index " path " --out <index>`")
+                      {:path path}))
+
+      :else
+      (let [s (slurp f)]
+        {:entries  (:entries (authorities/read-pool (authorities/sniff-format path s) s))
+         :manifest (assoc (manifest/fingerprint f) :path path)}))))
+
 (defn- do-reconcile
   "Cross-record agent reconciliation (ADR 0018, by authority id) to stdout. Real
    for INTERMARC, whose 100 $1 ISNI mints identified agents; other spokes report
-   no authority-identified agents (honest, not an error)."
-  [{:strs [from record-id authorities]} input]
+   no authority-identified agents (honest, not an error). With `--authorities`,
+   the names are matched against an authority file or index (lot M6: an index
+   is looked up by its blocking keys, offline); with `--manifest`, the run
+   manifest names the input and each authority file or index used."
+  [{:strs [from record-id authorities manifest] :as flags} input]
   (let [{:keys [err from source opts]} (read-source from input record-id "reconcile")]
     (cond
       err {:exit 2 :out "" :err err}
 
-      (and authorities (not (.exists (java.io.File. ^String authorities))))
+      (and authorities (not (.isFile (io/file authorities))))
       {:exit 2 :out "" :err (str "authority file not found: " authorities)}
 
       :else
-      (guard #(let [{:keys [records]} (convert/to-wemi from opts source)
-                    pool  (when authorities
-                            (let [s (slurp authorities)]
-                              (:entries (authorities/read-pool (authorities/sniff-format authorities s) s))))
-                    names (distinct (map :name (mapcat agents/occurrences records)))]
-                {:exit 0
-                 :out  (str (reconcile/format-agent-reconciliation (reconcile/reconcile-agents records))
-                            (when pool
-                              (str "\n" (reconcile/format-proposals (reconcile/propose-agent-links names pool)))))
-                 :err  ""})))))
+      (or
+       (path-collision (select-keys flags ["manifest"]) input)
+       (guard (fn [] (let [started (java.util.Date.)
+                           {:keys [records]} (convert/to-wemi from opts source)
+                           pool  (when authorities (authority-pool authorities))
+                           names (distinct (map :name (mapcat agents/occurrences records)))
+                           out   (str (reconcile/format-agent-reconciliation (reconcile/reconcile-agents records))
+                                      (when pool
+                                        (str "\n" (reconcile/format-proposals
+                                                   (reconcile/propose-agent-links names (:entries pool)
+                                                                                  (cond-> {:threshold 0.5}
+                                                                                    (:block pool) (assoc :block (:block pool))))))))
+                           m     (when manifest
+                                   (doto (staging manifest "palomar-manifest-")
+                                     (#(spit (:tmp %)
+                                             (manifest/->edn
+                                              (manifest/manifest {:from        from
+                                                                  :to          nil
+                                                                  :opts        opts
+                                                                  :inputs      [{:path input :content (let [f (io/file input)] (when (.isFile f) f))}]
+                                                                  :outputs     [{:path "-" :content out}]
+                                                                  :authorities (when pool [(:manifest pool)])
+                                                                  :started-at  started
+                                                                  :finished-at (java.util.Date.)}))))))]
+                       (try
+                         (if-let [e (publish! nil nil m manifest)]
+                           {:exit 2 :out "" :err e}
+                           {:exit 0 :out out :err ""})
+                         (finally (when-let [^java.io.File t (:tmp m)] (when (.exists t) (.delete t))))))))))))
+
+(defn- do-authorities
+  "`authorities index <dump> --out <index> [--built YYYY-MM-DD]`: build the
+   authority index of a dump (lot M6, `palomar.authority-index/build!`), once,
+   before any reconciliation reads it. The build date defaults to today
+   (UTC); the index is otherwise a function of the dump alone."
+  [{:strs [out built]} [sub dump]]
+  (cond
+    (not= "index" sub)
+    {:exit 2 :out "" :err (str "authorities needs a subcommand: index <dump> --out <index>\n\n" usage)}
+
+    (not (and dump out))
+    {:exit 2 :out "" :err (str "authorities index needs <dump> --out <index>\n\n" usage)}
+
+    (not (.isFile (io/file dump)))
+    {:exit 2 :out "" :err (str "dump not found: " dump)}
+
+    (same-file? dump out)
+    {:exit 2 :out "" :err (str "authorities index: --out is the dump (" out "); choose another path")}
+
+    :else
+    (guard #(let [h (index/build! dump out {:built (or built (str (java.time.LocalDate/now java.time.ZoneOffset/UTC)))})]
+              {:exit 0 :out ""
+               :err  (str "wrote " out " — " (:entries h) " entr" (if (= 1 (:entries h)) "y" "ies") ", "
+                          (:keys h) " blocking keys, built " (:built h) " from " (get-in h [:source :name])
+                          " (sha256 " (get-in h [:source :sha256]) ", " (get-in h [:source :bytes]) " bytes)"
+                          (when (seq (:skipped h)) (str "; skipped " (pr-str (:skipped h)))))}))))
 
 (def ^:private repair-policies
   "apply-repairs --policy values → curation decision functions (ADR 0005). `flag`
@@ -677,6 +771,7 @@
       (= command "report")      (do-report flags (first positional))
       (= command "inspect")     (do-inspect flags (first positional))
       (= command "reconcile")   (do-reconcile flags (first positional))
+      (= command "authorities") (do-authorities flags positional)
       (= command "apply-repairs") (do-apply-repairs flags (first positional))
       (= command "conformance") (do-conformance flags (first positional))
       :else                     {:exit 2 :out "" :err (str "unknown command: " command "\n\n" usage)})))

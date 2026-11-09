@@ -28,7 +28,8 @@
    (`1xx`), series (`4xx`) and physical description (`215`) have no floor home and
    are dropped — the MARC analogue of the other spokes' report-at-ingest loss,
    surfaced by the round-trip exporters."
-  (:require [palomar.plugins.marcxml :as marcxml]))
+  (:require [clojure.java.io :as io]
+            [palomar.plugins.marcxml :as marcxml]))
 
 (defn- policies
   "The MARCXChange family policies for the UNIMARC spoke (shared by `ingest`/`stream`);
@@ -54,7 +55,7 @@
     (string? source) source
     (map? source)    (case (:source/kind source)
                        :string (:source/value source)
-                       :file   (slurp (:source/value source))
+                       :file   (slurp (io/file (:source/value source)))
                        (throw (ex-info "Unsupported source kind for UNIMARC"
                                        {:kind (:source/kind source)})))
     :else (throw (ex-info "UNIMARC importer expects a string or tagged source"

@@ -27,7 +27,8 @@
    a record is an `<mxc:record>` (a `record` carrying the `id` ARK, vs the SRU
    `<srw:record>` wrapper that has none), its id is `:bnf/<cb-number>`, and its
    `:kind` comes from the `type` attribute."
-  (:require [palomar.plugins.marcxml :as marcxml]))
+  (:require [clojure.java.io :as io]
+            [palomar.plugins.marcxml :as marcxml]))
 
 ;; ---------------------------------------------------------------------------
 ;; Public API + plugin
@@ -61,7 +62,7 @@
     (string? source) source
     (map? source)    (case (:source/kind source)
                        :string (:source/value source)
-                       :file   (slurp (:source/value source))
+                       :file   (slurp (io/file (:source/value source)))
                        (throw (ex-info "Unsupported source kind for INTERMARC"
                                        {:kind (:source/kind source)})))
     :else (throw (ex-info "INTERMARC importer expects a string or tagged source"

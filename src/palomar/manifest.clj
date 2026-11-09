@@ -11,6 +11,13 @@
    output, the options, the compiled rule ids, the loss summary, and the times
    the caller supplies. `diff` names what changed between two manifests.
 
+   A reconciliation's manifest (lot M6) also names each authority file it
+   matched against under `:authorities`: its path and fingerprint and, for an
+   authority index (`palomar.authority-index/manifest-entry`), the dump it
+   was built from (its name and fingerprint, as the index header records
+   them), the build date, the format, the blocking scheme and the entry
+   count. A changed index is a changed `:authorities`.
+
    The engine stays pure: times, paths and the external block (e.g. the model
    and parameters an application used upstream) come from the caller; the CLI's
    `convert --manifest <file>` fills them."
@@ -160,10 +167,11 @@
 (defn manifest
   "The manifest of a conversion. `run` is a map:
    `{:from :to :opts :inputs [{:path :content}] :outputs [{:path :content}] :loss
-   <conversion-report> :started-at inst :finished-at inst :external {…}}` —
-   everything optional but `:from` and `:to`. The active rules are the spoke's
+   <conversion-report> :authorities [{:path :sha256 :bytes :index}] :started-at
+   inst :finished-at inst :external {…}}` — everything optional but `:from`
+   and `:to`. The active rules are the spoke's
    mapping rules and the canonical validation rules."
-  [{:keys [from to opts inputs outputs loss started-at finished-at external]}]
+  [{:keys [from to opts inputs outputs loss authorities started-at finished-at external]}]
   (let [onto  (for [p ontology/vendored :let [f (io/file p)] :when (.exists f)]
                 (assoc (fingerprint f) :path p))
         rules (concat (map :mapping/id (:mapping (spokes/plugin from))) (map :id (:rules canonical/plugin)))
@@ -186,6 +194,7 @@
       (seq rules)  (assoc :rules (vec (sort rules)))
       (seq vocabs) (assoc :vocabularies vocabs)
       loss         (assoc :loss (loss-summary loss))
+      (seq authorities) (assoc :authorities (vec authorities))
       started-at   (assoc :started-at started-at)
       finished-at  (assoc :finished-at finished-at)
       (seq external) (assoc :external external))))

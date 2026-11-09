@@ -100,7 +100,7 @@
                (not (era? text))
                ;; `182.`: a decade, or a three-digit year and an ISBD period
                (not (re-find #"(?:^|[^\d.])\d{1,3}\.$" text)))
-      (let [t        (str/lower-case (clean text))
+      (let [t        (.toLowerCase ^String (clean text) java.util.Locale/ROOT)
             [t open] (cond
                        (strip before-prefix t)    [(strip before-prefix t) :before]
                        (strip after-prefix t)     [(strip after-prefix t) :after]

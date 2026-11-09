@@ -48,7 +48,8 @@
    - DCMI Terms (`dcterms:`) are read too (`dcterms-mapping`, ADR 0037); their
      encoding schemes (`xsi:type=\"dcterms:W3CDTF\"`) are not.
    - An OAI-PMH `oai_dc` record is read through `palomar.plugins.oai`."
-  (:require [clojure.string :as str]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.shape :as shape]
@@ -161,7 +162,7 @@
     (string? source) source
     (map? source)    (case (:source/kind source)
                        :string (:source/value source)
-                       :file   (slurp (:source/value source))
+                       :file   (slurp (io/file (:source/value source)))
                        (throw (ex-info "Unsupported source kind for Dublin Core"
                                        {:kind (:source/kind source)})))
     :else (throw (ex-info "Dublin Core importer expects a string or tagged source"

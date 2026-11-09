@@ -262,7 +262,7 @@
    same document as the batch's (post-audit 7, I2)."
   [path]
   (let [md (java.security.MessageDigest/getInstance "SHA-256")]
-    (with-open [r (io/reader path)
+    (with-open [r (io/reader (io/file path))
                 w (java.io.OutputStreamWriter. (java.security.DigestOutputStream. (java.io.OutputStream/nullOutputStream) md) "UTF-8")]
       (io/copy r w))
     (.formatHex (java.util.HexFormat/of) (.digest md))))
