@@ -11,4 +11,15 @@
   :event/prior
   {:doc      "What precedes the object, its commissioning or planning: the object was not present at it."
    :terms    ["auftrag" "beauftragt" "beauftragung" "commande" "commandé" "commission" "commissioned" "commissioning" "geplant" "planification" "planned" "planning" "planung"]
-   :patterns ["(?:^|/)(?:commissioning|lido00032|lido00226|planning)$"]}}}
+   :patterns ["(?:^|/)(?:commissioning|lido00032|lido00226|planning)$"]}
+  ;; what an event says of the object, not of who made it (lot M7,
+  ;; palomar.agent-events): an exhibition or a publication about the object
+  ;; may be long after its maker's death
+  :event/exhibition
+  {:doc      "The object was shown: an exhibition, whenever it was."
+   :terms    ["ausgestellt" "ausstellung" "exhibited" "exhibition" "exposition" "exposé" "kiállítás"]
+   :patterns ["(?:^|/)(?:exhibition|lido00225|300054766)$"]}
+  :event/publication
+  {:doc      "The object was published (a catalogue entry, a reproduction in a book), whenever it was."
+   :terms    ["kiadás" "publication" "publication event" "published" "published catalog entry" "publikation" "veröffentlicht"]
+   :patterns ["(?:^|/)(?:publication|lido00228|300054686)$"]}}}

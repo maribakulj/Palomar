@@ -206,7 +206,7 @@
   "Words that make a role something else than the creator's, whatever word
    it ends with: who printed, published, sold, owned or kept it, a copy, a
    circle, an estate (\"lithographic printer\", \"after a painting by\")."
-  #"\b(print(er|ing)?|drucker|druckerei|publish(er|ing)?|verleger|verlag|éditeur|imprimeur|studio|atelier|anstalt|estate|nachlass|collector|sammler|dealer|händler|owner|besitzer|after|nach|by|of|von|workshop|werkstatt|circle|kreis|school|schule|follower|copy|kopie|copie|attributed|zugeschrieben)\b")
+  #"\b(print(er|ing)?|drucker|druckerei|publish(er|ing)?|verleger|verlag|éditeur|imprimeur|studio|atelier|anstalt|estate|nachlass|collector|sammler|dealer|händler|owner|besitzer|after|nach|by|of|von|workshop|werkstatt|circle|kreis|school|schule|follower|copy|kopie|copie|attributed|zugeschrieben|cast(er|ing)?|founder|fondeur|\p{L}*gie(ß|ss)er(ei)?|colou?r(ist|er|ed)|kolorist\p{L}*|impression|reissue[ds]?|restrike)\b")
 
 (def ^:private creator-role-uris
   "Role URIs that name a creator: AAT artists, painters, sculptors and
@@ -219,13 +219,15 @@
 
 (def ^:private attribution-order
   [:attribution/former :attribution/related :attribution/influence :attribution/uncertain
-   :attribution/maker-role :attribution/other-role])
+   :attribution/later-making :attribution/maker-role :attribution/other-role])
 
 (defn attribution
   "What an attribution qualifier (`attributionQualifierActor`) says of who
    made the work, by `resources/palomar/vocab/lido/attribution-qualifiers.edn`:
    `:former`, `:related` (an unnamed hand related to the actor), `:influence`
-   (made after the actor's work), `:uncertain`, `:maker-role`, `:other-role`,
+   (made after the actor's work), `:uncertain`, `:later-making` (a posthumous
+   cast, a restrike, a replica, a reproduction, a version, a forgery: lot M7),
+   `:maker-role`, `:other-role`,
    or nil when it says none of these (post-audit 8, K2)."
   [qualifier]
   (when-let [q (some-> qualifier str/trim not-empty)]
@@ -239,7 +241,7 @@
    names the maker's role is one (post-audit 8, K2)."
   [terms uris q]
   (case (attribution q)
-    (:former :related :influence :uncertain :other-role) false
+    (:former :related :influence :uncertain :later-making :other-role) false
     :maker-role true
     (creator? terms uris)))
 

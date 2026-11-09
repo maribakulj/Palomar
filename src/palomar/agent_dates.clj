@@ -9,13 +9,15 @@
 
    A **point** is an interval `{:from :to :text}` of years, either end nil when
    open:
-   - `1802`, an ISO date `1802-07-24` → 1802–1802; a three-digit year `804`;
+   - `1802`, an ISO date `1802-07-24`, a month `1802-07` → 1802–1802; a
+     three-digit year `804`; `1880-85`, two digits after the year's last
+     two and no month, → 1880–1885 (lot M7: no narrower than the source);
    - a century or decade with explicit unknown digits, `18..` / `18XX` →
      1800–1899, `182X` → 1820–1829; `1820s` → 1820–1829, `1800s` → 1800–1899;
      `182.` is ambiguous (a decade, or a year 182 and an ISBD period) and is
      not read;
-   - approximate (`ca.`, `circa`, `c.`, `vers`, `env.`, `um`, `approx.`, a
-     trailing `ca.`, EDTF `~`) or uncertain (EDTF `?`; `%` is both) → widened
+   - approximate (`ca.`, `circa`, `c.`, `c1775`, `vers`, `env.`, `um`,
+     `gegen`, `etwa`, `approx.`, a trailing `ca.` or `c.`, EDTF `~`) or uncertain (EDTF `?`; `%` is both) → widened
      by `margin` years on each side, flagged `:approximate?` / `:uncertain?`;
    - `av.`/`avant`/`before`/`vor`/EDTF `..1850` → open before,
      `ap.`/`après`/`after`/`nach` → open after;
@@ -71,8 +73,15 @@
 
 (defn- era? [s] (boolean (re-find era-re s)))
 
-(def ^:private approx-prefix #"^(?:circa|ca\.?(?!\p{L})|c\.?(?=\s*\d)|vers(?!\p{L})|environ|env\.?(?!\p{L})|approximately|approx\.?(?!\p{L})|um(?=\s))\s*")
-(def ^:private approx-suffix #"\s*(?:ca\.?|circa)$")
+(defn before-common-era?
+  "Whether `s` carries an era marker of a date before the common era (see
+   the ns doc): a string that does is never read as a year (lot M7 reads an
+   event's display date with it, whatever its earliest and latest say)."
+  [s]
+  (boolean (and s (era? s))))
+
+(def ^:private approx-prefix #"^(?:circa|ca\.?(?!\p{L})|c\.?(?=\s*\d)|vers(?!\p{L})|environ|env\.?(?!\p{L})|approximately|approx\.?(?!\p{L})|um(?=\s)|gegen(?=\s)|etwa(?=\s))\s*")
+(def ^:private approx-suffix #"\s*(?:ca\.?|circa|c\.?)$")
 (def ^:private before-prefix #"^(?:avant|av\.?(?!\p{L})|before|bef\.?(?!\p{L})|vor(?!\p{L}))\s*")
 (def ^:private after-prefix #"^(?:après|apres|ap\.?(?!\p{L})|after|aft\.?(?!\p{L})|nach(?!\p{L}))\s*")
 
@@ -81,7 +90,14 @@
 (defn- year-core
   "`[from to]` of a bare year form, or nil."
   [s]
-  (or (when-let [[_ y] (re-matches #"(\d{3,4})(?:-\d{2}(?:-\d{2})?)?" s)] (let [y (parse-long y)] [y y]))
+  (or (when-let [[_ y] (re-matches #"(\d{3,4})(?:-\d{2}-\d{2})?" s)] (let [y (parse-long y)] [y y]))
+      ;; `1965-04` is an ISO month; `1880-85`, two digits that are no month
+      ;; and come after the year's last two, a span 1880-1885 (lot M7: read
+      ;; no narrower than the source)
+      (when-let [[_ y n] (re-matches #"(\d{4})-(\d{2})" s)]
+        (let [y (parse-long y) n (parse-long n)]
+          (cond (<= 1 n 12)       [y y]
+                (> n (mod y 100)) [y (+ (* 100 (quot y 100)) n)])))
       (when-let [[_ c] (re-matches #"(\d{2})(?:\.\.|[xX]{2}|00s)" s)] (let [y (* 100 (parse-long c))] [y (+ y 99)]))
       (when-let [[_ c] (re-matches #"(\d{3})(?:[xX]|0s)" s)] (let [y (* 10 (parse-long c))] [y (+ y 9)]))))
 
@@ -201,7 +217,7 @@
 ;; ---------------------------------------------------------------------------
 
 (def ^:private qualifier-re
-  #"(?i)(?:^|[^\p{L}])(?:circa|ca\.?|c\.(?=\s*\d)|vers|environ|env\.|approximately|approx\.?|um)(?![\p{L}])|[~?%]")
+  #"(?i)(?:^|[^\p{L}])(?:circa|ca\.?|c\.?(?=\s*\d)|vers|environ|env\.|approximately|approx\.?|um|gegen|etwa)(?![\p{L}])|\d\s*c\.?(?!\p{L})|[~?%]")
 
 (defn qualify
   "`point` widened by `margin` and flagged when `text` (the source's own

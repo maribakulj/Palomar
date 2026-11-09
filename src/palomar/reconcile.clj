@@ -31,6 +31,7 @@
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [palomar.agent-dates :as dates]
+            [palomar.agent-events :as events]
             [palomar.agent-match :as fs]
             [palomar.curate :as curate]
             [palomar.model :as model]
@@ -113,22 +114,29 @@
                         (remove str/blank? (cons (:label candidate) (:variants candidate)))))))
 
 (defn- mention
-  "A mention as the matcher reads it: `{:name :dates :record}`, from a plain
-   name or a map whose `:dates` is a life-dates string (parsed) or a parsed
-   profile, and whose `:record` (optional) is the record it was read in."
+  "A mention as the matcher reads it: `{:name :dates :record :events}`, from
+   a plain name or a map whose `:dates` is a life-dates string (parsed) or a
+   parsed profile, whose `:record` (optional) is the record it was read in,
+   and whose `:events` (optional, lot M7) are the typed events the record
+   says it took part in (`palomar.agent-events`)."
   [m]
   (if (map? m)
-    (cond-> {:name (:name m) :dates (let [d (:dates m)] (if (string? d) (dates/parse-life-dates d) d))}
-      (:record m) (assoc :record (:record m)))
+    (let [ds (let [d (:dates m)] (if (string? d) (dates/parse-life-dates d) d))
+          ;; an event that contradicts the mention's own life is no evidence
+          es (events/consistent-events (:events m) ds)]
+      (cond-> {:name (:name m) :dates ds}
+        (:record m) (assoc :record (:record m))
+        (seq es)    (assoc :events es)))
     {:name m :dates nil}))
 
 (defn- mention-key
-  "What identifies a mention beyond its name — its dates and its record —
-   as a proposal carries it under `:mention`; nil for a bare name."
+  "What identifies a mention beyond its name — its dates, its record and its
+   events — as a proposal carries it under `:mention`; nil for a bare name."
   [m]
   (let [k (cond-> {:name (:name m)}
             (:dates m)  (assoc :dates (:dates m))
-            (:record m) (assoc :record (:record m)))]
+            (:record m) (assoc :record (:record m))
+            (:events m) (assoc :events (:events m)))]
     (when (< 1 (count k)) k)))
 
 (defn- dates-evidence
@@ -137,6 +145,21 @@
   (cond-> (dates/compatibility mention-dates candidate-dates)
     mention-dates   (assoc :mention mention-dates)
     candidate-dates (assoc :candidate candidate-dates)))
+
+(defn- events-evidence
+  "The events verdict of a mention's typed events against a candidate's life
+   dates (lot M7), nil when the mention carries no events. A group candidate
+   (`:entity-type`) has no life: no check."
+  [mention-events candidate]
+  (when (seq mention-events)
+    (events/compatibility mention-events (when-not (:entity-type candidate) (:dates candidate)))))
+
+(defn- rejection
+  "Why a candidate of evidence `ev` is rejected, or nil: its dates first,
+   then the mention's events."
+  [ev]
+  (cond (= :incompatible (get-in ev [:dates :verdict]))  :incompatible-dates
+        (= :incompatible (get-in ev [:events :verdict])) :incompatible-events))
 
 (defn- scored-candidates
   "The Fellegi-Sunter path of `agent-candidates` (lot M4): every entry whose
@@ -161,10 +184,14 @@
                        :let [c (fs/compare-pair m cand {:surname-counts counts :pool-size size})
                              lv (:levels c)]
                        :when (not= :none (:name lv))
-                       :let [{:keys [weights match-weight]} (when (not= :incompatible (:dates lv)) (fs/score model c))
+                       :let [evs (events-evidence (:events m) cand)
+                             {:keys [weights match-weight]} (when-not (or (= :incompatible (:dates lv))
+                                                                          (= :incompatible (:verdict evs)))
+                                                              (fs/score model c))
                              p  (when match-weight (fs/posterior match-weight (:prior model)))
                              ev (cond-> {:name-score (:name-score c) :dates (dates-evidence (:dates m) (:dates cand))
                                          :comparison lv}
+                                  evs          (assoc :events evs)
                                   weights      (assoc :weights weights)
                                   (:surname c) (assoc :surname (:surname c)))]]
                    (cond-> {:name            (:name m)
@@ -172,7 +199,7 @@
                             :authority-label (:label cand)
                             :evidence        ev}
                      p                   (assoc :score p :match-weight match-weight :decision (fs/decide model p))
-                     (nil? p)            (assoc :reason :incompatible-dates)
+                     (nil? p)            (assoc :reason (or (rejection ev) :incompatible-dates))
                      (mention-key m)     (assoc :mention (mention-key m))
                      (:entity-type cand) (assoc :entity-type (:entity-type cand)))))
         one    (fn [cs]
@@ -235,8 +262,20 @@
    it is listed under `:rejected`, with `:reason :incompatible-dates` and its
    evidence. Missing dates on either side are no evidence (`:unknown`).
 
-   A proposal or rejection of a mention given as a map with dates or a record
-   carries it under `:mention` (`{:name :dates :record}`), so `align-agents`
+   **Events (M7)**: a mention may carry `:events`, the typed events its
+   record says it took part in (`palomar.agent-events`). A candidate whose
+   life cannot hold them — a creation the mention carried out ending more
+   than 10 years before the candidate's birth (never one after death: a
+   posthumous cast, impression or copy names its artist) — is rejected the
+   same way, `:reason :incompatible-events` (dates first, when
+   both are), never weighed; the evidence holds `:events {:verdict :checks}`.
+   A publication, an exhibition, an acquisition, an influence, an untyped or
+   undated event, a group's event or one against a group candidate, and an
+   event that contradicts the mention's own `:dates` (dropped) are no
+   evidence.
+
+   A proposal or rejection of a mention given as a map with dates, a record
+   or events carries it under `:mention` (`{:name :dates :record :events}`), so `align-agents`
    keeps each proposal with the mention that made it.
 
    Every proposal is `:proposed` — never `:asserted` (D7). `:certifiable?` is
@@ -252,7 +291,9 @@
                         cand (if block (block (:name m)) authority)
                         :let [score (name-score (:name m) cand)]
                         :when (>= score threshold)
-                        :let [ev {:name-score score :dates (dates-evidence (:dates m) (:dates cand))}]]
+                        :let [evs (events-evidence (:events m) cand)
+                              ev  (cond-> {:name-score score :dates (dates-evidence (:dates m) (:dates cand))}
+                                    evs (assoc :events evs))]]
                     (cond-> {:name            (:name m)
                              :authority-id    (:id cand)
                              :authority-label (:label cand)
@@ -260,14 +301,14 @@
                       true                (assoc ::ev ev)
                       (mention-key m)     (assoc :mention (mention-key m))
                       (:entity-type cand) (assoc :entity-type (:entity-type cand))))
-           incompatible? #(= :incompatible (get-in % [::ev :dates :verdict]))
+           incompatible? #(some? (rejection (::ev %)))
            by-score #(vec (sort-by (comp - :score) %))]
        {:proposals (by-score (for [c (remove incompatible? scored)]
                                (-> c
                                    (assoc :certifiable? (boolean (:authority-id c)) :status :proposed :evidence (::ev c))
                                    (dissoc ::ev))))
         :rejected  (by-score (for [c (filter incompatible? scored)]
-                               (-> c (assoc :reason :incompatible-dates :evidence (::ev c)) (dissoc ::ev))))}))))
+                               (-> c (assoc :reason (rejection (::ev c)) :evidence (::ev c)) (dissoc ::ev))))}))))
 
 (defn propose-agent-links
   "The proposals of `agent-candidates` (which see): `[{:name :authority-id
@@ -324,7 +365,7 @@
   "A proposal's evidence as the bindings of its mapping's provenance: the
    authority's label, the name score, the dates verdict and the date texts
    compared — values a curator reads, and that PROV-O writes."
-  [authority-label {:keys [name-score dates comparison]} {:keys [score match-weight decision]}]
+  [authority-label {:keys [name-score dates comparison events]} {:keys [score match-weight decision]}]
   (let [text (fn [p] (or (:text p)
                          (some->> (for [role [:birth :death :active] :let [t (:text (get p role))] :when t]
                                     (str (name role) " " t))
@@ -340,7 +381,9 @@
       ;; an undated mention had no dates to compare: no verdict is stated
       (:mention dates)            (assoc '?dates (:verdict dates))
       (text (:mention dates))     (assoc '?mention-dates (text (:mention dates)))
-      (and (:mention dates) (text (:candidate dates))) (assoc '?authority-dates (text (:candidate dates))))))
+      (and (:mention dates) (text (:candidate dates))) (assoc '?authority-dates (text (:candidate dates)))
+      ;; a mention that carried typed events (lot M7): their verdict
+      events                      (assoc '?events (:verdict events)))))
 
 (defn- proposals-for
   "The proposals among `ps` (one name's) that record `rid` takes: those of the

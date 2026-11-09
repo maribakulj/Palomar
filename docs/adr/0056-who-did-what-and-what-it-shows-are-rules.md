@@ -107,3 +107,35 @@ decided again, from the LIDO, what the CIDOC CRM view had decided.
   about 3 ms more in the whole pipeline: about 19 ms against 22, measured
   warm. PROV grows by 2 to 7 % in triples, since a claim cites the event and
   the actor it was read from.
+
+## Amendment (lot M7, 2026-11-09): what an event says of a person's life
+
+Reconciliation now reads who did what in an event as evidence on identity
+(ADR 0018 amendment M7, `palomar.agent-events`). It reads the decisions
+above. It changes three of them, after a contradictory review:
+- **A later making is not the actor's.** The attribution-qualifier
+  vocabulary gains `:attribution/later-making`: a posthumous cast or
+  impression, a restrike, a replica, a reproduction, a version, a forgery
+  (`Nachguss`, `Fälschung`, `posthumer Guss`…). Like a former attribution,
+  it makes the actor no creator of the production (`maker?`).
+- **More roles are someone else's.** The other-role qualifiers gain "Hand
+  colored by", "Cast by", "Impression by", "Reissued by" and their
+  kin. The importer's `not-creator` words gain a caster, a founder
+  (`Gießer`, `fondeur`), a colourist, an impression, a reissue and a
+  restrike.
+- So an actor in such a role or qualifier is no longer `carried_out_by` the
+  production in Linked Art, nor its `P14` in CIDOC CRM. The rules read the
+  same responsibility, so the two views still agree. No fixture's actor
+  role or qualifier uses these words, and the LIDO conversion tests pass
+  unchanged.
+
+Two things are unchanged:
+- The event's kind is still the importer's (`event-kinds`, code).
+- An exhibition and a publication about the object are told apart by the
+  event-types vocabulary, which gains `:event/exhibition` and
+  `:event/publication`. No rule reads them.
+
+Only a production or a design carried out as its maker can constrain a
+life, and only when it ends more than 10 years before a candidate's
+birth. A posthumous cast, impression, reissue or copy names its artist as
+maker as often as not, so a creation after death is never evidence.

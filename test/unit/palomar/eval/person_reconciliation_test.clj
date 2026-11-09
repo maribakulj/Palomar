@@ -6,7 +6,9 @@
    M3's date-aware numbers are asserted next to them, and lot M4's
    Fellegi-Sunter numbers (with their calibration, an EM comparison and a
    synthetic stress set) after those, and lot M5's constrained clustering
-   (with a synthetic chain set) last. They are
+   (with a synthetic chain set), and lot M7's typed events (the editions of
+   the same records, a synthetic set built on the pool's authorities, and the
+   actors of five LIDO records) last. They are
    measurements, not a guarantee. Corpus and gold:
    `test/fixtures/er-gold/bnf-persons/README.md`; write-up:
    `docs/eval/person-reconciliation.md`. The corpus readers and the metrics live
@@ -20,6 +22,7 @@
             [palomar.eval.person-reconciliation :as pr]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.intermarc :as intermarc]
+            [palomar.plugins.oai :as oai]
             [palomar.reconcile :as reconcile]))
 
 ;; ---------------------------------------------------------------------------
@@ -560,3 +563,45 @@
     (is (= {:cases 9 :chains 9 :closure-merges 9 :constrained-merges 0 :refused 9 :refused-on-a-tie 9 :bridge-with {:mx 9}}
            (pr/chain-summary cases))
         "the closure merges X's and Y's mentions every time, the constrained clustering never; each refusal is a tie, won by the lower id, and says so")))
+
+;; ---------------------------------------------------------------------------
+;; Lot M7 — typed events
+;; ---------------------------------------------------------------------------
+
+(def ^:private te (delay (pr/task-a-events @c)))
+
+(deftest a-bibliographic-record-gives-edition-events-and-no-new-evidence
+  (testing "each of the 142 mentions carries its record's 260 $d, a :publication: 135 of them dated"
+    (is (= {:mentions 142 :events 142 :dated 135 :posthumous 62} (:events @te)))
+    (is (= #{:publication} (set (map :kind (mapcat :events (pr/with-edition-events @c)))))))
+  (testing "with the dates and the events, task A is M3's: the events reject nothing, and no truth"
+    (is (= (:all (pr/task-a-dated @c)) (:all (:with-dates @te))))
+    (is (= {:mentions-with-rejections 93 :rejected 166 :truth-rejected 0} (:rejections (:with-dates @te))))
+    (is (= {:rejected 0 :truth-rejected 0} (:event-rejections (:with-dates @te)))))
+  (testing "the events alone reject nothing: the name-only numbers"
+    (is (= (:all (pr/task-a @c)) (:all (:events-only @te))))
+    (is (= {:rejected 0 :truth-rejected 0} (:event-rejections (:events-only @te)))))
+  (testing "what-if: an edition read as the author's creation; since only a creation long before a birth blocks, it would block no mention's own authority (62 editions are posthumous), only 20 other candidates"
+    (is (= {:rejected 20 :truth-rejected 0} (:event-rejections (:as-creation @te))))
+    (is (= 101 (get-in @te [:as-creation :all :correct])) "the name-only baseline's recall@1")))
+
+(deftest a-synthetic-set-of-events-on-real-authorities
+  (testing "SYNTHETIC: on the 21 pool authorities that state a birth and a death, one event per mention, no dates"
+    (is (= {:creation-after-death       [21 0 0]
+            :creation-before-birth      [21 21 21]
+            :creation-just-before-birth [21 0 0]
+            :creation-in-life           [21 0 0]
+            :posthumous-edition         [21 0 0]
+            :edition-before-birth       [21 0 0]}
+           (pr/event-case-summary (pr/event-cases @c)))
+        "[cases, authority rejected, cannot-link]: a creation 30 years before the birth is blocked, and a cannot-link; one 8 years before (within the 10-year margin), one after death (a cast, a reissue) and an edition never")))
+
+(deftest the-actors-of-lido-records-against-their-ulan-ids
+  (let [recs (:records (oai/import-response "lido" (slurp "test/fixtures/documentary/lido/ycba-oai-lido.xml")))
+        run  (pr/lido-event-run recs)]
+    (testing "the five YCBA records: 8 person occurrences with a ULAN id, 8 ULAN persons, all dated"
+      (is (= {:mentions 8 :pool 8 :dated-pool 8 :creations 4} (select-keys run [:mentions :pool :dated-pool :creations])))
+      (is (= {:creation 4 :attribution 2 :influence 1 :activity 1} (:kinds run))))
+    (testing "no rejection by events, and no truth blocked"
+      (is (= {:rejected 0 :truth-rejected 0 :by-kind {}} (:run run))))))
+

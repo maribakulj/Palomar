@@ -14,7 +14,7 @@
    (their dates) ends with A and C merged.
 
    **Inputs** (`cluster`), plain data:
-   - `:items`, `{id {:authority? bool :dates profile}}`: the agents (a
+   - `:items`, `{id {:authority? bool :dates profile :events [..]}}`: the agents (a
      record's local agent, a mention), the authorities, and (in the IR) the
      person nodes a curator accepted memberships in;
    - `:links`, `[{:a :b :basis :weight}]`: the pairwise decisions. `:basis`
@@ -27,7 +27,11 @@
      are derived, item by item, when two clusters would merge:
      `:distinct-authorities` (two different authority records) and
      `:incompatible-dates` (both dated, `agent-dates/compatibility`
-     `:incompatible`). A mention accepted for one authority therefore never
+     `:incompatible`), and `:incompatible-events` (lot M7: an item's typed
+     events, `palomar.agent-events`, that the other's life dates cannot
+     hold — a creation it carried out before their birth or after their
+     death). Two items' events alone are no constraint: no life is known.
+     A mention accepted for one authority therefore never
      joins another's: the two authorities cannot be one cluster.
    Two mentions in one record with different roles are **not** a cannot-link:
    a record's local agent is keyed by the record and the name, not by the
@@ -79,6 +83,7 @@
    across batches (ADR 0018 §5)."
   (:require [clojure.string :as str]
             [palomar.agent-dates :as dates]
+            [palomar.agent-events :as events]
             [palomar.curate :as curate]
             [palomar.model :as model]))
 
@@ -105,10 +110,19 @@
   [cannot-link]
   (into {} (for [{:keys [a b reason]} cannot-link :when (not= a b)] [#{a b} (or reason :given)])))
 
+(defn- events-against?
+  "Whether item `i`'s typed events, those consistent with its own dates,
+   cannot be the life of item `j` (its dates)."
+  [i j]
+  (let [es (events/consistent-events (:events i) (:dates i))]
+    (boolean (and (seq es) (:dates j)
+                  (= :incompatible (:verdict (events/compatibility es (:dates j))))))))
+
 (defn cannot-link-reason
   "The reason `x` and `y` cannot be one person, or nil: a given constraint
-   (`index`, `constraint-index`), two different authorities, or dates that
-   cannot be one person's."
+   (`index`, `constraint-index`), two different authorities, dates that
+   cannot be one person's, or one's typed events the other's dates cannot
+   hold (lot M7)."
   [items index x y]
   (when (not= x y)
     (let [ix (items x) iy (items y)]
@@ -116,7 +130,9 @@
           (when (and (:authority? ix) (:authority? iy)) :distinct-authorities)
           (when (and (:dates ix) (:dates iy)
                      (= :incompatible (:verdict (dates/compatibility (:dates ix) (:dates iy)))))
-            :incompatible-dates)))))
+            :incompatible-dates)
+          (when (or (events-against? ix iy) (events-against? iy ix))
+            :incompatible-events)))))
 
 (defn- first-violation
   "The first `{:a :b :reason}` across clusters `xs` and `ys`, or nil."
@@ -164,6 +180,7 @@
       :joined     [link ..]   ; the links applied, in order (`:tie? true` when won on a tie)
       :refused    [{:link :violation {:a :b :reason} :tie?} ..]
       :conflicts  [{:links [accepted ..] :violations [{:a :b :reason} ..]} ..]
+      :event-conflicts [{:links :violations} ..] ; accepted links kept despite an events constraint
       :candidates [links that may not join] ; for a curator, never applied}
 
    Every item of `:items` or of a link is in exactly one cluster."
@@ -173,10 +190,15 @@
         index    (constraint-index cannot-link)
         must     (filter #(and (= :accepted (:basis %)) (join :accepted)) links)
         soft     (sort-by link-order (filter #(and (not= :accepted (:basis %)) (join (:basis %))) links))
-        conflict (vec (for [[ms ls] (components ids must)
-                            :let [vs (inner-violations items index ms)]
-                            :when (seq vs)]
-                        {:links ls :violations vs}))
+        comps    (for [[ms ls] (components ids must)
+                       :let [vs (inner-violations items index ms)]
+                       :when (seq vs)]
+                   [ls (group-by #(= :incompatible-events (:reason %)) vs)])
+        ;; an events constraint never overrides a curator (lot M7, review):
+        ;; the accepted links are applied, the constraint reported
+        conflict (vec (for [[ls by] comps :when (seq (by false))] {:links ls :violations (by false)}))
+        ev-confl (vec (for [[ls by] comps :when (and (empty? (by false)) (seq (by true)))]
+                        {:links ls :violations (by true)}))
         held     (set (mapcat :links conflict))
         merge-in (fn [{:keys [root members] :as st} ra rb]
                    (let [[keep gone] (sort-by str [ra rb])
@@ -213,6 +235,7 @@
      :joined     (vec (map-indexed (fn [i l] (if (contains? tied i) (assoc l :tie? true) l)) joined))
      :refused    refused
      :conflicts  conflict
+     :event-conflicts ev-confl
      :candidates (vec (sort-by link-order (remove #(join (:basis %)) links)))}))
 
 (defn transitive-closure
@@ -220,18 +243,20 @@
    joining `links` (as `cluster`'s `:join`), no constraint read.
    `{item key}`, the key a component's first member."
   [{:keys [items links join] :or {join default-join}}]
-  (:cluster-of (cluster {:items (update-vals (or items {}) #(dissoc % :authority? :dates))
+  (:cluster-of (cluster {:items (update-vals (or items {}) #(dissoc % :authority? :dates :events))
                          :links links :join join})))
 
 (defn violations
   "The cannot-linked pairs `clustering` (`cluster`'s result) puts in one
    cluster, under the same `items` and `cannot-link`: always empty for
-   `cluster`, by construction."
+   `cluster`, by construction. An events constraint among a curator's
+   accepted links, kept and reported (`:event-conflicts`), is none."
   [{:keys [items cannot-link]} clustering]
   (let [ids   (keys (:cluster-of clustering))
         items (merge (zipmap ids (repeat {})) items)
-        index (constraint-index cannot-link)]
-    (vec (mapcat #(inner-violations items index (:members %)) (:clusters clustering)))))
+        index (constraint-index cannot-link)
+        kept  (set (mapcat :violations (:event-conflicts clustering)))]
+    (vec (remove kept (mapcat #(inner-violations items index (:members %)) (:clusters clustering))))))
 
 ;; ---------------------------------------------------------------------------
 ;; In the IR: alignments and memberships in, memberships out
@@ -244,6 +269,12 @@
 (def conflict-code
   "The diagnostic code of a conflict between accepted claims (ADR 0057)."
   :reconcile/identity-conflict)
+
+(def events-conflict-code
+  "The diagnostic code of accepted claims kept although a mention's typed
+   events cannot be the life they join (lot M7, review): the curator wins,
+   the constraint is reported."
+  :reconcile/identity-events-conflict)
 
 (defn batch-fingerprint
   "The fingerprint of a batch: its records' ids. A person node is minted
@@ -302,7 +333,9 @@
 (defn clustering-input
   "The `cluster` input `records` state, with `extra`: `:dates`, `{agent-id
    dates}` (a string or a profile) known beyond what the alignments
-   compared, and `:cannot-link`, more `[{:a :b :reason}]`. A local agent's
+   compared, `:events`, `{agent-id [typed event ..]}` (lot M7, an agent's
+   events as `palomar.agent-events` types them), and `:cannot-link`, more
+   `[{:a :b :reason}]`. A local agent's
    dates are those its alignments' provenance states (`?mention-dates`), an
    authority's those it was compared with (`?authority-dates`); a rejected
    alignment is a cannot-link (`:rejected-alignment`); an accepted
@@ -325,7 +358,9 @@
                    (into {} (for [[id rid] locals :let [d (dates-of '?mention-dates id)]]
                               [id (cond-> {:record rid} d (assoc :dates d))])))
          items    (reduce-kv (fn [m id d] (if (contains? m id) (assoc-in m [id :dates] (parse-dates d)) m))
-                             items (:dates extra))]
+                             items (:dates extra))
+         items    (reduce-kv (fn [m id es] (if (and (contains? m id) (seq es)) (assoc-in m [id :events] (vec es)) m))
+                             items (:events extra))]
      {:items       items
       :links       (-> (vec (keep link-of alignments))
                        (into (for [a accepted]
@@ -425,18 +460,29 @@
    reason and the accepted claims involved."
   [records result]
   (let [diags (group-by first
-                        (for [{:keys [links violations]} (:conflicts result)
-                              [rid ls] (sort-by (comp str key) (group-by :record (filter :record links)))]
-                          [rid (model/diagnostic
-                                {:severity :warning :code conflict-code :subject (:a (first ls))
-                                 :message  (str "accepted identity claims that cannot all hold: "
-                                                (str/join "; " (map violation-text violations)))
-                                 :detail   {:reason     (:reason (first violations))
-                                            :between    [(:a (first violations)) (:b (first violations))]
-                                            :violations violations
-                                            :claims     (mapv :assertion ls)}})]))]
+                        (concat
+                         (for [{:keys [links violations]} (:conflicts result)
+                               [rid ls] (sort-by (comp str key) (group-by :record (filter :record links)))]
+                           [rid (model/diagnostic
+                                 {:severity :warning :code conflict-code :subject (:a (first ls))
+                                  :message  (str "accepted identity claims that cannot all hold: "
+                                                 (str/join "; " (map violation-text violations)))
+                                  :detail   {:reason     (:reason (first violations))
+                                             :between    [(:a (first violations)) (:b (first violations))]
+                                             :violations violations
+                                             :claims     (mapv :assertion ls)}})])
+                         (for [{:keys [links violations]} (:event-conflicts result)
+                               [rid ls] (sort-by (comp str key) (group-by :record (filter :record links)))]
+                           [rid (model/diagnostic
+                                 {:severity :warning :code events-conflict-code :subject (:a (first ls))
+                                  :message  (str "accepted identity claims kept, though a mention's events cannot be that life: "
+                                                 (str/join "; " (map violation-text violations)))
+                                  :detail   {:reason     :incompatible-events
+                                             :between    [(:a (first violations)) (:b (first violations))]
+                                             :violations violations
+                                             :claims     (mapv :assertion ls)}})])))]
     (mapv (fn [r]
-            (let [kept (vec (remove #(= conflict-code (:code %)) (:diagnostics r)))
+            (let [kept (vec (remove #(#{conflict-code events-conflict-code} (:code %)) (:diagnostics r)))
                   ds   (map second (get diags (:id r)))]
               (if (and (empty? ds) (= kept (vec (:diagnostics r))))
                 r
