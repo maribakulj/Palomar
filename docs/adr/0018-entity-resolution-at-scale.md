@@ -12,7 +12,8 @@
   authority `:iri` and collapsed to one reconciled agent across records (the store
   is the agent registry it returns). Exact and D7-`:asserted` — the Madame Bovary
   fixture reconciles to one Flaubert. The **fuzzy tier** (decisions 3/4) is now
-  *started*: `reconcile/propose-agent-links` emits confidence-scored (token-set)
+  *started*: `reconcile/propose-agent-links` emits scored (token-set; since lot
+  M4, optionally Fellegi-Sunter)
   name→authority *proposals* — `:proposed`, never `:asserted` — with a
   `:certifiable?` guard so a perfect name match to an id-less entry (the Victor
   Hugo *metro station*) can never be promoted. The equivalence-assertion verdict
@@ -263,3 +264,156 @@ tolerance: every date on that corpus is an exact year. Pinned by
 `a-proposal-carries-its-evidence-into-the-ir`,
 `a-proposal-stays-with-the-mention-that-made-it`,
 `an-undated-mention-states-no-dates-verdict`.
+
+## Amendment (lot M4, 2026-11-09): a Fellegi-Sunter score, abstention, and a confidence only when calibrated
+
+After M3, two things were still wrong on the BnF gold
+(`docs/eval/person-reconciliation.md`): the matcher never abstained — the two
+"Paltsits, Victor Hugo" mentions, whose authority is not in the pool, were
+linked to Victor Hugo at a Jaccard of 0.667 — and the Jaccard was written as
+an alignment's `:confidence` though nothing had measured it as a probability.
+This amendment was revised after a contradictory review (probes of the first
+version: a confidence carried to another pool, two outright proposals for
+one mention, weights read from pseudo-counts, a forged bar accepted); the
+rules below are the revised ones.
+
+1. **An explainable score, as data** (`palomar.agent-match`, pure Clojure, no
+   dependency). A (mention, candidate) pair is a comparison vector of three
+   features: `:name`, the best level over the candidate's forms, ordered by
+   agreement — `:exact` heading (accents, case, punctuation aside),
+   `:initials` (same surname, forenames compatible as initials: "P.-J." /
+   "Pierre-Jules"), `:same-tokens` (other order), `:surname-typo` (surname
+   one edit away, forenames alike), `:forename-overlap`, `:surname-only`,
+   `:forenames-differ`, then, surnames differing, the token-Jaccard bands
+   `:jaccard-high` (>= 0.5), `:jaccard-low` (> 0), `:none` — so the Jaccard
+   is one level of one feature, not the decision; `:form`, `:heading` or
+   `:variant` (the best level reached only on a `400` / pseudonym); `:dates`,
+   `:agree` (an exact birth or death year on both sides, within the 2-year
+   tolerance), `:compatible` (approximate, open, an activity), `:unknown`.
+   **Incompatible dates stay a block** (M3), never a weight. Nothing derived
+   from the gold is a feature: no authority number, ISNI, `$3` or record id
+   (the eval's spy tests check the matcher's inputs and that a model holds
+   no string but the names of the families it was trained on).
+2. **Only what was measured weighs.** For each level, m = P(level | same
+   person) and u = P(level | different persons) are read from observed
+   counts, and the weight is log2(m/u) — under four rules
+   (`agent-match/level-weights`):
+   - a level reached by fewer than **5** pairs (`min-observed`) on both sides
+     weighs **0**; reached on one side only, the other side's share is
+     bounded by 5/N and the weight is the bound it gives, kept only in the
+     direction it proves: an agreement seen among the same persons and
+     almost never among different ones weighs at least log2(m / (5/N_u)),
+     never below 0; a level seen among different persons and almost never
+     among the same weighs at most log2((5/N_m) / u), never above 0. No
+     weight is read from pseudo-counts;
+   - **`:dates :unknown` weighs 0 by rule.** Missing dates are no evidence
+     (M3). The corpus estimate (m 5/136, u 244/264, log2 -4.6) measures two
+     artefacts: the BnF headings carry a `$d` (so the true pairs are dated),
+     and the date block removed the dated non-matches (so what is left of
+     them is undated). Weighing it would abstain on every undated mention for
+     being undated;
+   - along the name order, **weights never increase**;
+   - a **disagreeing level** (`:forenames-differ`, `:jaccard-high`,
+     `:jaccard-low`, `:none`: forenames on both sides that differ, or
+     surnames that differ) **never weighs more than 0**.
+   **u is label-free, from the pool against itself**: every ordered pair of
+   two distinct authority entries (1 056 on M2) for the name and the form,
+   those the dates do not block (264) for the dates — two records being two
+   persons by construction, and, under the model's own independence
+   assumption, the name of different persons not depending on whether the
+   date block applies. The (mention, entry) pairs are not used for u: once
+   the dates block, about one in eight of those left is a true pair. This is
+   **transductive**: the pool is built from the gold's own authorities.
+   **m from labelled true pairs, leave-one-family-out** (Dumas, Hugo, Hetzel,
+   Verne, others): a mention is scored by the model fitted on the four other
+   families. The prior λ is the share of true pairs among the training
+   mentions' unblocked pairs (0.111-0.179 by fold). **EM** (unsupervised, u
+   fixed, m and λ re-estimated; its weights read from EM's expected counts
+   under the same rules) is reported for comparison.
+   On M2, every true pair is an exact heading, so the weights are: exact
+   +7.72 (u bounded: 2 of 1 056 pool pairs), agreeing dates +3.67, heading
+   +0.02, Jaccard > 0 with another surname at most -1.91, nothing shared at
+   most -4.46 (m bounded: 0 of 136), and **0 for every other level** —
+   initials, typos, reordered or partial names, forenames that differ, a high
+   Jaccard with another surname, a variant are unmeasured here.
+3. **Term frequency, from one pool.** A surname-agreeing name level with a
+   positive weight is adjusted by log2(ū / u_s): u_s the share of the
+   pool's headings with that surname (a surname no heading holds counts
+   once), ū = Σ n_s³ / (N Σ n_s²), the mean u_s of an agreement between two
+   random headings of the pool. **Both from the pool matched against**
+   (`compare-pair` carries them), never the model's ū with another pool's
+   counts: on a pool of 5 001 distinct surnames the first version added +7.2
+   to every Verne. **The pool, not the mention corpus**: a wrong candidate is
+   drawn from the pool, so the chance that it shares the mention's surname is
+   the surname's share of the pool; its share of the mentions says how often
+   a person is cited. On M2, ū = 2/34: a surname held by three headings
+   (Dumas, Hugo) weighs 0.63 less, one held once 0.96 more. A disagreement
+   gets no adjustment: a rare surname never makes different forenames
+   evidence for.
+4. **Decision.** Posterior p = 1/(1+2^-(w + log2(λ/(1-λ)))). At p >= 0.95 a
+   candidate is **proposed** (`:decision :propose`, `skos:exactMatch` when
+   certifiable) — **but only when it is its mention's one candidate at or
+   above 0.5**; with several, all of them go to **review**
+   (`:review-reason :competing`), so a mention never has two outright
+   proposals. At 0.5 <= p < 0.95 a candidate is for review
+   (`skos:closeMatch`); below 0.5 the matcher **abstains**: the candidate is
+   listed under `:abstained` with its evidence and makes no claim. The
+   thresholds are stated in the model (`default-thresholds`), set before
+   measuring, not tuned. Each proposal carries `:score` (p),
+   `:match-weight`, `:decision` and `:evidence {:comparison :weights
+   :name-score :dates}`; `align-agents` writes them as the mapping's
+   provenance bindings (`?posterior`, `?match-weight`, `?decision`,
+   `?name-level`, `?form`, `?dates-level`, beside `?name-score` and M3's
+   dates). The scorer runs only when a model is passed (`agent-candidates`
+   with `{:model m}`); without one, the M3 name-only path is unchanged. No
+   spoke and no CLI command passes a model yet; the model is computed by the
+   eval from the gold, not shipped as a file.
+5. **Calibration, and the confidence rule** (ADR 0005 L2). The held-out
+   predictions (every scored candidate of every determined mention, from its
+   family's held-out model) are measured: reliability table (10 bins), Brier
+   score, ECE, the largest bin gap, and what they rest on — the distinct
+   (mention, candidate) pairs, the distinct true mentions (35 identical
+   "Dumas, Alexandre" mentions are one), the distinct pairs in the review
+   band [0.5, 0.95). One report, pooled over the five folds, is attached to
+   every fold model, naming by fingerprint the pool and the gold it was
+   measured on. **The bar** (`default-bar`): ECE <= 0.05 and no bin off by
+   more than 0.1, on at least 300 distinct pairs and 100 distinct true
+   mentions; for a `:review` decision, at least 30 distinct pairs in the
+   review band too. A posterior is written as `:confidence` only when:
+   - the report meets the **model's** bar — pinned when the model is built,
+     never laxer than `default-bar`, never the bar the report carries;
+   - the pool matched against has the report's fingerprint: **a calibration
+     holds for the pool it was measured on, no other**;
+   - for a review decision, the review band was covered;
+   - and the proposal carries that proof (`:calibration-proof`), which
+     `align-agents` checks (`proven-confidence`) before writing a
+     confidence: one a caller put on a proposal map is not written.
+   Otherwise the posterior is evidence only (`?posterior`). **The name-only
+   Jaccard is never written as a confidence any more** (it was, since ADR
+   0032).
+   **On M2 the bar is missed**: 351 predictions, but 125 distinct pairs, 33
+   distinct true mentions and 7 pairs in the review band; Brier 0.0360, ECE
+   0.1082, largest bin gap 0.740 (the 24 competitors at 0.54, none right).
+   The fold models are not calibrated, and **no proposal states a
+   confidence**. EM: Brier 0.0832, ECE 0.1776.
+
+Measured (`palomar.eval.person-reconciliation-test`): against M3, false links
+0 → 0, recall@1 1.000 → 1.000, precision@1 0.986 → 1.000; the 5 mentions
+whose authority is not in the pool are all abstained (M3: 2 linked); no
+in-pool tie (the undetermined, undated "Dumas, Alexandre" is still tied
+between père and fils, now both for review); task B top-1 false merges 2 →
+0. Counting only outright proposals, recall@1 is 111/136: 25 in-pool
+mentions go to review because another candidate is above 0.5 — 20 "Férat,
+Jules" (1829-1906) against Jules Verne (1828-1905), whose different surname
+weighs at most -1.91 now that its bound is all that was measured. On a
+synthetic stress set of 143 perturbed gold headings the truth is a candidate
+143 times (M3's Jaccard: 97), the top proposal 127 times, outright 10. Pinned
+by `palomar.agent-match-test` and
+`palomar.reconcile-test/a-model-scores-each-candidate-and-explains-it`,
+`a-candidate-below-the-abstention-threshold-is-not-proposed`,
+`an-undated-exact-heading-is-not-abstained-for-being-undated`,
+`between-the-thresholds-a-proposal-is-flagged-for-review`,
+`at-most-one-outright-proposal-per-mention`,
+`an-uncalibrated-score-is-never-written-as-a-confidence`,
+`a-calibration-holds-only-for-the-pool-it-was-measured-on`,
+`align-agents-writes-no-confidence-without-its-proof`.

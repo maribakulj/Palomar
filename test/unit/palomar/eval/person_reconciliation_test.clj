@@ -3,15 +3,19 @@
    reconciliation scored on 150 real BnF INTERMARC records against the BnF
    cataloguers' own links (`100`/`700 $3`). The name-only numbers are the M2
    baseline (\"before\"), still asserted by running the name-only matcher; lot
-   M3's date-aware numbers (\"after\") are asserted next to them. They are
+   M3's date-aware numbers are asserted next to them, and lot M4's
+   Fellegi-Sunter numbers (with their calibration, an EM comparison and a
+   synthetic stress set) after those. They are
    measurements, not a guarantee. Corpus and gold:
    `test/fixtures/er-gold/bnf-persons/README.md`; write-up:
    `docs/eval/person-reconciliation.md`. The corpus readers and the metrics live
    in `palomar.eval.person-reconciliation`; the metrics are tested here on
    hand-made inputs first."
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.agent-dates :as dates]
+            [palomar.agent-match :as fs]
             [palomar.eval.person-reconciliation :as pr]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.intermarc :as intermarc]
@@ -306,4 +310,200 @@
     (is (= {:pairwise {:predicted 1116 :true 1114 :right 1114 :false-merges 2 :missed 0
                        :precision 557/558 :recall 1 :f1 1114/1115}
             :b-cubed  {:precision 419/423 :recall 1}}
-           (:top-1-dated @b)))))
+           (:top-1-dated @b))))
+  (testing "with the Fellegi-Sunter score (M4): no false merge; the two Paltsits, abstained, are no longer joined"
+    (is (= {:pairwise {:predicted 1113 :true 1114 :right 1113 :false-merges 0 :missed 1
+                       :precision 1 :recall 1113/1114 :f1 2226/2227}
+            :b-cubed  {:precision 1 :recall 140/141}}
+           (:top-1-fs @b)))))
+
+;; ---------------------------------------------------------------------------
+;; Lot M4 — a Fellegi-Sunter score, its calibration, and a stress set
+;; ---------------------------------------------------------------------------
+
+(def ^:private fsr (delay (pr/fs-run @c)))
+
+(defn- strings-in [x] (filter string? (tree-seq coll? seq x)))
+
+(deftest the-fs-matcher-never-sees-the-gold
+  (let [calls  (atom [])
+        models (:models @fsr)
+        spy    (fn [ms entries opts]
+                 (swap! calls conj [ms entries opts])
+                 (reconcile/agent-candidates ms entries opts))
+        res    (pr/task-a-fs @c (comp models :family) spy)
+        gold   (set (remove (set (for [m (:mentions @c) [code v] (:subfields m) :when (= "d" code)] (str/trim v)))
+                            (gold-strings @c)))
+        texts  (distinct (concat (map :name (mapcat first @calls))
+                                 (for [[_ es] @calls e es t (cons (:label e) (:variants e))] t)))]
+    (testing "one mention per call, as {:name :dates}, the dated entries, and a model; the result is the default's"
+      (is (= 142 (count @calls)))
+      (is (every? #(and (= 1 (count (first %))) (= #{:name :dates} (set (keys (ffirst %))))) @calls))
+      (is (every? #(= (cond-> #{:id :label :variants} (:dates %) (conj :dates)) (set (keys %))) (mapcat second @calls)))
+      (is (every? #(= #{:model} (set (keys (nth % 2)))) @calls))
+      (is (= (:all (:task-a @fsr)) (:all res))))
+    (testing "no $3, $1, ISNI or authority number appears in a name, a label or a variant"
+      (is (some #{"11901063"} gold))
+      (is (empty? (for [t texts g gold :when (str/includes? t g)] [t g]))))
+    (testing "a comparison is levels, a score and the surname: no id, no record, no ISNI is a feature"
+      (is (empty? (remove #(set/subset? (set (keys (:cmp %))) #{:levels :name-score :dates :surname :surname-u :tf-mean}) (:pairs (:data @fsr)))))
+      (is (every? (fn [p] (every? (set (mapcat val fs/features)) (vals (dissoc (get-in p [:cmp :levels]) :dates))))
+                  (:pairs (:data @fsr)))))
+    (testing "a model is numbers and levels: the only strings it holds are the names of the families it was trained on"
+      (doseq [[fam m] models]
+        (is (= (set (get-in m [:estimation :trained-on])) (set (strings-in (dissoc m :calibration)))))
+        (testing "and leave-one-family-out: a mention is never scored by a model trained on its family"
+          (is (not (some #{fam} (get-in m [:estimation :trained-on])))))))))
+
+(defn- r4 [x] (/ (Math/round (* 1e4 (double x))) 1e4))
+
+(deftest task-a-with-a-fellegi-sunter-score
+  (let [a (:task-a @fsr)]
+    (pr/print-fs @fsr)
+    (testing "all 142 mentions, each scored by its held-out family model: every in-pool top proposal right, every out-of-pool one abstained"
+      (is (= (summary {:mentions 142 :in-pool 136 :correct 136 :at5 136 :not-in-pool 5 :undetermined 1
+                       :recall-1 1 :recall-5 1 :precision-1 1})
+             (:all a))))
+    (testing "per family"
+      (is (= {"Dumas"  (summary {:mentions 51 :in-pool 50 :correct 50 :at5 50 :undetermined 1 :recall-1 1 :recall-5 1 :precision-1 1})
+              "Hetzel" (summary {:mentions 2 :in-pool 2 :correct 2 :at5 2 :recall-1 1 :recall-5 1 :precision-1 1})
+              "Hugo"   (summary {:mentions 8 :in-pool 8 :correct 8 :at5 8 :recall-1 1 :recall-5 1 :precision-1 1})
+              "Verne"  (summary {:mentions 29 :in-pool 29 :correct 29 :at5 29 :recall-1 1 :recall-5 1 :precision-1 1})
+              "others" (summary {:mentions 52 :in-pool 47 :correct 47 :at5 47 :not-in-pool 5 :recall-1 1 :recall-5 1 :precision-1 1})}
+             (:by-family a))))
+    (testing "the matcher abstains: the 5 mentions whose authority is not in the pool, Paltsits included, get no proposal"
+      (is (= #{"Rafina, Gesner" "Paltsits, Victor Hugo" "Hayat, Eric" "Harispe, Patrice"}
+             (set (for [m (:mentions a) :when (= :not-in-pool/abstained (:outcome m))] (:name m)))))
+      (is (every? (fn [m] (every? #(< (:score %) 0.5) (:abstained m)))
+                  (filter #(= :not-in-pool/abstained (:outcome %)) (:mentions a)))))
+    (testing "26 top proposals are for review, every one because another candidate of its mention is above 0.5"
+      (is (= 26 (:review a)))
+      (is (every? #(= :competing (:review-reason (first (:proposals %)))) (filter #(= :review (:decision %)) (:mentions a))))
+      (is (= {"Férat, Jules" 20} (select-keys (frequencies (map :name (filter #(= :review (:decision %)) (:mentions a)))) ["Férat, Jules"]))
+          "Jules Férat (1829-1906) against Jules Verne (1828-1905): dates agree, the surnames differ")
+      (testing "the undetermined, undated Dumas: père and fils tied, both for review"
+        (let [m (first (filter #(nil? (:truth %)) (:mentions a)))]
+          (is (= [:review :review] (map :decision (:proposals m))))
+          (is (apply = (map :score (:proposals m))))
+          (is (:tied? m)))))
+    (testing "an undated exact heading is not abstained for being undated: the 5 undated in-pool mentions are proposed outright"
+      (is (= #{:propose} (set (for [m (:mentions a) :when (and (:truth m) (nil? (:dates m)) (= :correct (:outcome m)))]
+                                (:decision m))))))
+    (testing "counting only outright proposals as links: 111 right, 25 abstained, still no false link"
+      (is (= (summary {:mentions 142 :in-pool 136 :correct 111 :at5 111 :abstained 25 :not-in-pool 5 :undetermined 1
+                       :recall-1 111/136 :recall-5 111/136 :precision-1 1})
+             (:all (:outright a))))
+      (is (= {"Dumas" [50 0] "Hetzel" [1 1] "Hugo" [8 0] "Verne" [29 0] "others" [23 24]}
+             (update-vals (:by-family (:outright a)) (juxt :correct :abstained)))))
+    (testing "at most one outright proposal per mention"
+      (is (every? #(<= (count (filter (comp #{:propose} :decision) (:proposals %))) 1) (:mentions a))))
+    (testing "the dates still block, never weigh: 577 candidates rejected, never a mention's own authority"
+      (is (= {:mentions-with-rejections 117 :rejected 577 :truth-rejected 0} (:rejections a))))))
+
+(deftest the-held-out-calibration-misses-the-bar-so-no-confidence-is-written
+  (let [{:keys [calibration models task-a fold-reports]} @fsr
+        pool (pr/dated-entries (:pool @c))]
+    (testing "351 held-out predictions, but 125 distinct (mention, candidate) pairs and 33 distinct true mentions"
+      (is (= {:n 351 :distinct-pairs 125 :positives 136 :distinct-positives 33 :review-pairs 7}
+             (select-keys calibration [:n :distinct-pairs :positives :distinct-positives :review-pairs])))
+      (is (= [0.036 0.1082 0.7401] (map (comp r4 calibration) [:brier :ece :max-bin-gap]))))
+    (testing "the reliability table, as measured"
+      (is (= [[[0.0 0.1] 113 0.0697 0.0] [[0.1 0.2] 53 0.1285 0.0] [[0.3 0.4] 23 0.3716 0.0] [[0.5 0.6] 24 0.5397 0.0]
+              [[0.6 0.7] 1 0.6517 0.0] [[0.7 0.8] 1 0.7401 0.0] [[0.9 1.0] 136 0.9969 1.0]]
+             (map (juxt :bin :n (comp r4 :mean-p) (comp r4 :observed)) (:bins calibration)))))
+    (testing "the report names the pool and the gold it was measured on"
+      (is (= (fs/pool-fingerprint pool) (:pool calibration)))
+      (is (= (pr/gold-fingerprint @c) (:gold calibration))))
+    (testing "the bar is missed — too few distinct true mentions, too high an ECE and bin gap, the review band empty"
+      (is (= fs/default-bar (:bar calibration)))
+      (is (false? (:meets-bar? calibration)))
+      (is (false? (:review-covered? calibration)))
+      (is (not-any? #(fs/calibrated? % pool) (vals models))))
+    (testing "so no proposal states a confidence"
+      (is (= 164 (count (mapcat :proposals (:mentions task-a)))))
+      (is (not-any? #(contains? % :confidence) (mapcat :proposals (:mentions task-a)))))
+    (testing "per fold, no report meets it either; one pooled report is what is attached"
+      (is (= {"Dumas" [17 6] "Hetzel" [3 2] "Hugo" [12 3] "Verne" [3 2] "others" [90 20]}
+             (update-vals fold-reports (juxt :distinct-pairs :distinct-positives))))
+      (is (not-any? :meets-bar? (vals fold-reports)))
+      (is (every? #(= calibration (:calibration %)) (vals models))))))
+
+(deftest the-supervised-weights-and-the-term-frequency-adjustment
+  (let [data (:data @fsr)
+        full (pr/supervised-model data (set (conj pr/families "others")))
+        w    (fn [f l] (r4 (get-in full [:weights f l])))]
+    (testing "u from the 1 056 ordered pool pairs (264 the dates do not block, for the dates)"
+      (is (= {:all 1056 :unblocked 264} (:u-pairs data))))
+    (testing "every true pair is an exact heading"
+      (is (= {{:name :exact :form :heading :dates :agree} 131 {:name :exact :form :heading :dates :unknown} 5}
+             (frequencies (for [p (:pairs data) :when (= (:truth p) (:id p))] (get-in p [:cmp :levels]))))))
+    (testing "only what was measured weighs: an exact heading, seen twice among different persons, weighs its bound log2(1 / (5/1056))"
+      (is (= 7.7225 (w :name :exact)))
+      (is (= (repeat 7 0.0) (map #(w :name %) [:initials :same-tokens :surname-typo :forename-overlap :surname-only
+                                               :forenames-differ :jaccard-high])))
+      (is (= [-1.911 -4.4626] (map #(w :name %) [:jaccard-low :none])) "bounds: m <= 5/136")
+      (is (= [0.0193 0.0] (map #(w :form %) [:heading :variant])))
+      (is (= [3.6684 0.0 0.0] (map #(w :dates %) [:agree :compatible :unknown])) "unknown 0 by rule"))
+    (testing "the name weights never increase along the order of agreement, and no disagreement is evidence for"
+      (is (apply >= (map #(get-in full [:weights :name %]) fs/name-levels)))
+      (is (every? #(<= (get-in full [:weights :name %]) 0.0) fs/disagreeing-levels)))
+    (testing "the surname adjustment of the M2 pool: u-mean 2/34; 3 headings 0.63 less, one 0.96 more"
+      (let [pool   (pr/dated-entries (:pool @c))
+            counts (fs/surname-counts pool)
+            tf     (fn [nm] (r4 (get-in (fs/score full (fs/compare-pair {:name nm} {:label nm} {:surname-counts counts :pool-size 33}))
+                                        [:weights :tf])))]
+        (is (= 0.0588 (r4 (fs/tf-mean counts 33))))
+        (is (= [-0.628 0.9569] [(tf "Dumas, Alexandre") (tf "Schlienger, Paul")]))))))
+
+(deftest initials-and-different-forenames-are-ordered-and-never-evidence-for
+  (let [m  (get (:models @fsr) "Hugo")
+        es (pr/dated-entries (:pool @c))
+        by (fn [nm] (into {} (for [x (let [r (reconcile/agent-candidates [{:name nm}] es {:model m})] (concat (:proposals r) (:abstained r)))]
+                               [(:authority-label x) x])))]
+    (testing "\"Hugo, V.\": Victor (initials) weighs no less than Georges-Victor (different forenames), which weighs nothing for"
+      (let [h (by "Hugo, V.")]
+        (is (= :initials (get-in h ["Hugo, Victor" :evidence :comparison :name])))
+        (is (= :forenames-differ (get-in h ["Hugo, Georges-Victor" :evidence :comparison :name])))
+        (is (>= (:match-weight (h "Hugo, Victor")) (:match-weight (h "Hugo, Georges-Victor"))))
+        (is (<= (get-in h ["Hugo, Georges-Victor" :evidence :weights :name]) 0.0))
+        (is (not-any? #(= :propose (:decision %)) (vals h)) "neither is proposed outright on initials alone")))
+    (testing "same surname, different forenames: \"Dumas, Adolphe\" gets Adolphe, never Alexandre"
+      (let [h (by "Dumas, Adolphe")]
+        (is (= :propose (get-in h ["Dumas, Adolphe" :decision])))
+        (is (= :forenames-differ (get-in h ["Dumas, Alexandre" :evidence :comparison :name])))
+        (is (= 0.0 (get-in h ["Dumas, Alexandre" :evidence :weights :name])))
+        (is (= 0.0 (get-in h ["Dumas, Alexandre" :evidence :weights :tf])) "a common surname adds nothing to a disagreement")
+        (is (= :abstain (get-in h ["Dumas, Alexandre" :decision])))))))
+
+(deftest em-without-labels-for-comparison
+  (let [em (pr/em-model (:data @fsr) (count (:pool @c)))
+        a  (pr/task-a-fs @c (constantly em))
+        k  (fs/calibration (:predictions a))]
+    (testing "EM converges in 36 steps, to a prior of 0.162; its weights obey the same rules"
+      (is (= 36 (get-in em [:estimation :iterations])))
+      (is (= 0.1619 (r4 (:prior em))))
+      (is (= 7.3511 (r4 (get-in em [:weights :name :exact]))))
+      (is (= 0.0 (get-in em [:weights :dates :unknown]))))
+    (testing "the same top proposals as the supervised model, fewer outright"
+      (is (= (:all (:task-a @fsr)) (:all a)))
+      (is (= [88 48 0] ((juxt :correct :abstained :false-links) (:all (:outright a))))))
+    (testing "and worse calibrated"
+      (is (= [0.0832 0.1776] [(r4 (:brier k)) (r4 (:ece k))]))
+      (is (false? (:meets-bar? k))))))
+
+(deftest a-synthetic-stress-set-measures-candidate-recall
+  (testing "SYNTHETIC: each distinct gold heading perturbed five ways"
+    (is (= {:initials "Hetzel, P.-J." :dropped-forename "Hetzel" :reversed "Pierre-Jules Hetzel" :typo "Htezel, Pierre-Jules"}
+           (pr/stress-variants "Hetzel, Pierre-Jules")))
+    (is (= "Perez, Victor" (:accents-removed (pr/stress-variants "Pérez, Víctor"))))
+    (is (= {:initials 33 :dropped-forename 33 :reversed 33 :accents-removed 11 :typo 33}
+           (frequencies (map :kind (pr/stress-set @c))))))
+  (let [s (pr/stress-recall @c (comp (:models @fsr) :family))]
+    (testing "the truth among the candidates: M3's Jaccard >= 0.5 lets 97 of 143 through, the model's blocking all"
+      (is (= {:n 143 :m3-candidate 97 :fs-candidate 143 :fs-top-1 127 :fs-outright 10} (:all s)))
+      (is (= {:initials         {:n 33 :m3-candidate 7  :fs-candidate 33 :fs-top-1 29 :fs-outright 1}
+              :dropped-forename {:n 33 :m3-candidate 29 :fs-candidate 33 :fs-top-1 29 :fs-outright 1}
+              :reversed         {:n 33 :m3-candidate 33 :fs-candidate 33 :fs-top-1 29 :fs-outright 0}
+              :accents-removed  {:n 11 :m3-candidate 11 :fs-candidate 11 :fs-top-1 11 :fs-outright 8}
+              :typo             {:n 33 :m3-candidate 17 :fs-candidate 33 :fs-top-1 29 :fs-outright 0}}
+             (dissoc s :all))))))

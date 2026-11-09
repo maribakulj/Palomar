@@ -4,6 +4,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [palomar.agent-dates :as dates]
+            [palomar.agent-match :as fs]
             [palomar.curate :as curate]
             [palomar.model :as model]
             [palomar.plugins.lrmoo.dataset :as dataset]
@@ -357,3 +358,162 @@
     (let [[r] (rec/align-agents [(named :doc/d "Dumas, Alexandre")] (rec/propose-agent-links ["Dumas, Alexandre"] dumas))]
       (is (= 2 (count (mappings r))))
       (is (every? #(= {'?label "Dumas, Alexandre" '?name-score 1.0} (get-in % [:provenance :bindings])) (mappings r))))))
+
+;; --- a Fellegi-Sunter score (lot M4) ------------------------------------------
+
+(def ^:private fs-model
+  "A hand-set model: an exact heading weighs log2 90, agreeing dates log2 16,
+   unknown dates 0 (by rule), a different surname with a high Jaccard log2
+   1/4; prior 0.05 (log2 1/19)."
+  (fs/model {:m {:name  {:exact 0.9 :initials 0.03 :same-tokens 0.02 :surname-typo 0.01 :forename-overlap 0.01
+                         :surname-only 0.01 :forenames-differ 0.005 :jaccard-high 0.005 :jaccard-low 0.005 :none 0.005}
+                 :form  {:heading 0.95 :variant 0.05}
+                 :dates {:agree 0.8 :compatible 0.1 :unknown 0.1}}
+             :u {:name  {:exact 0.01 :initials 0.002 :same-tokens 0.002 :surname-typo 0.001 :forename-overlap 0.01
+                         :surname-only 0.005 :forenames-differ 0.05 :jaccard-high 0.02 :jaccard-low 0.2 :none 0.7}
+                 :form  {:heading 0.9 :variant 0.1}
+                 :dates {:agree 0.05 :compatible 0.15 :unknown 0.8}}
+             :prior 0.05}))
+
+(defn- well-calibrated
+  "A calibration report on `pool` that meets `fs/default-bar`, review band included."
+  [pool]
+  (fs/calibration (concat (for [i (range 100)] {:p 0.99 :y 1 :pair [:t i] :mention [:t i]})
+                          (for [i (range 200)] {:p 0.01 :y 0 :pair [:f i] :mention [:f i]})
+                          (for [i (range 40)] {:p 0.75 :y (if (< i 30) 1 0) :pair [:r i] :mention [:r i]}))
+                  {:pool (fs/pool-fingerprint pool)}))
+
+(deftest a-model-scores-each-candidate-and-explains-it
+  (let [{:keys [proposals rejected]} (rec/agent-candidates [{:name "Dumas, Alexandre" :dates "1802-1870"}] dumas {:model fs-model})
+        [p] proposals]
+    (testing "the father, proposed outright; the son still rejected for his dates, never weighed"
+      (is (= [pere] (map :authority-id proposals)))
+      (is (= :propose (:decision p)))
+      (is (= :proposed (:status p)) "still only a proposal (D7)")
+      (is (= [[fils :incompatible-dates]] (map (juxt :authority-id :reason) rejected))))
+    (testing "the score is the posterior; the evidence holds the comparison vector and each weight"
+      (is (= {:name :exact :form :heading :dates :agree} (get-in p [:evidence :comparison])))
+      (is (= (fs/posterior (:match-weight p) 0.05) (:score p)))
+      (is (< 0.95 (:score p) 1.0))
+      (is (= #{:name :form :dates :tf} (set (keys (get-in p [:evidence :weights])))))
+      (is (= 1.0 (get-in p [:evidence :name-score])) "the Jaccard is kept, as evidence"))))
+
+(deftest a-candidate-below-the-abstention-threshold-is-not-proposed
+  (let [hugo [{:id "http://ex.org/hugo" :label "Hugo, Victor"}]
+        {:keys [proposals abstained]} (rec/agent-candidates ["Paltsits, Victor Hugo"] hugo {:model fs-model})]
+    (testing "the Jaccard (0.667) would propose Victor Hugo; the model abstains"
+      (is (= ["http://ex.org/hugo"] (map :authority-id (rec/propose-agent-links ["Paltsits, Victor Hugo"] hugo))))
+      (is (empty? proposals))
+      (is (empty? (rec/propose-agent-links ["Paltsits, Victor Hugo"] hugo {:model fs-model}))))
+    (testing "the abstention is listed, with its evidence"
+      (is (= [["http://ex.org/hugo" :abstain :jaccard-high]]
+             (map (juxt :authority-id :decision #(get-in % [:evidence :comparison :name])) abstained)))
+      (is (< (:score (first abstained)) 0.5)))
+    (testing "and no claim is made"
+      (is (empty? (mappings (first (rec/align-agents [(named :doc/p "Paltsits, Victor Hugo")]
+                                                     (rec/propose-agent-links ["Paltsits, Victor Hugo"] hugo {:model fs-model}))))))))
+  (testing "a name sharing nothing with an entry is no candidate at all"
+    (is (= {:proposals [] :rejected [] :abstained []}
+           (rec/agent-candidates ["Verne, Jules"] dumas {:model fs-model})))))
+
+(deftest an-undated-exact-heading-is-not-abstained-for-being-undated
+  (testing "missing dates weigh 0: the same heading, dated or not, is never abstained for its want of dates"
+    (let [[p] (rec/propose-agent-links ["Gustave Flaubert"] pool {:model fs-model})]
+      (is (= :unknown (get-in p [:evidence :comparison :dates])))
+      (is (= 0.0 (get-in p [:evidence :weights :dates])))
+      (is (not= :abstain (:decision p))))))
+
+(deftest between-the-thresholds-a-proposal-is-flagged-for-review
+  (let [[p] (rec/propose-agent-links ["Gustave Flaubert"] pool {:model fs-model})
+        [r] (rec/align-agents [(named :doc/f "Gustave Flaubert")] [p])
+        [a] (mappings r)]
+    (testing "an exact name and no dates: posterior 0.83, between 0.5 and 0.95"
+      (is (= :review (:decision p)))
+      (is (< 0.8 (:score p) 0.9)))
+    (testing "a proposal for review is a close match, never an exact one"
+      (is (= [:skos/closeMatch :proposed] ((juxt :predicate :status) a))))
+    (testing "its provenance states the posterior, the weight, the decision and the levels — as evidence, not confidence"
+      (is (nil? (:confidence a)))
+      (is (= {'?label "Gustave Flaubert" '?name-score 1.0 '?posterior (:score p) '?match-weight (:match-weight p)
+              '?decision :review '?name-level :exact '?form :heading '?dates-level :unknown}
+             (get-in a [:provenance :bindings]))))))
+
+(deftest at-most-one-outright-proposal-per-mention
+  (let [d     dates/parse-life-dates
+        pool2 [{:id "http://x/a" :label "Martin, Jean" :dates (d "1900-1980")}
+               {:id "http://x/b" :label "Martin, Jean-Pierre" :variants ["Martin, Jean"] :dates (d "1901-1979")}
+               {:id "http://x/c" :label "Durand, Paul"} {:id "http://x/d" :label "Bernard, Luc"}]
+        props (rec/propose-agent-links [{:name "Martin, Jean" :dates "1900-1980" :record :doc/r}] pool2 {:model fs-model})]
+    (testing "Jean and Jean-Pierre Martin (heading, variant) each above the propose threshold alone: both go to review"
+      (is (= #{"http://x/a" "http://x/b"} (set (map :authority-id props))))
+      (is (every? #(< 0.95 (:score %)) props))
+      (is (= [[:review :competing] [:review :competing]] (map (juxt :decision :review-reason) props))))
+    (testing "so the record never takes two exact matches"
+      (is (= #{:skos/closeMatch} (set (map :predicate (mappings (first (rec/align-agents [(named :doc/r "Martin, Jean")] props)))))))))
+  (testing "undated père and fils weigh alike: neither is proposed outright"
+    (let [ps (rec/propose-agent-links [{:name "Dumas, Alexandre"}] dumas {:model (assoc fs-model :thresholds {:propose 0.8 :review 0.5})})]
+      (is (= #{pere fils} (set (map :authority-id ps))))
+      (is (every? #(< 0.8 (:score %)) ps))
+      (is (= [[:review :competing] [:review :competing]] (map (juxt :decision :review-reason) ps))))))
+
+(deftest an-uncalibrated-score-is-never-written-as-a-confidence
+  (let [dated [{:name "Dumas, Alexandre" :dates "1802-1870"}]
+        conf  (fn [props] (map :confidence (mappings (first (rec/align-agents [(named :doc/d "Dumas, Alexandre")] props)))))]
+    (testing "an uncalibrated model: the posterior is a score, the proposal and its claim state no confidence"
+      (let [props (rec/propose-agent-links dated dumas {:model fs-model})]
+        (is (false? (fs/calibrated? fs-model dumas)))
+        (is (not-any? #(contains? % :confidence) props))
+        (is (= [nil] (conf props)))
+        (testing "so a confidence threshold never accepts it"
+          (let [r   (first (rec/align-agents [(named :doc/d "Dumas, Alexandre")] props))
+                res (curate/curate [r] (curate/accept-when (curate/confidence-at-least 0.5)))]
+            (is (= [0 1] ((juxt :accepted :needs-review) (:summary res))) "routed to review, not accepted")))))
+    (testing "a model whose held-out calibration on this pool meets the bar: the posterior is the confidence"
+      (let [m     (fs/with-calibration fs-model (well-calibrated dumas))
+            props (rec/propose-agent-links dated dumas {:model m})]
+        (is (true? (fs/calibrated? m dumas)))
+        (is (= (map :score props) (map :confidence props)))
+        (is (= (map :score props) (conf props)))))
+    (testing "the name-only Jaccard is no probability: it is evidence, never a confidence"
+      (let [props (rec/propose-agent-links dated dumas)]
+        (is (not-any? #(contains? % :confidence) props))
+        (is (= [nil] (conf props)))
+        (is (= 1.0 (get-in (first (mappings (first (rec/align-agents [(named :doc/d "Dumas, Alexandre")] props))))
+                           [:provenance :bindings '?name-score])))))))
+
+(deftest a-calibration-holds-only-for-the-pool-it-was-measured-on
+  (let [d   dates/parse-life-dates
+        m   (fs/with-calibration fs-model (well-calibrated dumas))
+        big (vec (concat [{:id "http://x/v" :label "Verne, Jules" :dates (d "1828-1905")}]
+                         (for [i (range 5000)] {:id (str "http://x/f" i) :label (str "Filler" i ", Anne")})))]
+    (testing "on another pool, even an exact dated heading proposed outright states no confidence"
+      (let [[p] (rec/propose-agent-links [{:name "Verne, Jules" :dates "1828-1905"}] big {:model m})]
+        (is (= :propose (:decision p)))
+        (is (not (contains? p :confidence)))))
+    (testing "\"Verne, Paul\" (forenames differ, dates agree) on a pool of 5 001: not proposed outright, no confidence"
+      (let [ps (rec/agent-candidates [{:name "Verne, Paul" :dates "1828-1905"}] big {:model m})]
+        (is (not-any? #(= :propose (:decision %)) (concat (:proposals ps) (:abstained ps))))
+        (is (not-any? #(contains? % :confidence) (concat (:proposals ps) (:abstained ps))))
+        (testing "and the surname adjustment, read from that pool alone, adds nothing for a level that weighs nothing"
+          (is (every? #(= 0.0 (get-in % [:evidence :weights :tf])) (concat (:proposals ps) (:abstained ps)))))))))
+
+(deftest align-agents-writes-no-confidence-without-its-proof
+  (let [m     (fs/with-calibration fs-model (well-calibrated dumas))
+        [p]   (rec/propose-agent-links [{:name "Dumas, Alexandre" :dates "1802-1870"}] dumas {:model m})
+        conf  (fn [ps] (map :confidence (mappings (first (rec/align-agents [(named :doc/d "Dumas, Alexandre")] ps)))))]
+    (testing "a calibrated model's proposal carries its proof, and its confidence is written"
+      (is (some? (:calibration-proof p)))
+      (is (= [(:score p)] (conf [p]))))
+    (testing "a confidence a caller put on a proposal map is not written"
+      (is (= [nil] (conf [(dissoc p :calibration-proof)])))
+      (is (= [nil] (conf [{:name "Dumas, Alexandre" :authority-id pere :score 1.0 :confidence 0.99 :certifiable? true}])))
+      (is (= [nil] (conf [(assoc p :confidence 0.999)])) "a confidence that is not the score")
+      (is (= [nil] (conf [(assoc-in p [:calibration-proof :report :ece] 0.06)])) "a proof that misses the bar"))
+    (testing "a review decision whose proof does not cover the review band writes none"
+      (let [thin (fs/calibration (concat (for [i (range 100)] {:p 0.99 :y 1 :pair [:t i] :mention [:t i]})
+                                         (for [i (range 200)] {:p 0.01 :y 0 :pair [:f i] :mention [:f i]}))
+                                 {:pool (fs/pool-fingerprint dumas)})
+            ps   (rec/propose-agent-links [{:name "Dumas, Alexandre"}] dumas {:model (fs/with-calibration fs-model thin)})]
+        (is (= [:review :review] (map :decision ps)))
+        (is (not-any? #(contains? % :confidence) ps))
+        (is (= [nil nil] (conf (map #(assoc % :confidence (:score %)) ps))))))))

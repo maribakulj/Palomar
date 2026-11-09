@@ -19,7 +19,11 @@ name-similarity score cannot justify.
    (an `E21_Person` scoped to that record) and the authority it may be:
    - `:skos/exactMatch` for a certifiable proposal scoring `reconcile/exact-score`
      (1.0), `:skos/closeMatch` below it; status `:proposed`, the score as
-     confidence (`reconcile/align-agents`);
+     confidence (`reconcile/align-agents`) — amended by lot M4 (ADR 0018):
+     a scored proposal is an exact match only when proposed outright, and the
+     score is a confidence only when a calibrated model's posterior, on the
+     pool it was calibrated on, with its proof; the Jaccard is evidence in
+     the provenance, never a confidence;
    - a curator accepts or rejects it like any claim (ADR 0028 keeps the
      decision); a rejected alignment stays, out of force, in the history;
    - `skos:relatedMatch` is available to an application for distinct but
