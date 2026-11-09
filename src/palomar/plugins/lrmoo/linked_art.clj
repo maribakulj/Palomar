@@ -363,14 +363,19 @@
 
 (defn- dimension-obj
   "The Linked Art `Dimension` of a LIDO measurement, or nil when its value is
-   no number (\"ca. 5\", \"NaN\") or its unit has no AAT term (`object-losses`)."
-  [{:keys [type value unit]}]
+   no number (\"ca. 5\", \"NaN\") or its unit has no AAT term (`object-losses`).
+   What it measures (its extent: the frame, the sheet) is a type of it too,
+   the node the CIDOC CRM view names (review of 2026-11-09, L4)."
+  [rid {:keys [type value unit extent]}]
   (let [v (some-> (lido/number-value value) parse-double)
         [uid ulabel] (get units (some-> unit str/lower-case))
-        [tid tlabel] (get dimension-types (some-> type str/lower-case))]
+        [tid tlabel] (get dimension-types (some-> type str/lower-case))
+        types (cond-> []
+                tid    (conj (type-obj tid tlabel))
+                extent (conj (type-obj (export/entity-iri (lido/extent-node rid extent)) extent)))]
     (when (and v uid)
       (cond-> {"type" "Dimension" "value" v "unit" {"id" uid "type" "MeasurementUnit" "_label" ulabel}}
-        tid (assoc "classified_as" [(type-obj tid tlabel)])))))
+        (seq types) (assoc "classified_as" types)))))
 
 (defn- object-id [record]
   (export/entity-iri (or (some #(when (#{:crm/E22_Human-Made_Object :crm/E19_Physical_Object} (:kind %)) (:id %)) (:entities record))
@@ -502,8 +507,8 @@
                    (some :uri (concat (flds :lido/work-type-concept) (flds :lido/classification-concept)))
                    (assoc "classified_as" (vec (keep #(when (:uri %) (type-ref % "Type"))
                                                      (concat (flds :lido/work-type-concept) (flds :lido/classification-concept)))))
-                   (seq (keep dimension-obj (flds :lido/dimension)))
-                   (assoc "dimension" (vec (keep dimension-obj (flds :lido/dimension))))
+                   (seq (keep #(dimension-obj (:id record) %) (flds :lido/dimension)))
+                   (assoc "dimension" (vec (keep #(dimension-obj (:id record) %) (flds :lido/dimension))))
                    (seq (filter #(and (:uri %) (not= "technique" (:role %)) (pkeys (:event %))) mats))
                    ;; what it is made of is what its production used (post-audit 5, G1)
                    (assoc "made_of" (vec (for [m mats :when (and (:uri m) (not= "technique" (:role m)) (pkeys (:event m)))]
@@ -689,9 +694,15 @@
         lido? #(= "lido" (namespace %))
         loss  (fn [cat p msg] (dx/loss {:category cat :subject (:id record) :edge :export :source-field p :message msg}))]
     (concat
-     (for [p ps :when (and (lido? p) (not (object-written p)))]
+     (for [p ps :when (and (lido? p) (not (object-written p)) (not= :lido/extent p))]
        (loss :dropped p (str (pr-str p) " is not expressed in the Linked Art object profile (ADR 0052)")))
-     (for [d (native-fields record :lido/dimension) :when (nil? (dimension-obj d))]
+     ;; an extent is written in the dimensions it measures; one that none
+     ;; carries (\"Dimensions\", which names no part) is said (L4 review)
+     (let [carried (set (keep #(when (dimension-obj (:id record) %) (:extent %)) (native-fields record :lido/dimension)))]
+       (for [e (distinct (native-strings record :lido/extent)) :when (not (carried e))]
+         (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/extent :value e
+                   :message (str "extent " (pr-str e) " is what no dimension written measures: not written in the Linked Art object profile")})))
+     (for [d (native-fields record :lido/dimension) :when (nil? (dimension-obj (:id record) d))]
        (dx/loss {:category :under-specified :subject (:id record) :edge :export :source-field :lido/dimension :value d
                  :message (str "measurement " (pr-str (:value d)) " " (:unit d) " is no number in a known unit: written only in the measurements statement")}))
      ;; only the production has actors in this profile, and only it and the
@@ -731,7 +742,7 @@
                            {:lido/actor            #(if (or (= "creator" (:responsibility %)) (#{"influence" "related"} (:attribution %)))
                                                       #{:name :uri} #{:name :uri :role :role-uri})
                             :lido/event            #{:date :earliest :latest}
-                            :lido/dimension        #{:value}
+                            :lido/dimension        #{:value :extent}
                             :lido/resource         #{:url}
                             :lido/subject-concept  #{:uri :label}
                             :lido/material         #{:uri :label}

@@ -14,6 +14,15 @@ of the same sources. The results are in `docs/eval/ycba.md`.
     python3 -I dev/eval/ycba/compare.py $D after.json   # the counts, one column per output
     python3 -I dev/eval/ycba/diff_makers.py $D after.json
 
+The benchmark is frozen (`docs/eval/benchmarks/ycba/corpus-manifest.json`):
+
+    python3 -I dev/eval/ycba/verify.py $D docs/eval/benchmarks/ycba/corpus-manifest.json   # offline: the frozen pairs?
+    python3 -I dev/eval/ycba/compare.py $D --manifest docs/eval/benchmarks/ycba/corpus-manifest.json after.json
+    python3 -I dev/eval/ycba/refresh.py docs/eval/benchmarks/ycba/corpus-manifest.json $D2 # network: the same pairs, fetched again
+
+`freeze.py <dir> <manifest> <commit>` writes a new manifest; a new sample is
+a new benchmark, compared apart.
+
 To compare two versions of Palomar on the same pairs, run this `convert.clj`
 (by its absolute path, an older checkout's may take no output name) from
 each checkout, with two output names. The sample is seeded.
