@@ -33,6 +33,7 @@
             [palomar.agent-dates :as dates]
             [palomar.agent-events :as events]
             [palomar.agent-match :as fs]
+            [palomar.agent-relations :as relations]
             [palomar.curate :as curate]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
@@ -129,6 +130,17 @@
         (seq es)    (assoc :events es)))
     {:name m :dates nil}))
 
+(defn- relational-mention
+  "A mention as the relational matcher reads it (lot M8, only with
+   anchors): `mention`'s, and its `:id`, `:role`, `:event` and `:works`.
+   Without anchors these are not read, so a mention is M4's."
+  [m]
+  (cond-> (mention m)
+    (and (map? m) (some? (:id m)))    (assoc :id (:id m))
+    (and (map? m) (:role m))          (assoc :role (:role m))
+    (and (map? m) (some? (:event m))) (assoc :event (:event m))
+    (and (map? m) (seq (:works m)))   (assoc :works (vec (:works m)))))
+
 (defn- mention-key
   "What identifies a mention beyond its name — its dates, its record and its
    events — as a proposal carries it under `:mention`; nil for a bare name."
@@ -136,7 +148,9 @@
   (let [k (cond-> {:name (:name m)}
             (:dates m)  (assoc :dates (:dates m))
             (:record m) (assoc :record (:record m))
-            (:events m) (assoc :events (:events m)))]
+            (:events m) (assoc :events (:events m))
+            (some? (:id m)) (assoc :id (:id m))
+            (:role m)   (assoc :role (:role m)))]
     (when (< 1 (count k)) k)))
 
 (defn- dates-evidence
@@ -175,25 +189,40 @@
    (lot M6), a mention is compared with the entries `(block name)` returns
    instead of every entry; the surname frequencies, the pool size and the
    pool's fingerprint are still the whole pool's."
-  [mentions authority model block]
+  [mentions authority model block anchors]
+  (when (and (some? anchors) (not (relations/frozen? anchors)))
+    (throw (ex-info "agent-candidates: :anchors must be a frozen anchor set (agent-relations/freeze-anchors), unchanged since"
+                    {:anchors (if (map? anchors) (select-keys anchors [:fingerprint]) (type anchors))})))
   (let [counts (fs/surname-counts authority)
+        rel-fp (when anchors (relations/relations-fingerprint model anchors))
+        ;; stated relations resolved to pool entries (lot M8)
+        resolved (when anchors (zipmap authority (relations/resolve-relations authority)))
         size   (count authority)
         fp     (fs/pool-fingerprint authority)
-        per-m  (for [m (distinct (map mention mentions))]
-                 (for [cand (if block (block (:name m)) authority)
+        per-m  (for [m (distinct (map (if anchors relational-mention mention) mentions))]
+                 (for [cand (cond->> (if block (block (:name m)) authority) resolved (map #(get resolved % %)))
                        :let [c (fs/compare-pair m cand {:surname-counts counts :pool-size size})
                              lv (:levels c)]
                        :when (not= :none (:name lv))
                        :let [evs (events-evidence (:events m) cand)
-                             {:keys [weights match-weight]} (when-not (or (= :incompatible (:dates lv))
-                                                                          (= :incompatible (:verdict evs)))
-                                                              (fs/score model c))
+                             blocked? (or (= :incompatible (:dates lv)) (= :incompatible (:verdict evs)))
+                             ;; lot M8: relational evidence, from the frozen
+                             ;; anchors only, when it says anything
+                             rc (when (and anchors (not blocked?))
+                                  (let [rc (relations/compare-relations anchors m cand)]
+                                    (when (relations/known? rc) rc)))
+                             rs (when rc (relations/score model (:levels rc)))
+                             {:keys [weights match-weight]} (when-not blocked?
+                                                              (cond-> (fs/score model c)
+                                                                rs (-> (update :weights merge (:weights rs))
+                                                                       (update :match-weight + (:weight rs)))))
                              p  (when match-weight (fs/posterior match-weight (:prior model)))
                              ev (cond-> {:name-score (:name-score c) :dates (dates-evidence (:dates m) (:dates cand))
                                          :comparison lv}
                                   evs          (assoc :events evs)
                                   weights      (assoc :weights weights)
-                                  (:surname c) (assoc :surname (:surname c)))]]
+                                  (:surname c) (assoc :surname (:surname c))
+                                  rc           (assoc :relations (assoc rc :fingerprint rel-fp)))]]
                    (cond-> {:name            (:name m)
                             :authority-id    (:id cand)
                             :authority-label (:label cand)
@@ -208,9 +237,17 @@
                      (if (and (< 1 n) (#{:propose :review} (:decision c)))
                        (assoc c :decision :review :review-reason :competing)
                        c))))
-        all    (mapcat one per-m)
+        ;; a decision rests on every candidate's relational evidence (a
+        ;; competitor pushed down counts): its support is their union
+        support (fn [cs] (let [sup (vec (sort-by str (distinct (mapcat #(get-in % [:evidence :relations :support]) cs))))]
+                           (if (seq sup) (map #(assoc % :support sup) cs) cs)))
+        all    (mapcat (comp support one) per-m)
         by-w   #(vec (sort-by (comp - :match-weight) %))
-        conf   (fn [c] (if-some [x (fs/confidence model fp (:score c) (:decision c))]
+        ;; relational evidence is a confidence only when the calibration
+        ;; measured these weights on this anchor set (lot M8)
+        rel-ok (fn [c] (or (nil? (get-in c [:evidence :relations]))
+                           (= rel-fp (get-in model [:calibration :relations]))))
+        conf   (fn [c] (if-some [x (when (rel-ok c) (fs/confidence model fp (:score c) (:decision c)))]
                          (assoc c :confidence x :calibration-proof (fs/confidence-proof model fp))
                          c))]
     {:proposals (by-w (for [c all :when (#{:propose :review} (:decision c))]
@@ -257,6 +294,23 @@
    threshold of 0 or less admits every entry, which no lookup can block: the
    whole pool is then scanned.
 
+   **Relations (M8)**: with `{:model m :anchors a}`, `a` a frozen anchor set
+   (`agent-relations/freeze-anchors`; anything else is refused), a mention
+   `{:id :record :role :event :works}` is also compared with each candidate
+   through its relational neighbourhood (`agent-relations/compare-relations`):
+   the role it plays against the candidate's roles in validated links, and
+   the validated agents of its record against those the candidate co-occurs
+   with elsewhere or its authority record states. The levels weigh as the
+   model's `:relations` say (`agent-relations/with-relations`), `:unknown`
+   0; a candidate whose relational levels are all unknown is scored as
+   without anchors, so no anchors, or anchors that say nothing of a
+   mention, give M4's result exactly. Evidence never reads the mention's own
+   validated link nor one whose validation used it, and a pass's proposals
+   are never anchors of the same pass. The proposal's evidence states
+   `:relations {:levels :support :fingerprint ..}` (the mentions read); its
+   posterior is a confidence only when the model's calibration measured
+   these relational weights on this anchor set.
+
    Either way, a candidate whose dates cannot be the mention's
    (`dates/compatibility` is `:incompatible`) is never proposed nor weighed:
    it is listed under `:rejected`, with `:reason :incompatible-dates` and its
@@ -284,7 +338,7 @@
   ([mentions authority] (agent-candidates mentions authority 0.5))
   ([mentions authority opts]
    (if (and (map? opts) (:model opts))
-     (scored-candidates mentions authority (:model opts) (:block opts))
+     (scored-candidates mentions authority (:model opts) (:block opts) (:anchors opts))
      (let [threshold (if (map? opts) (:threshold opts 0.5) opts)
            block     (when (and (map? opts) (pos? threshold)) (:block opts))
            scored (for [m    (map mention mentions)
@@ -365,7 +419,7 @@
   "A proposal's evidence as the bindings of its mapping's provenance: the
    authority's label, the name score, the dates verdict and the date texts
    compared — values a curator reads, and that PROV-O writes."
-  [authority-label {:keys [name-score dates comparison events]} {:keys [score match-weight decision]}]
+  [authority-label {:keys [name-score dates comparison events relations]} {:keys [score match-weight decision support] :as p}]
   (let [text (fn [p] (or (:text p)
                          (some->> (for [role [:birth :death :active] :let [t (:text (get p role))] :when t]
                                     (str (name role) " " t))
@@ -383,7 +437,15 @@
       (text (:mention dates))     (assoc '?mention-dates (text (:mention dates)))
       (and (:mention dates) (text (:candidate dates))) (assoc '?authority-dates (text (:candidate dates)))
       ;; a mention that carried typed events (lot M7): their verdict
-      events                      (assoc '?events (:verdict events)))))
+      events                      (assoc '?events (:verdict events))
+      ;; relational evidence (lot M8): its levels
+      relations                   (assoc '?role-level (get-in relations [:levels :role])
+                                         '?neighbours-level (get-in relations [:levels :neighbours]))
+      ;; what an anchor made of this claim needs (lot M8): the mention, its
+      ;; role, and the mentions its decision read
+      (some? (get-in p [:mention :id])) (assoc '?mention (get-in p [:mention :id]))
+      (get-in p [:mention :role])       (assoc '?role (get-in p [:mention :role]))
+      (seq support)                     (assoc '?support support))))
 
 (defn- proposals-for
   "The proposals among `ps` (one name's) that record `rid` takes: those of the
@@ -452,7 +514,7 @@
                                              :value (model/reference (:id auth)) :status :proposed
                                              :confidence (some-> (fs/proven-confidence p) double)
                                              :provenance (cond-> prov
-                                                           (or authority-label evidence)
+                                                           (or authority-label evidence (:support p) (get-in p [:mention :id]))
                                                            (assoc :bindings (evidence-bindings authority-label evidence p)))})]))))
           r hits)))
      records)))
@@ -466,7 +528,13 @@
    the authority says nothing of another record's. A link carries the
    `:dates` its mention was matched with, when the alignment states them.
    A curator's confirmed review candidate (`confirm-identity`) is an
-   accepted exact match like any other."
+   accepted exact match like any other.
+
+   Each link also carries what `agent-relations/freeze-anchors` reads, so a
+   curated link is an anchor (lot M8): `:id` (the claim's `assertion-id`),
+   `:record`, `:mention` (the matcher's mention id, `?mention`, else the
+   local agent), `:role` (`?role`) and `:support` (`?support`, the mentions
+   the proposal's decision read; empty when none)."
   [records]
   (vec (distinct
         (for [r records
@@ -479,7 +547,12 @@
               :let [auth (ents (:value/target (:value a)))]
               :when (and auth (:iri auth) (names (:subject a)))]
           (cond-> {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted
-                   :records #{(:id r)}}
+                   :records #{(:id r)}
+                   ;; what `agent-relations/freeze-anchors` reads (lot M8)
+                   :id (model/assertion-id a) :record (:id r)
+                   :mention (let [m (get-in a [:provenance :bindings '?mention])] (if (some? m) m (:subject a)))
+                   :support (set (get-in a [:provenance :bindings '?support]))}
+            (get-in a [:provenance :bindings '?role]) (assoc :role (get-in a [:provenance :bindings '?role]))
             (entity-type-of (:kind (ents (:subject a)))) (assoc :entity-type (entity-type-of (:kind (ents (:subject a)))))
             ;; the dates the mention was matched with, for `apply-agent-links`' check
             (get-in a [:provenance :bindings '?mention-dates])
@@ -584,8 +657,9 @@
    or in force) is superseded by the accepted exact match between the same
    two (`curate/supersede`), with `reason` and the curator `context`. A
    pending close match is first accepted (the curator read it), then
-   superseded; both decisions are in its history. Returns `{:record
-   :transitions}`. Clustering and `accepted-links` read the accepted exact
+   superseded; both decisions are in its history. The exact match keeps the
+   close match's provenance bindings (its evidence; lot M8, the mention,
+   role and support an anchor needs). Returns `{:record :transitions}`. Clustering and `accepted-links` read the accepted exact
    match: an accepted close match alone joins nothing."
   ([record close reason] (confirm-identity record close reason {}))
   ([record close reason context]
@@ -593,5 +667,15 @@
      (throw (ex-info "confirm-identity: not a close match" {:assertion close})))
    (let [{r1 :record t1 :transitions} (curate/decide-one record close :accept reason context)
          exact (assoc close :predicate :skos/exactMatch)
-         {r2 :record t2 :transitions} (curate/supersede r1 (assoc close :status :accepted) exact reason context)]
-     {:record r2 :transitions (into t1 t2)})))
+         {r2 :record t2 :transitions} (curate/supersede r1 (assoc close :status :accepted) exact reason context)
+         ;; the exact match keeps what the close match's provenance stated (its
+         ;; evidence, and for lot M8 its mention, role and support)
+         bs    (get-in close [:provenance :bindings])
+         xid   (model/assertion-id exact)
+         r3    (if (seq bs)
+                 (update r2 :assertions (partial mapv #(if (and (= xid (model/assertion-id %)) (= :accepted (:status %))
+                                                                (nil? (get-in % [:provenance :bindings])))
+                                                         (assoc-in % [:provenance :bindings] bs)
+                                                         %)))
+                 r2)]
+     {:record r3 :transitions (into t1 t2)})))

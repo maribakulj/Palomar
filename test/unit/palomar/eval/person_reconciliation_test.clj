@@ -8,7 +8,8 @@
    synthetic stress set) after those, and lot M5's constrained clustering
    (with a synthetic chain set), and lot M7's typed events (the editions of
    the same records, a synthetic set built on the pool's authorities, and the
-   actors of five LIDO records) last. They are
+   actors of five LIDO records), and lot M8's relational evidence, in each
+   anchor setting, last. They are
    measurements, not a guarantee. Corpus and gold:
    `test/fixtures/er-gold/bnf-persons/README.md`; write-up:
    `docs/eval/person-reconciliation.md`. The corpus readers and the metrics live
@@ -19,6 +20,7 @@
             [clojure.test :refer [deftest is testing]]
             [palomar.agent-dates :as dates]
             [palomar.agent-match :as fs]
+            [palomar.agent-relations :as ar]
             [palomar.eval.person-reconciliation :as pr]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.intermarc :as intermarc]
@@ -605,3 +607,116 @@
     (testing "no rejection by events, and no truth blocked"
       (is (= {:rejected 0 :truth-rejected 0 :by-kind {}} (:run run))))))
 
+;; ---------------------------------------------------------------------------
+;; Lot M8 — collective reconciliation
+;; ---------------------------------------------------------------------------
+
+(def ^:private rel (delay (into {} (for [s pr/anchor-settings] [s (pr/task-a-relational @c s @fsr)]))))
+
+(def ^:private m4-review
+  (delay (set (for [m (:mentions (:task-a @fsr)) :when (= :review (:decision m))] (pr/mention-id m)))))
+
+(deftest without-anchors-the-relational-matcher-is-m4-exactly
+  (let [r (:none @rel)]
+    (testing "every candidate of every mention: the same id, decision, score, weight and evidence as M4's held-out run"
+      (is (= (pr/decisions (:task-a @fsr)) (pr/decisions r)))
+      (is (= (:all (:task-a @fsr)) (:all r)))
+      (is (= (:all (:outright (:task-a @fsr))) (:all (:outright r))))
+      (is (= 26 (:review r))))
+    (testing "no anchor, every relational level unknown, every relational weight 0"
+      (is (= 0 (:anchors r)))
+      (is (= #{:unknown} (set (mapcat (comp vals :levels :rel) (mapcat val (:folds r))))))
+      (is (every? zero? (for [[_ m] (:models r) [_ lw] (get-in m [:relations :weights]) [_ w] lw] w))))))
+
+(defn- rel-row [r]
+  (let [o (:all (:outright r))]
+    [(:anchors r) (:mentions (:all r)) (:correct o) (:false-links o) (:abstained o) (:not-in-pool-proposed o) (:review r)
+     (:correct (:all r)) (:false-links (:all r))]))
+
+(deftest the-realistic-anchors-come-through-palomar-s-curation-path
+  (let [cur (:curated (:outright-plus-one-confirmed @rel))]
+    (testing "the curator accepted the 111 outright proposals that are right, through align-agents and curate"
+      (is (= {:accepted 111 :selected 0 :confirmed []} (dissoc (:curated (:outright-correct @rel)) :frozen))))
+    (testing "one review mention per name, chosen by its id, never by its gold: 7 selected, 6 confirmed (the undetermined Dumas has no truth)"
+      (is (= 7 (:selected cur)))
+      (is (= 117 (:accepted cur)))
+      (is (= [[:bnf/cb328105656 "700" 1] [:bnf/cb33214113x "700" 0] [:bnf/cb37597057q "100" 0]
+              [:bnf/cb392369204 "100" 0] [:bnf/cb41949035t "700" 1] [:bnf/cb47670054v "700" 0]]
+             (:confirmed cur))))
+    (testing "only after selection is the truth compared with M4's top: it was right for all 6"
+      (let [by-id (into {} (for [m (:mentions (:task-a @fsr))] [(pr/mention-id m) m]))]
+        (is (every? #(= (:truth (by-id %)) (:authority-id (first (:proposals (by-id %))))) (:confirmed cur)))))
+    (testing "every realistic anchor is an accepted claim of the curated records, with its role and its support"
+      (is (every? #(and (= :accepted (:status %)) (string? (:role %)) (set? (:support %))) (:anchors (:frozen cur))))
+      (is (empty? (:refused (:frozen cur)))))))
+
+(deftest relational-evidence-on-the-m2-gold
+  (doseq [[s r] @rel] (println "M8" s (rel-row r) (pr/review-outcomes r @m4-review)))
+  (testing "[anchors, measured mentions, outright right, false links, in-pool abstained, not-in-pool linked, review, top right, top false]"
+    (is (= {:none                        [0 142 111 0 25 0 26 136 0]
+            :leave-one-record-out        [141 142 111 0 25 0 26 136 0]
+            :leave-one-mention-out       [141 142 111 0 25 0 26 136 0]
+            :outright-correct            [111 142 111 0 25 0 26 136 0]
+            :outright-plus-one-confirmed [117 136 111 0 19 0 20 130 0]}
+           (update-vals @rel rel-row))
+        "the 6 confirmed mentions are curator work, out of the measured set"))
+  (testing "held out truly, the relational evidence changes no decision of any candidate, in any setting"
+    (is (every? empty? (map #(pr/decision-changes % @fsr) (vals @rel)))))
+  (testing "so Férat stays for review everywhere, even after the curator confirmed one of his 20 mentions"
+    (doseq [[s n] [[:leave-one-record-out 20] [:leave-one-mention-out 20] [:outright-correct 20] [:outright-plus-one-confirmed 19]]]
+      (is (= {[:review true] n} (get (pr/review-outcomes (s @rel) @m4-review) "Férat, Jules")) (str s))))
+  (testing "the dates still block as before"
+    (is (every? #(= 0 (:truth-rejected (:rejections %))) (vals @rel))))
+  (testing "no proposal states a confidence: the held-out calibration with the relational evidence misses the bar"
+    (doseq [[_ r] @rel]
+      (is (not-any? :confidence (mapcat :proposals (:mentions r))))
+      (is (false? (:meets-bar? (fs/calibration (:predictions r))))))))
+
+(deftest the-relational-levels-and-weights-on-m2
+  (let [loro (:leave-one-record-out @rel)]
+    (testing "the \"others\" fold (Férat's) never measures a different role: trained on the four author families,
+              whose features read no \"others\" link, a different role is seen once on each side: below 5, unmeasured"
+      (doseq [[s r] @rel :when (not= :none s)]
+        (is (= 0.0 (get-in r [:models "others" :relations :weights :role :other-role])) (str s)))
+      (is (= {[false :other-role] 1 [false :same-role] 53 [false :unknown] 49 [true :other-role] 1 [true :same-role] 81 [true :unknown] 7}
+             (:role (pr/relational-levels (get-in loro [:folds "others"]))))))
+    (testing "where measured, a different role weighs against, a shared one little"
+      (is (= {:same-role 0.0189 :other-role -1.4784 :unknown 0.0}
+             (update-vals (get-in loro [:models "Verne" :relations :weights :role]) r4))))
+    (testing "a shared neighbour is measured only when the judged record's co-mentions are anchors; not sharing one weighs 0 by rule"
+      (is (= 1.2108 (r4 (get-in (:leave-one-mention-out @rel) [:models "others" :relations :weights :neighbours :shared]))))
+      (is (every? #(= 0.0 (get-in % [:relations :weights :neighbours :not-shared])) (mapcat (comp vals :models) (vals @rel)))))))
+
+(deftest the-judged-mention-s-own-gold-never-enters-its-features
+  (doseq [s [:leave-one-record-out :leave-one-mention-out :outright-correct :outright-plus-one-confirmed]
+          :let [l (pr/leakage @c s @fsr)]]
+    (testing (str s ": its gold faked at the source the anchors are built from, its relational evidence is the same")
+      (is (= 141 (:mentions l)))
+      (is (= 0 (:self-in-support l)))
+      (is (= 0 (:changed-by-own-gold l))))
+    (testing (str s ": anchors of the same person are the oracle's in an oracle setting, the curator's in a realistic one")
+      (is (= (if (pr/oracle-settings s) #{:oracle} #{:curator}) (get-in l [:same-person :source])))
+      (is (= ({:leave-one-record-out 117 :leave-one-mention-out 117 :outright-correct 95 :outright-plus-one-confirmed 114} s)
+             (get-in l [:same-person :mentions])))))
+  (testing "leaving its record out, no mention of its record is read either"
+    (is (= 0 (:record-in-support (pr/leakage @c :leave-one-record-out @fsr)))))
+  (testing "the check can fail: a mention whose own link is not recognised as its own reads its faked gold"
+    (let [m     (first (filter #(= "Férat, Jules" (:name %)) (:mentions @c)))
+          f     (:anchors-of (pr/anchors-of @c :leave-one-mention-out @fsr))
+          fake  (update @c :mentions (partial mapv #(if (= (pr/mention-id %) (pr/mention-id m)) (assoc % :truth "11928016") %)))
+          f'    (:anchors-of (pr/anchors-of fake :leave-one-mention-out @fsr))
+          es    (ar/resolve-relations (pr/relational-entries (:pool @c)))
+          rcs   (fn [fr rm] (map #(ar/compare-relations fr rm %) es))
+          rm    (pr/relational-mention m)
+          blind (assoc rm :id [:not-this-mention])]
+      (is (= (rcs (f rm) rm) (rcs (f' rm) rm)))
+      (is (not= (rcs (f blind) blind) (rcs (f' blind) blind))))))
+
+(deftest task-b-with-relational-evidence
+  (let [b (fn [s] (update-vals (dissoc (pr/task-b-relational @c (s @rel)) :links :mentions) (comp (juxt :right :false-merges) :pairwise)))]
+    (testing "every setting: M5's clustering, the decisions being M4's"
+      (doseq [s [:none :leave-one-record-out :leave-one-mention-out :outright-correct]]
+        (is (= {:constrained [923 0] :closure-review [1113 464] :constrained-review [1113 0]} (b s)) (str s))))
+    (testing "the measured set without the 6 confirmed mentions"
+      (is (= 135 (:mentions (pr/task-b-relational @c (:outright-plus-one-confirmed @rel)))))
+      (is (= {:constrained [923 0] :closure-review [1094 437] :constrained-review [1094 0]} (b :outright-plus-one-confirmed))))))

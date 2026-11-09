@@ -256,22 +256,24 @@
 ;; ---------------------------------------------------------------------------
 
 (defn- counted
-  "The comparisons of `comparisons` that count for feature `f`: every one,
-   but for `:dates` those the dates do not block."
-  [f comparisons]
-  (filter #(some #{(get-in % [:levels f])} (features f)) comparisons))
+  "The comparisons of `comparisons` that count for feature `f` of `feats`:
+   those whose level is one of the feature's — so for `:dates` those the
+   dates do not block."
+  [feats f comparisons]
+  (filter #(some #{(get-in % [:levels f])} (feats f)) comparisons))
 
 (defn level-counts
-  "Per feature, `{:n N :counts {level n}}` over `comparisons` (fractional when
-   a comparison carries a `::w` weight); a blocked pair (`:dates
-   :incompatible`) counts in no dates level."
-  [comparisons]
-  (into {}
-        (for [f (keys features)
-              :let [cs     (counted f comparisons)
-                    w      (fn [c] (double (get c ::w 1.0)))
-                    counts (reduce (fn [acc c] (update acc (get-in c [:levels f]) (fnil + 0.0) (w c))) {} cs)]]
-          [f {:n (reduce + 0.0 (vals counts)) :counts counts}])))
+  "Per feature of `feats` (default `features`), `{:n N :counts {level n}}`
+   over `comparisons` (fractional when a comparison carries a `::w` weight);
+   a blocked pair (`:dates :incompatible`) counts in no dates level."
+  ([comparisons] (level-counts comparisons features))
+  ([comparisons feats]
+   (into {}
+         (for [f (keys feats)
+               :let [cs     (counted feats f comparisons)
+                     w      (fn [c] (double (get c ::w 1.0)))
+                     counts (reduce (fn [acc c] (update acc (get-in c [:levels f]) (fnil + 0.0) (w c))) {} cs)]]
+           [f {:n (reduce + 0.0 (vals counts)) :counts counts}]))))
 
 (defn level-frequencies
   "Per feature, the share of each level among `comparisons` (`level-counts`),
@@ -302,9 +304,11 @@
   [m u]
   (log2 (/ (double m) (double u))))
 
-(defn- counted-weight
+(defn measured-weight
   "The weight of a level observed `mc` times among `mn` same-person pairs and
-   `uc` times among `un` different-person pairs (see the ns doc)."
+   `uc` times among `un` different-person pairs (see the ns doc): log2(m/u)
+   when both are measured, the bound `min-observed`/N gives when one is, in
+   the direction it proves, else 0."
   [mc mn uc un]
   (let [k      min-observed
         m-ok   (and (pos? mn) (>= mc k))
@@ -315,7 +319,9 @@
       (and u-ok (pos? mn)) (min 0.0 (weight (/ (double k) mn) (/ uc un)))
       :else 0.0)))
 
-(defn- share-weight [m u] (if (and m u (pos? m) (pos? u)) (weight m u) 0.0))
+(defn share-weight
+  "log2(m/u) of two hand-set shares, 0 when either is missing or 0."
+  [m u] (if (and m u (pos? m) (pos? u)) (weight m u) 0.0))
 
 (defn- constrain
   "The rules every model's weights obey, however they were estimated:
@@ -332,15 +338,15 @@
 
 (defn level-weights
   "The weight of every level: from `m-counts` and `u-counts` (`level-counts`)
-   by `counted-weight`, or from hand-set shares `m` and `u`; then
+   by `measured-weight`, or from hand-set shares `m` and `u`; then
    `constrain`ed."
   [{:keys [m u m-counts u-counts]}]
   (constrain
    (into {} (for [[f levels] features]
               [f (into {} (for [l levels]
                             [l (if (and m-counts u-counts)
-                                 (counted-weight (get-in m-counts [f :counts l] 0.0) (get-in m-counts [f :n] 0.0)
-                                                 (get-in u-counts [f :counts l] 0.0) (get-in u-counts [f :n] 0.0))
+                                 (measured-weight (get-in m-counts [f :counts l] 0.0) (get-in m-counts [f :n] 0.0)
+                                                  (get-in u-counts [f :counts l] 0.0) (get-in u-counts [f :n] 0.0))
                                  (share-weight (get-in m [f l]) (get-in u [f l])))]))]))))
 
 (def default-thresholds
@@ -499,9 +505,12 @@
 
    The Brier score, the ECE and the bins are over every prediction; the bar's
    counts are distinct pairs, distinct true mentions and distinct pairs in
-   the review band [`:review`, `:propose`) of `default-thresholds`."
+   the review band [`:review`, `:propose`) of `default-thresholds`. With
+   `:relations` (lot M8, `agent-relations/relations-fingerprint`), the report
+   says the predictions were scored with that relational evidence: the
+   relational weights and the anchor set they read."
   ([preds] (calibration preds nil))
-  ([preds {:keys [bar pool gold]}]
+  ([preds {:keys [bar pool gold relations]}]
    (let [bar      (merge default-bar bar)
          keyed    (map-indexed (fn [i x] (assoc x ::pair (get x :pair [::i i]) ::mention (get x :mention [::i i]))) preds)
          uniq     (vals (into {} (map (juxt ::pair identity)) keyed))
@@ -519,7 +528,8 @@
                    :bar                bar
                    :pool               pool
                    :gold               gold}]
-     (assoc r :meets-bar? (meets? r bar) :review-covered? (review-covered? r bar)))))
+     (cond-> (assoc r :meets-bar? (meets? r bar) :review-covered? (review-covered? r bar))
+       relations (assoc :relations relations)))))
 
 (defn with-calibration
   "`model` with calibration `report` attached (`calibration`): the step that
@@ -562,12 +572,19 @@
   "The `:confidence` of `proposal` when its `:calibration-proof` holds — a
    report that meets the proof's bar (made no laxer than `default-bar`), on the
    pool the proposal was matched against, for its decision (a `:review` one
-   needs the band covered), the confidence being its `:score` — else nil."
-  [{:keys [confidence score decision calibration-proof]}]
+   needs the band covered), the confidence being its `:score`, and, when
+   the proposal's evidence holds relational evidence (lot M8), a report
+   measured with the same relational weights and anchors (its `:relations`
+   fingerprint) — else nil."
+  [{:keys [confidence score decision calibration-proof evidence]}]
   (let [{:keys [report bar pool]} calibration-proof
-        bar (strictest bar)]
+        bar (strictest bar)
+        rel (get-in evidence [:relations :fingerprint])]
     (when (and confidence report pool
                (= pool (:pool report))
+               ;; relational evidence (lot M8): the report measured it, with
+               ;; these weights and this anchor set
+               (or (nil? (:relations evidence)) (and rel (= rel (:relations report))))
                (= confidence score)
                (meets? report bar)
                (case decision

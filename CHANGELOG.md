@@ -18,6 +18,21 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Collective reconciliation** (lot M8; ADR 0018 amendment):
+  `palomar.agent-relations` makes a mention's relational neighbourhood
+  evidence — the role it plays (`$4`) against the candidate's roles in
+  validated links, and the informative validated agents of its record
+  (hubs left out) against those the candidate co-occurs with in other
+  records or its authority record states (the INTERMARC authority reader
+  now reads 331, 321, 5xx and coded 320 `$3` as `:relations`, resolved to
+  pool entries by record number). `reconcile/agent-candidates` takes
+  `{:model m :anchors a}`, `a` accepted or asserted links frozen before
+  scoring (`freeze-anchors`); the evidence never reads the judged mention's
+  own link nor one whose validation's support reaches it, and that support
+  is carried through `align-agents`, curation, `confirm-identity` and
+  `accepted-links`. Without anchors, M4's output exactly. On the BnF gold,
+  held out by family, it changes no decision in any setting: Férat stays
+  for review (`docs/eval/person-reconciliation.md`).
 - **Typed events as contrary evidence** (lot M7; ADR 0018 and 0056
   amendments): `palomar.agent-events` types what a record says a person
   did — a LIDO production or design carried out as its maker a creation;

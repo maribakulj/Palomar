@@ -569,3 +569,98 @@ now no date; the one rejection an earlier run made rested on one. The risk the n
 before the birth of the right person, by a source that misreads a model's
 or a design's date as the namesake's work. Pinned by
 `palomar.agent-events-test`.
+
+## Amendment (lot M8, 2026-11-09): collective reconciliation, from validated links only
+
+After M4, 26 top proposals on the BnF gold were for review because another
+candidate was above 0.5: 20 "Férat, Jules" (Verne's illustrator, born a
+year from Verne) against Jules Verne, three "Víctor Hugo" authors against
+each other, Hetzel against his pseudonym Stahl, and the undated
+"Dumas, Alexandre". The record says more than the name and the dates: Férat
+is the illustrator (`$4 0440`) of books whose author (`0070`) is Verne.
+This amendment lets a mention's relational neighbourhood be evidence, under
+one rule above the others: **a link is never supported by evidence that
+depends on it**. It was revised after a contradictory review; the rules
+below are the revised ones.
+
+1. **Anchors, frozen** (`palomar.agent-relations/freeze-anchors`). The
+   relational evidence reads *anchors*: links a curator accepted (an
+   accepted alignment, a confirmed identity) or a source asserted, `{:id
+   :mention :record :authority-id :role :event :works :support}`. A
+   proposal is never one (`:not-validated`), nor a link without its
+   mention or authority (`:incomplete`). Whatever their order, two
+   different links under one id are both refused (`:duplicate-id`), and a
+   mention linked to two authorities has all its links refused
+   (`:conflict`). The set is fingerprinted, and `reconcile/agent-candidates`
+   (`{:model m :anchors a}`) takes it only unchanged; it is frozen before a
+   pass and never updated by the pass's outputs.
+2. **No circular confirmation, carried end to end.** A decision's
+   **support** is every mention that the relational evidence of any of the
+   mention's candidates read (a competitor pushed down counts): each
+   proposal states it (`:support`), `align-agents` writes it (`?support`,
+   with `?mention` and `?role`), curator acceptance and `confirm-identity`
+   keep it on the accepted claim (the exact match keeps the close match's
+   provenance bindings), and `accepted-links` gives each link the `:id`,
+   `:mention`, `:role` and `:support` `freeze-anchors` reads. The evidence on
+   mention m reads no anchor of m, nor of any mention whose anchors'
+   support reaches m, transitively (`excluded-mentions`). A loop through
+   curation — m's decision rests on p's link, m is accepted, p is judged
+   again — is excluded: p cannot read m's link. A mention without an `:id`
+   has no relational evidence.
+3. **Neighbourhoods.** A mention's: the anchored other agents of its record
+   (for LIDO, of the same event), the authorities they are linked to, its
+   works where the caller has them. A candidate's: its roles in its
+   validated occurrences; the authorities and works it co-occurs with
+   through anchors in other records; what its authority record states,
+   resolved to pool entries by `:record-number` (`resolve-relations`, in the
+   matcher): a related agent is a neighbour, a pseudonym another identity
+   (not context). A relation to neither a pool entry nor an anchored
+   authority is no evidence. **Hubs**: an authority anchored in more than
+   10 % of the records the usable anchors cover (`hub-share`) is no
+   neighbour, on either side — the publisher of half a batch says nothing
+   of who a namesake is. The INTERMARC authority reader reads 331 (a
+   pseudonym), 321 (a work), 5xx and 320 with their `$3` — a 320 only with
+   its `$0` relation code (a 320 without one, a museum holding the
+   person's manuscripts, is not a relation between agents); a field read
+   in part stays listed as unread. GND relations are not read.
+4. **Two features**: `:role` (`:same-role` when the mention's `$4` is among
+   the candidate's validated roles, `:other-role` when the candidate has
+   some and not this one; a field without `$4` has no role, never its tag)
+   and `:neighbours` (`:shared`, `:not-shared`). `:unknown` and
+   `:not-shared` **weigh 0 by rule**: missing context is no evidence, and
+   nor is the absence of a shared neighbour. The other levels weigh as in
+   M4 (log2(m/u) of observed counts, a bound below 5 on one side, 0 when
+   neither side is measured; an agreement never below 0, a disagreement
+   never above), **leave-one-family-out, held out truly**: the training
+   pairs' features read no anchor of the held-out family. m from the
+   training families' true pairs, u from their other scored candidates
+   (labelled: the pool against itself has no record context). The weights
+   are added to M4's before the posterior; the decision rules are M4's.
+5. **M4 compatibility.** Without `:anchors`, the matcher reads none of a
+   mention's relational keys (`:id`, `:role`, `:event`, `:works`): whole
+   proposals and `align-agents` output are M4's (one name twice in one
+   record, as author and translator, gives M4's alignments). With an anchor
+   set that says nothing of a mention, its decisions, scores and evidence
+   are M4's; its proposals carry its id and role.
+6. **Confidence.** A posterior relational evidence entered is a confidence
+   only when the model's calibration report was measured with the same
+   relational weights and anchor set (`relations-fingerprint`, checked by
+   `agent-match/proven-confidence`).
+7. **Not changed**: the date and event blocks (M3, M7); the clustering (M5);
+   the identity relation of ADR 0057 (not amended). No spoke and no CLI
+   command passes anchors yet.
+
+Measured (`docs/eval/person-reconciliation.md`, M8) on the 142 M2
+mentions, in two oracle settings (the gold of every mention outside the
+judged record, or of every other mention) and two realistic ones built by
+Palomar's curation path (the curator accepts the 111 right outright
+proposals; and also confirms one review mention per name, chosen by its id,
+6 of 7 confirmable): **the relational evidence changes no decision of any
+candidate in any setting**. Férat stays for review everywhere, even after
+one of his mentions is confirmed: his family's fold, trained without any
+"others" link, sees a different role once on each side, so `:other-role`
+weighs 0, unmeasured. Where it is measured, in the other folds, it weighs
+-0.7 to -3.1 (by fold and setting). The leakage check fakes the judged mention's gold at the
+source of the anchors (the oracle's gold, or the gold the curator reads)
+and finds its relational evidence unchanged, 141 of 141, in every setting.
+No confidence is written. Pinned by `palomar.agent-relations-test`.

@@ -55,6 +55,12 @@
    actors of a museum's records against the authorities their ULAN ids name
    (`lido-event-run`).
 
+   Lot M8 adds a mention's relational neighbourhood (`palomar.agent-relations`):
+   the same mentions with their `$4` role, scored with anchors — validated
+   links, frozen before scoring — in several settings (`anchor-settings`,
+   `task-a-relational`), the leakage checks (`leakage`), and the clustering
+   of the decisions (`task-b-relational`).
+
    The metrics are pure functions of plain maps, so they are tested on
    hand-made inputs."
   (:require [clojure.string :as str]
@@ -62,6 +68,9 @@
             [palomar.agent-dates :as dates]
             [palomar.agent-events :as ae]
             [palomar.agent-match :as fs]
+            [palomar.agent-relations :as ar]
+            [palomar.curate :as curate]
+            [palomar.model :as model]
             [palomar.plugins :as plug]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.authorities :as authorities]
@@ -126,6 +135,7 @@
      :family    (family (sub sfs "a"))
      :truth     (sub sfs "3")
      :role      (or (sub sfs "4") tag)
+     :relator   (sub sfs "4")
      :dates     (dates/parse-life-dates (sub sfs "d"))
      :subfields sfs}))
 
@@ -424,6 +434,24 @@
          {:p (:score c) :y (if (= (:truth m) (:authority-id c)) 1 0)
           :pair (conj mk (:authority-id c)) :mention mk :family (:family m)})))
 
+(defn- fs-summaries
+  "A scored task-A run `res` with each mention's top `:decision`, the
+   rejections, the review count, the outright-only summary and the
+   predictions."
+  [c res]
+  (let [ms  (mapv #(assoc % :decision (:decision (first (:proposals %)))) (:mentions res))
+        ids      (set (map :id (:pool c)))
+        surnames (into {} (map (juxt :id :surname)) (:pool c))
+        out      (for [m ms :let [ps (filter #(= :propose (:decision %)) (:proposals m))]]
+                   (merge m (link-outcome (:truth m) ps ids surnames)))]
+    (assoc res
+           :mentions ms
+           :rejections (rejection-summary ms)
+           :review (count (filter #(= :review (:decision %)) ms))
+           :outright {:all (link-summary out)
+                      :by-family (into (sorted-map) (for [[f xs] (group-by :family out)] [f (link-summary xs)]))}
+           :predictions (predictions ms))))
+
 (defn task-a-fs
   "Task A with the Fellegi-Sunter matcher (lot M4): each mention as `{:name
    :dates}` through `candidates` (by default `reconcile/agent-candidates`)
@@ -434,22 +462,10 @@
    `:predictions` (`[{:p :y :pair :mention :family}]`, for calibration)."
   ([c model-of] (task-a-fs c model-of reconcile/agent-candidates))
   ([c model-of candidates]
-   (let [res (run-task-a c {:mention identity
-                            :entries dated-entries
-                            :candidates (fn [[m] es]
-                                          (candidates [(select-keys m [:name :dates])] es {:model (model-of m)}))})
-         ms  (mapv #(assoc % :decision (:decision (first (:proposals %)))) (:mentions res))
-         ids      (set (map :id (:pool c)))
-         surnames (into {} (map (juxt :id :surname)) (:pool c))
-         out      (for [m ms :let [ps (filter #(= :propose (:decision %)) (:proposals m))]]
-                    (merge m (link-outcome (:truth m) ps ids surnames)))]
-     (assoc res
-            :mentions ms
-            :rejections (rejection-summary ms)
-            :review (count (filter #(= :review (:decision %)) ms))
-            :outright {:all (link-summary out)
-                       :by-family (into (sorted-map) (for [[f xs] (group-by :family out)] [f (link-summary xs)]))}
-            :predictions (predictions ms)))))
+   (fs-summaries c (run-task-a c {:mention identity
+                                  :entries dated-entries
+                                  :candidates (fn [[m] es]
+                                                (candidates [(select-keys m [:name :dates])] es {:model (model-of m)}))}))))
 
 (defn gold-fingerprint
   "The fingerprint of the gold of corpus `c`: each mention's name, dates and `$3`."
@@ -853,6 +869,316 @@
      :creations   (count (filter #(and (= :creation (:kind %)) (:date %)) (mapcat :events ms)))
      :run         (run identity)
      :as-creation (run (fn [m] (update m :events (partial mapv #(assoc % :kind :creation)))))}))
+
+;; ---------------------------------------------------------------------------
+;; Lot M8 — collective reconciliation: relational evidence from anchors
+;; ---------------------------------------------------------------------------
+
+(defn mention-id
+  "A mention's id: its record, its field's tag and occurrence."
+  [m]
+  [(:record m) (:tag m) (:occurrence m)])
+
+(defn relational-mention
+  "A mention as the relational matcher reads it: `{:id :name :dates :record
+   :role}`, `:role` its field's `$4` relator code (none when the field has
+   none: never the tag). No `$3`."
+  [m]
+  (cond-> (assoc (select-keys m [:name :dates :record]) :id (mention-id m))
+    (:relator m) (assoc :role (:relator m))))
+
+(defn relational-entries
+  "The dated entries, each with the relations its authority record states,
+   as Palomar's INTERMARC authority reader gives them (`:record-number`
+   targets), and its own `:record-number` (the M2 id), so that
+   `agent-relations/resolve-relations` resolves them as in production."
+  [pool]
+  (let [xml  (slurp authority-file)
+        rels (into {} (for [e (:entries (authorities/read-pool :intermarc xml)) :when (:relations e)]
+                        [(:record-number e) (:relations e)]))]
+    (mapv #(cond-> (assoc % :record-number (:id %)) (rels (:id %)) (assoc :relations (rels (:id %))))
+          (dated-entries pool))))
+
+(def anchor-settings
+  "The anchor settings measured: `:none` (no anchor); two oracles, the gold
+   links of an oracle curator — `:leave-one-record-out` (every mention
+   outside the judged mention's record) and `:leave-one-mention-out` (every
+   other mention, the record's co-mentions included); and two realistic
+   ones, built by Palomar's curation path (`curated-anchors`) —
+   `:outright-correct` (the curator accepted the M4 outright proposals that
+   are right) and `:outright-plus-one-confirmed` (those, and for each name
+   M4 left for review, one mention chosen by a rule that reads no gold,
+   confirmed to its true authority when that is one of its candidates)."
+  [:none :leave-one-record-out :leave-one-mention-out :outright-correct :outright-plus-one-confirmed])
+
+(def oracle-settings #{:leave-one-record-out :leave-one-mention-out})
+
+(defn- gold-anchor
+  "An oracle's validation of mention `m`'s gold link (`$3`)."
+  [m]
+  (cond-> {:id (mention-id m) :mention (mention-id m) :record (:record m) :authority-id (:truth m)
+           :status :accepted :oracle? true}
+    (:relator m) (assoc :role (:relator m))))
+
+(def ^:private iri-prefix
+  "The M2 ids are BnF record numbers, no IRI; the curated path, which only
+   aligns to an IRI, reads them under this prefix."
+  "urn:x-bnf-record:")
+
+(defn- with-agent-names
+  "Corpus `c`'s records, each also naming its 700 persons as `:canon/agent`
+   (the classic INTERMARC mapping carries only the 100; the INTERMARC-NG
+   spoke carries both), so that `align-agents` sees every mention."
+  [{:keys [records mentions]}]
+  (let [extra (group-by :record (filter #(= "700" (:tag %)) mentions))]
+    (mapv (fn [r] (reduce (fn [r m] (update r :assertions conj (model/assertion {:subject (:id r) :predicate :canon/agent
+                                                                                 :value (:name m)})))
+                          r (extra (:id r))))
+          records)))
+
+(defn confirmation-choice
+  "The mentions the curator confirms in `:outright-plus-one-confirmed`: for
+   each name whose M4 top proposal is for review (`m4`'s held-out run), the
+   mention whose `mention-id` prints first. The rule reads no gold."
+  [m4]
+  (vec (for [[_ g] (sort-by key (group-by :name (filter #(= :review (:decision %)) (:mentions (:task-a m4)))))]
+         (first (sort-by (comp pr-str mention-id) g)))))
+
+(def ^:private aligned-records
+  "The records of corpus `c` with every mention's M4 proposals aligned
+   (`align-agents`): what the curator reads. Memoized; `c`'s mentions are
+   passed without their truth, which this step never reads."
+  (memoize
+   (fn [c m4]
+     (let [entries (mapv #(update % :id (partial str iri-prefix)) (dated-entries (:pool c)))
+           props   (vec (mapcat (fn [m] (:proposals (reconcile/agent-candidates [(relational-mention m)] entries
+                                                                                {:model ((:models m4) (:family m))
+                                                                                 :anchors (ar/freeze-anchors [])})))
+                                (:mentions c)))]
+       (reconcile/align-agents (with-agent-names c) props)))))
+
+(defn curated-anchors
+  "The realistic anchors, through Palomar's own path: every mention of
+   corpus `c` matched by its fold's M4 model (the decisions of M4; an empty
+   anchor set, so each proposal carries its mention's id and role),
+   `align-agents` on the records, a curator who accepts the outright exact
+   matches that are right (`curate/decide-one`) and, for `confirm`
+   mentions, confirms the close match to the truth when it is one
+   (`confirm-identity`), then `accepted-links` and `freeze-anchors`.
+   `{:frozen :accepted n :confirmed [mention-id ..] :selected n}`. The
+   truth is read from `c` (so a faked gold reaches the curator)."
+  [c m4 confirm]
+  (let [recs    (aligned-records (update c :mentions (partial mapv #(dissoc % :truth))) m4)
+        truth   (into {} (for [m (:mentions c)] [(mention-id m) (some->> (:truth m) (str iri-prefix))]))
+        conf    (set (map mention-id confirm))
+        target  (fn [r a] (some #(when (= (:id %) (get-in a [:value :value/target])) (:iri %)) (:entities r)))
+        mid     #(get-in % [:provenance :bindings '?mention])
+        curate1 (fn [r]
+                  (reduce (fn [r a]
+                            (let [t (truth (mid a))]
+                              (cond
+                                (and (= :skos/exactMatch (:predicate a)) (= :proposed (:status a))
+                                     (not (conf (mid a))) (some? t) (= t (target r a)))
+                                (:record (curate/decide-one r a :accept "right, by the gold"))
+                                (and (= :skos/closeMatch (:predicate a)) (= :proposed (:status a))
+                                     (conf (mid a)) (some? t) (= t (target r a)))
+                                (:record (reconcile/confirm-identity r a "confirmed by the curator"))
+                                :else r)))
+                          r (:assertions r)))
+        cur     (mapv curate1 recs)
+        links   (reconcile/accepted-links cur)
+        strip   #(str/replace-first % iri-prefix "")]
+    {:frozen    (ar/freeze-anchors (map #(update % :authority-id strip) links))
+     :accepted  (count links)
+     :selected  (count confirm)
+     :confirmed (vec (sort-by pr-str (distinct (for [l links :when (conf (:mention l))] (:mention l)))))}))
+
+(defn anchors-of
+  "For corpus `c` and `setting`: `{:anchors-of f :curated ..}`, `f` a
+   function of a relational mention giving the frozen anchor set its
+   evidence reads (the exclusion of its own link and of what depends on it
+   is the matcher's), `:curated` the curated path's report in a realistic
+   setting."
+  [{:keys [mentions] :as c} setting m4]
+  (let [det (filter :truth mentions)]
+    (case setting
+      :none                  {:anchors-of (constantly (ar/freeze-anchors []))}
+      :leave-one-mention-out (let [fr (ar/freeze-anchors (map gold-anchor det))] {:anchors-of (constantly fr)})
+      :leave-one-record-out  (let [by-r (memoize (fn [r] (ar/freeze-anchors (map gold-anchor (remove #(= r (:record %)) det)))))]
+                               {:anchors-of (fn [m] (by-r (:record m)))})
+      (:outright-correct :outright-plus-one-confirmed)
+      (let [cur (curated-anchors c m4 (when (= :outright-plus-one-confirmed setting) (confirmation-choice m4)))]
+        {:anchors-of (constantly (:frozen cur)) :curated cur}))))
+
+(defn- family-of [c] (into {} (for [m (:mentions c)] [(mention-id m) (:family m)])))
+
+(defn- held-out
+  "`anchors-of` restricted, for training the fold of `family`, to the
+   anchors of mentions of other families: the held-out family's links never
+   reach the training pairs' features."
+  [c anchors-of family]
+  (let [fam  (family-of c)
+        memo (memoize (fn [fr] (ar/freeze-anchors (remove #(= family (fam (:mention %))) (:anchors fr)))))]
+    (fn [rm] (memo (anchors-of rm)))))
+
+(defn relational-pairs
+  "Every (mention, entry) pair the M4 matcher scores (name level above
+   `:none`, dates not blocking) of the determined mentions of the
+   `families`, with its relational comparison under `anchors-of`: `[{:family
+   :truth :id :y :rel}]`. The truth labels the pair for m and u; it never
+   enters a comparison."
+  [{:keys [mentions]} data entries anchors-of families]
+  (let [by-e (into {} (map (juxt :id identity)) (ar/resolve-relations entries))
+        idx  (into {} (map-indexed vector) mentions)]
+    (vec (for [p (:pairs data)
+               :let [m (idx (:mention p))]
+               :when (and (:truth m) (families (:family m)) (not= :none (get-in p [:cmp :levels :name])) (not (blocked? p)))
+               :let [rm (relational-mention m)]]
+           {:family (:family m) :truth (:truth m) :id (:id p) :y (= (:truth m) (:id p))
+            :rel (ar/compare-relations (anchors-of rm) rm (by-e (:id p)))}))))
+
+(defn relational-fold-models
+  "Leave-one-family-out, truly: each fold's M4 model with relational weights
+   measured on the four other families' pairs, whose features read no
+   anchor of the held-out family (`held-out`): m from their true pairs, u
+   from their other scored candidates (labelled: the pool against itself
+   has no record context). `{family model}`, and `:pairs` the training
+   pairs of each fold."
+  [c m4 entries anchors-of]
+  (let [fams (set (conj families "others"))]
+    (into (sorted-map)
+          (for [f fams
+                :let [tr (relational-pairs c (:data m4) entries (held-out c anchors-of f) (disj fams f))]]
+            [f {:model (ar/with-relations ((:models m4) f)
+                         {:m-counts (ar/level-counts (map :rel (filter :y tr)))
+                          :u-counts (ar/level-counts (map :rel (remove :y tr)))
+                          :estimation {:trained-on (vec (sort (disj fams f)))}})
+                :pairs tr}]))))
+
+(defn task-a-relational
+  "Task A (lot M8) under anchor `setting`: each mention as
+   `relational-mention`, against the entries with their stated relations,
+   with its family's relational fold model and its anchor set. Mentions the
+   curator confirmed are curator work, not the machine's: they are left out
+   of the measured set (`:confirmed`). As `task-a-fs`, plus `:models`,
+   `:folds` (each fold's training pairs), `:anchors` (the largest anchor
+   set a mention reads), `:curated` (the curated path's report) and
+   `:anchors-of`."
+  [c setting m4]
+  (let [entries (relational-entries (:pool c))
+        {f :anchors-of cur :curated} (anchors-of c setting m4)
+        folds   (relational-fold-models c m4 entries f)
+        conf    (set (:confirmed cur))
+        c'      (update c :mentions (fn [ms] (vec (remove #(conf (mention-id %)) ms))))
+        res     (run-task-a c' {:mention identity
+                                :entries (fn [_] entries)
+                                :candidates (fn [[m] es]
+                                              (let [rm (relational-mention m)]
+                                                (reconcile/agent-candidates [rm] es {:model (:model (folds (:family m))) :anchors (f rm)})))})]
+    (assoc (fs-summaries c' res)
+           :models (update-vals folds :model)
+           :folds (update-vals folds :pairs)
+           :curated cur
+           :confirmed (vec (sort-by pr-str conf))
+           :anchors-of f
+           :anchors (reduce max 0 (map #(count (:anchors (f (relational-mention %)))) (:mentions c'))))))
+
+(defn decisions
+  "Per mention of a task-A run, what the matcher decided: each candidate's
+   id, decision, score, weight and evidence, proposals then abstentions."
+  [run]
+  (mapv (fn [m] (mapv (juxt :authority-id :decision :score :match-weight :evidence) (concat (:proposals m) (:abstained m))))
+        (:mentions run)))
+
+(defn decision-changes
+  "The measured mentions of `run` whose decision on some candidate differs
+   from M4's held-out run `m4`: `{mention-id [[id m4-decision decision] ..]}`."
+  [run m4]
+  (let [dec  (fn [m] (into {} (map (juxt :authority-id :decision)) (concat (:proposals m) (:abstained m))))
+        base (into {} (for [m (:mentions (:task-a m4))] [(mention-id m) (dec m)]))]
+    (into (sorted-map-by #(compare (pr-str %1) (pr-str %2)))
+          (for [m (:mentions run)
+                :let [b (base (mention-id m)) d (dec m)
+                      ch (vec (for [[id x] d :when (not= x (b id))] [id (b id) x]))]
+                :when (seq ch)]
+            [(mention-id m) ch]))))
+
+(defn review-outcomes
+  "Over a task-A run, the mentions M4 left for review (`m4-review`, a set of
+   mention ids), by name: `{name {[decision right?] n}}`."
+  [run m4-review]
+  (into (sorted-map)
+        (for [[nm ms] (group-by :name (filter #(m4-review (mention-id %)) (:mentions run)))]
+          [nm (frequencies (map (fn [m] [(:decision m) (= (:truth m) (:authority-id (first (:proposals m))))]) ms))])))
+
+(defn relational-levels
+  "Over relational pairs, the levels reached, `{feature {[true? level] n}}`."
+  [rpairs]
+  (into (sorted-map) (for [f (keys ar/features)]
+                       [f (into (sorted-map) (frequencies (map (fn [p] [(:y p) (get-in p [:rel :levels f])]) rpairs)))])))
+
+(defn leakage
+  "The leakage checks of `setting` on corpus `c`, for every determined
+   mention m (or the first `n`): its gold is replaced by another authority
+   at the source the setting's anchors are built from — the oracle's gold,
+   or the gold the curator reads in the curated path, rebuilt end to end —
+   and its relational evidence, over every entry, must be the same
+   (`:changed-by-own-gold`); the support never names m (`:self-in-support`)
+   nor, leaving its record out, a mention of its record; and the anchors of
+   other mentions of m's own truth that m's evidence may read are counted
+   (`:same-person`), with where they come from: the oracle (`:oracle`), or
+   the curator's accepted claims (`:curator`)."
+  ([c setting m4] (leakage c setting m4 nil))
+  ([c setting m4 n]
+   (let [entries (ar/resolve-relations (relational-entries (:pool c)))
+         f       (:anchors-of (anchors-of c setting m4))
+         det     (cond->> (filter :truth (:mentions c)) n (take n))
+         rows    (for [m det
+                       :let [rm   (relational-mention m)
+                             fake (assoc c :mentions (mapv #(if (= (mention-id %) (mention-id m)) (assoc % :truth "00000000") %)
+                                                           (:mentions c)))
+                             f'   (:anchors-of (anchors-of fake setting m4))
+                             rcs  (map #(ar/compare-relations (f rm) rm %) entries)
+                             rcs' (map #(ar/compare-relations (f' rm) rm %) entries)
+                             sup  (set (mapcat :support rcs))
+                             same (filter #(and (= (:truth m) (:authority-id %)) (not= (:id rm) (:mention %)))
+                                          (ar/usable-anchors (f rm) rm))]]
+                   {:self   (contains? sup (:id rm))
+                    :record (boolean (some #(= (:record m) (first %)) sup))
+                    :change (not= rcs rcs')
+                    :same   (seq same)
+                    :source (set (map #(if (:oracle? %) :oracle :curator) same))})]
+     {:mentions            (count rows)
+      :self-in-support     (count (filter :self rows))
+      :record-in-support   (count (filter :record rows))
+      :changed-by-own-gold (count (filter :change rows))
+      :same-person         {:mentions (count (filter :same rows)) :source (reduce into #{} (map :source rows))}})))
+
+(defn task-b-relational
+  "Task B (lot M8): the measured determined mentions clustered
+   (`agent-cluster`) from their relational decisions under `run` (a
+   `task-a-relational`), as `task-b-constrained` does from M4's:
+   `:constrained` under the policy (outright proposals join),
+   `:closure-review` and `:constrained-review` when review links join too
+   (a what-if)."
+  [c run]
+  (let [ms    (vec (filter :truth (:mentions run)))
+        es    (dated-entries (:pool c))
+        per-m (for [[i m] (map-indexed vector ms)]
+                (fs-links [:mention i] {:proposals (:proposals m) :rejected (:rejected m)}))
+        input {:items       (merge (into {} (for [e es] [(:id e) (cond-> {:authority? true} (:dates e) (assoc :dates (:dates e)))]))
+                                   (into {} (for [[i m] (map-indexed vector ms)]
+                                              [[:mention i] (cond-> {} (dates/dated? (:dates m)) (assoc :dates (:dates m)))])))
+               :links       (vec (mapcat :links per-m))
+               :cannot-link (vec (mapcat :cannot-link per-m))}
+        run-c (fn [join] (let [res (ac/cluster (assoc input :join join))]
+                           (assoc (score-clustering ms (:cluster-of res)) :violations (count (ac/violations input res)))))
+        all   #{:accepted :propose :review}]
+    {:mentions           (count ms)
+     :links              (frequencies (map :basis (:links input)))
+     :constrained        (run-c ac/default-join)
+     :closure-review     (score-clustering ms (ac/transitive-closure (assoc input :join all)))
+     :constrained-review (run-c all)}))
 
 ;; ---------------------------------------------------------------------------
 ;; Printing
