@@ -16,7 +16,9 @@ contrary evidence) is measured in [After dates (M3)](#after-dates-m3), lot M4
 (a Fellegi-Sunter score, abstention, calibration) in
 [A Fellegi-Sunter score (M4)](#a-fellegi-sunter-score-m4), lot M5
 (constrained clustering) in
-[Constrained clustering (M5)](#constrained-clustering-m5). The
+[Constrained clustering (M5)](#constrained-clustering-m5), and the same
+mentions against a GND snapshot (lot M6) in
+[On a GND snapshot (M6)](#on-a-gnd-snapshot-m6). The
 numbers are measurements, not a guarantee: no row in `guarantees.md` cites
 them (the behaviour of the date block, of abstention and of the confidence
 rule, and of the clustering's constraints and revisions, is guaranteed, by
@@ -523,6 +525,118 @@ the reason, and reopens a claim proposed again rather than copying it; a
 refused alignment goes to `:needs-review` with the reason; an accepted
 claim is never revised by the machine, and a contradiction among accepted
 claims is a conflict diagnostic on the records it involves.
+
+## On a GND snapshot (M6)
+
+Lot M6 makes an authority dump a **snapshot**: indexed once
+(`palomar authorities index`, `palomar.authority-index`), then read offline,
+its candidates looked up by blocking keys (ADR 0038 amendment M6). This
+section runs the M4 matcher on the M2 mentions against such an index, built
+from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
+
+### Method
+
+- **The pool**: 197 GND person records (CC0) fetched from lobid on
+  2026-11-09 by the M2 authorities' headings and some near-namesakes (every
+  Verne, the persons whose forenames are "Victor Hugo"…); queries in
+  [`test/fixtures/er-gold/gnd-persons/`](../../test/fixtures/er-gold/gnd-persons/README.md).
+  Indexed: 197 entries, 3 998 blocking keys. A closed pool again, though not
+  the gold's own: it holds GND namesakes the BnF pool did not (a "Dumas,
+  Alexandre" born 1988, two undated "Hugo, Victor", "Charles-Victor Hugo",
+  "Verne, Jean"…) and no record bridged to 14 of the gold's 33 persons.
+- **The matcher**: `reconcile/agent-candidates` with the M4 model fitted on
+  all five M2 families (m from the BnF gold, u and the prior 0.129 from the
+  BnF pool; no refit on the GND), the mention's `{:name :dates}`, and the
+  index's `:block`. **That m was fitted on the true pairs of these same 142
+  mentions**: the main table is in-sample for the mentions, though not for
+  the pool. The held-out run below scores each family with the model fitted
+  on the four others, as in M4. The term frequencies are the GND pool's, as always the
+  pool matched against.
+- **Blocking**: the blocks hold 4 764 (mention, entry) pairs of the full
+  scan's 142 × 197 = 27 974 (17 %); the proposals, rejections and
+  abstentions are the full scan's, mention by mention (tested).
+- **The truth**, by **bridges** the matcher never sees: the GND record's
+  `sameAs` to the BnF ARK (7 authorities), an ISNI both records state (10),
+  and Wikidata's BnF and GND ids (17; `bnf-gnd-wikidata.csv`). 19 of the 33
+  BnF authorities are bridged to a GND record of the extract; where two
+  bridges speak they agree, but for one pair. **Hetzel and his pseudonym
+  Stahl are contested**: the BnF's Hetzel has the ISNI of the GND's "Stahl,
+  P.-J." record, the BnF's Stahl the ISNI the GND's "Hetzel, Pierre-Jules"
+  carries, and Wikidata pairs Hetzel with Hetzel. Their 2 mentions are scored
+  for nothing. The 14 others have no bridge, nor do the 4 authorities
+  outside the M2 pool: what the matcher does for them
+  is reported, not judged.
+
+### What the matcher does
+
+| outcome of the mention (its top candidate) | bridged, right | contested | no bridge | undetermined | all |
+|---|---:|---:|---:|---:|---:|
+| proposed outright | 101 | 0 | 11 | 0 | 112 |
+| for review        | 8   | 2 | 1  | 1 | 12  |
+| abstained         | 0   | 0 | 11 | 0 | 11  |
+| no candidate left | 0   | 0 | 7  | 0 | 7   |
+| **all**           | 109 | 2 | 30 | 1 | 142 |
+
+- **Every uncontested bridged mention's top proposal is its GND record**: 109 of 109,
+  101 proposed outright; no wrong link, no bridged truth rejected for its
+  dates or abstained. The 8 for review have a GND namesake above 0.5: Victor
+  Hugo and two undated "Hugo, Victor" records (0.983 each), François-Victor
+  and Charles-Victor Hugo (0.656), 6 "Verne, Jean Jules" (the GND's "Jules-Verne,
+  Jean", by a variant) and "Verne, Jean", 1890-1982 (0.656).
+- **Contested**: Hetzel's mention has GND Hetzel first (1.000) and GND
+  Stahl second (0.653), Stahl's mention the reverse; all four for review
+  (competing).
+- **No bridge** (30 mentions of 18 authorities: the 14 unbridged, and the 4
+  the BnF SRU does not serve): 11 are proposed outright to a
+  GND record of the same name (heading or tokens) and compatible or no dates (Robert-Dumas,
+  Charles ×5; Paltsits, Victor Hugo ×2, whose BnF authority the SRU did not
+  serve in M2; Wlassikoff; Martínez González; Dumas de Rauly; D'Paola, to
+  "Paola, Víctor Hugo d'"), plausible but not measurable here; Escala is for
+  review (an undated GND "Escala, Victor Hugo", 0.998, against a "Zwinz,
+  Victor Hugo" whose dates agree, 0.656); 11 abstained, the extract holding
+  no record of their heading (7 Robert-Dumas, Alexandre — the GND has a
+  "Robert-Dumas, A." the queries did not reach —, four "Víctor Hugo"
+  authors), their best candidates at 0.336 at most; 7 have no candidate
+  left (no shared key, or, for Schlienger and Lippmann, every candidate
+  rejected for its dates).
+- **The undetermined** undated "Dumas, Alexandre" has three candidates for
+  review at 0.975: père, fils and the Alexandre Dumas born 1988.
+- 138 proposals, 2 280 candidates abstained, 2 346 rejected for their dates.
+- **Held out** (leave-one-family-out, each fold's prior 0.111 to 0.179):
+
+  | outcome | bridged, right | contested | no bridge | undetermined | all |
+  |---|---:|---:|---:|---:|---:|
+  | proposed outright | 80 | 0 | 11 | 0 | 91 |
+  | for review        | 29 | 2 | 4  | 1 | 36 |
+  | abstained         | 0  | 0 | 8  | 0 | 8  |
+  | no candidate left | 0  | 0 | 7  | 0 | 7  |
+
+  Still no wrong top proposal among the 109, but 21 more of them go to
+  review: the 20 "Férat, Jules" (Férat, Jules-Descartes, and Jules Verne
+  above 0.5 against them, the "others" fold having learnt from the four
+  author families only) and Rascón Banda. Three unbridged "Víctor Hugo"
+  authors (Acuña Ortega, Demaria Pesce, Viscarra Rodríguez), abstained
+  in-sample, are now for review at 0.540 against another "…, Víctor Hugo"
+  whose dates agree — a different person by every sign but the forenames.
+  173 proposals, 2 245 abstentions, 2 346 rejections.
+- **No confidence is written**: the model is not calibrated, and a
+  calibration measured on the BnF pool would not hold for this one (ADR
+  0005 L2; the code refuses it). Every posterior above is a score.
+
+### What it shows, and what it does not
+
+- The M4 model, learnt on BnF headings, carries to GND headings of the same
+  persons where the forms agree (most do: both follow ISBD-like
+  "Surname, Forenames"), and the dates keep the namesakes apart as on the
+  BnF. Its abstentions are where the GND has no such person.
+- It is the easy case still: controlled headings against controlled
+  headings, a pool drawn around the gold's names, and a truth only for the
+  19 authorities a bridge reaches (111 mentions of 141, 2 of them contested). The 11 outright
+  proposals without a bridge are unscored; a wrong one among them would not
+  be seen.
+- The bridges are not independent of each other nor always right: the
+  Hetzel/Stahl ISNIs show identity and pseudonym records crossed between two
+  national files.
 
 ## Limits
 

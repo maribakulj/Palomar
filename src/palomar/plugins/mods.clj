@@ -51,7 +51,8 @@
      `<modsCollection>`); id from `:record-id`, else `recordInfo/recordIdentifier`,
      else the first top-level `identifier`.
    - Import only; element-level core, no DCMI/relatedItem structure."
-  (:require [clojure.string :as str]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
             [palomar.plugins.record-id :as record-id]
@@ -250,7 +251,7 @@
     (string? source) source
     (map? source)    (case (:source/kind source)
                        :string (:source/value source)
-                       :file   (slurp (:source/value source))
+                       :file   (slurp (io/file (:source/value source)))
                        (throw (ex-info "Unsupported source kind for MODS"
                                        {:kind (:source/kind source)})))
     :else (throw (ex-info "MODS importer expects a string or tagged source"

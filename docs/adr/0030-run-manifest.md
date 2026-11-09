@@ -85,3 +85,20 @@ For reproducible research a conversion has to say what it was.
 - Two files cannot be replaced at once. When the output is published and the
   manifest cannot be, the run exits 2 and says so: the output is new, and no
   manifest describes it.
+
+## Amendment (lot M6, 2026-11-09): the authorities a reconciliation matched against
+
+- `reconcile --manifest <file>` writes a run manifest, as `convert` does: the
+  input fingerprinted, the output (what was printed), the options, and under
+  `:authorities` each authority file used with its path and fingerprint
+  (`:sha256`, `:bytes`).
+- For an authority index (ADR 0038 amendment M6) the entry also states,
+  from the index header, `:index {:built :source {:name :sha256 :bytes}
+  :format :blocking :entries}`: the build date, and the dump the index was
+  built from as its header records it. The dump itself is not read again:
+  it may be gone, or elsewhere.
+- `diff` shows a changed index as a changed `:authorities` (another build
+  date, another dump, or other bytes). Two reconciliations against the same
+  index differ only in their times.
+- The manifest is written beside its path and moved, as for `convert`; a
+  `--manifest` that names the input is refused.

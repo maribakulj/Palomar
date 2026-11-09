@@ -18,6 +18,20 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Authority snapshots** (lot M6; ADR 0038 and 0030 amendments): a GND dump
+  in the lobid JSON lines format (`palomar.plugins.gnd`, optionally gzipped)
+  is indexed once by `palomar authorities index <dump> --out <index>`
+  (`palomar.authority-index`): streamed, externally sorted, a sorted
+  line-oriented EDN file with a header naming the dump's fingerprint and the
+  build date, byte-identical for the same dump and date. `reconcile
+  --authorities <index>` reads it offline and looks candidates up by
+  blocking keys (tokens, and one-letter deletions of the surname), with the
+  proposals of a full scan (`agent-candidates` `:block`); a dump is refused
+  there. Names are case-folded in the root locale (`text/norm`), whatever
+  the JVM's default. `reconcile --manifest` names each index with its fingerprint, its
+  dump and its build date. A test traps every network request on these
+  paths and on `convert`. Measured on the M2 mentions against a 197-record
+  GND extract in `docs/eval/person-reconciliation.md`.
 - **A Fellegi-Sunter score for agent reconciliation** (lot M4; ADR 0018
   amendment): `palomar.agent-match` compares a mention with a candidate into
   name, form and dates levels, weighs each by log2(m/u) from observed pairs

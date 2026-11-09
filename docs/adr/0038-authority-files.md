@@ -89,3 +89,92 @@ as contrary evidence).
 
 The person-reconciliation eval reads its pool with this reader; a test checks
 it gives the pool M2's test-side reader gave.
+
+## Amendment (lot M6, 2026-11-09): authority snapshots — a dump indexed once, read offline
+
+The pool was a file read whole and scanned per name: right for a vocabulary,
+not for a national authority file of millions of records, and a dump read
+during a conversion would make its result depend on when it ran. An
+authority file of that size is now a **snapshot**: a dump prepared once into
+a local index, then read offline and deterministically.
+
+1. **The dump: lobid GND JSON lines** (`palomar.plugins.gnd`). The GND is
+   CC0. lobid's search API serves it as JSON-LD, one compacted record per
+   line (`https://lobid.org/gnd/search?q=…&format=jsonl`, every hit of the
+   query). JSON lines is read because a line is a whole record: a file of
+   any size is read one line at a time, in bounded memory. **The DNB's bulk
+   files are not read**: its JSON-LD dump (`authorities-gnd-person_lds.jsonld.gz`)
+   is expanded JSON-LD in arrays, with the name parts as blank nodes, and
+   its RDF dumps are not sorted by subject, so an entry could be built only
+   once the whole graph, or an external sort of it, is at hand; an index
+   build names an expanded JSON-LD array when it refuses one. Turtle is still
+   not read. An agent record (`Person` or `DifferentiatedPerson`,
+   `CorporateBody`, `Family`) is one entry; an `UndifferentiatedPerson` (a
+   Tn record, one name for several people) is none and is counted, since a
+   match to it would identify no one: its GND URI as `:id`, `preferredName` as label,
+   `variantName`s as variants, `:dates` from `dateOfBirth`, `dateOfDeath`,
+   `periodOfActivity` (else `dateOfBirthAndDeath`), `:entity-type`, and
+   `:same-as`, the sorted IRIs of its `sameAs` links to VIAF, ISNI, Wikidata,
+   the Library of Congress and the BnF. Those links are **data, never a
+   feature**: the matcher compares names and dates only (a test shows the
+   proposals are the same without them). A record of another kind is skipped
+   and counted.
+2. **The index** (`palomar.authority-index`), built by an explicit command,
+   `palomar authorities index <dump> --out <index> [--built YYYY-MM-DD]`
+   (API `build!`), never during a conversion or a reconciliation; a dump
+   given to `reconcile --authorities` is refused with the command to index
+   it. The file is UTF-8 EDN, one form per line: a header (format version,
+   blocking scheme, build date, the dump's file name, SHA-256 and size, the
+   entry and key counts, what was skipped), then the `[:entry id {…}]` lines
+   and the `[:key k [id…]]` lines, in sorted order, map keys sorted. The
+   lines are sorted by an external merge sort: chunks of `:chunk-lines`
+   sorted in memory, then merged at most `:fan-in` (64) runs at a time, in
+   as many passes as needed. Memory holds a chunk, the fan-in readers and the
+   largest posting; disk holds the runs. The file is written beside its path
+   and moved over it when complete. Refused, with nothing written: a dump
+   from which no entry is read, one more than half of whose lines are no
+   JSON object (the counts are said), and one holding an id twice. **The
+   body is a function of the records**: byte-identical whatever their
+   order, line endings, byte-order mark, gzip, chunking, fan-in or default
+   locale. The header names the dump file as given and the build date; the
+   API takes the date and reads no clock, the CLI records today (UTC) unless
+   `--built` is given. Same file and same date, byte-identical index.
+   Names are case-folded in the root locale (`text/norm`, also for every
+   other key it makes: under a Turkish default locale `I` folded to a
+   dotless `ı`), and the blocking scheme is versioned (`/2`): an index
+   built with another scheme is refused by the reader. `reconcile
+   --authorities` refuses a dump, known by a compressed name or by JSON
+   after a byte-order mark and blank lines in its first 4096 characters.
+3. **Blocking keys** chosen so that a lookup returns every entry the matcher
+   could score: `t:` + each normalised token of a name, and `s:` + its
+   surname (four letters or more) and each string made by deleting one of its
+   letters. The matcher compares a candidate only when its name level is
+   above `:none`, which needs a shared token or two surnames of four letters
+   or more one edit apart; two such surnames always share a one-letter
+   deletion. A key on the surname's first letters, the usual choice, would
+   miss a typo in them and keep every namesake of a common initial.
+   `reconcile/agent-candidates` takes the index's lookup as `:block` and
+   compares a mention with the entries it returns, in index order, the
+   surname frequencies and the pool fingerprint still being the whole
+   pool's; a name-only threshold of 0 or less admits every entry and scans
+   the pool. The proposals, rejections and abstentions are those of the full
+   scan of the same entries: tested on the extract with perturbed names and a
+   model in which every level weighs, on the M2 mentions, and by a property
+   test of the keys against `agent-match/name-level`.
+4. **No network** on these paths, by design and by test: the GND reader,
+   the index and the matcher name no HTTP client, socket or URL; files are
+   opened as files, never as strings `clojure.java.io` would take for URLs
+   (every CLI verb now opens its input that way, and the spokes their `:file`
+   sources; a test runs them on a file whose path reads as a URL); and a test replaces the JVM's
+   default `ProxySelector`, which every `http`/`https`/`ftp` URL connection,
+   the default `java.net.http` client and a plain socket consult, with one
+   that records and refuses every request, then builds an index, reconciles
+   against it and converts: none is made. A raw UDP datagram or a DNS lookup
+   would not be seen by that trap; nothing on these paths makes one.
+5. **The run manifest names the index** (ADR 0030 amendment M6).
+
+Consequences: the index is loaded whole into memory by `read-index` (entries
+and postings): a lookup is by key, not a scan, but a dump of millions of
+records needs the memory for them; reading the index lazily from disk is not
+done. The blocking keys of a common token (`t:victor`) hold many entries.
+Only the GND reader feeds an index; another dump format needs its reader.

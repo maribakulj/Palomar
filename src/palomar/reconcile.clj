@@ -148,13 +148,16 @@
    one candidate at or above the review threshold; with several, all of them
    go to review (`:review-reason :competing`). A proposal carries
    `:confidence` and its `:calibration-proof` only when the model is
-   calibrated on this pool for its decision (`fs/confidence`)."
-  [mentions authority model]
+   calibrated on this pool for its decision (`fs/confidence`). With `block`
+   (lot M6), a mention is compared with the entries `(block name)` returns
+   instead of every entry; the surname frequencies, the pool size and the
+   pool's fingerprint are still the whole pool's."
+  [mentions authority model block]
   (let [counts (fs/surname-counts authority)
         size   (count authority)
         fp     (fs/pool-fingerprint authority)
         per-m  (for [m (distinct (map mention mentions))]
-                 (for [cand authority
+                 (for [cand (if block (block (:name m)) authority)
                        :let [c (fs/compare-pair m cand {:surname-counts counts :pool-size size})
                              lv (:levels c)]
                        :when (not= :none (:name lv))
@@ -219,6 +222,14 @@
    0005 L2).
    Returns `{:proposals :rejected :abstained}`, best weight first.
 
+   **Blocking (M6)**: with `{:block f}`, `f` a function of a mention's name
+   returning the entries of `authority` to compare it with, in `authority`'s
+   order — an authority index's lookup (`palomar.authority-index/block`),
+   which returns every entry the matcher could score — a mention is compared
+   with those alone; the proposals are those of the full scan. A name-only
+   threshold of 0 or less admits every entry, which no lookup can block: the
+   whole pool is then scanned.
+
    Either way, a candidate whose dates cannot be the mention's
    (`dates/compatibility` is `:incompatible`) is never proposed nor weighed:
    it is listed under `:rejected`, with `:reason :incompatible-dates` and its
@@ -233,13 +244,12 @@
    match to an id-less entry can never be promoted (the metro-station guard)."
   ([mentions authority] (agent-candidates mentions authority 0.5))
   ([mentions authority opts]
-   (if (map? opts)
-     (if-let [model (:model opts)]
-       (scored-candidates mentions authority model)
-       (agent-candidates mentions authority (:threshold opts 0.5)))
-     (let [threshold opts
+   (if (and (map? opts) (:model opts))
+     (scored-candidates mentions authority (:model opts) (:block opts))
+     (let [threshold (if (map? opts) (:threshold opts 0.5) opts)
+           block     (when (and (map? opts) (pos? threshold)) (:block opts))
            scored (for [m    (map mention mentions)
-                        cand authority
+                        cand (if block (block (:name m)) authority)
                         :let [score (name-score (:name m) cand)]
                         :when (>= score threshold)
                         :let [ev {:name-score score :dates (dates-evidence (:dates m) (:dates cand))}]]

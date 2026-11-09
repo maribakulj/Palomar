@@ -72,6 +72,7 @@
      slug of the manifest URI.
    - Import only; 2.x manifests and Collections are out of scope."
   (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
             [palomar.model :as model]
@@ -398,7 +399,7 @@
     (string? source) source
     (map? source)    (case (:source/kind source)
                        :string (:source/value source)
-                       :file   (slurp (:source/value source))
+                       :file   (slurp (io/file (:source/value source)))
                        (throw (ex-info "Unsupported source kind for IIIF"
                                        {:kind (:source/kind source)})))
     :else (throw (ex-info "IIIF importer expects a string or tagged source"

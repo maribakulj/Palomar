@@ -41,6 +41,7 @@
    - The canonical→MARC21 exporter is `palomar.plugins.marc21.export`.
    - Leader/008 fixed-field decoding and indicator semantics are out of scope."
   (:require [clojure.data.xml :as xml]
+            [clojure.java.io :as io]
             [palomar.plugins.marcxml :as marcxml]
             [palomar.plugins.record-id :as record-id]))
 
@@ -157,7 +158,7 @@
     (string? source) source
     (map? source)    (case (:source/kind source)
                        :string (:source/value source)
-                       :file   (slurp (:source/value source))
+                       :file   (slurp (io/file (:source/value source)))
                        (throw (ex-info "Unsupported source kind for MARC21"
                                        {:kind (:source/kind source)})))
     :else (throw (ex-info "MARC21 importer expects a string or tagged source"
