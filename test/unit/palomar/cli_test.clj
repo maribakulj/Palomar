@@ -5,7 +5,7 @@
   (:require [clojure.data.json :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [palomar.cli :as cli]
             [palomar.manifest :as manifest]))
 
@@ -479,3 +479,95 @@
         (is (= 2 exit))
         (is (= "before" (slurp out)) "--out untouched"))
       (.delete out))))
+
+;; --- L1: no path names two of the input, the output and the manifest ------
+
+(defn- bytes-of [f] (when (.exists (java.io.File. ^String f)) (vec (java.nio.file.Files/readAllBytes (.toPath (java.io.File. ^String f))))))
+
+(def ^:private scratch-dirs (atom []))
+
+(defn- scratch-dir []
+  (let [d (str (java.nio.file.Files/createTempDirectory "palomar-paths-" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (swap! scratch-dirs conj d)
+    d))
+
+(defn- clean-scratch! []
+  (doseq [d @scratch-dirs
+          f (reverse (sort-by #(count (str %)) (file-seq (java.io.File. ^String d))))]
+    (java.nio.file.Files/deleteIfExists (.toPath ^java.io.File f)))
+  (reset! scratch-dirs []))
+
+(use-fixtures :each (fn [t] (try (t) (finally (clean-scratch!)))))
+
+(defn- symlink! [link target]
+  (java.nio.file.Files/createSymbolicLink (.toPath (java.io.File. ^String link)) (.toPath (java.io.File. ^String target))
+                                          (make-array java.nio.file.attribute.FileAttribute 0)))
+
+(deftest no-two-paths-of-a-conversion-name-one-file
+  (testing "--out, --manifest and the input name three files, by any path, symbolic links included; a refusal changes no byte (review of 2026-11-09, L1)"
+    (doseq [stream? [false true]
+            [label paths] [["--manifest is the input"   (fn [d] {:out (str d "/out.nt") :manifest (str d "/in.xml")})]
+                           ["--manifest is --out"       (fn [d] {:out (str d "/out.nt") :manifest (str d "/./out.nt")})]
+                           ["--out is the input"        (fn [d] {:out (str d "/../" (.getName (java.io.File. ^String d)) "/in.xml") :manifest (str d "/m.edn")})]
+                           ["--manifest links to --out" (fn [d] (symlink! (str d "/link.edn") (str d "/out.nt")) {:out (str d "/out.nt") :manifest (str d "/link.edn")})]
+                           ["--out links to the input"  (fn [d] (symlink! (str d "/link.nt") (str d "/in.xml")) {:out (str d "/link.nt") :manifest (str d "/m.edn")})]]]
+      (let [d (scratch-dir)
+            input (str d "/in.xml")]
+        (spit input (slurp marc21))
+        (spit (str d "/out.nt") "earlier output")
+        (let [{:keys [out manifest]} (paths d)
+              before (into {} (for [f [input (str d "/out.nt") (str d "/m.edn")]] [f (bytes-of f)]))
+              {:keys [exit err]} (cli/run (cond-> ["convert" input "--from" "marc21" "--to" "ntriples" "--out" out "--manifest" manifest]
+                                            stream? (conj "--stream")))]
+          (testing (str label (when stream? ", streamed"))
+            (is (= 2 exit) err)
+            (is (str/includes? (str err) "choose another path") err)
+            (is (= before (into {} (for [f (keys before)] [f (bytes-of f)]))) "no byte changed")))))))
+
+(deftest distinct-paths-are-converted-and-the-manifest-cites-the-output
+  (testing "three distinct files: the conversion runs, and the manifest's output is the file published, byte for byte (L1)"
+    (doseq [stream? [false true]]
+      (let [d (scratch-dir)
+            out (str d "/out.nt") man (str d "/m.edn")
+            {:keys [exit err]} (cli/run (cond-> ["convert" marc21 "--from" "marc21" "--to" "ntriples" "--out" out "--manifest" man]
+                                          stream? (conj "--stream")))]
+        (is (= 0 exit) err)
+        (is (= (:sha256 (manifest/fingerprint (java.io.File. out)))
+               (get-in (edn/read-string (slurp man)) [:outputs 0 :sha256])))))))
+
+(deftest a-manifest-that-cannot-be-published-is-not-a-success
+  (testing "the output published, the manifest not: exit 2, and the report says what was published (L1)"
+    (doseq [stream? [false true]]
+      (let [d (scratch-dir)
+            out (str d "/out.nt")
+            man (str d "/m.edn")]
+        ;; a directory where the manifest goes: the move over it fails
+        (.mkdirs (java.io.File. (str man "/x")))
+        (let [{:keys [exit err]} (cli/run (cond-> ["convert" marc21 "--from" "marc21" "--to" "ntriples" "--out" out "--manifest" man]
+                                            stream? (conj "--stream")))]
+          (is (= 2 exit) err)
+          (is (str/includes? (str err) "the output was published") err)
+          (is (str/includes? (str err) "no manifest describes") err))))))
+
+(deftest an-output-is-written-where-its-path-leads
+  (testing "a link is written through, a private file stays private, a pipe is written into (L1 review)"
+    (doseq [stream? [false true]]
+      (let [d (scratch-dir)
+            run #(cli/run (cond-> ["convert" marc21 "--from" "marc21" "--to" "ntriples" "--out" %] stream? (conj "--stream")))]
+        (spit (str d "/target.nt") "old")
+        (symlink! (str d "/link.nt") (str d "/target.nt"))
+        (is (= 0 (:exit (run (str d "/link.nt")))))
+        (is (java.nio.file.Files/isSymbolicLink (.toPath (java.io.File. (str d "/link.nt")))) "the link is kept")
+        (is (str/includes? (slurp (str d "/target.nt")) "<") "its target has the output")
+        (let [f (str d "/private.nt")
+              perms (java.nio.file.attribute.PosixFilePermissions/fromString "rw-------")]
+          (spit f "old")
+          (java.nio.file.Files/setPosixFilePermissions (.toPath (java.io.File. f)) perms)
+          (is (= 0 (:exit (run f))))
+          (is (= perms (java.nio.file.Files/getPosixFilePermissions (.toPath (java.io.File. f)) (make-array java.nio.file.LinkOption 0)))))
+        (let [fifo (str d "/pipe")
+              _    (.waitFor (.start (ProcessBuilder. ["mkfifo" fifo])))
+              got  (future (slurp fifo))]
+          (is (= 0 (:exit (run fifo))))
+          (is (str/includes? (deref got 60000 "") "<") "the reader of the pipe has the output")
+          (is (not (java.nio.file.Files/isRegularFile (.toPath (java.io.File. fifo)) (make-array java.nio.file.LinkOption 0))) "the pipe is a pipe still"))))))
