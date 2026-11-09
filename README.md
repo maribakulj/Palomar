@@ -216,10 +216,11 @@ plugin (ADR 0013), never the core.
 │   ├── integration/palomar/ # Multi-layer end-to-end scenarios
 │   └── junit/palomar/       # JUnit XML runner (CI)
 ├── docs/
-│   ├── adr/                 # Architecture Decision Records (0001–0019)
+│   ├── adr/                 # Architecture Decision Records (0001–0056)
 │   ├── eval/                # Measured evals (WEMI derivation, BIB-R, scale, …)
 │   ├── cleanup/             # Audit + remediation passes
-│   └── roadmap-v1.md        # The work-package roadmap + Definition of Done
+│   ├── roadmap-2026-2027.md # The plan now: maturity levels, what is guaranteed, phase 3
+│   └── roadmap-v1.md        # The V1 work-package roadmap (superseded as the plan)
 ├── .github/workflows/ci.yml # Lint, format, test on every push
 ├── .clj-kondo/config.edn    # Linter config
 ├── .cljfmt.edn              # Formatter config
@@ -242,7 +243,8 @@ grounded in **LRMoo** (the object-oriented IFLA LRM, a CIDOC-CRM extension), for
 production use across the full IIIF ↔ MARC family ↔ museum range. The Sprint 0–6
 substrate is preserved as-is; the redefinition is an *extension*, not a rewrite.
 
-Against the work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md)), as of
+Against the V1 work-package plan ([`docs/roadmap-v1.md`](./docs/roadmap-v1.md),
+superseded as the plan by [`docs/roadmap-2026-2027.md`](./docs/roadmap-2026-2027.md)), as of
 2026-06 the engineering is largely landed:
 
 - **WP-0…WP-5, WP-8 done** — design lock + WEMI-derivation spike, substrate
@@ -437,10 +439,14 @@ Force pushes and branch deletion on `main` should be disabled.
 
 ## Roadmap
 
+**The plan now** is [`docs/roadmap-2026-2027.md`](./docs/roadmap-2026-2027.md):
+three levels of maturity (experimental, validated on a corpus, qualified),
+what is guaranteed, heuristic or experimental, and the semantic work next.
+
 **V1 was redefined in 2026** around a rich, **loss-aware** pivot grounded in
 **LRMoo** (the object-oriented IFLA LRM, a CIDOC-CRM extension), for production
-use at flagship institutions. The detailed plan lives in
-[`docs/roadmap-v1.md`](./docs/roadmap-v1.md): dependency-ordered work packages
+use at flagship institutions. That plan lives in
+[`docs/roadmap-v1.md`](./docs/roadmap-v1.md), the record of V1: dependency-ordered work packages
 (WP-0…WP-9) over an honest ~18–24-month horizon. The decisions behind it are in
 [`docs/wp0-decisions.md`](./docs/wp0-decisions.md); the architecture is fixed by
 ADRs [0013](./docs/adr/0013-lrmoo-rich-pivot.md)–[0019](./docs/adr/0019-conversion-directionality.md).
@@ -457,8 +463,8 @@ INTERMARC-NG **entity-relation** spoke (graph→graph, no inference — ADR 0019
 DC / MODS / IIIF; targets span RDF (N-Triples · Turtle · JSON-LD), CIDOC-CRM,
 Linked Art (validated against the official draft-2020-12 schema) and the floor
 formats. Directionality follows role — spokes are bidirectional, the hub is a
-target, and CRM→LRM is a *downcast* (ADR 0019). See
-[`docs/roadmap-v1.md`](./docs/roadmap-v1.md) for the live work-package state.
+target, and CRM→LRM is a *downcast* (ADR 0019). The plan now is
+[`docs/roadmap-2026-2027.md`](./docs/roadmap-2026-2027.md).
 
 **Scope reversal.** The original plan (below) deliberately deferred IIIF,
 CIDOC CRM, Linked Art, and **deduplication**. The redefinition pulls them in:

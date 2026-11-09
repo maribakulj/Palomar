@@ -1,8 +1,11 @@
 # What Palomar guarantees — and what it does not
 
-*State of 2026-10-29, after the corrections of six post-audits (C1–C7, D1–D6,
-E1–E6, F1–F7, G1–G7, H1–H3). No release is tagged yet; this file is the
-reference until one is, and each release should carry its own copy.*
+*State of 2026-11-09, after the corrections of eight post-audits (C1–C7,
+D1–D6, E1–E6, F1–F7, G1–G7, H1–H3, I1–I3, K1–K6) and of the first cycle of
+the review of 2026-11-09 (L1–L5). No release is tagged yet; this file is the
+reference until one is, and each release should carry its own copy. What is
+guaranteed, heuristic or experimental, and the levels of maturity, are in
+[`roadmap-2026-2027.md`](./roadmap-2026-2027.md).*
 
 Every guarantee below is a behaviour a test pins. If the test is removed or
 fails, the guarantee is withdrawn. Anything not listed is not promised.
@@ -134,8 +137,9 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
 - **Archival and museum domains.** EAD units project to RiC-O (ADR 0045),
   checked against RiC-O 1.1 on the fixtures only: the spoke stays
   experimental until validated on a real corpus. The LIDO spoke (ADR 0052)
-  is tested on eighteen real records of three institutions (the Städel, and
-  two through museum-digital): a far cry from the variety of LIDO in use.
+  is tested on twenty-three real records of four institutions (the Städel,
+  two through museum-digital, and the Yale Center for British Art), and its
+  Linked Art compared with YCBA's own on 500 frozen pairs (`docs/eval/ycba.md`): a far cry from the variety of LIDO in use.
   It validates each record against the LIDO 1.0 or 1.1 XSD, but not
   LIDO-MC's own rules, which are no XSD; it reads event types and artefact
   terms from lists, in English, German and French; and it writes a title's
@@ -144,6 +148,21 @@ the spoke of its metadata format (ADR 0037). The EAD spoke is experimental
   synthetic data only.
 - **Entity id collisions.** Ids carry a 64-bit hash; the policy and its limits
   are in `palomar.model/mint-entity-id`.
+- **Agreement is not correctness.** The YCBA benchmark (`docs/eval/ycba.md`)
+  measures how far two independent mappings of the same sources agree, on
+  500 frozen pairs of one institution; neither is annotated truth, and both
+  can share an error. Makers matched by name only (15) are agreements to
+  check.
+- **Confidence is not calibrated.** Where an assertion carries a confidence
+  (a reconciliation score, a mapping or a rule that states one), it is that
+  source's number, not a calibrated probability: the LIDO proposal that a
+  design was used by a production is given 0.5 divided by the number of
+  productions, a set value, not a measure. Most assertions carry none.
+- **A manifest names what the run read, not what came before it.** What an
+  application did upstream (a model, an authority service it consulted) is
+  the caller's `:external` block, given through the library
+  (`palomar.api/manifest`), as the caller states it; the CLI writes none.
+  Palomar does not fingerprint it.
 - **Batch memory.** `convert` holds the corpus and its output in memory; only
   `convert --stream` (the MARC family, and a LIDO `lidoWrap`) is bounded. A
   streamed LIDO record takes 25 to 30 ms (`docs/eval/scale.md`).

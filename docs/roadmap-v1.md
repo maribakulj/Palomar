@@ -1,6 +1,9 @@
 # Palomar V1 — Redefined Roadmap (rich LRMoo pivot)
 
-- Status: **Proposed**
+> **Superseded as the plan** by [`roadmap-2026-2027.md`](./roadmap-2026-2027.md)
+> (2026-11-09). This file stays as the record of what V1 set out to do.
+
+- Status: **Superseded** as the plan by [`roadmap-2026-2027.md`](./roadmap-2026-2027.md) (2026-11-09)
 - Date: 2026-05-31
 - Supersedes: the twelve-sprint roadmap table in [`README.md`](../README.md) (§ Roadmap)
 - Builds on (kept): ADR 0001, 0002, 0003, 0005, 0007, 0009, 0010, 0012
