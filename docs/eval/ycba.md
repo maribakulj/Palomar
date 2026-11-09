@@ -1,6 +1,7 @@
 # Palomar against the Yale Center for British Art's own Linked Art
 
-*2026-11-04, post-audit 8, K3. 500 objects.*
+*2026-11-04, post-audit 8, K3. 500 objects. Frozen and rerun on 2026-11-09
+(review of 2026-11-09, L4): see "The frozen benchmark" below.*
 
 ## Why this comparison
 
@@ -37,7 +38,8 @@ the study recommended:
   - On Palomar's side: the Production's own `carried_out_by`, its creators
     (ADR 0054).
 - **Reproducing it.** The scripts are in `dev/eval/ycba`
-  (`sample.py`, `people.py`, `convert.clj`, `compare.py`, `diff_makers.py`).
+  (`sample.py`, `people.py`, `convert.clj`, `compare.py`, `diff_makers.py`,
+  and since L4 `freeze.py`, `verify.py`, `refresh.py`).
   YCBA's data is fetched, never committed, under the Center's
   [Open Data and Data Services Terms of Use](https://britishart.yale.edu/open-data-and-data-services-terms-use)
   (Data Source: Yale Center for British Art).
@@ -143,6 +145,62 @@ Palomar writes 1 343 types against YCBA's 1 210, and 710 are shared.
 - **YCBA's 500 that Palomar lacks** are its two top classes, "Visual Works"
   (483) and "Objects" (17). The LIDO does not give them.
 
+## The frozen benchmark (L4)
+
+The review of 2026-11-09 asked that this comparison be one that can be
+rerun and read without overstating it.
+
+- **The corpus is frozen.** `docs/eval/benchmarks/ycba/corpus-manifest.json`
+  names the 500 pairs: each TMS number, its Linked Art object URI, when it
+  was fetched (2026-11-04, 04:48 to 05:00 UTC), and the SHA-256 of its LIDO
+  and of its Linked Art. It also gives the digest of the activity page and
+  of `people.json`, the seed, and the Palomar commit it was frozen at. The
+  data itself is not committed; its ids and digests are.
+  - *Frozen mode, offline:* `verify.py <dir> <manifest>` says whether the
+    pairs on disk, `people.json` and the activity page are the frozen ones,
+    and `compare.py --manifest` compares only those pairs, with rows for any
+    that are not. Without `people.json` makers match by name only, and
+    `compare.py` says so.
+  - *Refreshed mode, network:* `refresh.py <manifest> <dir>` fetches the same
+    pairs and their people again (not a new sample), into a new directory
+    only. `verify.py` then says which YCBA changed.
+- **Matches are counted by kind.** Of the 480 YCBA makers found in Palomar:
+  - 0 by YCBA's own id: Palomar never writes YCBA's URIs;
+  - 465 by an id YCBA's record of the person lists (ULAN, Wikidata, LoC…);
+  - 15 by name only. These are actors the LIDO names by no authority:
+    Alfred Diston (3), Daniel Turner (3), Thomas Wright, William Dixon and 7
+    others. Two namesakes would agree this way too, so these 15 are
+    agreements to check, not agreements established.
+- **Dimensions are compared by value, unit, type and what is measured**, not
+  by count. By value, unit and type, 1 491 of 1 492 agreed. With what is
+  measured, they agreed on **566 of 1 492**, where the count had said
+  1 492 = 1 492.
+  - The cause: YCBA classifies each dimension by what it measures (Sheet,
+    Frame, Plate, Image, Mount…), from the LIDO's `extentMeasurements`.
+    Palomar read that element apart from the measurements and wrote it
+    nowhere, so a frame's height was stated as the object's height.
+  - The fix: each dimension now carries the extent of its measurements, as
+    a type in the CIDOC CRM view (`P2_has_type`) and in Linked Art
+    (`classified_as`), one node of its own in both
+    (`lido-test/a-dimension-says-what-it-measures`,
+    `lido-test/an-extent-is-a-part-of-its-own`). An extent that names no
+    part ("Dimensions") is not written; the English term is read first; a
+    value that is no number keeps its extent in its note.
+  - The one dimension left that differs (pair 548) is a frame's depth that
+    Palomar types by no AAT term; not this fix's.
+  - After it, **1 491 of 1 492** agree on type, unit, value and what is
+    measured.
+
+| (frozen corpus, 0 pairs not as frozen) | YCBA | Palomar before L4 | Palomar after L4 |
+|---|---|---|---|
+| YCBA's makers Palomar names | 499 | 480 | 480 |
+| … by the same id / an equivalent id / name only | — | 0 / 465 / 15 | 0 / 465 / 15 |
+| dimensions | 1 492 | 1 492 | 1 492 |
+| … same type, unit and value | — | 1 491 | 1 491 |
+| … and the same part measured | — | **566** | **1 491** |
+
+All other rows are as above.
+
 ## What it shows
 
 - Testing against an independent mapping found errors no internal test
@@ -154,3 +212,6 @@ Palomar writes 1 343 types against YCBA's 1 210, and 710 are shared.
   maker for "follower of"), the limits of matching, or readings that differ
   without contradicting each other.
 - Subjects are the one large gap left, and it is known and planned (K5).
+- This is the agreement of two independent mappings, not a measure of
+  correctness: YCBA's mapping is not annotated truth, and both can share an
+  error. Where they disagree, the report says which and why.

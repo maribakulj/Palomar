@@ -300,6 +300,18 @@
   (let [read (set (map #(nth % 2) natives))]
     (frequencies (keep (fn [[nm path]] (when-not (read path) nm)) (text-leaves node)))))
 
+(def ^:private placeholder-extents
+  "Extents that name no part of the object, only the measurements: \"Dimensions\"
+   (Städel). Not written as what a dimension measures (L4 review)."
+  #{"dimensions" "dimension" "measurements" "maße" "masse" "abmessungen"})
+
+(defn extent-node
+  "The node of what a dimension of record `rid` measures, `extent` (the frame,
+   the sheet): a type of its own, minted apart from the record's types named
+   by a label only, which the CIDOC CRM view and Linked Art both name (L4)."
+  [rid extent]
+  (model/mint-entity-id :crm/E55_Type [(str rid) "extent" extent]))
+
 (defn number-value
   "The measurement `s` as a decimal number with a dot, or nil when it is none:
    a comma is a decimal mark only before one or two digits (\"12,5\"); before
@@ -379,13 +391,20 @@
           (concat
            (strings :lido/measurements (mapcat #(kids % "displayObjectMeasurements") ms))
            (strings :lido/extent (mapcat #(descend % "objectMeasurements" "extentMeasurements") ms))
-           (for [s (mapcat #(descend % "objectMeasurements" "measurementsSet") ms)
+           ;; each dimension with the extent its measurements give: the
+           ;; frame's height is the frame's (review of 2026-11-09, L4: YCBA)
+           (for [om (mapcat #(kids % "objectMeasurements") ms)
+                 :let [es     (keep #(when-let [t (some-> % text str/trim not-empty)] [t (lang %)]) (kids om "extentMeasurements"))
+                       ;; as the measurement type: the English term first (L4 review)
+                       extent (or (some (fn [[t l]] (when (= "en" l) t)) es) (ffirst es))
+                       extent (when-not (some-> extent str/lower-case placeholder-extents) extent)]
+                 s (kids om "measurementsSet")
                  :let [types (kids s "measurementType")
                        t     (or (some #(when (= "en" (lang %)) (text %)) types) (some text types))
                        v     (some-> (kid s "measurementValue") text)
                        u     (some-> (kid s "measurementUnit") text)]
                  :when v]
-             [:lido/dimension (model/structured (cond-> {:value v} t (assoc :type t) u (assoc :unit u))) (second s)])
+             [:lido/dimension (model/structured (cond-> {:value v} t (assoc :type t) u (assoc :unit u) extent (assoc :extent extent))) (second s)])
            (mapcat (fn [s] (concat (strings :lido/measurement-type (kids s "measurementType"))
                                    (strings :lido/measurement-unit (kids s "measurementUnit"))
                                    (strings :lido/measurement-value (kids s "measurementValue"))))
@@ -904,15 +923,21 @@
                         (claim i :crm/P190_has_symbolic_content (:value a) a)]))
              (of :lido/inventory-number))
      (mapcat (fn [a]
-               (let [{:keys [type value unit]} (fields a)
+               (let [{:keys [type value unit extent]} (fields a)
                      d (model/mint-entity-id :crm/E54_Dimension [(str rid) (str (some-> (model/evidence-of a) first :selector :value))])]
                  ;; P90 takes a number (E60); a value that is none is said as text
                  (if-let [n (number-value value)]
                    (concat [(entity d :crm/E54_Dimension) (claim obj :crm/P43_has_dimension (model/reference d) a)
                             (claim d :crm/P90_has_value n a)]
                            (when unit (typed d :crm/P91_has_unit :crm/E58_Measurement_Unit a {:label unit}))
-                           (when type (typed d :crm/P2_has_type :crm/E55_Type a {:label type})))
-                   [(claim obj :crm/P3_has_note (str/join " " (remove nil? [(some-> type (str ":")) value unit])) a)])))
+                           (when type (typed d :crm/P2_has_type :crm/E55_Type a {:label type}))
+                           ;; what is measured, the frame, the sheet: a type of the dimension
+                           ;; too, a node of its own, apart from the label-only types (L4 review)
+                           (when extent
+                             (let [t (extent-node rid extent)]
+                               [(entity t :crm/E55_Type) (claim d :crm/P2_has_type (model/reference t) a)
+                                (claim t :crm/P190_has_symbolic_content extent a)])))
+                   [(claim obj :crm/P3_has_note (str/join " " (remove nil? [(some-> extent (str ":")) (some-> type (str ":")) value unit])) a)])))
              (of :lido/dimension))
      (for [a (of :lido/measurements)] (claim obj :crm/P3_has_note (:value a) a))
      (for [a (of :lido/description)] (claim obj :crm/P3_has_note (:value a) a))

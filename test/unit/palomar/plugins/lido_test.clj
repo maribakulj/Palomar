@@ -9,6 +9,7 @@
             [palomar.fidelity :as fidelity]
             [palomar.plugins.lido :as lido]
             [palomar.ontology :as onto]
+            [palomar.plugins.lrmoo.export :as export]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.validate :as validate]))
 
@@ -842,3 +843,74 @@
       (is (nil? (get (doings-by-name facts) "Rembrandt")))
       (is (= #{"P14_carried_out_by"} (get (doings-by-name all) "Rembrandt")))
       (is (not (str/includes? (:output (convert/convert {:from :lido :to :dc :source xml})) "<dc:creator>Rembrandt"))))))
+
+(def ^:private framed
+  "A painting measured twice: the image, of no extent stated, and its frame."
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>F-1</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"en\">"
+       "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>painting</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+       "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap>"
+       "<lido:objectMeasurementsWrap>"
+       "<lido:objectMeasurementsSet><lido:objectMeasurements>"
+       "<lido:measurementsSet><lido:measurementType>height</lido:measurementType><lido:measurementUnit>cm</lido:measurementUnit><lido:measurementValue>41.9</lido:measurementValue></lido:measurementsSet>"
+       "<lido:extentMeasurements></lido:extentMeasurements></lido:objectMeasurements></lido:objectMeasurementsSet>"
+       "<lido:objectMeasurementsSet><lido:objectMeasurements>"
+       "<lido:measurementsSet><lido:measurementType>height</lido:measurementType><lido:measurementUnit>cm</lido:measurementUnit><lido:measurementValue>56.5</lido:measurementValue></lido:measurementsSet>"
+       "<lido:extentMeasurements>Frame</lido:extentMeasurements></lido:objectMeasurements></lido:objectMeasurementsSet>"
+       "</lido:objectMeasurementsWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>"))
+
+(deftest a-dimension-says-what-it-measures
+  (testing "the frame's height is the frame's, in CIDOC CRM and in Linked Art; a dimension of no stated extent says none (review of 2026-11-09, L4: YCBA)"
+    (let [r     (first (:records (convert/to-wemi :lido {} framed)))
+          as    (:assertions r)
+          label (into {} (for [a as :when (= :crm/P190_has_symbolic_content (:predicate a))] [(:subject a) (:value a)]))
+          value (into {} (for [a as :when (= :crm/P90_has_value (:predicate a))] [(:subject a) (:value a)]))
+          types (fn [d] (set (for [a as :when (and (= d (:subject a)) (= :crm/P2_has_type (:predicate a)))]
+                               (label (:value/target (:value a))))))]
+      (is (= {"41.9" #{"height"} "56.5" #{"height" "Frame"}}
+             (into {} (for [[d v] value] [(str v) (types d)])))))
+    (let [obj  (first (filter #(= "HumanMadeObject" (get % "type"))
+                              (map json/read-str (str/split-lines (:output (convert/convert {:from :lido :to :linked-art :source framed}))))))
+          dims (into {} (for [d (get obj "dimension")] [(get d "value") (set (map #(get % "_label") (get d "classified_as")))]))]
+      (is (= {41.9 #{"Height"} 56.5 #{"Height" "Frame"}} dims)))))
+
+(defn- measured
+  "A record of one objectMeasurements: `extents` (`[term lang]`…) and one dimension."
+  [extents type value]
+  (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>M-1</lido:lidoRecID><lido:descriptiveMetadata xml:lang=\"en\">"
+       "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>height</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+       "<lido:objectIdentificationWrap><lido:titleWrap><lido:titleSet><lido:appellationValue>T</lido:appellationValue></lido:titleSet></lido:titleWrap>"
+       "<lido:objectMeasurementsWrap><lido:objectMeasurementsSet><lido:objectMeasurements>"
+       "<lido:measurementsSet><lido:measurementType>" type "</lido:measurementType><lido:measurementUnit>cm</lido:measurementUnit><lido:measurementValue>" value "</lido:measurementValue></lido:measurementsSet>"
+       (apply str (for [[t l] extents] (str "<lido:extentMeasurements" (when l (str " xml:lang=\"" l "\"")) ">" t "</lido:extentMeasurements>")))
+       "</lido:objectMeasurements></lido:objectMeasurementsSet></lido:objectMeasurementsWrap></lido:objectIdentificationWrap></lido:descriptiveMetadata></lido:lido>"))
+
+(defn- rid-of [xml] (:id (first (:records (convert/to-wemi :lido {} xml)))))
+
+(defn- dimension-types
+  "`[crm la]`: the P2 type ids of the record's dimension in CIDOC CRM and the
+   classified_as ids of its Linked Art dimension."
+  [xml]
+  (let [as  (:assertions (first (:records (convert/to-wemi :lido {} xml))))
+        d   (some #(when (= :crm/P43_has_dimension (:predicate %)) (:value/target (:value %))) as)
+        obj (first (filter #(= "HumanMadeObject" (get % "type"))
+                           (map json/read-str (str/split-lines (:output (convert/convert {:from :lido :to :linked-art :source xml}))))))]
+    [(set (for [a as :when (and (= d (:subject a)) (= :crm/P2_has_type (:predicate a)))] (:value/target (:value a))))
+     (set (for [dm (get obj "dimension") t (get dm "classified_as")] (get t "id")))]))
+
+(deftest an-extent-is-a-part-of-its-own
+  (testing "what a dimension measures is its own node, the same in both views; a placeholder names no part; English first; a value that is no number keeps it in its note (L4 review)"
+    (let [xml      (measured [["Frame"]] "height" "5")
+          [crm la] (dimension-types xml)
+          frame    (lido/extent-node (rid-of xml) "Frame")]
+      (is (contains? crm frame))
+      (is (contains? la (export/entity-iri frame)) "the Linked Art type is the CIDOC CRM node"))
+    (let [[crm _] (dimension-types (measured [["height"]] "height" "5"))]
+      (is (= 2 (count crm)) "an extent named as a measurement type is not merged with it"))
+    (let [[crm la] (dimension-types (measured [["Dimensions"]] "Höhe" "5"))]
+      (is (= 1 (count crm)) "\"Dimensions\" is no part: only the measurement type")
+      (is (empty? la)))
+    (let [xml     (measured [["Blatt" "de"] ["Sheet" "en"]] "height" "5")
+          [crm _] (dimension-types xml)]
+      (is (contains? crm (lido/extent-node (rid-of xml) "Sheet"))))
+    (let [as (:assertions (first (:records (convert/to-wemi :lido {} (measured [["Frame"]] "height" "ca. 5")))))]
+      (is (some #(= "Frame: height: ca. 5 cm" (:value %)) as)))))

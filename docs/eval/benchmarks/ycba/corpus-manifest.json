@@ -1,0 +1,3516 @@
+{
+ "benchmark": "ycba",
+ "licence": "Data Source: Yale Center for British Art, under its Open Data and Data Services Terms of Use; the data is not redistributed",
+ "manifest_version": 1,
+ "pairs": [
+  {
+   "fetched_at": "2026-11-04T04:54:26Z",
+   "la_sha256": "a18c4dbc3dd03f81f28a65a3136f7bb1a438714bafdf9d634049477a38f1dcae",
+   "lido_sha256": "7922c089d50b7af3301f1cb024c7dc41936ab7706fcef478c94fbf6f0b814dd2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/95/95469a9b-63c6-4eb3-8126-232580e70f8f.json",
+   "tms": "1002"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:52Z",
+   "la_sha256": "e39a54f5e7aefbba976db4ee978b018fa2e83ca6aba7be9f78bd1fe32a94e326",
+   "lido_sha256": "7cabbcb26a2314986969224daeb80ab55c55570a62902f23126aad7e61613206",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b7/b7791575-e618-4ddd-940a-702994ed72ae.json",
+   "tms": "1005"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:09Z",
+   "la_sha256": "e6caa718694050c1412faff6bec6b7e9caab32af3c3badb97fe4837f80488985",
+   "lido_sha256": "dfbce89e43f072b2a99405bc444f9ea9c362ceabed196801026ef5501633541b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/90/9066aaef-773c-4df0-ad79-542ca21807d6.json",
+   "tms": "1010"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:18Z",
+   "la_sha256": "57344aa966d589e33614595ebb3f7456b1331259f73301d7408ef026e2eea20e",
+   "lido_sha256": "4dcc3f6237eb5ec4f7e527f5d76b4a8589396498eda14982d358837d80d56ab4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cc/cce5e99c-2d3c-44f1-b4bc-7f00b826ba26.json",
+   "tms": "1015"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:04Z",
+   "la_sha256": "206307dc98f3967d64088b122cc17fbcf2dd3e2bfd31b197583c8b3c845206ed",
+   "lido_sha256": "a60504a963b92f712296d32a285378031223f754cd18642ebe2d6dacc7cf29b2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/dd/dd07f2f2-c3d6-4f3a-b81c-8a7079123c20.json",
+   "tms": "1032"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:19Z",
+   "la_sha256": "f80fd77214b4dad6bb472cf6f70ee2351c8dec003b7d4ef5e3d643c89414029f",
+   "lido_sha256": "8185a31874fd6d32ef65fc76bb88f1535c5294a056db943002141391cfb345b3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/eb/eb198d2f-e006-4d62-9a10-d884744371a4.json",
+   "tms": "1037"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:42Z",
+   "la_sha256": "de1f4369fd7e120d479cf6d31443ee220a0596fe722deb4a1f77fe989a738c43",
+   "lido_sha256": "7b89a8cd4484174d26d4e5d348f55da4e11829176a51bef81400a6b82c47535b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ef/ef818ad3-931d-4f5e-b552-863a015df483.json",
+   "tms": "1038"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:55Z",
+   "la_sha256": "8716f904c4e1af9a1bb0126541558aef26a6d5e78886ee0470a63602008e82bc",
+   "lido_sha256": "4d9f1675124ec41f7471b77001c2ad183f518dfc92f90131eed9a1cc82b6b785",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f3/f35332ad-55a3-4160-ba39-819d49d3a160.json",
+   "tms": "1040"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:16Z",
+   "la_sha256": "144d30a1b7e024005198d0de8903cb2c9897aa4e92b1ccd920047f7baf5f0dd6",
+   "lido_sha256": "8c7bf9f4016f740997596cc1edf29616ee2fb469056414dee6f8fec364620485",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/be/bef31de7-1e81-47ae-9a4c-604fcb305cdd.json",
+   "tms": "1042"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:10Z",
+   "la_sha256": "c25f56066cbcb17f09f6bdad71c6cf35086e7b6fbf3aee59cf45cf615c51f2e0",
+   "lido_sha256": "a05ccd3d732e43110a216a4c894490850cbc21a07c8400543bc280944b6124e9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/38/38ba5458-eb66-4bd6-85ce-3552ef8f06fc.json",
+   "tms": "1045"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:49Z",
+   "la_sha256": "a62ccc4fada1c436315b286e38d61f798a8562ceec13bbe6ec4b24716e738b44",
+   "lido_sha256": "d4994c18e020daafed94d7a8d1539eacbb55703b73b564a570cfa0345c38265f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c6/c6d62d88-69ea-4e92-9302-a6adc86ad032.json",
+   "tms": "1048"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:22Z",
+   "la_sha256": "7edd606dd703c0de7de6d0103de5f8bee15c2146a6e77d5d17aaee7225a80fde",
+   "lido_sha256": "633698f75c7bbc66517d1490e2f673f296b6614458e2fe0f918bb229671777eb",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a1/a109dba2-684d-4df3-8237-732b2ad83084.json",
+   "tms": "1051"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:43Z",
+   "la_sha256": "e605a0bf0246ef94fbf05cc2670df68cd7f81aee3d4d96e149defeed7943f095",
+   "lido_sha256": "9f54e09102f713254dd4ee59c47dacdf147afb7332fcacda07fc11932717c39e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/71/71a15761-b689-4d0c-8a8c-cf55c95432d1.json",
+   "tms": "1052"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:45Z",
+   "la_sha256": "dea0afa62abd261869a107d0314043caf7c1fd0e3a7a0df861cfbab465464c9d",
+   "lido_sha256": "f68a17942852662d7ab138d8ebaf81b90156a57e13abba295014ab8b3342d06a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b2/b207029f-249f-413a-a14a-3c73f8616356.json",
+   "tms": "1058"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:34Z",
+   "la_sha256": "39cecf3a31c1c0cc3ee088bed9eae1ca85e336ab2e584ec9f6d0de87aebbad6f",
+   "lido_sha256": "2ce1ab2d2cc8705e15b15090387bcc99cd73a359783043616a305200a3bc989c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/46/46ef6f95-3886-4873-8145-71f783d69e52.json",
+   "tms": "1067"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:45Z",
+   "la_sha256": "533c656a58fbf2682fb435db820a9a9f457e6194c275293a25b5a6ac3cd2f63a",
+   "lido_sha256": "e16a485fa1e1af4d5e084ca9cff9b73cbca3aff066c6697d0b12df6a4fe49b62",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7d/7d6c9763-9be2-49f6-8833-db0cc17d5126.json",
+   "tms": "1069"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:17Z",
+   "la_sha256": "e19ea3eaddca8bf3c606c9c31f51e7360d1307edc1cabb81aaaffb7e47ee4317",
+   "lido_sha256": "69d354fc5a5813ad4253d5a135cb1eabd323fe40eece51906c57c3f20adc233d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/89/893b7301-797b-4aa1-8e87-a6894c15da21.json",
+   "tms": "1070"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:21Z",
+   "la_sha256": "8a9d97bcd72236b35bcba0f790baaee79a748ec5e9cbe87897fc698d4627a5d5",
+   "lido_sha256": "f72c4c57e038c46a918c1e7136a69e71283fa993ba91edb1950a33b990cec148",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/09/09aba462-5f1c-49d9-bdac-b5f69df77d26.json",
+   "tms": "1073"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:32Z",
+   "la_sha256": "d899fa4c60c853bc12726d4c55b23157d04890ef1667d3b5748a062342db5111",
+   "lido_sha256": "145f5781f704b5c260aa8eb0d6470f925d176e55d2d438befc56e3f97ec70960",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e7/e7ebe8fa-6f4c-4639-9fce-1cf86f5ab700.json",
+   "tms": "1075"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:34Z",
+   "la_sha256": "a7ece2e5f94191dc05bf4f02197da8bd3f8124c37b86980d836d89d8527d56df",
+   "lido_sha256": "06470f630814059dd9f0b4dc7e0ad65855df1e06a39b55dbcb5faf25663fc75f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/be/be0e11f1-7bcc-45d1-81eb-33abc6b66355.json",
+   "tms": "1080"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:10Z",
+   "la_sha256": "b3800348122e3ec9e0504d6382773c9554e7e80208cce63c4a37f53f5725d6eb",
+   "lido_sha256": "4051790f20d8a50afe12d12b4050124a6ef0d8bc5aebc7c8af9c7dc8e725e550",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/bc/bcdc7374-6126-48e8-bb68-a08bc5acba88.json",
+   "tms": "1086"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:35Z",
+   "la_sha256": "7b1c4e33f8dfa575002bb4db2631283dcd91dd261a403ed5da9bb1fcee2aebe2",
+   "lido_sha256": "7b767ea66535276760e35decc5a04e152a71492210353dc6db9a179d586eed65",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/20/2071f3e0-b3d3-465e-ab26-600e99e7f1ca.json",
+   "tms": "1089"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:11Z",
+   "la_sha256": "cc527be943705b0ca4a89b5f23f60763f68323e7e4f54ba0aea0736456a673a1",
+   "lido_sha256": "6825dc180b619479b8c4d3e199e1b4adf263741b33636c07061157660f85c4bc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/96/96b13b62-8030-4eaf-b233-db6e15724073.json",
+   "tms": "1090"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:13Z",
+   "la_sha256": "1911be8cd35c69b8653e16010a01e815ae29bd74dd779c3eb26d6070fa4e120d",
+   "lido_sha256": "503deaa0ecb127aeca69b5d78d831c8aeefff9bb7dc80fecf019b3a02aa238df",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/71/71a5f134-50a9-4e2b-b29b-fd58dce5bafd.json",
+   "tms": "1091"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:10Z",
+   "la_sha256": "4be88438039e9d8518ec6e75b533458c1ede1b8b1ed43bf4b3404201da6d2663",
+   "lido_sha256": "224f5fc91f0fb28853394a085e9d9b0059870f09e37f55bc9ae9036d0567894d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/36/369cd793-9d00-428c-b479-1ad5cce35c1e.json",
+   "tms": "1101"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:18Z",
+   "la_sha256": "505e21077042e10cb1aceeb7f671225cdda4c37157836344577196c0df32f6f4",
+   "lido_sha256": "ffebd9515080e65a3f6a4ab1b20f3137de7db608bcfc1d0d38d38b9b6d14269b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d1/d1a02019-2c5e-4d91-9904-99a531755b15.json",
+   "tms": "1106"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:06Z",
+   "la_sha256": "5862b2ff77355dbda5368f044caadb9e657229e0cca2ecc97706019aae9375a9",
+   "lido_sha256": "d76d754ea00aef6a936966482d4ba4b347bf93c92b4c1751df11352dbfb757de",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/05/05a14835-2494-461b-a714-ab877758dbcc.json",
+   "tms": "1109"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:03Z",
+   "la_sha256": "8a4caf689b8a017eeedd321dd6c7f15ca7e845432e328ae2d28f3ba09da577db",
+   "lido_sha256": "ca389556b9a1eaa99d4e975d4b304af18462e98c39e644181994b85f3a42ce26",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/aa/aa920643-1ad2-45e3-b5ee-ca87cb0588ab.json",
+   "tms": "1128"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:09Z",
+   "la_sha256": "0e3b57fd4f248e510904321ffbe2773273e2e38a014b6c07cbd0d8d05ca175ba",
+   "lido_sha256": "8e4139d7727c508bf8f4ae4eac8babc8a60074472f0a206c5a1269e443300f62",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0b/0bd4413f-a3a6-466d-b7a0-f9b7b14aa928.json",
+   "tms": "113"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:43Z",
+   "la_sha256": "1d791bf1b827689294def9ab8b86ac1792e380b5baa11a4cefc4beaa1a59255c",
+   "lido_sha256": "f1f7a3ce3634c19f739de6f948ac209ea398f752f1153e09574d83bfe1e2f874",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/02/02a0e13e-48a7-4e05-8793-a3ae3925b283.json",
+   "tms": "1134"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:04Z",
+   "la_sha256": "471d9397d7d57726c9f60612b8af16bed69e8696b3cc088cbe2c26fe20f96c23",
+   "lido_sha256": "ebe575296608bf47c0598a0f3bafc9ad1dbba17b4c16e666851727b57b3cb9e0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/99/995e18b1-6aaf-4d9c-ab1e-ed0611da877c.json",
+   "tms": "1138"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:10Z",
+   "la_sha256": "197410197dad46056d0808e8188c66dfdda6dce4af98507b4f8d02f96f378633",
+   "lido_sha256": "34260452feebae4260692f8580342e63384093eea2eb3537c4618f85656dbb0f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d4/d4730447-563c-4bff-a157-86e954d66664.json",
+   "tms": "1149"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:15Z",
+   "la_sha256": "46ab494632520f414c9efd4e814b110e54fb33a28fc4d4bbd69f89e3625a94bb",
+   "lido_sha256": "61dca9d4bf020d1d42c22f9718207e121abd1a7e323f0ebedb2234e927eecd05",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/48/4816152f-807d-4393-bb61-14527680ffe3.json",
+   "tms": "1161"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:47Z",
+   "la_sha256": "fb5ab0492232b73a642c11dd28f72996128965a4eb3c71b4ecc2cb484ddb7418",
+   "lido_sha256": "10f4b6d68fa3f6f9c46b9e0549310d361360e9f382440fa1bf34abf84d6b292d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8a/8a459601-1176-4043-b106-f95ff20b0d0e.json",
+   "tms": "1163"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:55Z",
+   "la_sha256": "5c3b9444dbb442f45e40b63bfc0451ac89d12856fc79f2c43198975c7978c673",
+   "lido_sha256": "082d22618b33d85a412193742fae5d55d9682464094c17edde7aa69556754d40",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9f/9f766219-e7d1-40ba-8424-6a5dc08fe34a.json",
+   "tms": "1164"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:39Z",
+   "la_sha256": "00b19f0d0b89b378c6c3ee99acaba53ca3f9b2e62c5ab4b23b0707180426a376",
+   "lido_sha256": "5b31d0ea48187b942252b96218d2f42c657fee7d25f6db68eb7feb2f509a124c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/de/de5628bf-c942-4b6a-ae98-7e4cb339b7b4.json",
+   "tms": "117"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:10Z",
+   "la_sha256": "4cd49fc59b02fed9efa220dadae9f4f98dcb0d1bc7302e526c974c7a4e0d856d",
+   "lido_sha256": "2fd2086caadb9f872f0cdb979abdcc05935445b440cfb3b88aff6531e6cec825",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/bc/bcc0288e-fa38-4c2d-97ac-709152fade80.json",
+   "tms": "1171"
+  },
+  {
+   "fetched_at": "2026-11-04T05:00:00Z",
+   "la_sha256": "ae7735eb179703b1056d93a5418d54a75094c7de3284b053c55af0250e2003fc",
+   "lido_sha256": "1a056722adf99e4d2482665f41445c2fbeab6a6fd9004a2d5675f9675bf50474",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e9/e9267756-b2b7-4faf-84a7-a26535dad8ea.json",
+   "tms": "1178"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:04Z",
+   "la_sha256": "2f372c3a08cc840ed05e4081f6026e6ff35442bb89225499f1f587fe7032d7f4",
+   "lido_sha256": "97044fb3be695dc031bd6643559d5419f358e16bc19ac83ad2b84fefc5733c8a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/74/74fc858e-5f26-4489-b941-fb255d8982d0.json",
+   "tms": "1180"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:26Z",
+   "la_sha256": "520cf35ddb549d1ebaec31a67898919da42a62b1ef98f76962455eff71442e0a",
+   "lido_sha256": "8f1db9bd3d27a937747d25a19696a3bca6536a32e6a54cec6075b45ae8b77334",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e1/e1334a64-18df-4c26-83c4-e5887fa38382.json",
+   "tms": "1181"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:22Z",
+   "la_sha256": "1482fe53d379acf22a9bc834e13e0e6288a4a69518f86d3af9b036146a1dcc85",
+   "lido_sha256": "a916d1d2c47793252143df6f70cf504374ca3fab371488808bd0485ec48f5509",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e2/e27566af-2a55-44cf-9fbe-a7b34e158bec.json",
+   "tms": "1183"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:53Z",
+   "la_sha256": "715ae40f6d641a558287412f67a176c5d9cb72b8c2d51c6dc4383dee4bcd36cd",
+   "lido_sha256": "df5a7ffdf1ea8a232263cc4466b40a8964c0b2e4720ec7a5a1a5bae9b0440e98",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1d/1da5ba42-e444-4929-b972-d1cebe006579.json",
+   "tms": "1184"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:11Z",
+   "la_sha256": "c532d874bbfb5f7df019895dd56be796716f09058156159b04583a677f30eacd",
+   "lido_sha256": "89a6c810e2855a291967e130027bdd460cc3d3574cac883406ef328ae5a4311c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/36/3609dff0-8003-4b06-8ae4-4d94a06323fa.json",
+   "tms": "1186"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:56Z",
+   "la_sha256": "60d460acb32e2605508e15c7e66be66139deb968e03da246afec05472909bba2",
+   "lido_sha256": "d793caf36e1e2eb1eb89598c51c974506914b7eb2e1cf3304f990b47b374444a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3c/3cab9b2d-a3d4-4bc1-813c-30038a338bb5.json",
+   "tms": "1198"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:27Z",
+   "la_sha256": "a56ea6a11a916f70de8b9d3db6560f9c2d7b953e0a90998a964d7b6234c4148c",
+   "lido_sha256": "aa86ea8760a893ed420086c4dc64b0a46d6f2219190abe1656c67e676d472295",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cf/cf8fe9dc-a66f-4571-818e-af2023851e36.json",
+   "tms": "1204"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:09Z",
+   "la_sha256": "e59de3b7729541b68157740303ed65d78deef7dbd2bdf09367d4a248121efc12",
+   "lido_sha256": "f6ed014e58d64e5e02eab0db428ad70678c5b2d0ac7557d2697e84bf9d0b765f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b4/b4cb4858-5d1a-4dfe-babe-a1fb35bac2b0.json",
+   "tms": "1205"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:22Z",
+   "la_sha256": "ca831db61338e2c4188aab07cbd7444c923d180c5e36542376618dfc20ac05f1",
+   "lido_sha256": "28f0b707649232f41edd2d4d8904ddd20f0a87f48ef83b17b1f9ffeca645eb13",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9c/9c9de04b-a583-4135-8922-24b9537abb30.json",
+   "tms": "1210"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:12Z",
+   "la_sha256": "7cf12c994d9ccb3e519b6e7b1e0a29f6b380a9b362072dfe016781290b69c9c1",
+   "lido_sha256": "1a6c2dd9b396b2d8a87f5daf7de85db82d33bae5b531a3cd1b8114097a244e05",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/25/2596d983-b7ea-4ba8-94c6-5acfa595631a.json",
+   "tms": "1212"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:41Z",
+   "la_sha256": "ce85ac083d7c401d32c0852e6647ac8ab9f614652da80361b0a17dba02d6df2f",
+   "lido_sha256": "adb09998c0858eb9e7359f5eea708f6798cd32e98a22cb45bd7b085724d81381",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9c/9c0be293-e4ac-46e1-a66e-7f4c6b8743a6.json",
+   "tms": "1213"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:06Z",
+   "la_sha256": "9836a5d57ab7f63ca7eaa900d4b284457a5618292516abec43e4eb56ca71d86e",
+   "lido_sha256": "3c6a3ccdd0ab72b7e697171af46054e3264d738187841df5dd077d05c6d4bf0c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9a/9a128797-a90f-487b-b21e-3be5eb47535c.json",
+   "tms": "1214"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:52Z",
+   "la_sha256": "b2cd4446432b30d0586287769d30060558312bdc5ff8c17c7a27f8eacbf6372f",
+   "lido_sha256": "2c82918594aaf6f25b7c6a6a6e29acc7d3ec00cd4117483f2a24cc3ad861a418",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/10/10ef9842-297b-4d04-8426-6f883386859a.json",
+   "tms": "1216"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:23Z",
+   "la_sha256": "60b8e26eff3300cc3937ce8b5e2d81bcd83b522495413bbef67d67e71991d017",
+   "lido_sha256": "f9f50179a39c5a3ab5f2ecea7c9e7f14afeacb41933f3883ff4663fd285d3a74",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d2/d2022678-d384-48a4-804c-347947775ce1.json",
+   "tms": "1218"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:54Z",
+   "la_sha256": "e793778d67330027c7a4f4353330db1bf57db6c3a26a9589f3b29ecee3508f6b",
+   "lido_sha256": "810b07114d16480f0292301d50a971a7154702619d805ccf4c122bcae57f95dc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/84/843b956e-e2ed-414e-84cf-fcafddd06068.json",
+   "tms": "1222"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:36Z",
+   "la_sha256": "16f7e5b8db00b9070bb95b9b3bdcc280af1abe8fe927231d59df83ccbb5244ef",
+   "lido_sha256": "d21d0c2a42e0437829a7eca429a107030a58f3ab1979883039903cd40877e8e5",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/42/42eccc61-80c4-420d-955f-d9484c5bc84d.json",
+   "tms": "1223"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:37Z",
+   "la_sha256": "45f922416440cf09c8c0bb2a287a8a87231fb17e93b4559d45cd3f75ea1c18dc",
+   "lido_sha256": "50221e8a920b1990a4a3ca3615abd0e9747ebe43f8e839629e22b9aaa11e0921",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ab/ab994607-6e83-4a67-b737-dbceec14a451.json",
+   "tms": "1225"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:28Z",
+   "la_sha256": "9831ed0a6d376b22571912355fc91b9100fd435356d112c8a3c9ce9a600b6d79",
+   "lido_sha256": "1811d30ed8981e10ba73cc45ccd4b342599506a1365563a767b3cc66d2a74a83",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d9/d919fa36-ca08-4def-9326-093491308f2d.json",
+   "tms": "1231"
+  },
+  {
+   "fetched_at": "2026-11-04T05:00:07Z",
+   "la_sha256": "c98fe2bbcf2d07d703a6f8cc4ae03ac2b99986b2df496f7f2f38b9c240cae950",
+   "lido_sha256": "a0144a6f342d39cecbad4103f15e30bed50438d4f73e3f9c482823897d85da11",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e7/e7ab85a8-c3db-4b21-8928-2fb922f79a11.json",
+   "tms": "1236"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:45Z",
+   "la_sha256": "fc4d25288c35d1bfe5dfc5769b48835c40ad5aeb86bc622ba692b194b1372f84",
+   "lido_sha256": "1ad16e680f8c02aef14e46b55999227fcab1992cba26f15bc7ad527fda453ca3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4e/4ec7333f-efca-48b2-bafc-f7797b85602f.json",
+   "tms": "1237"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:32Z",
+   "la_sha256": "a3aaabd188647411169b8dfff47cfa1869286b0c296950ce2b0a56a5e57248b3",
+   "lido_sha256": "710a5bba210d436fcfba19c11e7a146902a686507336b151b472c73f6dde97a0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/13/1384ae74-d0d0-470e-a1b1-86c700455dd1.json",
+   "tms": "124"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:15Z",
+   "la_sha256": "4ba03b91105d9c308179152240bcca43f0bf4b18da0afbbef3a34aa7d3adc27d",
+   "lido_sha256": "6c07c490b531bf9424ea53d10b98d65cbc35c0f73d8ead39ea2ddca18d75212d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7b/7b0f3c1e-430e-4aa2-b906-dbe03b8364ed.json",
+   "tms": "1240"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:52Z",
+   "la_sha256": "72431103dffbe8cde03bcd6c609a9799cbc7470061ba6fdb9c5928114d54fb3e",
+   "lido_sha256": "cfebd2c98aaecde5c233013d3ea5546b578d876ab41d16e235b1aa0a7bb6cd37",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4c/4c3ca669-3d82-4c5f-9bab-2e0664038c03.json",
+   "tms": "1244"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:57Z",
+   "la_sha256": "43294b1af4aca9704bd103313ea311b9c0f45a2fc824ceab29b0247b828bbe14",
+   "lido_sha256": "9942278bab34e0103669e77618ae5e337a29e3959c350013dc8643982a4ae15d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4b/4b1e4e42-162a-46d2-b797-66e25735f2f5.json",
+   "tms": "1247"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:29Z",
+   "la_sha256": "c2a3098ad56458e4cd03374d25ddf40bea7523e632a8897031a0eafa60bd988f",
+   "lido_sha256": "6e78ca86f12397697a428b01546400fcad90844cd6c70db9db7a6863639dcb7c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5b/5b3c29e9-fcba-44a3-98c3-a323664470c8.json",
+   "tms": "1249"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:32Z",
+   "la_sha256": "a37743baf69e69ecd65c58a060181e6a6959069823f5a4b59f32bfd6848bb3fe",
+   "lido_sha256": "425d1fdd96f2853a715072289e379b014811786a58a2f9765d4e43ca3545b304",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b3/b3ee6245-5086-48fc-b96d-0c1477f8e27c.json",
+   "tms": "1250"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:35Z",
+   "la_sha256": "af1493bfea2418db74561dd7a5591b398404f1d3ae90840f8ee41991c44085a7",
+   "lido_sha256": "4af7072836283ec335a731d052f916c266e7b966cfe3f339dd7089395c79c228",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/37/37adff37-4c5d-4be3-91e8-f866f35968e7.json",
+   "tms": "1255"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:35Z",
+   "la_sha256": "5c7acca54cfc0fb688eb4e83ac67ef6ce6a959d9ed81e187b2b11f00b85ad70b",
+   "lido_sha256": "c3de887ae648f2d8a7557d62bbf1df9c061054b68e7deb20574f6c1b5e33bb23",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/12/12057223-1ddf-46fd-a19b-13e4431f574b.json",
+   "tms": "1262"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:05Z",
+   "la_sha256": "ce7f769f6b96cc7137c92f8896cb56847613054ab02645050357ceb8ee8f820c",
+   "lido_sha256": "4aa7d31674c17b28c902fc1850312a14e966b32e49659a75e3847cb634516152",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4a/4a1cfb52-7643-4801-aa76-e422b2d1c3ae.json",
+   "tms": "1265"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:59Z",
+   "la_sha256": "b5943628348f5ca8688cde91ca62b5be2c0f1fba17044506dcef5c64df40b0b1",
+   "lido_sha256": "13558c397930d3be85e691ceb38a864c594f04844676ee021f3f4dcc8c18fd88",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3f/3fa5df13-7f3e-42d5-8ddc-d529d3888f22.json",
+   "tms": "1266"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:59Z",
+   "la_sha256": "ad86629fc712d88dc55013b9cd5ee4a8754f1f06eb5ce6c66726119e34d2ab9a",
+   "lido_sha256": "3a96c8da5194f654034dc3af886a08ea13c9e9b1565d0a73b04101fb1849f5d9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/67/67ecd296-e72f-46ab-80bc-9a5b1508a587.json",
+   "tms": "1269"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:47Z",
+   "la_sha256": "c708262f86325a62e33a80c4203e82b15011b8a7b1783fba768859b6b3060242",
+   "lido_sha256": "9d9f26d9908593ee19499e1ce1dff22a9f34550716d60e47c3957529af81504c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ee/ee0ba102-f5cb-4b72-9383-0017b7935a33.json",
+   "tms": "1273"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:08Z",
+   "la_sha256": "1d68a6c35fd54e8332c7a16e6996ef6f10b0aba047479a938a0df2498395e31f",
+   "lido_sha256": "e8647c22a3bef564d184edda020e0a72ce2ef2292f4dcca3ce48c14e2770bfd1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e9/e905d4fc-4b02-4bdf-9227-fb287db2cc01.json",
+   "tms": "1274"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:55Z",
+   "la_sha256": "1a6411d056695d55b9b7f20e4e483df04b6c0c35da2b890a0ae4db6d94113d4a",
+   "lido_sha256": "cbcba3113fa9deebb1a1ebaccca2069282cdb4f574282949c5791bbefcba577e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1a/1ae77206-fba1-496e-95ee-628b3256a8d9.json",
+   "tms": "128"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:26Z",
+   "la_sha256": "72bd5b4fbd352d79d8c19c54cc4737804645ffd49e3a4a07e0df32d84eb856e0",
+   "lido_sha256": "5db55b139473740f645ff5ade5ec01f455c3aee016bff47de8a0d1cb927d211e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c5/c57ff7ed-ac3c-4806-a40b-2155cc530623.json",
+   "tms": "1285"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:09Z",
+   "la_sha256": "f5cd1c1fb345e46b11642d12ab39badd8241729287f816bc4fd049d33feba71c",
+   "lido_sha256": "955b8be631c5bea3cd38030d05c4d9a9774ce9126b24fc345b76a61d2b9f6e6b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/15/1518ccb6-98d6-4f9a-a263-2bdb80a55e82.json",
+   "tms": "1297"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:08Z",
+   "la_sha256": "fb9af8eb046aa8d1d6fab707361f0b78094259087ad0bd946d9d9cb7385e409a",
+   "lido_sha256": "3517f3680a85c587d536aba25182e81a5fb2a3dfe7737ce56b8931a61129c1f1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e5/e59c4052-817e-4b42-b6f0-2537d1def563.json",
+   "tms": "130"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:20Z",
+   "la_sha256": "cc3d60d776e1f3be3d3ea4462db1ef23b1edb2c04c7f44876b839aebadde9b6f",
+   "lido_sha256": "f5a9cc2b65f9be6b392c0317c10641b364b84af888b17488fd38546fd8dd27a8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/34/347e8bc2-df0b-4e42-9234-1d500b61ee5e.json",
+   "tms": "1303"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:50Z",
+   "la_sha256": "6a84f83a27122f9cb87c5240536fef1181dcd4ccfda1b10bc1dfa1330afece7a",
+   "lido_sha256": "00cd1f256c0a9351c7776b378c8fe5c44615af5e518792d98f719970322a2e29",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a4/a451e609-f3cc-46d9-a553-74d8752d7b67.json",
+   "tms": "1307"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:18Z",
+   "la_sha256": "9dfea263d295b3fc57c0fd770c83881c39167cc81f3dbbd38e5820a9c84cd42a",
+   "lido_sha256": "815a8d28511e437f5e5eda9e0720a53050a072d3aee139208d011bd8fa174aaa",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/16/16e0a586-d143-41c4-af5f-fbf1cb16d67b.json",
+   "tms": "131"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:25Z",
+   "la_sha256": "891e324c32db584156d0653af69135b94b22744c95e0f23dce6a93ea539a61a2",
+   "lido_sha256": "a605404d976e966b642a25650ad890ceb658830e7d709a9ffe032f2950bca622",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/df/df964baf-ee5e-43f5-bfb9-8c73b35e3670.json",
+   "tms": "1312"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:08Z",
+   "la_sha256": "d1e8a6b2ab1359ec376258799184a845542f61ac66d0f2b726a00cd4ed1a0eb5",
+   "lido_sha256": "9caea02211b04ba55797d56ba13a6fc804d1d9eed4beb706179300befc9576ed",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cc/cc1f27c8-0ba2-413f-bf34-67ebb7763f6c.json",
+   "tms": "1315"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:24Z",
+   "la_sha256": "628b156d81acf0559c448b797a7d30b4a6f10c3545a1f09bcbc2cccb62f13ed3",
+   "lido_sha256": "bf3421d45e90930ee4afbb9ca524ce99de4950cd34aa6706d4c9ea7326e01009",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7f/7f5cc9df-c312-45e7-a8fc-490552e28722.json",
+   "tms": "1316"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:06Z",
+   "la_sha256": "bb8ed3194277d60a1b74efcbe1b8b7c58a8b5d2eb5edcce2d2ca3cc1fcadc4fa",
+   "lido_sha256": "5952695952039d8153caffb0c5226e996f44a87905bfa78489638c248c32cfa1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/66/66e9660f-47eb-4627-a8d9-dcae99a564d1.json",
+   "tms": "1317"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:38Z",
+   "la_sha256": "e3a7da7a82298dfd9f1828205229eb8669b7b3e0ad783ec048fbc437de25f84b",
+   "lido_sha256": "1e2866d580a0cd2d140428286342288b5a51b6b540634c427aa8672551f1a2b4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/da/da27f842-d67e-45db-96c8-1d31e7abed4e.json",
+   "tms": "1325"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:31Z",
+   "la_sha256": "f364929e2ac31444e36e0215233d82710d5c8cfc748dbd6d84a08559008a4dc1",
+   "lido_sha256": "ebaa2d49c78ca49dbac7f84133bfbcea3146961b5ad21104dad9ce1a45373bc3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d3/d3e44a41-2f20-4295-8d73-5089902f490e.json",
+   "tms": "1331"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:15Z",
+   "la_sha256": "4d3664991080ccfbfc7d5a6828a18cb2c5e94ed98c751fe1fe106b3a1a42d0d5",
+   "lido_sha256": "dcd631587663f5505c4a08540844fb44d04eb76986d4d2a2be6e43726b526461",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/57/57706b0c-61e5-47f0-93af-3b9bc5c0844a.json",
+   "tms": "1337"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:22Z",
+   "la_sha256": "78f6b638ce481ebf3093a8645585c3bdf766ee7aa3b36bff8c2af968ff95a318",
+   "lido_sha256": "6016e2faae511a2bb53d2ba6206ae9aaa04e1ae5781f767937c888452c5601e7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c0/c0abeb18-a171-4e84-8dfa-9512a37b644b.json",
+   "tms": "1341"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:59Z",
+   "la_sha256": "6598e961ed3a40369393430ef89d72c3dc1f70b4ed70ade72e6728673c629825",
+   "lido_sha256": "e418526071389291b4941a91949bddac265ecdc8954d0e1637404397552723f0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a9/a99ea600-fca9-49de-8e02-e397a45fd9b7.json",
+   "tms": "1346"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:03Z",
+   "la_sha256": "1ae4087781f9faca859271ccee2efd4bb952b7c8a8bec71f805e2c8fd17085dc",
+   "lido_sha256": "03ec57f3dbabc4c333083ed8fb7d1f2465e9c287e77e835623d2f02ad7cfd532",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/77/773b58c8-c146-4b62-9965-f0fab4341aff.json",
+   "tms": "1350"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:21Z",
+   "la_sha256": "72db8474f97afa93bd2308223226d86b47e2dbf83bea6cc8d9d1f7aa54c40ec2",
+   "lido_sha256": "a7af868b19ba9c8b12811638c75d41b6f8ad82d5dfa76dd659f3d1f8cc46ae23",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/df/df927301-027a-4ee3-a812-16d07fd1455d.json",
+   "tms": "1351"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:25Z",
+   "la_sha256": "0656c5f055d4aa2124a190639de8490e4d6bdef8cf530a65d60df600e31a0b6a",
+   "lido_sha256": "3e13969ac1c75c7e5e54c7e585e4309e7d2b5ed2de66c6a65b461d87364ab068",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4f/4fd69667-5ca7-4617-b544-99b7b1e00883.json",
+   "tms": "1357"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:36Z",
+   "la_sha256": "1d85b10e2859e42fdfe1cfd21208933d503d6b278e070e2a1b21eb6bdb7d7bd6",
+   "lido_sha256": "49822a07e2d0d52bcf2b8d1380c245e3ab88c99c9802085f52219bc090372854",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0e/0e24faf8-5087-4607-be9b-2b780545f79e.json",
+   "tms": "1358"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:26Z",
+   "la_sha256": "090d5c91ffa19e88c32bafa2600b0cf1c5b2a4de3f795b28202828da17588a9e",
+   "lido_sha256": "62cd5fc24db4f62d8ee00d1a354413fd452a6bf490a4ed6f99b7478738500b56",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/43/4316e7f9-4afe-41e0-a647-9fc2165b8277.json",
+   "tms": "1361"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:39Z",
+   "la_sha256": "02452a25ac7694db02e7d51a3f320b5e2b0af547a62fe632185c5b8736a15c19",
+   "lido_sha256": "85fb7964fec6bbd441e3df251cea303f798af909723be671db67511d01103add",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/dd/dda80d92-5895-45a2-9ce2-30d523101783.json",
+   "tms": "1365"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:17Z",
+   "la_sha256": "54f7cf96d11224e1b7f1ac5fb37f0c5ec12ed21472fdd60f50688dad3f205436",
+   "lido_sha256": "cd78d8e8342f5ee2971185b4154d65b70ab457e97bcb7629953c36e7933609e0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/04/0471a3a9-e1cf-46a1-a62b-f972ecf8580f.json",
+   "tms": "1372"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:07Z",
+   "la_sha256": "054fc23924a891a9a23fbed6e45e18d35bc72091f126fe064a69b756d4e95166",
+   "lido_sha256": "99bdfe8a08bb07c4e3ec8978190f4d363032e9bf59eaad958a6fb7951c2676ee",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f5/f535eb1e-a7dc-4c22-abb9-2a8a7800248d.json",
+   "tms": "1373"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:50Z",
+   "la_sha256": "153c8e57b0809b50d3107440739443b4e08ddb2796bcbbe1d6ac0b9c77e09446",
+   "lido_sha256": "3cc87c0556fd81deef8cc6c556550eab6886f0c7cd5d93a4aeed865f26e422f7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9b/9b941faa-d267-499a-a997-742f32502c7b.json",
+   "tms": "1376"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:02Z",
+   "la_sha256": "a3ab46bfdde2c8761440044c6e373ecba5f22fb154c14436513fcba48706d055",
+   "lido_sha256": "9b58cfbc124587f54eff94bdc35722fc4707aafaddf61ed510c8803f98c1e6f7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/aa/aa34d7f8-2bce-43f5-8238-6a7bf210afbd.json",
+   "tms": "1379"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:58Z",
+   "la_sha256": "97b7f711c88aa86f09ca62963b00af512e5ce14231e11a3f342db2f0c53e10c2",
+   "lido_sha256": "4e1d68d6971fb5c9857f79db5b56f2f84468f7e0573e4df38162a3321de159ec",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/76/7693b11a-f53c-4eea-8ecc-0ce089725c24.json",
+   "tms": "1387"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:42Z",
+   "la_sha256": "b680eb7b3a6cacc274822859a1127e2050ac574b23c19314bd1dd9b247e5234e",
+   "lido_sha256": "c4ea75303b761cc7f00672dc851b3bc28fcd079061528e7f0d614cc6a77b4278",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/21/21d85ed7-083f-471b-96bb-d338e113ddec.json",
+   "tms": "1409"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:29Z",
+   "la_sha256": "97f61a7dfe821a94a66239f106dd2e0e9e1783bdccf8c77ffa698612e3f293e1",
+   "lido_sha256": "1fae1853ac1bef42d5e235cdc749dac3296395ebbde74e3e3707811d94e99f23",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9f/9fb7699d-7923-4891-aad1-a3f1d9291b6c.json",
+   "tms": "1417"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:35Z",
+   "la_sha256": "cae872db64646c92aa6ac0435edaf206c42bab184b728da5a11c4a1694e567ee",
+   "lido_sha256": "25ff5b208c57838cbeab663fcca05c8dcba839e2e0ee839006c1bc9d55784c57",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3b/3ba6ea94-13a6-4742-9b68-5651ccdf55c9.json",
+   "tms": "1418"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:17Z",
+   "la_sha256": "6d65d68c1fe68fabe1a8619e317bbaf6fa0edbcaf72f706d530f62fc878388f6",
+   "lido_sha256": "026765915476fa619f3c22c501a2e30173e48c71d03f3f2b5e813d21d0b4d0af",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c0/c0bcbdec-afb6-44b1-8665-683c862543c7.json",
+   "tms": "142"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:14Z",
+   "la_sha256": "26f0dac5f66e8b48b6ca88de209bec20815504c8bc4520ae00cc149d063ac59c",
+   "lido_sha256": "39497c357760fac95379e58a8a44659dbb5ef3479815ffacc1fed3768c165434",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a6/a6c0df87-be9b-42b5-9f78-30d619991af4.json",
+   "tms": "1433"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:34Z",
+   "la_sha256": "3287141733f076ce8331f1381adb616b4fc1e6a3fd8ed0eab6df3b84cc69f63a",
+   "lido_sha256": "8bc08cab5d8e5168f8c701e6573300dbfe2ae3ceb9f35adfac1b5f9441725533",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6f/6f46e068-2fb0-4005-971a-7a071c563120.json",
+   "tms": "1439"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:28Z",
+   "la_sha256": "a3f902b08e1fc1d2d18703abe695822c7e031f8ac6735731eadfdcb6c9705994",
+   "lido_sha256": "be0d9d65b6098444eb6fd4def7608dd5543cdd084364543d54563639aa3ec00c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/57/5774d060-7eb5-4d81-ad19-3b12485a2dbf.json",
+   "tms": "144"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:37Z",
+   "la_sha256": "d091fd63cabc14aaff4e5ee767f9783d4d5cf12720e735a11e29dc612d3dbd9c",
+   "lido_sha256": "96369043eb3cf2308c197572b9f4a5df9059aee2ec7bdbd7ca2dfdb0d9e70cae",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/55/55769668-93dc-44d7-b8d6-b52cd21f74e5.json",
+   "tms": "1441"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:41Z",
+   "la_sha256": "e5cbff314639b1aca2fcc223763c460822ee1b868a96cf7266a6cded01f21c38",
+   "lido_sha256": "353bc6d41ef47f67afacec527dbfb52c2d8f9340bf74b25bfa0ed66048bc7903",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/22/225bbf9c-9895-44e8-8126-1726b9837aa7.json",
+   "tms": "1445"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:23Z",
+   "la_sha256": "ea3ed6cacb9956809767a32b63cd1b26f92394fbe9e6613ba5d8f3eb0fcaba3a",
+   "lido_sha256": "b92d472d0f25e28d68d74ae1d3dabc11b1239926d5defd45216c23aedde8a9c4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/bb/bbe7a41a-731f-4242-8f71-e8013e4ee70c.json",
+   "tms": "1450"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:55Z",
+   "la_sha256": "873f331b5054e3b4f705cdd82b75c29da5e95f2f7edb034201152affe26ebbbe",
+   "lido_sha256": "9d320df67ce543a8ebd8174d8d32e4c8fd47b47e4f0b760c37ff44e294043004",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f6/f60b6ab8-86cc-4930-8f63-8abd64ab8c2a.json",
+   "tms": "1455"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:57Z",
+   "la_sha256": "2862cc91bd0d0b460151cd279ef8e6c87b5c95d3792b6e57a69c87bc97ded0b5",
+   "lido_sha256": "5ee51f84b565ea94fde995381980fc8aae43151aa6a37b7d25d74d04b736eefd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4b/4bf719ba-ccb7-470f-93aa-54c9485ae817.json",
+   "tms": "1459"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:45Z",
+   "la_sha256": "1f4ec2613ddf6ddec7c4d738c280fb39277bea1f61a4b95442ccff2211ba72cb",
+   "lido_sha256": "e03ba2ffd13d63f7d02558a99abae0d15bda12186f62e8bdb57b8f6c0a11b00a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b6/b6eb76fb-5aa1-4ed3-8cda-9c0027c8b0d3.json",
+   "tms": "1464"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:07Z",
+   "la_sha256": "e748ebd9446007c3446809be4970b3b315703f0c3df7fd87a10e954d4844110d",
+   "lido_sha256": "ea8e5da1acd5a28129943213ef528b1df679c315b46980e39286850df074a859",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/40/409a6eb6-bd51-47ea-851f-06be9511f4f0.json",
+   "tms": "1465"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:10Z",
+   "la_sha256": "b73ed8d273a83f63d8e0e1df07ffe13d4af5874293646e99df0afed931d2ce05",
+   "lido_sha256": "a83bbfa2ec856b6b6d227a6b6109ddd733c7620182c4d629a42543183537e0e3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e0/e01851b6-6679-4229-a0b8-2c7eb16ddcf0.json",
+   "tms": "1467"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:03Z",
+   "la_sha256": "204be5b44a5c7d63b9882f8ddf71cf4982cc49de7595a8fd887a7298046e3804",
+   "lido_sha256": "3feea8f5d501655f505b1bc80bb981959530ec0c18a71541abdd725035db5d55",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cf/cfcf8197-af89-43c6-a467-d714c436f37f.json",
+   "tms": "147"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:59Z",
+   "la_sha256": "d14718a78f8016534c077a93238f4535d7db26f2f9f03bf839e886c3c23db51e",
+   "lido_sha256": "94b8399bdcdb3da46f513548d420c822e576391ea4638a69137333c66ec8d1ba",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/14/14c23152-924f-41d3-b11a-0db9fadf5ebb.json",
+   "tms": "1477"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:19Z",
+   "la_sha256": "3b979d31173216fd4aee9b9d2165b7371202651b56a6aee74d57162e1d3f9346",
+   "lido_sha256": "f1233409cfdaa9f1e4c57b7d67d85939e7df0e13c1f87b31cbcf418786f4a4df",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4c/4c5109cb-e9ee-4719-9526-a49fa2a10c5c.json",
+   "tms": "1488"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:47Z",
+   "la_sha256": "7f2c410812187510afd549a02dbe0ffc573925fa810ab3760f036dc73a8f2d28",
+   "lido_sha256": "b9fa451bd3ee079c5a66f876bd97ee4a946bd6a9ad31c3b7771cc06ee4c4bce6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7b/7b0f326c-b3dd-4cdd-a43c-a87659e912cf.json",
+   "tms": "1489"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:39Z",
+   "la_sha256": "b86b7677e121ceada8b3e2d92dbb05505c8db43924b37d85af289ed1f2ab425a",
+   "lido_sha256": "9871ac5ed66d89ec3793ad88eef120437f6293b48684b0193ea787e02d51c103",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/bb/bbd5dc09-840f-4457-ad28-6ad3924136b4.json",
+   "tms": "1494"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:02Z",
+   "la_sha256": "d06b29af56d11c23b77f81c2425dfb75a4689aaa8cd62c499c901894481cf34d",
+   "lido_sha256": "7a00f70fa72eff6cc6bd78e1a6e3aee94bf346595301c3c65dc5569ad8515681",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5c/5cd7cc13-fe3c-45ee-ad49-99448a24a3c9.json",
+   "tms": "1498"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:28Z",
+   "la_sha256": "d495cdbd7d7fd6a8e04a4b5a1f870d73fda07009f203c2d8f679d6225a01f5c5",
+   "lido_sha256": "48c9be0d9d00309299c8c1976b46992b5564eaf00b7fd3122fcfe08df3e425c2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9e/9e77ffcd-607e-463c-bbd7-88796cc2d1c4.json",
+   "tms": "1502"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:07Z",
+   "la_sha256": "984c53c71fdc6c2152d7800ea15a5c73dface0485c79f03df1ccc805b4e0fd7f",
+   "lido_sha256": "918164e144707b6c276e71c73eab99d8f2d32c4bdb85a3b5c542f5e781a959cb",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/28/28b934d5-cb8e-4e4c-8b90-a9668c825579.json",
+   "tms": "1509"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:33Z",
+   "la_sha256": "fb159a76483155a0837d9050522b1bb9489a6ac3e8703a46821c8ad5cf62bdd8",
+   "lido_sha256": "f8e78c2dc6771597a66b79eec149148f43d8e8057aeee2a15bdae3f159bfd3d8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a7/a70f0839-39d9-43a3-998e-6647f5f4246c.json",
+   "tms": "1514"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:54Z",
+   "la_sha256": "1181ee9dedba405df3d591e81aace3139384b558c0a0f733d91d185140d58b9b",
+   "lido_sha256": "a7d6bab6dbf147550ad033f86696f252f59945e97ef8fd56e6b4deaa4283a7dd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/64/641f514e-5517-4dbc-94c3-3b20a8f539d6.json",
+   "tms": "1521"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:05Z",
+   "la_sha256": "a59efe6e80e69ba25bacb730f8086c768db481cea2caa7887f41bf9fe5a50df4",
+   "lido_sha256": "ced2c1e3a0e3c38c4efda4a5bba5aa33790f62059a8d6b2af5ded0698d4bedd0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/06/06345e81-13d9-4c81-918c-8cdd99439792.json",
+   "tms": "1526"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:51Z",
+   "la_sha256": "0b03f3e1d08a47f4d45f7f7282f9acacafb243e9cd929002a71337552b848718",
+   "lido_sha256": "7922f08d7f1b61eee32232f9b3026af284d67046c5d7c1ec37190264e2020c75",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/87/87ba9fe9-85a5-4b97-b7f7-cb41bc53c14e.json",
+   "tms": "1527"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:16Z",
+   "la_sha256": "3a036d719ff82a8a42f36a10f8c273124873711978fd6f081b70e51d6961edee",
+   "lido_sha256": "08ef56c90b302dd8965c60b11119d6ad42c0adb6426a99325c4d124583bf02d3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/75/751739cd-17ad-4dfe-903c-393baad72c33.json",
+   "tms": "1532"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:18Z",
+   "la_sha256": "2ef8ce29bb3f29cf01153b21c95ffb48c536ae459cbd68985bde4318e19bfac1",
+   "lido_sha256": "16b413a923b832085283b4192bed593dabca2c1055c46a3e6bca5f8c5fad0d8e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7f/7fd59948-36cf-4129-8c1c-0a22cf8c0ccb.json",
+   "tms": "154"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:56Z",
+   "la_sha256": "9105e66090a95c85cb2c88455e1c600fce0704d43f97148dcee51f3006a64fb9",
+   "lido_sha256": "ac76b77b66663439c4f3e94fc11aef30a5a165486f3aa7f2a048f5a9328268ce",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9d/9d4bed7d-6b02-4619-ab23-6314cf865ae8.json",
+   "tms": "1545"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:13Z",
+   "la_sha256": "25e227a196fbd44a1bc69a7a6d584bc44edc84a2d5352d0bddcacc5baf23c8ae",
+   "lido_sha256": "abc39f2519f6a12e9d90a5674371df5a0be987cfde45a7a07201e296505d9817",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/80/809fc15a-dc14-4f20-a964-230968ad4462.json",
+   "tms": "1548"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:21Z",
+   "la_sha256": "82c2b30e43187f66d74c4ba68129c444919a68b46c2b1160821b963f695d7f3a",
+   "lido_sha256": "0c3df2e44e1076b6d1f66521bd7994bfca0ab73ce245523d4b22f0b745d4d6b2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8d/8de71357-f738-4a75-83b0-7cfed7b05afa.json",
+   "tms": "155"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:42Z",
+   "la_sha256": "5ff6fb3c610083ad70e9f1f42311a8dae5cd79ce5d27da518a797701c65d254a",
+   "lido_sha256": "3f35890d9f3c260dce9ea40482d30a548b454c7721071a45674605bedf9aaf24",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a8/a890e595-f1b1-4b95-86ea-fba440faee7e.json",
+   "tms": "156"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:51Z",
+   "la_sha256": "128c9092071fc27730cced69ecf49d9738cf92fdd71b9e013b0b1c7fa951beb6",
+   "lido_sha256": "9a23390a76df1719d7f9bed988a6b6421ed47ee04cad8a8424b4e08da38888c8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/29/29cc115a-5cc4-4f62-86dd-8c9acde204f1.json",
+   "tms": "1579"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:20Z",
+   "la_sha256": "2ad2e2cd0724e36ea7eeff04077973ff06eb49d8deb700dd08debfe82128ca22",
+   "lido_sha256": "413cf114e8b0767a9c89bf31121b7082556776111c7c4551561f332d582fc1fc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/47/475b8cd6-e674-41e4-bf22-6c49d0f16e01.json",
+   "tms": "1587"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:13Z",
+   "la_sha256": "53d9dd9772dbbdb2dff93d723ab9aa86b622e0ba9685d172a0966a31b8e06c61",
+   "lido_sha256": "3ab1a4f7067727e983523c952ffacfc33a7fcc843ed0b2962ba39167111d531e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5a/5aae9fd9-3cf1-4044-bf25-375fac5791e1.json",
+   "tms": "1596"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:47Z",
+   "la_sha256": "75dac8f6f9b422e321baee1a71fe58a8c3c22d78480563ab6d9561bd611f54b9",
+   "lido_sha256": "7911381ebdf1d8cabae20da2ab91746c59aabdbe41fe4dc27faa8194b73c0741",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b0/b07de3ac-c1f4-42e5-8fc6-511887a0d522.json",
+   "tms": "160"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:25Z",
+   "la_sha256": "d55efc77db0b2d385ceb0959541975726c493823e0fa9deb4e73c8067cbb6e00",
+   "lido_sha256": "2a09d58da4f63e93df97dad6d90d9104ef5f97852570a51d2cf38bfd4a51d454",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/01/01ab1c5d-8ed8-4d30-9492-18eb0dfdf674.json",
+   "tms": "1631"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:32Z",
+   "la_sha256": "3418a9b7a09577933f9d4838e63ac9774fd36786bcc01cc6661f393ed5a64667",
+   "lido_sha256": "0669346d830df77822cc382326a785c4f7422bcd91ff2e3cce69f335fcdac942",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/51/51ee8219-61e1-46a2-bcf2-78c93911de68.json",
+   "tms": "1647"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:58Z",
+   "la_sha256": "c87b241bf03c9b5d14d63fdc067a4e859839f53403cb84b27ac09ccd92290369",
+   "lido_sha256": "b697aeecf566c972b3e8b8b645c775a5423b864aca4d2769560e58817bee55ff",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ee/eef1fa16-dfce-4a13-be0e-89b4819a9cc0.json",
+   "tms": "1648"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:39Z",
+   "la_sha256": "170beaf91d564156103b16df52c9bf35f1ca06c479b4955c6537d1247a6a1ff4",
+   "lido_sha256": "e44b94e18a2bd81eed17d11b3b2574b30b82d3d644465fe3f8f28ea0095bdda5",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0a/0a5e8664-d8d8-43f7-9381-e5daacf25798.json",
+   "tms": "1650"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:57Z",
+   "la_sha256": "3632acf357d9962e5eee3d140c19ad214d449fe93ba881a5c36f99890346ac9c",
+   "lido_sha256": "caa718382f6d97ca7c991bd3c30585f1db242f7fac981a7b21dc2a07c41e5d9e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c1/c100115c-29e2-43e3-b0f2-dc6362829bcb.json",
+   "tms": "1653"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:02Z",
+   "la_sha256": "1ec188de6c876daecae1551b59d10908f180def4b7d08b813beb3096801b9f13",
+   "lido_sha256": "600d915e34f90987d1bbb0692923372ff1e2573e6aa72dff30f422f2f2eb3132",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0f/0ff25266-0b2a-45c0-926c-a1093c9a707d.json",
+   "tms": "1665"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:24Z",
+   "la_sha256": "bd672c1623282f3cb4c05f99ad2a1500a3f2c78f57d981cebf25c455691b70d4",
+   "lido_sha256": "078f892070d9a4f47639d2599ea57da55d3686d1e2a604a54eab97fc454f232b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6e/6ebdb0b1-be0e-41fa-914a-644abc648a48.json",
+   "tms": "1674"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:04Z",
+   "la_sha256": "66e8d0628e16f68a5dc44c8662617cbe98ca28b6b6731718bf3b3d4616168b0a",
+   "lido_sha256": "3156d260de2c28b90a9fd69ccd4cbc299c2f111ea59d6556a17d220e9017723e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9b/9b9a982c-c6d1-410d-9499-0af5a1c5dfbe.json",
+   "tms": "1676"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:56Z",
+   "la_sha256": "8d4fe5e1f301fa081d2a9d52fc8613494dd2b8834a48887c279b7e2c36201112",
+   "lido_sha256": "d0c0d3a4566e7ba398d9bfbb5a72feda02a11a1395cec6d29da83b9879a6414f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1e/1e7d0cc1-5545-4a54-aefd-e1cc5a9734a9.json",
+   "tms": "1677"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:12Z",
+   "la_sha256": "4292c2db458108e634b9d5a26ee25af80f9d8d495e29bc0385707a58501c1509",
+   "lido_sha256": "687b717c286b020135da85d1d42c89522ada6453490ab3fde0922e77bb6f7b97",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/67/67555e6a-1ae0-41a1-a80e-abdd92d4d466.json",
+   "tms": "1687"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:47Z",
+   "la_sha256": "6e6cb349ebded649bd6ab0e1db6f9efd8dc1f8ffa74b59bda82c4bcbe07dcb4a",
+   "lido_sha256": "eb1f55279f9523c3f6dab0d1e1fe080873ecda7cea402c083e19594269a92676",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b3/b3db5bd7-e293-4c2c-8ed5-8b41fc9baa88.json",
+   "tms": "1696"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:24Z",
+   "la_sha256": "ec7e2d9ab89573e379411b4cf0aad32a650fab426b2b1cd7875b4d51707ecf00",
+   "lido_sha256": "32b4f90cbe2e69c0d4eed33078a8e6f7ce479e3af098f96742af8aea7d565978",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ff/ff0fbd32-972b-4f69-883f-60ede549df48.json",
+   "tms": "1697"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:33Z",
+   "la_sha256": "5f2f615c8110db4b78742ca7d6c826a61ff957d0915e5b613e379b98abf4288a",
+   "lido_sha256": "5a4d1b69fb56e3f2c48eaabd86831b5470d74dd601e030bf29f378282e472e74",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/90/90e5995c-2dac-44f2-a157-fb0a403ba8e1.json",
+   "tms": "1704"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:03Z",
+   "la_sha256": "24a99f3b02970f1fb901b7c0e6c7c01934843eb869501a6db7a924ca98f7a098",
+   "lido_sha256": "32c17206fb71a93e22cf3609de5afcc7a043fd5026eccd0a271500d42da5dfc6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6d/6ddf04a9-210c-47e3-9c86-678313e6fa3d.json",
+   "tms": "1718"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:34Z",
+   "la_sha256": "cd717584c2ce89580f4ea7fb3902720f8d4b32b3f59adcb4aefcdc383ad51434",
+   "lido_sha256": "a9b6c690245daeb47d852e2c551460d237466b9f1ff1f835bd549c1c053481a4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cc/cc042888-97b5-4e9b-8aba-d6e1bda878c2.json",
+   "tms": "1729"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:50Z",
+   "la_sha256": "6b724499a23e52ff645f781b0e7357a7ef5e6d55254c1cf92956e10248ef4fb2",
+   "lido_sha256": "8b80e514cc4ad18c151fd0ef727b1752f036e27a68134c036229ea682ebdf22a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/66/660547ed-3f67-4628-9850-5bdf52c49049.json",
+   "tms": "1730"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:26Z",
+   "la_sha256": "a7454e2154805d9dfe32f6d60cd959391eefdcd640eb3120c4d189d78c9c552d",
+   "lido_sha256": "685c5e23c68265288a9bbd6b1b2844c9a1796b07c77edabc599abea8dfb99b5b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/10/1032b2e4-0669-4725-89bf-0a39cfab2feb.json",
+   "tms": "1742"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:01Z",
+   "la_sha256": "5b10c3fb3335c49662ec28fc45620bc0e74586c08c87b02067c3add81d6decc8",
+   "lido_sha256": "dacf4e7ea5fa3007ec4dc2add57e5949e5c99219e6964513f1a9408ed27a9414",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/aa/aaf8a287-84ac-4be0-b8a5-dbb7daa895e8.json",
+   "tms": "1744"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:33Z",
+   "la_sha256": "05c61b6086195f8d96d5084b5f5959cff6c05edc8729cf5be8738ad27da6bf95",
+   "lido_sha256": "ba2aec1af47669275a2aea291f29f5909ac5ee5ee2da537e180621dcb7885d86",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a5/a5e88142-e96f-4de5-a57a-817c5c51698f.json",
+   "tms": "1749"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:00Z",
+   "la_sha256": "831f61ec9659229cfa7124d59a00aff03f1cb32ac78f325bdeafaadc40454735",
+   "lido_sha256": "1c8c652d2dcab1af616cf4a3ccfc6a6ed1a3a782ead6be36e23bf0170f55cf72",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8e/8e648050-e0ab-403d-a5d4-44566f4c77ca.json",
+   "tms": "1756"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:13Z",
+   "la_sha256": "8a15bde887afc2af842ec0095f37385fe5ca7606ce788950fe16af9f343ba143",
+   "lido_sha256": "995fe6160ba2792b5f9f4c65dafa0243c63669e6aee24d2480d51f4089bfe920",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/55/557b6fdf-084c-493d-9995-6bb56a86b8ef.json",
+   "tms": "1759"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:27Z",
+   "la_sha256": "72f6f919b12a243369e1f5987812568d261703d5a5ada0861f93d0ee2135c40b",
+   "lido_sha256": "cd77af8241ba661d0eca1bd149afa33e8f6bab3730d630ee8ab9ca8d6ded7856",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7e/7e2aab29-7f60-4b39-8d61-43777fa94149.json",
+   "tms": "176"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:59Z",
+   "la_sha256": "9c7e54b4ceef2a7b5e208949e1bdbd2b3fa515279ce830fe65daa4865cc04a01",
+   "lido_sha256": "cb540efdc9e329f2ee934cdb03ae78b574cb42529e3bfeb6203ebf2be367b27d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b0/b06a9986-3b3d-469d-812e-e991edcd5c95.json",
+   "tms": "1769"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:09Z",
+   "la_sha256": "412020d3103ec77ac4a2cfc8238491e4b408516557ae35c95286ba8f7dcb3b48",
+   "lido_sha256": "fc1d44deea2d1c6ace09ad2944ea415ee71b728de7063a790e93d93916557371",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/31/312039d2-8631-41a9-85be-e9a71002c2c8.json",
+   "tms": "177"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:38Z",
+   "la_sha256": "f5aeaf676fb3ff6684a741f060b05326015932cb73a1686066791a75d94e79b4",
+   "lido_sha256": "e29fee6732bbb319d6c5887d70a2da6559ef5ab0683c4bbcb6b0036b9015ea19",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3b/3becec7a-d5ed-4559-b1de-fa2505da6eef.json",
+   "tms": "1771"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:40Z",
+   "la_sha256": "214b2ae04b241daac4f18a58de10fc28dcf5b64d9acb8d9986db5dd89a7b56e3",
+   "lido_sha256": "78b693a4bbad576a748b347bc5a6bed55a2a898caa622d1d38972355e656be11",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/af/afa306bf-27d0-4347-bd32-566addae56b6.json",
+   "tms": "1772"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:07Z",
+   "la_sha256": "65241919e9610c4bf080f19a6f57665560561cf163d7893cbf5df3807462b569",
+   "lido_sha256": "31f7fbfe38d97ee08af5c53aaad27d3ae89fac752209e3e27f697536d873f81a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/721864b7-ebca-42f1-ba74-39a5a34c3e3c.json",
+   "tms": "1776"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:35Z",
+   "la_sha256": "06e8044707de5f751c35c1357bd26113f5b39e7598e5c5fe68edddaeaced6f0c",
+   "lido_sha256": "df8d8daee1d920a97e54500f60e55a3fc5b15dc87f13023c4fb0eeb0ac19373a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b3/b3183a43-6fa4-4f29-a805-ebe76a3c0a8b.json",
+   "tms": "1779"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:02Z",
+   "la_sha256": "446112e8ed3dd0aa79d8a46ed61c2a900d9c8aa4f35eafc249da08a5d6f60562",
+   "lido_sha256": "c61e016552d652e4df050be7a489af7ef565b7732451b665353cab0f365b44a9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ba/bacdf4b0-51f7-4806-99c8-ff0b086589bf.json",
+   "tms": "178"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:27Z",
+   "la_sha256": "a2764254d47990e86eafa5460ce19e0e72fe14f290cf218b97e391a201c786af",
+   "lido_sha256": "20f97f2b87bb880ac70e35b835b8de89e33039b5007f59fa35f294e5ab8ec57f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/96/96f5bf9f-8f64-43b4-80d0-7ddd1c5635f7.json",
+   "tms": "1780"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:30Z",
+   "la_sha256": "a9cb4726ec9ad3fc48f4cf6600d90c169ae6adbb31cd20d8d23c212d52f9cdf6",
+   "lido_sha256": "be008403be442719eb675ada58a651c10b6d200fb4befc101b8c1e3e6f7b5327",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d1/d1044b41-9757-40c1-be42-999dc96ba27e.json",
+   "tms": "1781"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:47Z",
+   "la_sha256": "867ce4694fba41e70a4b10b068d38af6687c7c2328fd2f1ac1babfefa989c5d1",
+   "lido_sha256": "cc095a366fa19329c247cbbdcbe54c4792bb65af7384b975ba90eaaa4f42ec76",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1e/1e672e2d-5728-4917-b0c0-816280f4e196.json",
+   "tms": "1784"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:42Z",
+   "la_sha256": "2361a07e6ed8ae8f864bce9b33171d642a89525675d5bbc4d03bf8527655bcea",
+   "lido_sha256": "58eef44d3b4212ede92b8b416e47ae9b724f3c1dd858523b40ee476f0d18acc0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/79/790367eb-05d6-4b90-8da0-afb5d1ff4dd7.json",
+   "tms": "1795"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:55Z",
+   "la_sha256": "ac164c5e4c2bfde17d71544ad0f04362235ef3f7025cdff1670a50257d86667d",
+   "lido_sha256": "23f52ffceeae6696d16524e5bcc7650385f1375c26ceea229744b2ed63af2edc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cd/cdd4d0d8-1822-479b-b32b-60e8a89bd83c.json",
+   "tms": "1797"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:14Z",
+   "la_sha256": "c230c295e91a314816e3c0304b90daca3bb0be494ac3f009da619ef714110334",
+   "lido_sha256": "d378598ca4e6fbdd7acb86f9b9e14d1e5b772c93152293cdea9c3f2e7c1e76b3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d6/d69c8ae7-d716-4755-bb84-f86a703de954.json",
+   "tms": "1808"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:11Z",
+   "la_sha256": "97db5ee326e63634f62ca3fc5b4f8ef7529a984481f5d7c342a3af5fbd109db1",
+   "lido_sha256": "87057f86449cdb026472bd27116c8bc0c44a73eca98c058488bb2df78c076cea",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/00/002d31f5-4f2f-48c6-839a-c40e06475d5f.json",
+   "tms": "1809"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:53Z",
+   "la_sha256": "a0a0018d4476af9a0c0aa8479c9af3a45a7f7ab8e40a1aa08cf2f1d87cad0c7c",
+   "lido_sha256": "71ed838c3635458ad916b105e12d7289b470009749215184e4f60b04738ca3ed",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/aa/aa755467-055d-4e60-a9ee-91e8333456d9.json",
+   "tms": "1815"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:13Z",
+   "la_sha256": "6ba1606a4bb56baf8e079c24bd2f36e21aa7217ca0bd1ddad959717a805c1903",
+   "lido_sha256": "d77db146e466e5374aae19103d3d81a61808320b8aff1b4c7f0c9eb2391f1499",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a7/a77f7f51-78e5-42b9-b0dc-0b0c710a6fab.json",
+   "tms": "182"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:15Z",
+   "la_sha256": "ad026401502ddd649d5742aa495631bdce7aa160bca0562f4a9ec8d6a5546ebd",
+   "lido_sha256": "95dcf5ca2e1207da49da238ee450314e7c45eb5a5a456b563a1566019217e060",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c9/c9549a8b-3666-471d-990b-ab0664727c5a.json",
+   "tms": "1822"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:33Z",
+   "la_sha256": "2372ec4edf7fb48e0a1d171c1bd320b7f04d980fe6ece1085d2422e61a644865",
+   "lido_sha256": "3d6952eea7e053b1283b693ac0b3107093004255e4eedf2ac88acd58ef80db98",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c5/c5441a1e-0ee6-40c4-92ae-939bb0ed9e02.json",
+   "tms": "1823"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:20Z",
+   "la_sha256": "2880f3a12ff2d7be6f76c51e4cf0f85ee141f76cef56a446c7ae818dbe3948af",
+   "lido_sha256": "e12443e922803e727de11c4686d0f3a8d70a35e9f96c31ba70d660672d21ac26",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/99/9913605a-2177-4348-acfe-fa688eab551a.json",
+   "tms": "1825"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:23Z",
+   "la_sha256": "0dc75e1e3e1416701de9458b9d601eb3b1a11c410768fed35c409ec5a7f97522",
+   "lido_sha256": "32ff6c4c6370c5dc5ab27a0fd4546af1ed64b6cf08d0f24f55caade203f88130",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/41/413db952-e8e3-48cc-89d5-6aec30bb82f9.json",
+   "tms": "1826"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:14Z",
+   "la_sha256": "589d6e866c4104d3f38781d1314fe35de21b566344f95930a72caa7bcd52b31a",
+   "lido_sha256": "21377f184e5703142b5358bbe8e2793bce7791475c4d5ae740eab298bda8bee6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e8/e842ee66-8f44-453f-b213-7378d9a51c0e.json",
+   "tms": "1827"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:36Z",
+   "la_sha256": "481c41e51943b914ff2f66e5b3c75ab5598f9789686ed9c22201eec78f38b4fc",
+   "lido_sha256": "66d663ec0fc23261e4f846d3947fc7fd54b01550c725c1305756e010a4ce37c9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/bb/bb726484-93e0-4c2b-84d6-f9d3529dc26f.json",
+   "tms": "1829"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:27Z",
+   "la_sha256": "a901ad250b8fe333f3c024d2a5f8b4f97dd9a706fc642ffaa1f5ed002b607ff4",
+   "lido_sha256": "93a474e5262826a0ca5698ab91af29b99030b2b2d52786d44a5563d1aa792933",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/2a/2a05c7fd-b3c5-418e-abd6-bd7e3bfad1fd.json",
+   "tms": "1847"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:36Z",
+   "la_sha256": "eaab10b123dfff550fb12fe8c619eb5b0bcf3f0460ba32eb0b3c833aaa15a738",
+   "lido_sha256": "4df01ab4ff661e1378740b90277557089ae44d4be4b54ee8985775ee14208f21",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4a/4a20532a-a16b-4312-a766-0e664a681c11.json",
+   "tms": "1854"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:45Z",
+   "la_sha256": "3614d8b7f38072f8b09d233e5c2c8257666f23c0fdce5fdc68de7e42f559cb7d",
+   "lido_sha256": "b8b9d6c49a6a7e8a9f70bca7100977509f28fbf2856957ef954eb8d216893bcd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/29/2967e9b6-ccd2-4542-b752-478ad24419e8.json",
+   "tms": "1863"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:01Z",
+   "la_sha256": "e9432455d9d3b7b9f5cd9489cc4e0a7865cfdb19f9dc29343615e0cf0c40f0a9",
+   "lido_sha256": "14a52165658233665360307fe89017d915bcad9fb9d5ff55178a6aca8407988c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a8/a8b12a8a-a54e-4947-b96f-325ddede8e90.json",
+   "tms": "1864"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:32Z",
+   "la_sha256": "3b5ba9698c729e6a8963bc1bff0a8f414bc59c5773e03dcbdeb83953c1ebe6aa",
+   "lido_sha256": "40ec8a7de2aba453c2bddc7002f12f9e881d629e62cacefc30c93d465fb605af",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/87/87f81fab-9881-40a4-961c-11478094e805.json",
+   "tms": "1867"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:37Z",
+   "la_sha256": "75bd03e229bab671bc7c0c3a6a70b5341b3823bd4410bdcf613057f11241a9bd",
+   "lido_sha256": "3d1eb48d2e71e5dd46dd6bd985f06e2fcefb985eed3a8d6f088e4960d2f43825",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1d/1def63e2-c0c5-4ca7-a7fa-85f240438c2f.json",
+   "tms": "1872"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:26Z",
+   "la_sha256": "7bf9696ec3c308cf5d5b7ea08c86e56e30d0f5134ca58842001fc45edc12feaf",
+   "lido_sha256": "8ce4cab6a6b08ad502e2864831986c692332645ca99f5eeca082bc9433069cc3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cc/cca49bdd-b572-4d84-aea1-fcf015e9f649.json",
+   "tms": "1875"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:31Z",
+   "la_sha256": "bbffc1e3b4dc2aa226ddf23afcbf47424d470cc0d58b3f8335f52cf2a8e31fe4",
+   "lido_sha256": "2dead7d358e34ea85e432a7c028a9a90e799adcd2d302e0db96139f83a9a326b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/69/69bbe6ba-8f5d-4754-8ab5-4599944b2477.json",
+   "tms": "1876"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:56Z",
+   "la_sha256": "1f58315f2c07d15d0e56c45c84ec836b62fc4d9d41d94a440cdf9938a3776e09",
+   "lido_sha256": "61c2abe40d7dd46947729b6d1e9d2a38605a65f6668eda5119f05947391326ef",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/10/10bbfc01-119c-4d7f-b434-2ac06e43824e.json",
+   "tms": "1878"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:41Z",
+   "la_sha256": "ad3e5b480e2441571fe702419fd4dcd91453a516984602b0de3c0224b3615a7f",
+   "lido_sha256": "2a4469a2790f9a152ad193485187d9c42aeaea0eb813a694e35ac4809ad2570a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d5/d5ff4b70-b43a-4d07-abe5-22eb893b1508.json",
+   "tms": "1879"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:49Z",
+   "la_sha256": "7dd3a0fe6bc52a3f4cab61ca223e61e6446765af8d50838e043f2f3f1ffe90fe",
+   "lido_sha256": "d0fa8585674a5461b25646f7aefea4cf4f4a69199b083833892bda069f88ae83",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/20/2094e1ef-c336-49ed-a4a3-212c239ef80b.json",
+   "tms": "188"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:30Z",
+   "la_sha256": "a09f0e3b0e87aff20f019afce0da7e594747a37f8d81496f72be7349fb0635bc",
+   "lido_sha256": "879714d60d29047d83e6926f69ef0ea95a951639c24dae34797cd848ab313998",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a1/a1aa6d63-b157-4692-8629-9fb41f5cd2b7.json",
+   "tms": "1884"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:19Z",
+   "la_sha256": "6455a27907cf07333c89aac25fc64bded4094cb6a9ab06b6b1da4901e9814dcb",
+   "lido_sha256": "98a4b57c2501b8877074a8825664b92c8867bf78aaf4d8ea95e980f3ae5b3258",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5e/5e1dc751-4f61-4472-b7ff-61c2403de553.json",
+   "tms": "1887"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:30Z",
+   "la_sha256": "cdd3df72af4d62e872c6c853f2e305d862b35c4d04953236e21772f157fb9a89",
+   "lido_sha256": "35bc696af08008eb75262303229230f36bf0407a4c51d3f265dbd3444f2aabc2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/61/613ea383-0587-4889-8b5a-2e3c03306d34.json",
+   "tms": "1889"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:44Z",
+   "la_sha256": "198ebfcff4949937f3785fdf5f208e80c0cdeb156dd189b0ac74f52a2d0ede9d",
+   "lido_sha256": "0b6b488abf56d42fbaf4bfa4f33080a7ba8b7a38dd9ced512b98d1a2395756c9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b1/b148e103-6917-44ec-85f2-5912568d97aa.json",
+   "tms": "1890"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:02Z",
+   "la_sha256": "dc0789b36920a064d62c3e3ac60bedba8abc1a986cf3bd53c3a8968c1f1a9482",
+   "lido_sha256": "cc97cb1e6baf3b9b7f57d80a941bec2f7b556eefd474e9a79236ed4bbffb3c50",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d7/d779e094-1bf2-4c68-b01d-8010742d45e3.json",
+   "tms": "1893"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:28Z",
+   "la_sha256": "4d372a5faea1d025191a2e43c783d37612f9733ff2ca999313e683cddac86ab2",
+   "lido_sha256": "b68bed6b601905d71eb55a09ea227bb0306fac0770266bbdf5a69f85785b6d59",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/83/83b40ff6-96ff-4803-ad8f-c6098103bd4f.json",
+   "tms": "1898"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:19Z",
+   "la_sha256": "ec380a2ad1b321548b8e4c742ba6894d1dd54f24a4407ae3ca907575a3c39734",
+   "lido_sha256": "f3fc15a6f5660883709368ff4a76fb1679450ac98a49b98a5d456f1ded56b79b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/16/16ea267a-c853-4fd1-805f-76a102e0aeff.json",
+   "tms": "1903"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:18Z",
+   "la_sha256": "69c71db116f0da035154310ef0c55b98f25ac43f5627f0c1a2eca1f054a9ca2e",
+   "lido_sha256": "b8131a7556fc8f1c7fe8ca245629b15bbc35c6eb28d02af7c48748a027666687",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/93/93ad53e4-bbbc-4912-9d9b-45bf3a2a9ee7.json",
+   "tms": "1907"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:48Z",
+   "la_sha256": "bc3c148d3c71e2110dca8751f1967f579309332ecb4b6fe58b056009be98c5e8",
+   "lido_sha256": "2c8a784c3a9e852f3614774c00d9eb3f09dab0d23007086bb1442001d8a5d375",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/91/91521414-d783-4181-a73e-b83ed7aabd22.json",
+   "tms": "191"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:25Z",
+   "la_sha256": "1bc8f79f1c3ee0944286d82f1c18a5fefd48a608702384d01a48b21572486829",
+   "lido_sha256": "1deff5f3beec8d5348f39ba1f4d1ca9ef8b5844a590446111fda69abf1f33b4b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/09/096a22b7-77f7-4e9e-8928-eaeb5076f343.json",
+   "tms": "1913"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:13Z",
+   "la_sha256": "d0782dfafc5ccfbb3c22606148a34f059cb0c9540a0f9aecdccbe3d7d1525f5a",
+   "lido_sha256": "bd567581bee23efbd505028c167366d9f024c3f308bf1e5d30f45075d87089a1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/19/19f6fa8b-4bd9-4088-8da3-08321bfd7403.json",
+   "tms": "1916"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:57Z",
+   "la_sha256": "7b9d1b1da46dc59231aab813d875bf2546fb2c882430f50812f4767d21b38f68",
+   "lido_sha256": "8900c87edd058ae44509c02e328aa27ea7c1a08a6cf33390a41977b242b3bd5c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f5/f5127295-455c-4763-a03d-d3b0dc850445.json",
+   "tms": "1921"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:33Z",
+   "la_sha256": "b72e8a802c74baa5fcfec892a1260360caa807a9a0b28d5960ca92246e5a2160",
+   "lido_sha256": "4e6ea66ce4a6e1452603f85087e74c45f14f1750c7c3a2881bf390ed24dc1c93",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5c/5c993f1e-9672-4227-96cd-935a95594bf0.json",
+   "tms": "1931"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:25Z",
+   "la_sha256": "08a53a79f31bdd4e2ee6bbc8bd6e3f4e4e14902953f0257509e8c9f7a7591104",
+   "lido_sha256": "52daf5836c9ba615520617aa1e6b2e244027bcff9e4935149868faed0a1bdc53",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/40/403fd869-0842-4153-9861-361583bd6cfe.json",
+   "tms": "1938"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:45Z",
+   "la_sha256": "b4e6087d761636272e321613436521c58734a92400cfa3585924a4e09969c97d",
+   "lido_sha256": "7be66342878bbe5c71d50f4cf96aec8387406607a37295ce8fc16366e69a3e90",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/eb/ebaade4e-d5d5-4320-b542-051bf95e89c9.json",
+   "tms": "1940"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:32Z",
+   "la_sha256": "b10b92fcb5b969c628cbf02e67e8c26727199fd7775c0f9281d1a4af4e9e69e3",
+   "lido_sha256": "be33cc4917d26e645e22bad5d75c292d85abc55b30e5de581945fee0203ef606",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6f/6f3bb45c-9b10-4432-b38c-7e7ae69c6f40.json",
+   "tms": "1959"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:02Z",
+   "la_sha256": "f500a97a4dcf60028a1796ca83642654e7e4d5a383516259ffe9fe07acda36a5",
+   "lido_sha256": "ba26f4162a33d16c6feb102edf38b1dec0a7c6c309f1e3b1ac793393bf5148b7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4d/4de6321e-79aa-4197-bd08-0b3bad946579.json",
+   "tms": "197"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:38Z",
+   "la_sha256": "5c22b03082277d3f5bbe7736abf97c34280816849a8fbf32158e084e40ca795d",
+   "lido_sha256": "b9ac57fdd4486bd8c7d6e3982ba190addc0cb64f571a4cf8adcdfaddce0b229a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/87/8746fa13-e819-4c0b-a1d7-d694086fc3b5.json",
+   "tms": "1974"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:00Z",
+   "la_sha256": "5ec5c5b5bb162be286e033a995f902edde910d7755cbae9e744c13c980640b97",
+   "lido_sha256": "9649597553929d57400a7ff8e8219b1012c679a9cf996f7555e9aa37ca7640e1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5a/5a398427-5b24-4b65-9e67-a1b4fbcc2925.json",
+   "tms": "198"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:25Z",
+   "la_sha256": "98eca8c57c70fb0eb461930a93e1fc989b0cb6c09be73f84fe81a2113ade33c5",
+   "lido_sha256": "af0cd5d37c962064ac91a4c23fb67fe984d3a9bb595eb6e491e5158b5bbd1ce4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/72c648f1-a90a-4a01-b2c5-596d0a7ca231.json",
+   "tms": "199"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:11Z",
+   "la_sha256": "22ecacb33b965e045369e01efc2d1c4d4c8ea32f4c4e2db7303cd9d22fe40de8",
+   "lido_sha256": "13f6e3ee491709cd9337f00a9e5b6b7957aa5c92cb91b4819a3f1e309ea6e5bd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3a/3a7eb698-1dce-44a0-b4ba-e79a55fb7297.json",
+   "tms": "1993"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:13Z",
+   "la_sha256": "f043fad9112b58fccc585684497f44a3a6896b0ad11e187a7ba28245ddf95756",
+   "lido_sha256": "8d1277b6546f268874e1e1487fb05633629f95b8426537d608b2470796bb3763",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/11/112f6cc4-6b38-4515-bad7-05687be1f541.json",
+   "tms": "2003"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:57Z",
+   "la_sha256": "1d8fb11ff5a7cc88a2e8f381af2cff81d16efdf352b65ee8db4e8e20ba55690f",
+   "lido_sha256": "c85215b3b82ea6d3f67fc41ef94e06fa1df3fb1105553d5325ae67e6daac1e61",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1e/1e2ee9d9-a10f-4551-b6ea-ee0fbb0c264d.json",
+   "tms": "2006"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:26Z",
+   "la_sha256": "be49499916da579c88f4c54eb67c147ba39c8ba25d2ccfed6bd7d23fc8e7ecb0",
+   "lido_sha256": "44ce42e44a5ba626173a275ec9e8e6529773044bc501f852e158b3afbb5070f0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/62/62418683-0bb4-486a-b632-45ba6de668f9.json",
+   "tms": "2007"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:07Z",
+   "la_sha256": "fc31656c9edbdcecb96807bc7f019b751b1d7a048c38a1eb3e1900d585b1843d",
+   "lido_sha256": "b37cd444cddc5be2d555197104745da5d3db2c8a15a90de49b70f4e0929a4514",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/fd/fd92413d-e084-48bd-a77c-e0629d764f26.json",
+   "tms": "2008"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:33Z",
+   "la_sha256": "0cf278a76c34d3b5a8503673fc63fb1c44ca8b720fc6aac055db72e0552d2afd",
+   "lido_sha256": "da044b934a051c9e6ff446c28e982e948070bfbd35de3c3cb95082a24c0fa829",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/59/59e147a1-fc9b-42b0-acd7-836d8cc5ff34.json",
+   "tms": "201"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:46Z",
+   "la_sha256": "523d15c5808338fd7716ac943856a65f5506e46f9bd891944ee55f46202ffb40",
+   "lido_sha256": "734ed6a977682a75341565f0bd89cee5976b549894093bd420978c08126c9673",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6c/6c24732e-963e-4393-acc5-d5c261b98c36.json",
+   "tms": "2010"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:30Z",
+   "la_sha256": "2f20343f8444207f5ab71087864f179379f9d3e990ecf6235149319e2973f04b",
+   "lido_sha256": "b6b7ecf02141ce34f4ab5542e2b8248e8c7047e65b36acf02e1a75690de4c65d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/53/536587bc-b849-4356-a337-104863332078.json",
+   "tms": "2013"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:15Z",
+   "la_sha256": "d5705e3823a2bf0eceb65f6f3b02a4546af3735da40862a4ef8071650cf8a0c6",
+   "lido_sha256": "99bebd7a85726dcff34c9f64cf407225c4ed0d90b108d23b90532aab9287e156",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c0/c0883a00-9d59-495b-9f72-faaed4f90525.json",
+   "tms": "2015"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:59Z",
+   "la_sha256": "450ead9c01b0fada0729d4f7be86a074b889b6d0c5d22a8be7c390b44eba6aa8",
+   "lido_sha256": "5e90165d19cdc2e611e8a939abfcde75c1c80cd407b60d27ed00fe6e1f695d8a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b6/b6132e5c-d452-4747-996b-d1ce616c871f.json",
+   "tms": "2016"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:08Z",
+   "la_sha256": "353683e2dfccf68151e1fd61d37f4a6bb51b451a3f851b73b55bb4c739eebaed",
+   "lido_sha256": "6d54421fa21ccba9ce033e4187bb35129bc3d2f840b4ec537b63b8724289b6bb",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b5/b5bf9ed0-9a86-4207-8d96-c6a641bb970d.json",
+   "tms": "2018"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:05Z",
+   "la_sha256": "915bd750d489ef3c411a281c17af69ee35b8bca58ae6e7d56a0e2aa968403cdc",
+   "lido_sha256": "7ea321a53207325a705e49fbeee2b9ccbc23898edb06d7fadc5fa705c0eb324a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/37/37eac957-53c8-4870-b969-1a9a831aaff8.json",
+   "tms": "202"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:20Z",
+   "la_sha256": "b2233282d984738e0472ab4145ee60250c1b5817f0cf8ae43ee74e1023e77972",
+   "lido_sha256": "b5ac503892a6f525ac804f67bf8e2acfd93ba01c04340ea598feb6fa0cec1b43",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/fb/fb7d3d41-7690-419b-9df1-2141c59e3d7a.json",
+   "tms": "2020"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:28Z",
+   "la_sha256": "86bc02afb163daaf02f872521778969579b3ec52415aa00b5a2962363c1ef650",
+   "lido_sha256": "e5630d9df11ff06d9264ad5d12436ca2758d887f98851a0eba9a5bd8b81e3156",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ef/efa52999-a770-4618-86eb-6fc8a7fe2673.json",
+   "tms": "2022"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:23Z",
+   "la_sha256": "5aa3857a6d4c40eff998f22ef4422d3d764db734b697a7ea401db6f0378f58a2",
+   "lido_sha256": "934c769b27a16ab741bbeda303bd1185ccff68137df6cb5cdc9ab310b96e1ee6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/15/15758ed0-377f-4545-bc4b-e7bfa3d5d749.json",
+   "tms": "2033"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:45Z",
+   "la_sha256": "da1c5c3cb889ecb3271ff119acce8791793bfdf9bc3be119c3f415e308c24fbc",
+   "lido_sha256": "d006c485ac5e5e16a84a04948355204c78ffff26f2b267a686ada6270a8ebcb7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0a/0af5c079-75b2-4367-9d95-db781c767c74.json",
+   "tms": "2045"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:42Z",
+   "la_sha256": "ca3584e237836a4e27a0541f540fa293cf0bb1d2a382c69082a2ddec60cb96f7",
+   "lido_sha256": "d57e4a83bdaa65f14aa39132ea70b9297a52c5770669545e3d87df17c23c8744",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/44/44a38f18-ac65-474b-922a-f51d54c37fdd.json",
+   "tms": "2047"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:35Z",
+   "la_sha256": "4fc651a774ab5111511d959ade9ef25a2980b8299e5bc182ae1a7b144c810eee",
+   "lido_sha256": "38b1a2ca7667078550876918e760f77ffa7fae53a0e3d99db06b2e82aad4819b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/47/47924af2-0052-426e-99a7-ba163c97b49a.json",
+   "tms": "205"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:55Z",
+   "la_sha256": "3f37445a6629380ab644cc2c6ad0ba4cfb826a8df3f78a9d4e855589f38d88ec",
+   "lido_sha256": "55ec36237051fff8d88331c7b7b6f0401ef27f31cda419ba10892b5aec16ff39",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/11/11bff1e2-a16e-4784-89a1-eb510751d360.json",
+   "tms": "2052"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:01Z",
+   "la_sha256": "6651b9049dec6cab02f8dae864c65796cababfbf2c336bf2a369eda2dc834057",
+   "lido_sha256": "35cc36b9ab0d72048ad6a91f02e46b889b2f98ef97233ac4b97a82fb0de526ab",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/7250e997-c94e-4cad-aef0-2eeadf6792e6.json",
+   "tms": "2053"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:48Z",
+   "la_sha256": "ea5a14aca85cc0a741645905835596c29e546de7b31c643106f0823ab92c8fc1",
+   "lido_sha256": "90d42bdcf48c454a0b7ebf1ddf2639eaaefda02932e581fc925a45247e619732",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/aa/aa292c09-c96e-43a8-bcc4-0aacd1a67169.json",
+   "tms": "2062"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:42Z",
+   "la_sha256": "0b4951162d620d483717d4cb21bc530aa98dba65b8dd60d3a37484648ec5396e",
+   "lido_sha256": "45425f1d58f7cb6824a604d4b2d1fc158531fd6a0b52b52d7eb9346d748a038a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a7/a746e91e-92eb-4d19-9234-326a5e49d446.json",
+   "tms": "207"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:20Z",
+   "la_sha256": "f9732d2614f68fd96660fb96d30d3fd449a2a2d5ff87c56deae0c85a7e1d388d",
+   "lido_sha256": "8f1b2d0bec444d779c3d639aba277f3bc4ce853bfb06af6bec5cd72b41852431",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3c/3c9ad9c0-7013-499f-9d7a-6d649e832b4e.json",
+   "tms": "2074"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:38Z",
+   "la_sha256": "8bd5f993dda3a1c4cedb138dd1a6081a250d3aa8dd88cae1ae117adb75da8e5c",
+   "lido_sha256": "1e21dfcea3774d669abca6c1df93d3ae34739b28d0d700dd367bc43b4324051e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6a/6a2b705a-2637-423a-beb7-231626c93cf0.json",
+   "tms": "2079"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:43Z",
+   "la_sha256": "9e83a4af58388ad37530896b7719a0afb798fb8d0a3928e60e30d3fe5bd22f63",
+   "lido_sha256": "a58c005a6a635266ec9e63555c5149c6f2f3d7b93c91b5f853e75d7a28d21744",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f4/f4064820-63c4-41e1-ae69-3351246e3d36.json",
+   "tms": "2094"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:30Z",
+   "la_sha256": "2512c846b395332985f330b9805992fdb63a58cb5f7f18bf73e6598cd967ec7a",
+   "lido_sha256": "4448ff5293f8cc330402fa8c8615045165fb1e3697bc60b06ae77ce03e7fea32",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3d/3d6b8265-5612-46ff-b7ca-da5081be89ee.json",
+   "tms": "2102"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:30Z",
+   "la_sha256": "f112a856768641646f544758135cd943f9bb4ca48464e7120082d2d8dda24246",
+   "lido_sha256": "a5aa8bb2cd60ba5f7592f2649373f11050fcfe3525cc6bdccbc388b1479808b7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8f/8f4a4042-a23e-4584-b3e1-b6bc561915de.json",
+   "tms": "2110"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:01Z",
+   "la_sha256": "9074e587cef6377ce4fa2306b7ffb64cd261016ca8b2468228cfe6f726e52810",
+   "lido_sha256": "5fa53744b80ba3ea7b17bcdaa49239ab724fee8b765208c7a20b727ddc75f935",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/89/89cace8e-f18e-485e-b75a-de64671acd45.json",
+   "tms": "2117"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:45Z",
+   "la_sha256": "39d6f4fc45d0565fc35824b78e80a9e6fcff4126649a81ba8080a8ac387c219d",
+   "lido_sha256": "be022564989f24fde9bc7ae1bb621074a8928439585033410cf1174b1ff9cb61",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/eb/eb66e398-3a55-4e28-a903-fd1b99530d83.json",
+   "tms": "2134"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:34Z",
+   "la_sha256": "685d9b7c976fae527026922594335cffbbd83cf39a42be6d38cf6958ce33824a",
+   "lido_sha256": "ceb593fc3282519cb611dcbd39487ec490f89597dc810a4cc43be3cf1ff0ebcd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/76/761dcc08-962c-4129-a6ba-05a588259f77.json",
+   "tms": "2135"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:31Z",
+   "la_sha256": "2c4db83a794fff0dd5ca2544132660585c3f72beca5363abae1710d394112fbc",
+   "lido_sha256": "0b2a1f7be895da259d0d2426ae88acfa70089c0293a04b65949fc3c1fb3f7997",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5e/5e9c5db7-22f6-4891-becf-ee9d2d9194b9.json",
+   "tms": "2138"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:14Z",
+   "la_sha256": "3da5745949cdff5df439ef078cce5c2b716534128f175447de4ed6b7be11e536",
+   "lido_sha256": "090bcf9e5d329b9c8a66a554cb0164fe6ce4538adf3c518bbe66cc34e63d8782",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/23/23200e59-ebc1-465b-bf6e-27235fcc97f5.json",
+   "tms": "2139"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:11Z",
+   "la_sha256": "39e2bad0eb33d730876d69e75afc049452de15f87414467d523726520024ad9c",
+   "lido_sha256": "29c06ff269485e0fa242b6074214befea8d42e0f7deac6e88169344b80e58acc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/16/16099415-10a6-4e5b-b2f9-a892165557c3.json",
+   "tms": "2141"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:28Z",
+   "la_sha256": "14cc8d0e9fd13f68d91b95e79911f333c0958f8e740e69e588399ca116a8ad9c",
+   "lido_sha256": "d3db22508c35ef4667673c1f5f76a2066540bd20a2e6343bff1eda7e0b9ce81e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f2/f20196d9-f162-4172-b60f-3b378cf6d478.json",
+   "tms": "2144"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:13Z",
+   "la_sha256": "b7a4b800e0ec0a718c1b5f16c47b5ca4ec7ad33d93fca262e6647f2520e5f3f0",
+   "lido_sha256": "ab378b145e1cefa6218d1df520368d1ec05369360a741afd79afa774d208c694",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/16/1669e7a1-0ba0-4c62-931c-4366babd72e8.json",
+   "tms": "2145"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:41Z",
+   "la_sha256": "198347ff0c43da92fccaf7c2f03ee1c9ef620fff6fb5e85c90710426f68cd42f",
+   "lido_sha256": "067e4128d937befc9db9a2a231d13db31a45da932eb1ed83a5c277275254db0d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1f/1f4972f7-77a7-4d06-9895-5fbb2649eedc.json",
+   "tms": "2146"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:26Z",
+   "la_sha256": "5cc9ba3d6da32534b99646491d58f9e7a7b92ec310671002ac0779a502fd0d97",
+   "lido_sha256": "ab86c1eb67008e451f23a82d8f3cb2b625e83775f2b726eb177ada6cf29ac4e8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3b/3b9f61c2-18c6-4ccb-8f9e-87257fa1b64f.json",
+   "tms": "2154"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:14Z",
+   "la_sha256": "603bf0421e25a105663b4111ef4640b4744905c819261cfc05cd7ffa1470ed1e",
+   "lido_sha256": "24a41e014be26ba75cd8ac2c1978c542b9bf859659076fbac0256133e7ae2b69",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3f/3fca8549-10e2-40dd-8a84-dd640bcbbfa7.json",
+   "tms": "2156"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:16Z",
+   "la_sha256": "0ab72f36f653a33f482963fb08d8fb7771e5e2ed50df993ada4e121e9db4e94e",
+   "lido_sha256": "df0f524d34a5db464d0d0277746bab61674e30aa5b7aaa0e94277796161c3275",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/38/38218d95-9429-4050-9058-71c37979f6a6.json",
+   "tms": "2158"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:35Z",
+   "la_sha256": "81511d7b464300e728e4c51bcb2129c03edf0683a5d9c6b70dd3dc25300978ce",
+   "lido_sha256": "a9abf4f066fbc9a3f0734440601007a84544f8c0c4742e9f19545952e82eb3a4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7d/7d20b495-e46a-4219-b76b-c2e73e1aa210.json",
+   "tms": "2163"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:12Z",
+   "la_sha256": "818b65276abe2ea28bb196bd55aee7752cb8540cd31565b12f76a1f5987be9ea",
+   "lido_sha256": "08faf01e85b18497f4c215f13a4051fbeb4b6730f1f57a806cddf961b1d9a210",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a7/a74b7d3d-bce9-49d9-b07d-3310cc8d8d0c.json",
+   "tms": "2167"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:49Z",
+   "la_sha256": "06dde61269f0602d4eb0696baae06fbaa28e665dfca7de7422a955d1e3c5597a",
+   "lido_sha256": "4490a1c26b5c2090e858bfdb41956a8e20842071a89a59308562f794d21902e8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/88/88b9b754-0d79-45a0-83a2-113e7a43600d.json",
+   "tms": "2171"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:50Z",
+   "la_sha256": "bab41d868b30d633e6857b9836a2c52f1f791f03dfd4331a753ba660c7486342",
+   "lido_sha256": "e57f7bf92ae327de9dd686faa28b432e8b8e02f827510ea26b86f86dfc70cc54",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/64/6473c2a5-feaa-4f42-a3a1-3c36994a63fe.json",
+   "tms": "2174"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:49Z",
+   "la_sha256": "e6fafe7e39ff73ff39c7ece34e761bec46c5ffd38faf5b71da615e1985ee8102",
+   "lido_sha256": "3dbb76dbe786ac002409e810f885b961c70a39a16cd6815f6d25dcd338c135c7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/94/94479a73-857d-45b0-ba22-28b8224ec5f7.json",
+   "tms": "218"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:08Z",
+   "la_sha256": "28bdd73633755516d305ab158c4c79ac3a81ca095e57ccad48a9bb53d0bb021a",
+   "lido_sha256": "64b88a94baa4bd12eaa2b6817c4ccc6e6971e675a2dce5a8fdcec3979340c7a9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5d/5dabc3df-4d7a-44da-b740-7551b72924bf.json",
+   "tms": "2183"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:38Z",
+   "la_sha256": "30bad3575b39216bc8173c2aa17219e62b694a5db91d9c345300ec8c299fe4c8",
+   "lido_sha256": "0e2f47026997501e338584db432f5afa42f801830aa8199e2c0187c79ff5ad60",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/59/59148776-cd9a-4ecc-b396-e623dd3e03ea.json",
+   "tms": "2191"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:38Z",
+   "la_sha256": "cf1449364c8122e84685c204865ecb772e9302238d86d2f56f47f8f1dca8154a",
+   "lido_sha256": "2642a52b1a695b2ccd24f2cbb3aee0c26fd589479de63243cf3ce0a163062089",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/33/335b4f89-7444-4b46-9633-2003e66945ee.json",
+   "tms": "2194"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:23Z",
+   "la_sha256": "c03914bb392ed6b9465bb44d3eb9f062ce11288b853dd1e60aa8199a27f9e0be",
+   "lido_sha256": "f30d099f72f6dc12ab7ed0aece6b1a5ccfa8b9efcaf67cfb18dcde00c2508a7e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4d/4d6c2c0b-0ca4-49b2-8a07-f42ea63003cc.json",
+   "tms": "2195"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:29Z",
+   "la_sha256": "15fc41f747d86f4a901d3b05654a05a04d8a2fdd683f18222980d301db7824cf",
+   "lido_sha256": "647a81560d56fbf400500d079c8cfccf73d4c10ca87792c6a810ea6e61298722",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/42/426c69b0-b38f-4394-b5f4-b38fbb14f17f.json",
+   "tms": "2200"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:58Z",
+   "la_sha256": "06cf1275bc51791c46df29bd0c10e91708cfa5c6a1def35d148cc536a0201bd0",
+   "lido_sha256": "7eef222442c1dc8b06eae5860b06e53cdeeb00490f3f84c52fb98b9370d22db1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/11/1153bf3d-483d-4ad5-8751-92b25f58ff96.json",
+   "tms": "2209"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:20Z",
+   "la_sha256": "92d6688f02b7ffcc2258b5ee1f2551bfd997be8e029f5d2b19c51efe8ff0bb99",
+   "lido_sha256": "e2a10106d3e53dfa76b629e6a2e62d159be4f2522903e28663c736752822bfaa",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/41/41b92b50-ff32-4080-8536-d2ab2e558330.json",
+   "tms": "2215"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:38Z",
+   "la_sha256": "2935e55c54f169f7157738e2a2e3c9093139fb580dfe0b6af5dd488a971a12b9",
+   "lido_sha256": "9f34ec778cbe35df0412088974f372c8675b1decd375eaf456aa4c7c02f36909",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b8/b872c6c8-4b79-49ee-bda9-8d6720f649d7.json",
+   "tms": "2218"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:44Z",
+   "la_sha256": "522899ca47d0a019e328d6c928afb2cfc76bcaf06c8c51345deeaef0650b8fab",
+   "lido_sha256": "79021a6d1eaa8e2d68463cfe02023d4d353f95d482672b1a9867a718eb9bc61e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/721d2530-66db-4676-a033-fcb46b833a31.json",
+   "tms": "222"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:05Z",
+   "la_sha256": "8682a93534a389d5293b6a76f849094a1c04efca38c3c7007710bba112f21a5f",
+   "lido_sha256": "510ca86e5f66306bde401391960c33b0545fa3309b69f5eab1a7a8aec6c0d369",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6b/6bbf63cc-4efc-45ab-bb08-7e7a002bdcd1.json",
+   "tms": "2222"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:46Z",
+   "la_sha256": "082e822f7433392562b70cc2412d94a889473adacddc98f23dc2932928eb40d2",
+   "lido_sha256": "ccdcceea059f608585218e8e99d17d9e81bc59e0c4e8428a96a3fb26476e8557",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/df/df7a8e33-d686-47be-96f4-83867ab904a5.json",
+   "tms": "2227"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:25Z",
+   "la_sha256": "86ad42678e6a3f0c958f1440ba51b358757865ef31cc67e62946d0eacd930db3",
+   "lido_sha256": "e047cb38eb5dc3d93cc6673fa59d272cbaa9163dcfcae5b84609ba538dc5ae40",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/64/64a7cd23-0659-4982-b16f-bcd8a2aebcd7.json",
+   "tms": "2234"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:23Z",
+   "la_sha256": "a8d0221e3b2e5d1c06df9cbe883a68e503cac3bc5d5cb2232f813e09c5878235",
+   "lido_sha256": "1dc0842b912f217dd94d4a116294b3ee604a7fee0f190ffa2f3838a1ca46a00c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cf/cfe43d04-0f37-4a14-bb62-64e152533e38.json",
+   "tms": "2235"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:45Z",
+   "la_sha256": "de83295abd5b893b4683fd9b2424d1daa76485f1e18206ef4769378ad39f5209",
+   "lido_sha256": "97e544f4bf4ceeaac5653d64236a5507428474f0a4c3b694dba1a69c8e597bbd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e9/e911cd58-6107-458c-9bd1-0f4322ba35ea.json",
+   "tms": "2242"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:08Z",
+   "la_sha256": "7eda03808c2fa161b83a5f1d2f2ab7eeb6715ca6d653174fb5c3180d893e022c",
+   "lido_sha256": "43439062ccdf22b3062c5ae87e3b77937167fa89871f9dd91e77adcb2ebd2667",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e9/e9c4cdaf-93ce-4533-81ab-7dab310b49cd.json",
+   "tms": "2246"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:30Z",
+   "la_sha256": "422384ea3e44753f87e357212de74309b3a9f2c2d62998dc8c7448def0b34a7f",
+   "lido_sha256": "4c8aba518149305d6c1ab1e5774f379b5cf6056162ea63db542e0f8f52964364",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b9/b9484100-4f6c-4d36-a9fc-b16f7d5e0fe6.json",
+   "tms": "2251"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:57Z",
+   "la_sha256": "1284566b15a2b100e90d5db40706ab4c391a7b68c6f64097219df130cb649115",
+   "lido_sha256": "becd1a4b2c968664bbf7ae7fb4bb199b23a7db4f2bca2a35537caed2fd28dc48",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/37/379d69f7-958d-4074-bd6b-d7db5ea005ef.json",
+   "tms": "2256"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:19Z",
+   "la_sha256": "3609c772f5bedaf7fcd8eec5a6225d18d6dd1c1538ba00052435168efaf4e822",
+   "lido_sha256": "12a2355199d780d4dd33ee97fb84a9d8f8fa3b5fe3beefae8d2d3d4a9d03450f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/aa/aa6bf70f-fa9e-4391-93b3-22b5d27169f5.json",
+   "tms": "2257"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:19Z",
+   "la_sha256": "fe2d88630c8879991e359b9ae299d99042c0e722c983c476fbe91217586804c0",
+   "lido_sha256": "7fe7c14fc73fa9a2eeb94869657c4e50e86f17202b391ebae49660bb1cf4d157",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c7/c769396a-4cc7-4d39-b203-8a277698dea3.json",
+   "tms": "2264"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:23Z",
+   "la_sha256": "98f364c2ae43eb2a92734889ff3a51795b8f87a69ab1b426ad4d59d60387cbef",
+   "lido_sha256": "588e2607300f4c6b05964fb74237009949ab975d78685856d951b001b5114e11",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/02/0254cbf4-4796-4c31-bcc5-d1e06ecaf471.json",
+   "tms": "2266"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:06Z",
+   "la_sha256": "c38b5a507e8e0f9838e1e86dc20bc16b7ccb8a219b1b4959204f6887bd4daf0d",
+   "lido_sha256": "662499584f8b417e50fb9221c9bda6f00689ef567431edc0a478d47057107f0b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b8/b80e8ff2-cbca-49be-8563-ac441970cad4.json",
+   "tms": "2271"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:54Z",
+   "la_sha256": "93186112c6e718ce72fe97187dcf42ba0aa4dca2b8b26e71a9448d2423a7efa1",
+   "lido_sha256": "31edb873a82655694fa1f442bfba8f425dfa0ed259936bc37997217995f823a0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/49/49464b96-cbdc-45cf-9910-e857759fa27d.json",
+   "tms": "2282"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:41Z",
+   "la_sha256": "fb0d567127e4689568e9ba0ac6fe88b87368393e8c599e49b26edd8f9182ac10",
+   "lido_sha256": "aa3169f535133daec0abda543ef22f7ba1f0437ba377550070c4d761a4407fe2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/95/95446202-6647-4761-a9a8-7a8ab35aa072.json",
+   "tms": "2285"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:54Z",
+   "la_sha256": "bb0d44b21fc4482f12f686c01ba106af7e1601b6d6924114166119de62efd610",
+   "lido_sha256": "b7e2651949422233aa41f886cce09e55de0c30a25813f8033e3e3b66bb256f59",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ab/abcd37da-212a-4353-8833-9f1ed6a44003.json",
+   "tms": "2296"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:35Z",
+   "la_sha256": "50f760a2dad7de25262022e6c091dac99b28e8ce1f48d9b47518cbb76a13c373",
+   "lido_sha256": "1de56a19f6574b6b242a4f20fca460d463ffff26c5dedba038b1277112e41632",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b3/b32d6800-3857-4bbf-8202-2a472dd2c55a.json",
+   "tms": "23"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:04Z",
+   "la_sha256": "3c7eb9dcdc81ff96f62e65a4598e1175f02f840f8191e69820029568aba51c54",
+   "lido_sha256": "2a293271ad1de55d628d5dd6293a718547bd99798b3da79185ac70248470a9e4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/83/8322eb62-7aee-4f05-bfe4-db6b431f7938.json",
+   "tms": "2325"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:26Z",
+   "la_sha256": "1ed09e67ae641dd7ccb4e4d45fe158901ba3d85872503ad5d51bc819281ffb41",
+   "lido_sha256": "5a75bf5e95ccf6fd2d7addd20d63cb18fe5b258a849470caa7fedbe16a8b8fd3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f7/f76c5e0c-3628-46d9-9e14-fe72aa9512ef.json",
+   "tms": "2327"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:29Z",
+   "la_sha256": "7e6dcca4b1a3e6b43b3c5c2a322ac59e9cfd873059f1e15262e379394883d461",
+   "lido_sha256": "875540f91dc8f9334f110e43880e51b199d4e639665a17d2b22b103a6810afd6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1a/1ad54983-61ab-4684-bb4f-ddae82029efa.json",
+   "tms": "2335"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:08Z",
+   "la_sha256": "29e4fdd8426a6a41a123da20a2875a31554814bf45b81dc71f2fb4551e33a8ec",
+   "lido_sha256": "dfa881f9f1e14e92713bc9ee08cbb4812e09ce8cd805510579b234f35dea7a27",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4a/4ab9efaf-4ab2-463d-b6a6-99751c64eeb4.json",
+   "tms": "2338"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:18Z",
+   "la_sha256": "bfca9fa28cdb226704d4055441aa30f50cbbaab90f364c45f436a326d4d1fa80",
+   "lido_sha256": "14a4a7d349620ff0ceb8e507788e964bb37e37d7df5387a841ea120db4631cf9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e8/e8a230fc-5973-4811-8307-9acfc42ccc5a.json",
+   "tms": "2344"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:20Z",
+   "la_sha256": "10e58990d261c20c0c8369d57797eee9141bd858d31e6e1ab1749105cb2f2fc5",
+   "lido_sha256": "ec38bacc0333e3f1e20495c10014a85c1d417284a23f7559e7415e8e1e742ce6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/19/19d8c470-48a3-41ac-b15b-33c419803a75.json",
+   "tms": "2356"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:48Z",
+   "la_sha256": "b9969d23434a448b3ea212c8b3ed3ddc800b2d722b1907760420849f291bbe68",
+   "lido_sha256": "580f5a5ab6eefccddb77a1094e0def81cb8de7c1f9cceee5c30c3844f6474b64",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/71/719ba66e-d6c3-46f7-86c8-021a2e3b68f5.json",
+   "tms": "2359"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:17Z",
+   "la_sha256": "06e4a78cb5a6eb61f58bd783ded39785a34552bd6e46680ac0fe0ce77e28cc41",
+   "lido_sha256": "d3ab4e6cfaf484b128f51e654a1d476590fd0f6ade6146fad51d9dba99901454",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ca/cab8453c-10b6-434c-964b-560f5c1b761e.json",
+   "tms": "2362"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:38Z",
+   "la_sha256": "27ba562148ce3d5033a962809882cb3f080bbe7c92b5283037155a2bd7e7d765",
+   "lido_sha256": "8f9243ba05f38de7e649e9cdb9071453d7f04fc705139a9cc88161a794d1aace",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a3/a338af12-1107-497a-bbe6-e80896694613.json",
+   "tms": "2370"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:44Z",
+   "la_sha256": "da4d21aa6f63e723775c3bd33bb8906a7227a9c4cd4fe4880dd9ce921f084245",
+   "lido_sha256": "3a34f1a452dc1fde7296e66313f6e1af5d4581fd657fb5ba79a55bad00acde5b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/22/2232e79a-8976-4054-a583-8945b30952c2.json",
+   "tms": "2373"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:52Z",
+   "la_sha256": "5404764e591d1ff8517e9030b642a5bebccb3723b36c2e90021c799751f0440a",
+   "lido_sha256": "3687035254fd625448296753ad0dd36395543b5a7f4cdd9544c3ed88ae3d5379",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3c/3c11ff25-dac5-49fc-9402-5685ac99375d.json",
+   "tms": "2377"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:36Z",
+   "la_sha256": "12c2ea025a35e7fccbedcee293282afaa7ccd11e1012fb62115be74ad5dd4b08",
+   "lido_sha256": "84788f1dcc74175cbfa368675a8e105456341ff5af94764532ca712046db9e9e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/18/188867ca-2e22-4962-a728-fdd96987399a.json",
+   "tms": "238"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:29Z",
+   "la_sha256": "e2f00567fc780a8d4e9977ed1bab7d84e149ac72feda6bf88c798cc6f2361666",
+   "lido_sha256": "e2b2699f120e99a435f5adeaec8ef569d03fe680f41a1206bc27b7f0652a7d37",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/97/97462e26-9622-42dc-94c2-43daf18b9644.json",
+   "tms": "2381"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:08Z",
+   "la_sha256": "9d1ba309b42fa29bbf561a7d973483051d203ad3b9f59b0fac3d41049473cc33",
+   "lido_sha256": "e6bbf91d5393e675eb91522bb3947079d09d648f5a8af9351026730f1f826201",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/34/347a05b5-ac8f-4cf1-a3ea-1b74fefef900.json",
+   "tms": "2383"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:55Z",
+   "la_sha256": "651ba749abc53d2a9afff8cb9a3180a65b606716b359e2d2e8e27d03f57400a4",
+   "lido_sha256": "a90409061b198abd32440689573401346f8986ad3f24918b58ea842500029ef5",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/76/766e4b03-c6b2-48f3-b71f-6885ff3ba4dd.json",
+   "tms": "2385"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:16Z",
+   "la_sha256": "6c2d8b3aa76a2296a685e0b4d82cec96ebc463bbfe8ef8db3958d7082ac3ea91",
+   "lido_sha256": "c7d9a41d60efdf247d6abbc2cd31377ee65f948f2e62d34ffb7461b3c7237416",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f4/f4a12315-3a41-4a38-8c33-907db41b168f.json",
+   "tms": "2389"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:21Z",
+   "la_sha256": "39550b5bee7c29e6a406e1cbd81002a0d742acaa2ab870c5a66b72c06e511a14",
+   "lido_sha256": "49380b9e6d0fb159ef8c9c7fa9738b0e10bae25df7e571520e1c9f7bdda16fb8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/18/18327615-f233-41d0-bcc1-a5fb21741217.json",
+   "tms": "2390"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:24Z",
+   "la_sha256": "353f2ec60ae646a3fb86ca7f4451182e656187b643ca0936ffae620468e39dfa",
+   "lido_sha256": "ab9f1b20ff5b30f036e9b754173d30283a7e5d91ae9a609799c53bf51e8dfd28",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e2/e2d2c357-c299-4a69-944d-a890b93ff23b.json",
+   "tms": "2398"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:24Z",
+   "la_sha256": "9581d4a02393ccd7f788a4496558315b4525c24ec7b760a0b3167b324db78e56",
+   "lido_sha256": "8493c8fb9c1051e8dcd180147f3ae1743e9bb781a02981da768958256d444612",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/63/6305131e-013b-4f99-8888-82c0ba710a2d.json",
+   "tms": "2401"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:33Z",
+   "la_sha256": "3b75a2c3406e022fd88ee9fc5025704ebfa276f66ecf364794aa8cbc51d23760",
+   "lido_sha256": "bfd2c98ebb2ba7b1ad3f2b16786aa0f3bea13bb26abcec92b70bea5ed2b18507",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c2/c274faf5-7eae-4893-bdb4-3c12ebeb7616.json",
+   "tms": "2417"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:04Z",
+   "la_sha256": "23142b51f8dd79b588b26b4bb4db670366239c93bbd0ea3bd6ef49e98e6484ef",
+   "lido_sha256": "098c7758c2708996ca371e071f1111e61edd6c822b89785994e4af0d56a1b6f3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ba/babc7da1-70b2-4e8b-8311-26acf75549f6.json",
+   "tms": "2428"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:48Z",
+   "la_sha256": "7741af5f731c2ec1abac39d04d5b8849340e96efe402f699fb594c26c0db57c1",
+   "lido_sha256": "b55fef3290eb43fad94ac39cb7592859f5cba1c9555a12912903faee28456bcd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e0/e0f1d077-6676-4a7c-904c-76dc665a7585.json",
+   "tms": "2430"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:02Z",
+   "la_sha256": "87037faceacb5a22f93f2041b535e50b156e723152c7921feca261f701b51ab9",
+   "lido_sha256": "b32a00e6aa3ac63732242cc0a978627cfe70862df931e0d8ee7d761119e304d1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/20/20048ea9-1b06-4c4e-ae56-ba6f56c80cb5.json",
+   "tms": "2435"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:32Z",
+   "la_sha256": "6ad0791e348c701abba3484e49515c084c34d7c8f72f2027d2ec9be840d1d779",
+   "lido_sha256": "0872fccb979b5879593fd9c1144b512fc231b81befddab3860f3a470e10d1cd4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/2e/2e6cceb4-9975-4c29-972b-985272ed0ce2.json",
+   "tms": "2436"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:30Z",
+   "la_sha256": "1b4b3636d0ed6795e31be1bbb4d6e08cbde095e9a59dbf8fb9d506f4e75924d2",
+   "lido_sha256": "512738dce78108be97d86dec47e2eb5129db80ec6bc67cdd122929d64661a9ea",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/15/15b8b232-b25d-411b-b1a4-7ce8a93c0760.json",
+   "tms": "2437"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:13Z",
+   "la_sha256": "a4149c45746a9dccf3cd87c74354d4649a7480db84dfb7b06968bb4d8923a52d",
+   "lido_sha256": "f078cdb7638837896fab08b26381489e64cec1d2a6538d617f8e7595a2a211af",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/54/54146246-5936-4acb-bea6-3ca12a568bb8.json",
+   "tms": "2439"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:40Z",
+   "la_sha256": "9e1877f8b151703e41256470ba8b3156088857b0343265e8d7804a2b8b28843b",
+   "lido_sha256": "7c5374cd694ec76db855c5654ca249d9de1ebe5a45d0452346d5cb0b1095cfe9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/09/091b4c2c-76a4-404c-b568-8cee1fbf5121.json",
+   "tms": "2446"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:57Z",
+   "la_sha256": "89cb62e1321ed6e21d70b7e29064c007d942c06ff9f6094f3593c3a1019c978c",
+   "lido_sha256": "d867198510c8fc90d6656450bc9c8f8461078eda1426c7b1e7e461be2e058694",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cd/cde0f785-96f6-4b4c-b12f-0cd142dcd060.json",
+   "tms": "2448"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:52Z",
+   "la_sha256": "27e5cac224c2dc517afa1718fa0a47e8f64a98510315a70729365bc00d4ad73d",
+   "lido_sha256": "e21e5ba59712b85d29e1134b78b5bbda7a76c814e6512d76d2e437196041eb5e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8a/8a34da1a-c5a0-48c1-984e-0bdffd3bef7d.json",
+   "tms": "2483"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:46Z",
+   "la_sha256": "a45d9f3c94c8db0ab2078c18cac448ffc98e8b7b85be643ed03a1e39d21405fa",
+   "lido_sha256": "d77b742ba63aa22aaa9695461c77999d302e7e95dc3577c085404ca23616041e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/88/8804d83d-75d3-4044-a1aa-063cd7c88ac9.json",
+   "tms": "2499"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:21Z",
+   "la_sha256": "2d5e2df6328daf27e6340dfae8194694081c760ea8a5321638ec3fe7966c514d",
+   "lido_sha256": "17bee04578d7a913a7242845bae3a763cad3ec48b5eb06a932e21ec19e9375bb",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8c/8c3874b5-9b98-4d38-9b93-7550985c4930.json",
+   "tms": "2512"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:10Z",
+   "la_sha256": "49880515644c2159b79249ec7231f42b93cda0fef1b808536ad9b54ed6075d7d",
+   "lido_sha256": "b6a1789496eb534fe8c53490b6b31dbea52a2c7f0f999e64a756ab95c7027cb3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1a/1a500c82-8d49-4bcb-9ee9-e3858dc9f406.json",
+   "tms": "2525"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:42Z",
+   "la_sha256": "3c306d697580feec66d9a512c3d632f0ffb20eca38dd42e4cb763873088be4cf",
+   "lido_sha256": "78a4392290c46c9f11ab4a3d318d1136cc65948e868191645c0a58fca368de98",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/57/57de0828-0b27-46d3-87bc-4f7f7ceb53fd.json",
+   "tms": "253"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:45Z",
+   "la_sha256": "3a40d1e7993cb47a70175e993d0a85e93d86ae5b4c91acdae9698b9f4b8ca5fc",
+   "lido_sha256": "3b5c6afc1577e422da17ce3747411f3b4184edea0922d43d17996f4dbe1239a3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e2/e20427a0-bdee-4ed7-ad35-821f9e992993.json",
+   "tms": "254"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:06Z",
+   "la_sha256": "0d6d93e9cca61eea776d9591cea9afa14b26a1315e17044eb08352b6d5f5e59f",
+   "lido_sha256": "fd6a97aabb8780a76a0832131a19aea23fe71de0c499d9eb430a5638a2aaa8a3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0d/0de1f3ba-2535-4f42-8fc1-cb3453b47926.json",
+   "tms": "2561"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:33Z",
+   "la_sha256": "c7dd53ee4e4bce9e64ab71f660a2691e40c0ab2f9793b5b48bfbf7617075bcc8",
+   "lido_sha256": "b0582075712d889e1dbf4cd2ee281cacba84656dbb200ed1c3b0563465219102",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d9/d96c80c4-693b-4250-9030-a7f55ff2dea2.json",
+   "tms": "2563"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:18Z",
+   "la_sha256": "f98553e307b2230a2595a133b956bdade1be229bd625b86ae5e1b8e2389a0fe1",
+   "lido_sha256": "394e12b2ec7eebeaa77ee12aad1066f244c97e5dbbf04f8b75b34fe28d35e6e7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cf/cf2cf514-0b46-4fa9-9116-6ab91a5fd89e.json",
+   "tms": "2571"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:44Z",
+   "la_sha256": "2e79668aa4ca6f053d22375c67231c75fec25b6d39c961df164c5ec169e7ec59",
+   "lido_sha256": "dcbbf9081a20e82d95afa9c83db87371e4353345c1b61866a834b3579d1d2a3a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/21/21a192f8-e9e0-44b7-8d06-39098338baf8.json",
+   "tms": "2572"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:51Z",
+   "la_sha256": "f2aedbcdcbf5ca29d262400328659fce6aa552dc72cbd50ce3707524633a83c9",
+   "lido_sha256": "66ac5e8a44f0ed3dd78bb1b5cea1a5cbb8541a1c5241ffcb1b0cd07dafe032ae",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/80/806268ff-87b2-43de-950d-af30ea18814a.json",
+   "tms": "258"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:54Z",
+   "la_sha256": "b6d06acd3360346a7eed2bc8f118e14c4855f29a861343e12dcd242696fb2bf3",
+   "lido_sha256": "1dcd02273da24773e4a747bdc45f8002f36845ca57062fae0c3d139c18569c28",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c4/c42f71b1-68d2-40ed-9698-c0694b4795f5.json",
+   "tms": "2580"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:44Z",
+   "la_sha256": "ea6e29bb4fa9731b6a01cde1ba6be619ccfb86df66d245c45bdbe14343c2ebfc",
+   "lido_sha256": "8e69c1a6778593dc873666b7adfaf7807307589c169f610e5706eae2f751569b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/50/501445e9-3aed-4fcc-819d-3a8ed0cbdb90.json",
+   "tms": "2581"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:22Z",
+   "la_sha256": "c99b6725f44fd0bb87a11471b15c508ed81379c957f49067530b628de85ad474",
+   "lido_sha256": "dbc2158ecc26ca56552b4ec485576225892b0cfb64283f64b7461673ac26f982",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ef/ef35ad8b-32c1-435b-bf08-9966ca0b53e0.json",
+   "tms": "2584"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:40Z",
+   "la_sha256": "41906ad9e64ad19b659ade16e1b556f29634a5141330568f5ca8061fd0c120ff",
+   "lido_sha256": "d550e2595f54dd7e8ef47e18aa79b6d5fc0acfa60b64a234d72a8b1f4bd194cf",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e1/e1446431-b592-4085-88be-1e0dea2f8296.json",
+   "tms": "2587"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:30Z",
+   "la_sha256": "0477a5e2853b592047b71e2ca5151a3be3a4d0e244ff8e302339b6bee618d4f6",
+   "lido_sha256": "a2e7d925ff4b73ccc1a8f09b6465c4ea0a4c86efc654256710b4f5750bb57448",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/03/036a80c0-711c-41dc-8f0d-ec15f82a2a9b.json",
+   "tms": "2589"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:11Z",
+   "la_sha256": "582192a4695cec0def0a49148fbba0df08f00efbf38c01c3cff9eb78dde23abe",
+   "lido_sha256": "95acb2404a80d4c3f121e19e98f7481ee2427001db904006f85c8de7b493f558",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1e/1e2ceabe-a408-4b2b-95c7-ed3f4fafe880.json",
+   "tms": "2593"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:28Z",
+   "la_sha256": "900200c7908b096bc173fdbe55f6b4feb90467c67a63aade4610e0c39310feea",
+   "lido_sha256": "6e7558662fc5d1988efa179b06c270a3346601416ddcdbcda6d51cefc8b3b880",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/30/30987d87-3911-465b-9aca-87b8e8a7fbbb.json",
+   "tms": "2596"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:14Z",
+   "la_sha256": "10301562239bd4dcdc18fb623a2d527b840c4dbe374fab653aa62c8a3e001391",
+   "lido_sha256": "7f61ee00e7877265832731bf99d82c821aace8eece479c62600dab5bc90418a7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/db/db7840fc-1943-4b27-bbd4-0b0851973c5d.json",
+   "tms": "2597"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:05Z",
+   "la_sha256": "bb75b013c458b0212c6e0973b71edd2849d7eebf2302979810901814bac89f8b",
+   "lido_sha256": "19b0b045830d9cc48d8ab62a8dbe870f450687d865f3c2ab321d90fcefbdd561",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9d/9d694aa2-8ee5-4a3b-8a77-fb2c859d0320.json",
+   "tms": "2600"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:38Z",
+   "la_sha256": "3ea09473da9fe49aa2c1986088f76f8625bd24254e4ddfb8d11cec20dcdf9a19",
+   "lido_sha256": "9634f783bc02cc5cdf0401683ad41146aad2ebbee5aaa71fcf18c697ece97911",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d1/d1b94c67-2b3c-4e28-8766-694fe05980e7.json",
+   "tms": "2603"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:07Z",
+   "la_sha256": "ad1b9b5ff27787c2b674fe79f2494433c1bdde9cb4ef1cac6ae6cc004b0372fc",
+   "lido_sha256": "f74a0063f376d8c14670c0f31c906799ffdbe0657410f73bc68ea65cf6f401be",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/22/220a8c21-537c-4e6e-9480-385983d191b1.json",
+   "tms": "2608"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:52Z",
+   "la_sha256": "71c7da8a7b5cf29b9a39ed028accaea61b3736db7060c76ecf84eaf2b59f5b48",
+   "lido_sha256": "c8f3c838e2d94de4913645052bbdb67055546de09dbd6fd1fa9c172ca24eeca6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6b/6b90e450-ef74-49d4-a3ab-8cee46d56634.json",
+   "tms": "2615"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:43Z",
+   "la_sha256": "22acb2b4d1d8abb55aca159c2acf056e525efecedb7b80a391e705a4c469b2f9",
+   "lido_sha256": "f4b9a3c4e517415cfaca8d3a97575525b537489dbedcefbcd0fe137bf1168105",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5d/5d7f1892-9df7-4c53-b0f5-76931fce4ce2.json",
+   "tms": "2626"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:29Z",
+   "la_sha256": "30f4a6201c27195b95fa0d4a4a3348743f3650dc8faf11d72ab0c43ae1677cf9",
+   "lido_sha256": "5750f9badacecbc10c87d3378bc7082b10e91a11d38a4ed24fec8ef58d24d039",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c7/c7579a2c-4a5e-4f3e-8ebf-0517081b2235.json",
+   "tms": "2627"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:37Z",
+   "la_sha256": "da07aca4b06c8ac8df09c5cd79af7768b7c20ac64d089d7b6314017b3c49e910",
+   "lido_sha256": "4286ffd8dc1403f846ed36cd994c43c5509633fe9a3cd17c0f049f0cc1b8a601",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5d/5dfffecc-0dbd-4973-a515-759b70439574.json",
+   "tms": "2630"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:51Z",
+   "la_sha256": "dfa8a75b4c912b3a02b3d747dd510163def77f2647633bedf5f00209b99ad90a",
+   "lido_sha256": "80eaab0dfca9e082651d94ad983463c66f1268ad46d948bfc163b3f772906757",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/83/83995689-ccc6-4e86-9d40-d64293f349f6.json",
+   "tms": "2634"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:48Z",
+   "la_sha256": "3056611b08091bd903d6d81d51fc8ac1552233b621fd27a8507115b1a5634973",
+   "lido_sha256": "fb93544e8192966dfcc2eb89eefd5dbde68f0036222e668257c7081b263241ab",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/eb/eb0194f3-2c87-45fb-9572-a242d1accd31.json",
+   "tms": "2635"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:24Z",
+   "la_sha256": "2bd6ec45dd6985472064693734d5e9df02a5b7e2eff4e3ad55c81d4efdb2de59",
+   "lido_sha256": "26febfec89fa3685a6cefa787d30e3fdb8b51dade070d46cdf535afb6233f2f6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/34/3406100d-d5f0-4f22-92d6-3b27a7cd3624.json",
+   "tms": "2643"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:39Z",
+   "la_sha256": "b4d58f6dcb9640bb444fd3f4ccab44993e23baa24ddb789f40fc9ae35c46bbd3",
+   "lido_sha256": "45ed83b4eefc3a990b47b2d2cef757617cfe7994ad5321715cdf8d191487ddd9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/83/83c98cf2-77fe-49ea-9182-dd5eeb199c96.json",
+   "tms": "2649"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:07Z",
+   "la_sha256": "2b07fc358ee687662aeb27232c39c53c2add8105587ef758820a2c3e00c598c7",
+   "lido_sha256": "e3d2e8173a144060a0a46abb8deea69fd4478ac2d3014ee14dd9f9b057594012",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b7/b7d4a33e-b26a-4e21-a8cb-159214ebf5bf.json",
+   "tms": "265"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:46Z",
+   "la_sha256": "4461874ddc69d137470e7c749892dc1250c16b03028cf8d8c9a3a88591cd3eed",
+   "lido_sha256": "9d1d5ef5e158f16b6efa51800b30f53aa88cfb75a7e2ba0b0c535710fa04cbf6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/06/06cc1c27-d7fe-4bcc-adce-af8c58f16ee7.json",
+   "tms": "2650"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:28Z",
+   "la_sha256": "6cdcee265e381c571bf31b50281aafd986f119a8641ca19965a6d0980022ae6e",
+   "lido_sha256": "1f680fbf656f15ec06fb60d253144dbf01a217f6f47963842633bacd4902793f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/12/12aaa0ff-ad59-49d3-9daa-ccd0f46ae346.json",
+   "tms": "2657"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:31Z",
+   "la_sha256": "d342f8f5aeb2616192473c257535159bddf8d7048bbd57c9ea52889cd6866926",
+   "lido_sha256": "1b051aeaaef6f4e984976c3fdb5261fbfce1b204cb2aa0e524ef594ca2d80f2a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/22/221cf882-0095-43f4-bdd9-a3bcf2528e08.json",
+   "tms": "2662"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:04Z",
+   "la_sha256": "6c2a8741d3a730adadd8753d1fd0fec258fce9aa3d2551b71ffb6d5ed3a4662b",
+   "lido_sha256": "7fdb92cac06e74fd9185bc674652339f701fd532ce7dbe505635ccf83af51eb3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3e/3e908451-a4aa-4f67-9048-2036636d42fa.json",
+   "tms": "2663"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:19Z",
+   "la_sha256": "ab7de4315bf013aa6e6ceb376125b74e7594984f92a3d47a946c117bccfad129",
+   "lido_sha256": "5bb7107711102583d9669379f1b6ce49794b023c3b65ead85c0d508ad394312c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e8/e881ba44-2e69-4480-9d00-2fe3aedefc2c.json",
+   "tms": "267"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:12Z",
+   "la_sha256": "54a3d906a255355d7603fcf7818b8cbf52b57a2d46a1f29c1f4098209f43ba92",
+   "lido_sha256": "4e97768abb49237a404ca0a4312f53ffea541f35b83f9d788b99e9529424d748",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b5/b58a29ef-2c97-4fbc-81b6-46733db1d77f.json",
+   "tms": "2670"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:58Z",
+   "la_sha256": "c7ca09649a9ac89a938510935509ccbcbd67757aee4756415ae6f56109108a0d",
+   "lido_sha256": "ac773fa83f4cdd53ed55d8dacc3f5c6b365d5cc0731c5c0e16646207b39ef7e4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ba/ba58a91f-754a-4511-b7b4-e0f02d14c214.json",
+   "tms": "2675"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:27Z",
+   "la_sha256": "f86d166609cd9b75f5600d77ca268fe676075378bfac562d7e46373c1c07fd23",
+   "lido_sha256": "74473fc96fce9bbc66510f6ec2b8872f52bcc19d4b1a95c0bbef4dee16041d97",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/65/657267b1-9937-422d-8296-73cc98b25c7d.json",
+   "tms": "2687"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:48Z",
+   "la_sha256": "7e89fb5bf90dc5e6e27b3a3546c45d2d46d6c08e5a562535e5a8f8d16e890762",
+   "lido_sha256": "6d63e777f75da1ab23489be68c71f746febe9330da617527b763baaceacedebf",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/07/07ee23ce-1163-494f-8136-b05ccec862ee.json",
+   "tms": "2688"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:29Z",
+   "la_sha256": "878fdfca1b1466c1f8eb52d68a31ace33eca5af3071d41c8f4f0efdd801d63ad",
+   "lido_sha256": "ec7b7c2d45165101e31fdade727660ce7fd26191edb1e492354cfcdcb6d1d3c4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/10/109adc56-da9d-43e6-9efe-eb749bfb7c13.json",
+   "tms": "2690"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:01Z",
+   "la_sha256": "0222ba3103f4162040f7cefce1b09a2b74ef8d023fd53ec31414dfcc38878a0a",
+   "lido_sha256": "c23bf0addaa6b319f0ae05a62feee106813dcf441a66715094b683ab7680aad9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6c/6c20ab74-2c9f-493a-a021-1a07280308d0.json",
+   "tms": "2695"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:50Z",
+   "la_sha256": "1209006b70f81297e20d5967e29c31c7148eef4ca07603582895941098faed6b",
+   "lido_sha256": "77aa6ca56949c80772ae3ac61887d8e41f0276fbab4b6a1d93854290f4147790",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/36/3653dcaa-1c23-4046-a49d-4f7ae240ae9f.json",
+   "tms": "2703"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:00Z",
+   "la_sha256": "363669fe7b438d4e90819e21d44b565561dc390f43bfea9a8776bd1d11bc932b",
+   "lido_sha256": "68c6e4b1cbf17ccbfd4e503916c96c7b12d3e7ba02eee3bf2c5c90aa081b2332",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0e/0e802dc7-97dc-41d2-9184-47761457d26c.json",
+   "tms": "2704"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:51Z",
+   "la_sha256": "f6fc98632c05f53000171484557913000a769f1002cab574064a276918be0835",
+   "lido_sha256": "7b60d68ee6d05addda553a2ea87e69ad912a32f82a488037b2e803ecfa2b7d15",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/34/340a6700-5288-4024-be4f-012fc21f65ba.json",
+   "tms": "2709"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:25Z",
+   "la_sha256": "65b6462cc00335c49b638cf6d87b892aa4b1e7c99170c062078be15e3385df60",
+   "lido_sha256": "60bef11eccc9e07898783b08bd503ecaeb865f93182ce41b2528529e8769ad2b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b7/b7dcc9b8-a7a7-4c6a-82e3-b0f2b35b5cb8.json",
+   "tms": "2711"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:41Z",
+   "la_sha256": "e053f0bd8d4afbe07b6743b1802cb7e7dd78b69dd7aa74586d55f1ec86ab1efc",
+   "lido_sha256": "d4eee4917f9490caa05409b3ccc983e3d1e0c57869c7028ce8a43e8ee9171a12",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/40/4067a3c3-869c-41dd-a079-6f50522c9931.json",
+   "tms": "2719"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:56Z",
+   "la_sha256": "607a158bd501f0b4f1058d49edb86d0c455e17a19c406444fce61a99f66f8978",
+   "lido_sha256": "722a9ac2bb28974f05f6223964db851cfc70dd32ccb094ec0c0680f0f60d01c3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/04/04fa16d6-a0d7-4cd0-b567-cace4bb50f82.json",
+   "tms": "2721"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:48Z",
+   "la_sha256": "9e13ed3eec25e6a40ed705d60cb16725e5c9f15153a3448d6da1883c773c22c4",
+   "lido_sha256": "1250f54745f513ba2deaaa7dacd1772d6d50b0d4e154d95050fce2ea7f4322d1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d3/d3d0c09e-0261-44a4-83c0-4e632dc011b2.json",
+   "tms": "2724"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:35Z",
+   "la_sha256": "7ce94f040770c15c05af541a227e92c870c051fb212ddbae6208e989187e9b45",
+   "lido_sha256": "55165165e668bee251b630eddbdee66b8cb3f59078b0bd8670a1903336ec31da",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/75/756200c1-5202-4a23-8cc8-0bc7505df687.json",
+   "tms": "275"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:40Z",
+   "la_sha256": "c3448ee2ac51b2a892fd698cb429e55fc3d7ce8f37e5d35b88119f6dbaf5cc48",
+   "lido_sha256": "30ed54b1959de7737aef7b6937f53524f2079d4ed3112c44f87b9237c675dbc2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c0/c02c40d3-e85f-4bfd-941d-9e8b6ac8f49c.json",
+   "tms": "276"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:07Z",
+   "la_sha256": "74d54289b5f55ca2e7319069b7811049258d564e86f62e7ff86c37baa7b5487d",
+   "lido_sha256": "cec05f92dcfe972596c5cf946da4eabced1cfb4aa40cceae071778b2a354795e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/41/417d495f-8dd6-4fa6-bf1d-908b79759ab1.json",
+   "tms": "279"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:41Z",
+   "la_sha256": "49884b8af5cd71b4bf3e8c80fad89af4202e9b37ba5b79cebf294e330559dccc",
+   "lido_sha256": "53f5727c6895e38d38f82dc267282874ff37dd37ce118b0cdfc4b65f8055fcd8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1e/1e6c0cee-682a-483c-854b-6dd8eefe5019.json",
+   "tms": "28"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:21Z",
+   "la_sha256": "f4438d0c5e504544f11b170f236cd6b955a62a491651a162b10f456223ccbf3c",
+   "lido_sha256": "13d3486b7ee3aa7e83758993f4bcfc9579f562d7ef0329652d6ac1b1a729274d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/36/3657efec-7b50-445d-af5d-19a458dcec46.json",
+   "tms": "281"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:53Z",
+   "la_sha256": "9df4fe05c3ace9dcf9ffc245c6add56dac82d81525f10cc928e1cbf7018a771a",
+   "lido_sha256": "4a65fda9bb97e663263c30fe353cf666c62c43aecad1c178adab0390d38d19ea",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3e/3e72cc57-d870-4341-aec3-81a32bb0286a.json",
+   "tms": "283"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:14Z",
+   "la_sha256": "4d9554112e3621899f2aa705acd531e9a0b38546979f6560abdd7723237a55bb",
+   "lido_sha256": "e91fd8a4717ebbb9157135753b384fa9323d17d114f399776a4b1589b69f8fcd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8e/8e82a153-3377-4d17-af22-783eb442ab8f.json",
+   "tms": "293"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:54Z",
+   "la_sha256": "6391e9a5c0599ef1f43abd8acd49c6f1ccb0a63d800e42cdab09c9bf238826e6",
+   "lido_sha256": "e4abcab1ff270c9454afb25ca9c48cd1d5f1cf0985c003f6506e75e2325cdf66",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3a/3aecb492-3389-4a6b-aac7-abf5e1c6e8a6.json",
+   "tms": "294"
+  },
+  {
+   "fetched_at": "2026-11-04T05:00:08Z",
+   "la_sha256": "9949a49588d7e467f1aa5156bbabfd296b64bc929a811dd3a6b15d0ab85c4882",
+   "lido_sha256": "de9ab7adb9af51fd64b04147b7723db6fa9b9ee0662913cf3977351fa435d292",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ba/ba90ba3d-2384-49e4-b1cc-0169f100efd4.json",
+   "tms": "297"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:14Z",
+   "la_sha256": "5a275dbb7d3b36c716e38a9088b5bf4584b3c45779c000451973d5c930e3516a",
+   "lido_sha256": "61cd6550dc2be3c5f4313f203f6c165911af415ed8ed7a4e7b4ff4da9740a903",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7b/7becc725-f896-4ca9-ade9-197d8712ff4d.json",
+   "tms": "298"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:44Z",
+   "la_sha256": "052b240699547d17737d56b71c49466ce4a29c200e154393461a7ffeb38e94e0",
+   "lido_sha256": "27bb83ae9e165d61a7ae5f0e6638382b2ed7f9584211948f236b9a8ce02c9435",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/fd/fd3819e1-7565-4a8a-b9ac-3173edf86740.json",
+   "tms": "300"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:35Z",
+   "la_sha256": "44cba3c3bf1c72a63b5c1f20b740b3c3e710240845e191af2ad37c1983ab6a5f",
+   "lido_sha256": "266e8944d54f268a9f2f94e749eb15481aafee3a9da0d950dde5df10123b9e5e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d6/d682b220-0eb3-47e3-8498-593226c2f229.json",
+   "tms": "304"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:11Z",
+   "la_sha256": "d7c8819132fab142dcac5efbb9ccc5b066949f22541ca3024b527da7e611809f",
+   "lido_sha256": "7e63b7de3d730f0b414772950b17d27c6467cc3413b9dadba5f72ac69d3b64ca",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/14/1420cb28-2588-4e32-8f7c-c6f4d33c4649.json",
+   "tms": "307"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:51Z",
+   "la_sha256": "f3d22d2aa4ac479f6ddbf53e0078ea685513179e2a0d242f832d06ad627dde8d",
+   "lido_sha256": "a87efb314869c09e7de645c905aaf4335f998ed76a4166d52ae61877bd9b6b93",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/41/4198c3da-96bb-4e9c-8985-77e376eae990.json",
+   "tms": "32"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:28Z",
+   "la_sha256": "39924f332e28925d185b2776a4db2b13cf84becf82544cc9424913a21a8d5f87",
+   "lido_sha256": "ea2518bb975d6e5d4b840bfe72c0d0c6534859f11363caf0647293e3a3ea4973",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c5/c5197155-e449-4ff5-9668-6bee0727a18c.json",
+   "tms": "329"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:49Z",
+   "la_sha256": "b8e0e732684acae889a8b8020d49927a1578b63f0d0d35aba43b961b7baae27b",
+   "lido_sha256": "fb0ed693b53004c0bf907e00ac8e35c3e71b7ac2ccb786a0c1a46ca4d34a4e63",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/95/954d01f0-d95c-4fb0-9131-be4841ffb3e1.json",
+   "tms": "34"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:20Z",
+   "la_sha256": "3fac05e6a063ff102bdf0daae4a9441be53bf0ae67607411d2804bc763c5e681",
+   "lido_sha256": "ac30008c6159289d2962a1ec27ceece4e5c866d39289022ab2fc642a0d0120c2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6b/6be73a30-de00-46cb-b6f0-7cb4b275c207.json",
+   "tms": "345"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:16Z",
+   "la_sha256": "4407b080e1fcc5729dbe5105da1af553798b402ac6dbe6e1e8f3e0c8049668e3",
+   "lido_sha256": "32952b9d503133955c0c09207350f80f5bc3c6c80eef9520ab0e5a5a14177f9c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7b/7bbcbb58-9508-43fb-ab41-fbbd5c987915.json",
+   "tms": "356"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:49Z",
+   "la_sha256": "78e7714a12bcd9441e41c9e586505ee51ebc9bfcd1955c8644541a9a65892289",
+   "lido_sha256": "e03a5163b7211c6ebb4d1dc7d61d6edfa4fb8cf9bc48ec686e2bfa0698796cc9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/26/266d02f5-6faf-4fce-9088-bb88043e140c.json",
+   "tms": "369"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:51Z",
+   "la_sha256": "ca51e8d3ad30dc7fa5308ce92db2f020994cf52dbf0705fabcac0069e94ebab3",
+   "lido_sha256": "efb12eb1d18766027a7b4392f5b75e4f0a1a7e084a869f6998021b36a52fb529",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5f/5fba6252-0cc9-4b62-ba0e-26b4ba09f048.json",
+   "tms": "373"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:56Z",
+   "la_sha256": "32be99fab2b8762aecba685b60ed822a4c53427da49c28900f0af0a0e699e8cc",
+   "lido_sha256": "c6bb1443b1b7b3db4429c2e887d1f05ee2aff7ac20bca4a14d2b645ab14d1849",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/7281a794-710e-44b6-8234-5bd12403dd2d.json",
+   "tms": "374"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:09Z",
+   "la_sha256": "cdbea25d1d3f030a354443172e53d677feedc092e0476d581022b574c22ef6eb",
+   "lido_sha256": "c8868446ef7bfa2fb77cf338bab3d6f3dfcd45e512647ed652090d52d50185e2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ec/ec50fbfd-033c-4019-858d-dda2d51401bf.json",
+   "tms": "375"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:04Z",
+   "la_sha256": "22715918ca960c265e41318ef33a0f88b710807dba96825950705eba68c48d2e",
+   "lido_sha256": "33e4583b597476eff6cf38ebdfe4aec523b642e299a922c690e9ae1a477fa473",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/fa/fa826775-aed6-404e-9e4e-fefae4938cf5.json",
+   "tms": "377"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:43Z",
+   "la_sha256": "99cd2e47cba922c251aacde98969cd8d4c17c5095e8ef4ca260f4fc2e1d88b76",
+   "lido_sha256": "c970d072e932855e200e80f42da1403590d054f2aabb41da7679c99ce2aa85a4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c6/c6791f52-e694-4d3b-9f5c-26e6d57e3acd.json",
+   "tms": "388"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:23Z",
+   "la_sha256": "afe5ce077639d0fabbf59aa2ae808e15f15a27a8199f393439ea85003824c32b",
+   "lido_sha256": "15ab757afc081c35c18c734ae99a74bff707ed3ca7cb1eaab39e2e309cbf1b30",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/40/40c2760f-6245-44d1-b052-b01b74e3c997.json",
+   "tms": "392"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:59Z",
+   "la_sha256": "4d2da1b93812010050b0604c85437a71cecc253e1b924693dee40225b572ba5b",
+   "lido_sha256": "5301a80e26366a9de737a9808a2a97dcda07f94faa179e1f78318e3add331dfd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3a/3aa03380-2771-4f69-bff5-3bcd2241e4ba.json",
+   "tms": "40"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:32Z",
+   "la_sha256": "103bca0f30439ec52b205f130dc0a0c814f593767fbd2786faabf0139de07dea",
+   "lido_sha256": "0c6d364fb44c036ed4a0e7bc6d11a40da14f76cede377b02938c760fb0edcdb1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/04/0486a252-7e1d-4453-a20f-22cfa5d053a5.json",
+   "tms": "406"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:32Z",
+   "la_sha256": "fe6f4deae9544f05decdcc301cbcd1a3204cf48b42c321e90e9e4cc6fc1ea657",
+   "lido_sha256": "b5220e141cee920c4362f9c79e7c97b86c6741d7fa3c46ee4e0af9bcc6634f95",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e3/e3f28d7c-90af-4449-9e2e-bd8de855dd9d.json",
+   "tms": "411"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:45Z",
+   "la_sha256": "9f61621186bdf61339508a91cf4995daa4badfe83ac669751766a93be2711a3f",
+   "lido_sha256": "5876d928617da63257e1f9ef0cb1238ad9b3c0fb994cd307dd2f3d1bab26bf2d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/30/308ca4b8-7a4d-4cda-8ce0-9d5cd8c05295.json",
+   "tms": "421"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:15Z",
+   "la_sha256": "1d1fb0b436621e6d0a4e1b84f1d853e5291635be1529a3e02964cf6ff10f9e3d",
+   "lido_sha256": "4cdb865bd2f356390f6bc98c5baf776a378dfc847605ff64bf9c4b169b33f7a7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e9/e928fce7-6d0c-4071-b00f-938cb2432d05.json",
+   "tms": "428"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:40Z",
+   "la_sha256": "086064bd6ce3100a60dbee37a8591801f0c092ca615738a7946cc923199a66d7",
+   "lido_sha256": "df6c120725d70444f68acb18e70ffcfb57166fd47afbee19b00c93b84947cf76",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/fa/fa649e13-5498-497a-8b03-4f69b2264320.json",
+   "tms": "430"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:53Z",
+   "la_sha256": "9625e7da5dc2886fa0be9d9f917e96b3d69e21eda508e3dae9c06afb9d690039",
+   "lido_sha256": "283536acdff84c1611271f8ecc6d37a4d23ab9f39c50c0f0acc2062471226a4a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9a/9a8be357-b7e3-4961-b3c7-48e94a4021b7.json",
+   "tms": "437"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:56Z",
+   "la_sha256": "39b09a6b1c360efeb58a0722a1c35d8ed47a88b29456e0699565735ccc4a8fba",
+   "lido_sha256": "04d970d66ff42ca573812704494dcf8073c8f381b5daff6091aff3df9a68be3f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/74/74ef4c42-2c73-45f3-aa2f-7283afb71d39.json",
+   "tms": "445"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:03Z",
+   "la_sha256": "c5a4b6bb17b29c2f0c0bc7ce9d116e661a13fa979d1826ff327fdf845eea281c",
+   "lido_sha256": "27904402073e83e3c9b24c2dabcfffd9aacdfa270092eb9b173a801ff5ca65f5",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c8/c8744391-b9b9-4ead-ae26-9336eb6aef8d.json",
+   "tms": "451"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:33Z",
+   "la_sha256": "10309277cd1771c0eeb17372e52e132ee6f32c83c9778244a0aea424ef9b9b51",
+   "lido_sha256": "f3e58aa9b19cf5527d00badd5ccf45893ca77b9863f5a340778cac2cf8a8671f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/72139825-09b1-4e96-bd58-535bf2f2cad8.json",
+   "tms": "452"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:50Z",
+   "la_sha256": "279eb3de74927ba047bb3d679ba8bef9dd912876d6f3537170f95bcc8764fb8b",
+   "lido_sha256": "5cfcd1b1ace82e599dc1382788ee635e89f006b258f5dbaf7e018c457b1e4f75",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/89/893bc6cc-5a57-4081-8256-08ef2117faec.json",
+   "tms": "455"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:47Z",
+   "la_sha256": "dba7e175ddbb6c1d966541b518eda6a628e2de311967554d65fd60764da51bf4",
+   "lido_sha256": "9eebc3e930d521bedcf21d0b0fbf511fa5f6272cb3e21512933f70d34c3b1cfc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/dc/dc6f04e4-cc4e-453d-b9fc-65aff05ef331.json",
+   "tms": "460"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:22Z",
+   "la_sha256": "accbd22914c47f6b356523f6e924a87ca163ac56f755f2127dc067dabc74494b",
+   "lido_sha256": "3b788692f15e79b71b782c5e382262ccb61d3d06988ad8d52a1a86fd78d93c95",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/97/970ded2c-4d37-463f-a8a4-1ebeb4b661f7.json",
+   "tms": "470"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:04Z",
+   "la_sha256": "aa24497326cc3e31d71de2ad4fc18e4c22bdf425a0c3fe28d50025aa317722d9",
+   "lido_sha256": "fffb1ee587936449d3984eb2b01b419c13acac06be755f4ce448872fc57f5771",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9f/9f8346ab-1c16-46fa-9c11-1eda0e5964ab.json",
+   "tms": "476"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:22Z",
+   "la_sha256": "bdd7e9ec5ba7cb5ecd3dd1fe55e2823f73bd3998f3be5b50958ef4705120b7d9",
+   "lido_sha256": "84c9474f2cd8f86a969cc2be262c5fbbec67945250db9900376caf962abf99d9",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/03/03e4da5e-3a2b-4850-9159-6ca654445ad4.json",
+   "tms": "484"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:10Z",
+   "la_sha256": "bc2500db5574b4184af12997d3db5008ac0228aa63219fdc757eb05002f0c5bc",
+   "lido_sha256": "a4b6231511dfd15b4244f1953c2b8a94e1e110ad35d28b30ff40020a28d7d0ed",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/728dfeb5-fd3c-43f7-b1f3-a7d78b02378e.json",
+   "tms": "489"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:42Z",
+   "la_sha256": "240258c531a08d98437cc6996c0070250e4a185c77d3979248cb89659a12bef5",
+   "lido_sha256": "7d829787bb47e08b17425aebd5f3587ef07e0221cfc9c0d383ee8072f67a14dc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/36/3678aa43-712b-4179-9547-59c4b559ee14.json",
+   "tms": "512"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:52Z",
+   "la_sha256": "7c502084ef7338713bfc374bf9b36230afc4a4dea42f8fc78bfa826abc550b61",
+   "lido_sha256": "531c3fe57e899d802f11d5931713e2b8ff4e2ddca6b04194cdc3075347816352",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/70/70d7240e-5a89-422a-9e6a-36324c342b79.json",
+   "tms": "516"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:40Z",
+   "la_sha256": "5cc334c1119345af8c6a179b3f6ba13b5297e13de3af8863e9bff2257807b309",
+   "lido_sha256": "7f6fd4f2480012cd10c665e7831001154e9d263783c47b43992ebb58e384906d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/60/60b91c6c-0996-440d-a85f-8bb0c2dd540a.json",
+   "tms": "520"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:24Z",
+   "la_sha256": "68b48f133b6a1057aae502a7228074ec44d53dc6079a9776235df092c808c84e",
+   "lido_sha256": "9db15512273ec8bc71c5ccd8206387b8473434cce2851985d0fcac459f9e3fc2",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/33/33481687-00a2-4fbd-bd85-87beefce8388.json",
+   "tms": "521"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:57Z",
+   "la_sha256": "5522a13239b85972f30662dc22530ef68a13137ec3c8a340ddc98fd1fe2c1397",
+   "lido_sha256": "e383d4125b0c3428ce1c1ce0209aea6ed0493f134c7d6024f12a1d7467b7f06d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/76/7660fced-22fd-4816-8bb5-b8f48bd9aada.json",
+   "tms": "523"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:11Z",
+   "la_sha256": "8bb996f8d79678f2a8ba0026f817d942ee0ff66239552065231ed6802b54b5a3",
+   "lido_sha256": "a3880a9b06846967e93b5a03db68a661ceeb2d1dc45e187371b308e89655c1c8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/91/9175d67a-2db2-44f6-a11b-27371ce911eb.json",
+   "tms": "524"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:46Z",
+   "la_sha256": "b8d1fac1ba4703082c02f4d19b59e2dab32371d9081e1a4df0fc15f894dd9beb",
+   "lido_sha256": "6bb8c596691b021428b510852d77928f5d0ff7474caaa0283240c2885da4f4f7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/06/066ab043-371c-45b2-a059-5615a2e96247.json",
+   "tms": "53"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:20Z",
+   "la_sha256": "8dfac33cef3d480c74e2645a4790e159061846ac117e82d2c145be5d6812361b",
+   "lido_sha256": "dbc117cab0b4fe8ba9fab0c9d6ab235c03bddc8502041e227bef70f0e0bde893",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/02/02b135b6-c700-41e1-a3c9-5011485aa279.json",
+   "tms": "530"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:06Z",
+   "la_sha256": "ceb5ab553926effdcdf8ef10af9d29f3cd94e61df22c5a07ac6d8f2af0adb973",
+   "lido_sha256": "b1b84ac0c1fed74711f857c54c1463b88ee958d0f6c3f967612eeff08dac4893",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ea/ea38dd4c-fc9b-4418-a300-b678137bf3f9.json",
+   "tms": "533"
+  },
+  {
+   "fetched_at": "2026-11-04T05:00:01Z",
+   "la_sha256": "d32c82cd939aac62214f2d5ab2a24bb7403501d6090ae6e364e550f42ba841f5",
+   "lido_sha256": "908fd65b9043bcc7d0ce77fa7d9edaafc2cd4aace962217da6b5a0f00a85492b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a1/a19b1cc6-cedd-43d3-8fa1-59b317ba3219.json",
+   "tms": "54"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:00Z",
+   "la_sha256": "ea2437f72936d9bc603b8c15d7c0cfd2ceb78760f0fcdca1f25250b2d2d8c3dd",
+   "lido_sha256": "c288478f1c15de33082b397a76b2c0f4d974efe7e63bcffd08099390927ee3f1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/18/185560ea-ba0c-482b-8d91-c169bcee29b1.json",
+   "tms": "543"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:42Z",
+   "la_sha256": "ba927e71f1ebe3a787ea1deb49a48812a4d328dd4342b77651ee666067d0ea46",
+   "lido_sha256": "1362fef215feaa13708a315f7b61dc8854693115a28e659594a829718a312370",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e4/e4bfdc94-d06a-4091-bb6e-f696f9507825.json",
+   "tms": "548"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:39Z",
+   "la_sha256": "ba89c14cef006d9f30a77663768b85b42ad9ea96d17c8b021194f0afbb0c3ae5",
+   "lido_sha256": "471da9ff1efaeb629ae332503e44614a76f6a0b64173becf95e604e962c8463c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/23/23df3142-290d-4257-ba61-a5ffece7cf33.json",
+   "tms": "551"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:02Z",
+   "la_sha256": "b9f60926d7292bf0e8095ddce506265983eaab4ca21aad11f74dd5ad367a1770",
+   "lido_sha256": "78ea6a0b6182cd5f6ec10b0ffab30320792ad4dd8eff7faa4a4487a6c0150e85",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f9/f9c31b99-d345-46b2-9d84-0b17986e8ca4.json",
+   "tms": "552"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:21Z",
+   "la_sha256": "b5f76ca36f0ecc91b20fe198d96b91966750f5eedb50d0680159304e3436c966",
+   "lido_sha256": "6432fd46d4d5ab0b49f2b48c3acbb835f0e818da338dc9b00e7a12c2fafac0aa",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/9a/9a0f6c62-1d82-4635-8b73-04e042b1b407.json",
+   "tms": "564"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:15Z",
+   "la_sha256": "ddba29a549c1eae81ca90000753215947a92d51c93f537c94ea9fd4bf188babb",
+   "lido_sha256": "33665d7d9382b14e7861e4d28d7cbc5e4e66a260872cdd12fe67d27315ff0079",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ad/ad697abc-8bc3-487b-a20f-92b1b77b05af.json",
+   "tms": "568"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:46Z",
+   "la_sha256": "c99cd7c7018f847182d6d0d96244f17622c3270fba5d403b30b4dbed3239f7aa",
+   "lido_sha256": "641a978d0441f031c00f4205e95a3ea623fe1be35faa16947ae24746ad816476",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/7b/7b614563-1404-47c3-8ffb-92dc4e55f9ec.json",
+   "tms": "578"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:32Z",
+   "la_sha256": "1e36e4c2ddf89d54dcffcfee978dd50290b02e0876b60e7b7cd234321f054f9b",
+   "lido_sha256": "bca12f88d6c21287ada5651821c4243da7b2c8322085b52537b005edce97be89",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/19/191990a8-0e5e-40e7-9164-6192ffece2cb.json",
+   "tms": "580"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:17Z",
+   "la_sha256": "ad17950a4cd32ef423af888e73a1dc72e75057f79305ec3fb080dcbd4edc3a72",
+   "lido_sha256": "a3a9b8565dddfa9c8130f44523671ed72aa2a1ec7fc53e03c4bd184f755cf614",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3f/3fb1ff60-0bff-407e-accd-0739053dcc2f.json",
+   "tms": "585"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:54Z",
+   "la_sha256": "778d3f9bcdac9bb0bdf71627308fafc0c8ac7f60f71860a1a8bcf2ff26c60985",
+   "lido_sha256": "3ec6988e4fb47f92ea8cc852ebe455a47934cf4c67f5adb8f344ba7b189e9dcb",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/57/578cdb1b-bf6a-4280-8003-ae3296d6ee25.json",
+   "tms": "593"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:30Z",
+   "la_sha256": "c26b5518c9723c2d7a79deb08a4292cd6924e3a971f85f5e2021574ff315792e",
+   "lido_sha256": "f76dec2f6181e8f198a0617cd53d1ee5727e2fffd6235353e7b095ea0e4f7560",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d5/d56efe50-799d-4e04-abb0-b5eea98086a6.json",
+   "tms": "594"
+  },
+  {
+   "fetched_at": "2026-11-04T05:00:03Z",
+   "la_sha256": "60b327dda84df9d03a94da4d7f1a5a146a6d9a49c5769eb7412081075b9160c8",
+   "lido_sha256": "911e123994f06bb18e9fb4c51e93fbe525cf851be639971dc81cc1dc7617050b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d4/d46eddc8-a0d3-4073-b66c-1ae2824e7c05.json",
+   "tms": "595"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:23Z",
+   "la_sha256": "f1693e6e5230ac457056b8e829fbe6beeaba4e87817f3b9bccc415b518c3ce64",
+   "lido_sha256": "22be2e375cd20a73da28581a7da1526b23910211e5be22f23c82030d0fc8f07b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/76/76e29b26-fe48-452c-98b8-f0e0edbdf95e.json",
+   "tms": "596"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:15Z",
+   "la_sha256": "ed4aca0cb3665a884b571809aa2b63ae62f82f2aa0580286fafeb4740d7cdaed",
+   "lido_sha256": "819493c7e1407a13e902d65f4214b68808eb99d9b2e4bd0e92364d9d2acd16ad",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0d/0d1b1e0b-8059-45d8-b8d1-353b617e2a57.json",
+   "tms": "605"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:00Z",
+   "la_sha256": "5c96b3f7673cc7ad6e6564caec4dfd390ef28cbe8dea1f828f79c6188292cffd",
+   "lido_sha256": "a2e75e0dfd1ccf903491522c571434b70da581bec380171eabde10b529fdbe59",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c0/c0d6bd8c-e07f-4655-b5c1-c875cb1ac3c1.json",
+   "tms": "608"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:16Z",
+   "la_sha256": "58cc8aa7f44c5b0e888186283aad29474a2510d5e8e94113f1ce9f6b07c74f54",
+   "lido_sha256": "136c63d8deae7297851ff735dc9a9c9490cd26eab660f48fa38762da5b59a904",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/70/70b04085-bc1d-4e14-8d70-97fc9449c1bd.json",
+   "tms": "615"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:29Z",
+   "la_sha256": "b2fa642f7939490ac4fb03073d07c5d6729f0b69c27faab4ceba2b0aa5222ed2",
+   "lido_sha256": "d3a11366b4ac4d2c44213f37e72d34d437d84c76f61764b8b56585a376804aee",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f2/f29e8b34-83a0-46c3-af23-59b2107e64fc.json",
+   "tms": "621"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:39Z",
+   "la_sha256": "654e30daa77b4f83e69ff175c1dedb54bbd785094fda20fbbc659391934ade30",
+   "lido_sha256": "52c2f95c70b3ca0879a7afa5b24bc36cb2366afbf8632e02fd821611b23c632b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/35/352a5b8a-5e99-480b-bc5e-d31876185182.json",
+   "tms": "625"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:19Z",
+   "la_sha256": "e82d74f8aa03a049df761fefa000e99fa947e5e9c45ca0f78e74f74ad4a34a42",
+   "lido_sha256": "50d873b64bf5e0a7e3cb9cbbd7d2dae8af5dc8bb4db484c245fea28d92929205",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d2/d2b25c86-a01b-462e-b78c-24869a4d3bbc.json",
+   "tms": "627"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:31Z",
+   "la_sha256": "3e986acdc611f300818f665f2d60bea9b0027d15755df04a978e03f13f55bff8",
+   "lido_sha256": "808d01317ccad5b8b1184ca3927ce0f5269a4953c63d0f6c68559ca775e7c60b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a7/a73e3071-4145-4441-a741-7b3c35dccd40.json",
+   "tms": "635"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:38Z",
+   "la_sha256": "8282d5506793568433ec099db0f9d06c0b80d532f386dbb8590001ff52fb125b",
+   "lido_sha256": "bf9e4d357563633869c92806f816989f606f70f95973e467d7c09c668c5ca557",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/57/570214cc-7a1a-4c36-8a56-5805eed65d6b.json",
+   "tms": "638"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:54Z",
+   "la_sha256": "eada79d3c09ab6a1ba561e62b98b5a80df06893c6c03717f55c08256381d88ee",
+   "lido_sha256": "03ad2c5bba7e09c7b870f77c907596cb4bc7d2249e0ce734daa370de8fbff6cc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/dc/dcc2836b-a648-463c-a17a-a83fccdffcc6.json",
+   "tms": "642"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:06Z",
+   "la_sha256": "2db6fc53f83f772edaffac74175e87203cb1eaa8a14f64d96941bfa52b9601e0",
+   "lido_sha256": "8c1bd88c003a724dd496387c6d9315596fd7e6c2870d1a6172d6cbc1762e0f23",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/2f/2f396989-d404-4ba9-941f-867472912ecf.json",
+   "tms": "645"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:18Z",
+   "la_sha256": "cb49f7505b15ba6c1d34a4bdb4c94d2bef8d2fe0fee16e023d3466ec7686be46",
+   "lido_sha256": "286f04f493740d81679d7b8d4a88e776112683af31753a22e3a8dc5eae97161f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c9/c91776a2-4f12-4559-99c0-7fd7810a9a54.json",
+   "tms": "654"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:01Z",
+   "la_sha256": "dfb5cc6d6007e279c43ff40277c3d8ad3f1ae88ede4e3d697e392e7ddff5bbcc",
+   "lido_sha256": "ce9b3cd15a1d3b99fd1dd4630e63d902cdcc1fb500f0e9141527f919f7ffab14",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/aa/aa81166a-ac77-4091-a442-c15a079ac958.json",
+   "tms": "675"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:38Z",
+   "la_sha256": "5f465dbb24beb2293ffb0c7c9fadbc959fedfd2acef976cd79c1b2f3a02528b1",
+   "lido_sha256": "0c2f682f8cea40c8303d81e824b5eeb16b77b026b8f384ff7228e7f6598fb955",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/dc/dc4f90d9-5425-4904-98b6-51ebbbe57083.json",
+   "tms": "676"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:04Z",
+   "la_sha256": "5da26301efb82529c4147a430097ca57f88ab118545d49f538c1a62ed65db710",
+   "lido_sha256": "cc253b1ae00adeecf1db555595c29152d1ff638be403a91da80eef2f3e264143",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/87/8763d170-ee27-45b3-b537-cfe1699104c5.json",
+   "tms": "677"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:23Z",
+   "la_sha256": "2d6940707830d2c1a492c4a8690da12aaf022dd99fe67a3bfb65cdaf090c81b4",
+   "lido_sha256": "9aebfd6cdcf3d27ca0dd1216b56b8cf5db81c5225a40440ab005ab977b534200",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/92/9202260d-cb23-4764-9bc8-5600f5a00abc.json",
+   "tms": "682"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:17Z",
+   "la_sha256": "95e296e3efad9d3ba9a57bacd2b0174f59d9ebac5c3dda128fc618e17bc0812a",
+   "lido_sha256": "02e30cef04b1ca728ff6feec4e27c35c53ab5ea305fa18e8c1d23403f20f1597",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e4/e42be9b9-3f3a-40b5-b611-6ab4a828740a.json",
+   "tms": "690"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:36Z",
+   "la_sha256": "dc4860dc9f5837ea9910d7ca5dbabe37ff85e9be1177236fec6ac0337284b943",
+   "lido_sha256": "c471945901c6adc6e1ded84777ab37e7fda63f2b35dfb410c11dc15d51933a21",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/be/be79b98e-590b-49ba-ba4c-5d3692ada1f5.json",
+   "tms": "691"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:00Z",
+   "la_sha256": "d3143cc58f4e4dfa91934196d2ccd444c6a676a6c3d70b366a887bd8f8caee98",
+   "lido_sha256": "d21b377bf70f85546a7e359fdfdf985505c9e73ebfd356b5cad17c03c25f8883",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/fa/fac13137-eb27-4d0a-9829-b7221a0e70ad.json",
+   "tms": "693"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:27Z",
+   "la_sha256": "f23a20046b8aed673457013a7bcaef4eb0de62f613f8dbd3d27c2d894edfe012",
+   "lido_sha256": "ed2c975c2c29d0bf8bc2705393a0b5d98541a9caa3887f72800032d614c0b24b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f5/f500c2ad-a6eb-4ce0-8c8f-b2693fcee89c.json",
+   "tms": "694"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:49Z",
+   "la_sha256": "c133d373dff0bc04a1b46b13184e833a984e58825c1596054f7704fff9e3654e",
+   "lido_sha256": "68149afa7f4932b2363160e8aca00f41d0ed4617bc46fc47345b978b287890a0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/19/194a2eb8-538e-4ab4-b8ff-c3f029f1893e.json",
+   "tms": "708"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:43Z",
+   "la_sha256": "cf95ed83b1acba03140db74e4fdf2e41ea537624086f42cf8f6e10f3c2167c11",
+   "lido_sha256": "78a0881b6d937a9f85a4ae2308e74b61b96965a1f1e9cc66012c5a997daf4a62",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/5e/5e6b31be-2c29-43db-9346-46dcd7a03cf7.json",
+   "tms": "718"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:29Z",
+   "la_sha256": "4d7ebc4cddbfc6fe95fa928849b5d83be5426319de5beb94b584a40884e242b2",
+   "lido_sha256": "b2e750a3954993a2fdb2bc0c8399e5e5eeeb7dfd5ccac7391733a4d095567537",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0c/0caca64d-3fc9-4b3c-925b-a4e4dbe844ad.json",
+   "tms": "734"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:58Z",
+   "la_sha256": "c041fb458434b87ad2b463c38cd875d6a658d4cd9e27ea45a4c4fa8906e4c71a",
+   "lido_sha256": "e4f2957d0c5eda5da2d8f0074328d000da76968c2d4d4eddeb6041772f5d2b07",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/66/664f4040-840c-4c1b-8d9d-caa4079833f5.json",
+   "tms": "739"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:11Z",
+   "la_sha256": "e87d0ca98ea218935f57e31f8d9c5193ba004f5e214bc7c2b313a36c9284e328",
+   "lido_sha256": "b4377013e1579d78c59b6235a7c3e7fc4c90231af2a5db7292157c2bc68a8968",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4e/4e481822-b3f9-4716-825e-d80746265753.json",
+   "tms": "748"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:41Z",
+   "la_sha256": "7d428d40a90623556aa3ca4152bca6d7fd4316b91dbcdb4f41f61c84a8805a86",
+   "lido_sha256": "54c136318495223aeaeb91463965e8cc56dbeda813ab1f4019b4b09107d883d4",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/23/23b6707b-d462-4a6e-9f61-984577df1c57.json",
+   "tms": "758"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:49Z",
+   "la_sha256": "441aaf7583f3c3ba3cdbc54ecc538047fb684a7263c8cd10fc981bc5383a98bf",
+   "lido_sha256": "d2ddd08ef132ddfefd2ca1e7dbb4a2dcee1f54b95b35e6d38ffe8f68f826db2d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/4e/4eb0edf8-6c62-4884-b984-3c2aeee74128.json",
+   "tms": "763"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:52Z",
+   "la_sha256": "e60610e7665dd07530dcb2bb2a913a307e3b2ae547ee4374560b88013f9b17a1",
+   "lido_sha256": "aa8109d0915649c09611af1ab5d8bb7d7c857622fd353e12975a77206ea8b9a0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e0/e0e43096-fddf-4e94-b3c9-b4d721dfba7f.json",
+   "tms": "772"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:05Z",
+   "la_sha256": "5266eac2863ba97ac956982d9f4ec50a33459d430d5490259f690f237d6055b2",
+   "lido_sha256": "8fb6e200d1e77e4c2e714da0a3d06548ece6eba1b350a0e7af75040b2722df1b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3f/3fd54f83-d2d9-4410-867c-8dea639a1041.json",
+   "tms": "773"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:53Z",
+   "la_sha256": "9389f45fc1fd6389675bd47b8fd990b50bcaa36bc669db546ba3cb97155ce94a",
+   "lido_sha256": "772f2e016f4f768f071021b758b51c901e12ef817a43d69d57fd64c413e56825",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/36/368ba94c-5bec-4f7f-937f-dddf6daa9409.json",
+   "tms": "776"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:16Z",
+   "la_sha256": "d30423efdaa9c6b4b4e8cc0eb4d5272c0e03f07b87f6e4e36b6e38dbfa5eeeef",
+   "lido_sha256": "de1b74980de84170d107322deeef0a32b099924c83a98c0f999f57eb934e5d0b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0b/0ba76e6b-f85c-4697-a467-e44a78a8c748.json",
+   "tms": "778"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:46Z",
+   "la_sha256": "4e5b1b06b6f4636a04568e7a4899181ff73cf2749240986873b367e4e8635c31",
+   "lido_sha256": "849472b8e1947dad5a468b2dde7562c5e334cb41bf7c931e71048c2510b75133",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/78/7860d48d-0daa-46bc-88ee-b9b690caba8b.json",
+   "tms": "787"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:02Z",
+   "la_sha256": "58ac4172de8d280d5a77d3af882faa406c469c4ebeca42e428676216af7dcde5",
+   "lido_sha256": "80e8db21f2bbe09e39dc6a42974cc917c99dff03479a1ae62b31f7d5b337fb73",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/25/256bcaa7-4548-49d9-857d-b0f39e478324.json",
+   "tms": "794"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:17Z",
+   "la_sha256": "d5234d81b616f77805368a720f778064bd9be6f84db638b010a73783c332583e",
+   "lido_sha256": "aa2563d24e91aebe8d062a0e91e4027026f369b9ba7343fa44f9e0b179981059",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/13/131abc7e-f2f3-4763-9fa1-93ff3c442986.json",
+   "tms": "797"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:00Z",
+   "la_sha256": "5dc64c404fa7b442dae231f4dd0aad5ca4f034df98e5e0ab45e97fa465b86eca",
+   "lido_sha256": "12d9fb2b7ecab0530e27445b097e940e5ef5cf9dff5c87112eaeba7bd4543827",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/72fff216-9f99-4fe5-a7be-6acc6a319a44.json",
+   "tms": "80"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:38Z",
+   "la_sha256": "9780a867fd9b9efaf6dfbbd141ff80895fab81ad8a8d2e97ae5b4640fb084268",
+   "lido_sha256": "db668dce72b65c85becc922c97941e3436ab2881745698df2d25f91f60609555",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e0/e0bb2a66-1d03-45bd-b798-1de677a4bcc0.json",
+   "tms": "800"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:43Z",
+   "la_sha256": "a8653c8cc0d6cd78e73d5ec1bde4a1f967dbab8d8898657b28ef31ae8648a333",
+   "lido_sha256": "fb3df6f962d2a0d0a1125a752b0a595252a6eb8504b44ffab336c71041a2c031",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1f/1f17f8ad-b1d8-4d22-9b67-3cc8bb2f4444.json",
+   "tms": "802"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:00Z",
+   "la_sha256": "e67e50a142509c986e49ccea42ceb8ccaec5ab32f7b3f1a461b915f4a8765920",
+   "lido_sha256": "ef132b49a5ef6c7bf1b8114f264044b2c4050c567adbb84641f00dc470c2cc2b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0a/0ad686c3-e895-4f15-b6de-056dfca15559.json",
+   "tms": "815"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:11Z",
+   "la_sha256": "5b84e468db5ad2064a51518ba1aba326001b0124a52b48cb772b2371f45b37ec",
+   "lido_sha256": "22a974f9f022d9f3fa21f2f54f88e5fde0c006afcbd34c4817320580544eac0d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/0f/0fd1d219-10cb-4cc1-86fa-f95c298f3571.json",
+   "tms": "825"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:21Z",
+   "la_sha256": "b84685588603bafdd2e13d8ca2b2c2fa60ad379e4f7a634b96a76caf0102b39c",
+   "lido_sha256": "c7dc06e11e265b3164dff73aab5918afb8e0e1bfa0b7c49aef926d3255af1bb6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/48/4831ea1b-144e-4670-8b94-d3ed8fc8c987.json",
+   "tms": "826"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:06Z",
+   "la_sha256": "6121eaf24d812fb916d68327f26f4a0694e9aeecb1c7c318b27087f31b77a3be",
+   "lido_sha256": "4a334c3ec4e97572bc6a28f3c9316c7ff5000d6e708b7fd1af5dc9656958c959",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/81/81780c2f-9040-4d3b-950f-7373d29effb2.json",
+   "tms": "833"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:57Z",
+   "la_sha256": "71e98fe870750667ece8d44e2e6ac96ab1dcce91ffba4032ac52beb67d89b501",
+   "lido_sha256": "c7fde3b7e2f2e068db6b15f2793e48efc841c96cf301d11f5d8ab3565005b633",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/fa/fa4d6f03-d5a8-452a-9b5b-f413adc6f163.json",
+   "tms": "838"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:39Z",
+   "la_sha256": "dbe061de6486a129477a6374fce66a0a891de8a76d7f19c745cb2369c881db98",
+   "lido_sha256": "4dae6e4bbbe1860d86f83dd5617d354b8207da160bcfdf6f0bf6e6af437a957c",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/b1/b1571b55-f22a-4840-aaa6-e542815c9446.json",
+   "tms": "839"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:43Z",
+   "la_sha256": "1d164f141010a13d2138f8cf600dba7be2de4b9d54092b11043b983e4c95be9f",
+   "lido_sha256": "0286f27dfe542a6827e8c46ba135bd7dcd556959d35f09c9b6b23c80d240fa77",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3b/3b0cc654-c55f-4b95-9e8c-b6118672a898.json",
+   "tms": "840"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:09Z",
+   "la_sha256": "2110e5df09a4990bf5c55a36adfc3a1a9dfab6d76e2c216f7e69bd0322a3a056",
+   "lido_sha256": "8ae9c1c63258402ae094fa08c8f2d8669d98897f8f5fe77db32d4d9e17a3c912",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/af/af1f80e6-0888-42dc-b0fa-1a250d771549.json",
+   "tms": "843"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:36Z",
+   "la_sha256": "274f3cc1090d7c6c7e9f98ee4fb5b82d00828b124a61f22c36dbed9bf145bc0a",
+   "lido_sha256": "1b62fdc7fda5d41c42a21510316252060b1e04b7f8dad1281c93d6a66dcff1c7",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/721afb60-cbbe-4e30-a758-cc4cb63a4533.json",
+   "tms": "846"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:49Z",
+   "la_sha256": "873f98838fa7f40ea41d1e9053ff74a85139c3d62547c2ede8ff8aeec1638a1e",
+   "lido_sha256": "8b588f801c1f8f10de53bdc504424d9c1199320f9e0fb640963b25c23554b967",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/dd/dd4930d2-7e57-4656-9ccf-69a18d29d248.json",
+   "tms": "849"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:53Z",
+   "la_sha256": "79176364fa47dfdfd4edb7232bcf98b1cf3bf7eca313836d1d98f8820ecf6e77",
+   "lido_sha256": "3b3ca7850061cc0876b3367d2661bdad3ce7f445262c385462099b34904b7ec1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c3/c3b04549-a3f2-42b3-9986-ff73d0c50862.json",
+   "tms": "850"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:33Z",
+   "la_sha256": "52ed79721ac38b5d6a56e2ffabe5cf62f5b2cdd8b257c3aa81f1f8214afe2b6a",
+   "lido_sha256": "f7e542ab624ad01c4f16aa248ca47c5e7734f9f0363d9465df6b0b6613e356bd",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/85/85c4179d-942d-42ca-8493-b0122320a8f0.json",
+   "tms": "855"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:42Z",
+   "la_sha256": "97bd23d653dd8c78dbbf4211b36c533786b0c5c1dce007815aa3462601a7c6e1",
+   "lido_sha256": "f7d13d2df2bdef7b2f34d1c69813e3a07390bdc5d9cd7134c9cc14d71de38c8a",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/72/72a14316-74f2-404a-a548-29e45bf05966.json",
+   "tms": "858"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:01Z",
+   "la_sha256": "e701940b1c56a21ec209915328999e15effa1317884820b391be0bf72a5bebf3",
+   "lido_sha256": "0195619344fe7dd07aa7bffd6019c60691e4d9e6af26b825f7035189148099e6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/e3/e3aa7c5a-cc97-4aba-a97d-36cb2c7e8a0a.json",
+   "tms": "860"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:53Z",
+   "la_sha256": "fa0321ab72bb662d882be9e4632da900e6c33f9e6129f647de117e1609b4bc05",
+   "lido_sha256": "c5b8042403f8961dcc23ccbfec5836011d6fa13c59b2913cd9afe826fae0e948",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/47/47785597-fd7f-471d-9ea2-f66465150351.json",
+   "tms": "861"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:10Z",
+   "la_sha256": "1a7cc934ddef4f438397ad792cdbaf836df49e16b5e36bdc5c42a1da06671930",
+   "lido_sha256": "5a8b7fe465ae4c72effa1b0b4aa5375c7445dd5732ac6908ea0df24cca261384",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/81/81e96129-fc4c-4d33-b4bd-b2d019daa78e.json",
+   "tms": "867"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:11Z",
+   "la_sha256": "665c1f1db3c23536a6697d868b853710ad8fc5e675efe335905d1b002147d69a",
+   "lido_sha256": "d32f7b2029e41901a2208669b6db2354fa93c8102e9152382c0a3cb2d71584d8",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/f2/f2b3b242-07e0-4c73-9441-a50e7508d754.json",
+   "tms": "882"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:07Z",
+   "la_sha256": "04a71bf0646e4d7ae174e25c22d3c802978651dfe3aad8894fe0a635eee8990e",
+   "lido_sha256": "129ee5fb976709e1160818f0f88e3e46830dd9ce8542b710d936bff1d6ff916b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d1/d126165b-40cb-4171-aea6-4cbccff456c7.json",
+   "tms": "885"
+  },
+  {
+   "fetched_at": "2026-11-04T04:49:52Z",
+   "la_sha256": "924bdd8f8754137b79e2d2e7352f07c84b214b935af39738a646c23417eed8f7",
+   "lido_sha256": "bd24c8778678d5c0dbbbf7fc873460020f33ccfa45765c295cd5e5246a8c7ce6",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8c/8c9d18c1-9627-4f56-b245-0b2b1046baa1.json",
+   "tms": "886"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:56Z",
+   "la_sha256": "91dd5bddb0e85571d3388102ea5c5834dc728629a0553b85302d023fd773267a",
+   "lido_sha256": "7b28213b06e43ce494fe24fe5fcc3f53a2f15c985487cca52882669ca2c9320f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/6b/6bde133d-ceb9-4bb1-87c7-ec72eee5d240.json",
+   "tms": "887"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:16Z",
+   "la_sha256": "2c6f15c39559096e6a47734992710fab5fbb23bc9ad39ac02cf6250dd37e3d40",
+   "lido_sha256": "2423595690a09ccd69bd16161b683a212b72f2dc433ac681648369eae8a916be",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/cf/cfdbc60d-1f24-49af-88b9-0d98388fb9a7.json",
+   "tms": "889"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:40Z",
+   "la_sha256": "47b98601b851e362ab9e464301080079c039ccd441eb37588366092039359f52",
+   "lido_sha256": "2f3ecad269b7e43360304931d7b434e5a4533534ef1709d58f7ef84491947f4d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/81/81335283-c1d4-4c69-8971-f39e86b55b32.json",
+   "tms": "905"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:26Z",
+   "la_sha256": "b3bf6cbf8788b7bf4ac64183fc773a46550be9b5257f46960bb6b3a5af2aab23",
+   "lido_sha256": "7113e94642aa465147551b47c53e7762c636366d1c710f6242e9d3d48094a918",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/3c/3c92278e-3cf3-4348-a673-3c61cb1d8f9c.json",
+   "tms": "907"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:36Z",
+   "la_sha256": "4afeb68075a704f0ff0be8284c4ad2787f8d6a32d3d1c14bfa902bc7eb4308cc",
+   "lido_sha256": "04a52246ddcbef444577fe1032c6718c65038e07d4f1f8ae11eb0a6a2533a716",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a4/a4d4ab26-ce20-436c-a6c1-596581d8a595.json",
+   "tms": "912"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:59Z",
+   "la_sha256": "d14f267dfad2bc9e4c6beff5a54f2c72f2e3fa0d419a37efb2b191259f0365fa",
+   "lido_sha256": "3705566b85d2d39949dfbf39fd060a7cac5a96458ec7495baedd40f0e1aec122",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/ef/ef6ab838-7819-42d3-8f61-5a1965316a85.json",
+   "tms": "914"
+  },
+  {
+   "fetched_at": "2026-11-04T04:53:13Z",
+   "la_sha256": "41ad1a3624f974ed1c3f4591f5a8e6f91ebab0a94addcf5575375c72a6e26081",
+   "lido_sha256": "14c1db0ef5a4ad5b42656f5751673862cd76ab190ded1e720a28ed816679e26e",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/86/86f6b976-c3b2-42f9-97af-2442327eb9c6.json",
+   "tms": "926"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:56Z",
+   "la_sha256": "9c76c8f59ef467b824bb175aa356dcfa98ec0dec18faced47eb385e80a587b7f",
+   "lido_sha256": "6b0fcac35f3f904993d5a18852d05a4a2c3e81189d64acb504497ef451a2710b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/71/7148f657-e3a0-4355-9c4e-b3ab2a20e495.json",
+   "tms": "935"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:47Z",
+   "la_sha256": "e4ea19b5a987816ccfd93e6e7f7135b5c1df9052caeab7774d3336bc6ba480fc",
+   "lido_sha256": "d319423aed2526f05f1869cfd02ea851e18404a49011f787447a10e61b461660",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8a/8ae3a8e8-99bf-446b-83d7-7f7aa074f164.json",
+   "tms": "939"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:51Z",
+   "la_sha256": "9ecfe57daf2c133946bfbcdabf0fb68e1714b18b0023fdfdc6344f38102b8100",
+   "lido_sha256": "17f8335b3a6eeb73c60be1c410f92233120a6ef039e2d665c65d58d845ee0772",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/82/829b2e84-fb88-436b-804e-21147a4c974c.json",
+   "tms": "94"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:58Z",
+   "la_sha256": "5f3074f855272ff8dc2cbb6f7ba460eb4d719770f029912c38442d850b33154e",
+   "lido_sha256": "5bed2287ac42a84639c7af3befd242f645e9c5674b85b9bbf14505e08e411261",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/be/be8b7664-e652-4118-93b3-965debb0cf2a.json",
+   "tms": "942"
+  },
+  {
+   "fetched_at": "2026-11-04T04:55:17Z",
+   "la_sha256": "f09500b604f8de1220df24e3fb0908d6f0892bada39c5aab70f1368311812cc1",
+   "lido_sha256": "6534971e700d5194ec573aadd8e7986569d7479c93c9e31f3b2d23eabddc7b3b",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a8/a8e4621a-5a35-4397-a324-702edeec1595.json",
+   "tms": "944"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:58Z",
+   "la_sha256": "aa441c79ee41c2523e899b45bdf700aad080702d070ce5976c04941d81213c6c",
+   "lido_sha256": "06aefb85eca0cf1ab2d7e214de28e6f848d582b453f8198f72c7f13e25d0bcbc",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/c1/c1ec8427-5474-441e-81f0-45351d7f82c7.json",
+   "tms": "950"
+  },
+  {
+   "fetched_at": "2026-11-04T04:59:39Z",
+   "la_sha256": "9a07aec632d94df732b6bcd1064b2cdcd5df1669f493d28cbc5b1d1742972013",
+   "lido_sha256": "334b708dd220041802894deb58dc1e1028c93756b68414e21fc76ea7af0abafb",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8d/8dafa2c2-e647-40e5-863d-38d6674ec251.json",
+   "tms": "957"
+  },
+  {
+   "fetched_at": "2026-11-04T04:48:22Z",
+   "la_sha256": "2760e44b5463824d8daef2c7a86f07cc0b34a3e7763d620ae504f503f5daf852",
+   "lido_sha256": "d7e3d78a548b9e220a9b132f59c5439aac8b33f0d517253a21c8ed94a355d802",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/12/12d65aec-27af-4aa5-8e07-939dd0ea4836.json",
+   "tms": "964"
+  },
+  {
+   "fetched_at": "2026-11-04T04:56:58Z",
+   "la_sha256": "4cb2e4faa37b220b2c2a9279cc2b13b65aa92b09b09526272200883fa2b9fe6e",
+   "lido_sha256": "5ca6f72640a562265bf2ae5c148d5fb853d5b567b78d315de76596bb495f817f",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/40/4053a49f-0392-419b-bd3a-4ae0f8ed0724.json",
+   "tms": "967"
+  },
+  {
+   "fetched_at": "2026-11-04T04:52:35Z",
+   "la_sha256": "9b3b07bbe49dfc75c09f8c955ac76bc3056236462e2f729d9665ce84c38ab1b4",
+   "lido_sha256": "c88a8d290cc54dd684111045505127ffb9abcfd8999c6faaa567370b0778c8bf",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/63/633d9763-41e0-4ff9-b3bc-f652698c759f.json",
+   "tms": "975"
+  },
+  {
+   "fetched_at": "2026-11-04T04:50:54Z",
+   "la_sha256": "b7f5a546c9ec6dc67e0489250f0b0fbc9bb2361965999b8e25064a7c422be541",
+   "lido_sha256": "96a9be7479e3a48244b83e7491b0130a24775e2fede4820c4faff3708bda6597",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/74/7432083b-c447-4af5-855c-aa6648a74011.json",
+   "tms": "976"
+  },
+  {
+   "fetched_at": "2026-11-04T04:58:55Z",
+   "la_sha256": "450fa9d3fe54419d65a8200b89deeb598440cccc514b78ff793f07da30e0c77e",
+   "lido_sha256": "710d41442e722892b7d7e63d5bb30d2bc93016119641e07ad6843a87d33ed533",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/a8/a8f9255a-0dc2-417c-8244-df00ff7f10fb.json",
+   "tms": "979"
+  },
+  {
+   "fetched_at": "2026-11-04T05:00:05Z",
+   "la_sha256": "61ffaa137237e39a73f6666f42c0c3e5843f0e1d4d266dbe84ba1817ad73e49a",
+   "lido_sha256": "4630430014f60bd3bd0ae8c41503f7a08ee6ad16bd75e2b6c13957dea45a70c3",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/1b/1b7eac77-5793-4bd3-ad75-a7fdc23eaadd.json",
+   "tms": "980"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:49Z",
+   "la_sha256": "394d39bc88445ece2b2e37a4e4cffc0d42f3e451412c48843d0e1c4b0d6d0c5a",
+   "lido_sha256": "722b5856ee324cac1f5d4ed028d0dfb48c4f0319ae291f7331bd39c3914418b1",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/28/28d7f757-259e-45da-b43c-606a4b41255f.json",
+   "tms": "983"
+  },
+  {
+   "fetched_at": "2026-11-04T04:51:05Z",
+   "la_sha256": "a1f64e7337cac778b345a8a66d4568a5adc1c05ddc442712b31aa683f046fbf0",
+   "lido_sha256": "b89f3ec6b1de9d7e3fadd5a7236756f517ec9bf0fec62c305d6df9944e2f93ce",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/61/615edb3d-cf01-46f6-b743-b99216564e76.json",
+   "tms": "984"
+  },
+  {
+   "fetched_at": "2026-11-04T04:54:03Z",
+   "la_sha256": "b378c10a82389cb98539b9146453b70620a2cb7a2cba1b31df6310de67505ccc",
+   "lido_sha256": "c7b034528d32a69a629740f5499c472f69cab1fdc6c29b1bb576246e00512269",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/8e/8e9f1dcd-24bd-478d-9c5a-477e487ec351.json",
+   "tms": "985"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:14Z",
+   "la_sha256": "bbb9754b3508a1b7406a4fd0d7c336510f79ce54577677fb99c4c236c927e1b2",
+   "lido_sha256": "9c4e3682c20a4ecdad76af0c8d93c92ca981743f694c677e221ea60f21cf27a0",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/d5/d58ce996-2f25-4cb7-9735-95b97a58f9cd.json",
+   "tms": "990"
+  },
+  {
+   "fetched_at": "2026-11-04T04:57:17Z",
+   "la_sha256": "79f6706270758b9b843233cfc08a45d1097f5beba30b0fac2e1ef2817a25141c",
+   "lido_sha256": "60c3baf2eb427bfe068fba075350e9176957c9ee1d2661a5f005d482b723488d",
+   "object": "https://ycba-lux.s3.amazonaws.com/v3/object/2d/2d22a8d0-851d-4480-bad4-e5a7b7551251.json",
+   "tms": "992"
+  }
+ ],
+ "palomar_commit": "759d935",
+ "people_sha256": "8be522b4ab3d3de4f27d46c9500eceddceac5cda7414d5add2de62ca110b2bf6",
+ "source": {
+  "activity_page": "https://ycba-lux.s3.amazonaws.com/activity_stream/page1.json",
+  "activity_page_sha256": "e781e5ba10a7f059063dac2b4b847046e71134db1cad6f8c26e4f418a62664c8",
+  "lido": "https://harvester-bl.britishart.yale.edu/oaicatmuseum/OAIHandler (GetRecord, lido)",
+  "sample": "HumanMadeObject items of the page, shuffled with seed 8, the first with a LIDO record",
+  "seed": 8
+ }
+}
