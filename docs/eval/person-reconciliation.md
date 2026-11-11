@@ -182,7 +182,9 @@ same 35 (all 36 Alexandre Dumas mentions go to the son, first in id order) and
   and the Jaccard's top proposal is never wrong outside that pair. Both
   sentences now point here. The claim may still hold for looser names (a
   transcribed statement of responsibility, a search string), which this eval
-  does not test.
+  does not test. Transcribed statements of responsibility are measured by
+  the hard benchmark (lot N3,
+  [`person-reconciliation-hard.md`](./person-reconciliation-hard.md)).
 
 ## After dates (M3)
 

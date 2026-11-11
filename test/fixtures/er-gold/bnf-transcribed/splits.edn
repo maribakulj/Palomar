@@ -1,0 +1,648 @@
+{:rule "design corpora: bucket < 75 :train, else :dev; bucket = first 4 bytes of SHA-256(salt + key), big-endian, mod 100. Test corpora: :test, unless a design mention has the key (then set aside). key = the truth ($3), else \"name:\" + no-match-key (surname + first initial)"
+ :salt "palomar-n3-design/"
+ :proportions {:train 75, :dev 25}
+ :assignments
+ {"10504289"
+  :train
+  "10516499"
+  :train
+  "10739960"
+  :test
+  "10746725"
+  :dev
+  "10961816"
+  :dev
+  "10977863"
+  :dev
+  "11024982"
+  :dev
+  "11098123"
+  :dev
+  "11199126"
+  :train
+  "11205164"
+  :train
+  "11213465"
+  :train
+  "11217386"
+  :train
+  "11226763"
+  :train
+  "11477926"
+  :dev
+  "11511983"
+  :train
+  "11885918"
+  :train
+  "11886331"
+  :train
+  "11888409"
+  :dev
+  "11889953"
+  :test
+  "11890133"
+  :test
+  "11891092"
+  :train
+  "11891457"
+  :dev
+  "11891679"
+  :test
+  "11893186"
+  :test
+  "11893937"
+  :train
+  "11894144"
+  :train
+  "11894145"
+  :dev
+  "11894146"
+  :train
+  "11896351"
+  :test
+  "11897143"
+  :dev
+  "11897220"
+  :dev
+  "11897556"
+  :train
+  "11898724"
+  :train
+  "11899425"
+  :test
+  "11899763"
+  :train
+  "11902577"
+  :test
+  "11904287"
+  :dev
+  "11904318"
+  :train
+  "11904660"
+  :test
+  "11907814"
+  :test
+  "11908064"
+  :test
+  "11910310"
+  :train
+  "11910450"
+  :test
+  "11912223"
+  :test
+  "11913405"
+  :train
+  "11913547"
+  :test
+  "11914283"
+  :train
+  "11915270"
+  :dev
+  "11915271"
+  :dev
+  "11916562"
+  :train
+  "11917053"
+  :train
+  "11918633"
+  :train
+  "11920094"
+  :train
+  "11921219"
+  :train
+  "11921626"
+  :train
+  "11922639"
+  :train
+  "11922710"
+  :dev
+  "11923599"
+  :test
+  "11923600"
+  :test
+  "11923601"
+  :train
+  "11923603"
+  :test
+  "11924674"
+  :dev
+  "11924795"
+  :test
+  "11924796"
+  :test
+  "11925504"
+  :test
+  "11925505"
+  :test
+  "11926193"
+  :train
+  "11926577"
+  :test
+  "11927417"
+  :test
+  "11927984"
+  :train
+  "11928893"
+  :test
+  "11929807"
+  :train
+  "11950335"
+  :train
+  "11986326"
+  :train
+  "11990679"
+  :dev
+  "12012996"
+  :test
+  "12015836"
+  :train
+  "12026610"
+  :dev
+  "12032207"
+  :test
+  "12039209"
+  :dev
+  "12041947"
+  :test
+  "12052350"
+  :train
+  "12056750"
+  :test
+  "12056844"
+  :train
+  "12083386"
+  :train
+  "12095207"
+  :train
+  "12096469"
+  :dev
+  "12103489"
+  :dev
+  "12105472"
+  :train
+  "12105476"
+  :dev
+  "12110751"
+  :train
+  "12111196"
+  :train
+  "12127798"
+  :test
+  "12128736"
+  :test
+  "12133148"
+  :dev
+  "12150008"
+  :train
+  "12151599"
+  :dev
+  "12165755"
+  :train
+  "12167509"
+  :test
+  "12197217"
+  :dev
+  "12208509"
+  :train
+  "12222859"
+  :dev
+  "12224946"
+  :train
+  "12235851"
+  :train
+  "12311529"
+  :train
+  "12364103"
+  :train
+  "12404952"
+  :train
+  "12459108"
+  :test
+  "12467883"
+  :test
+  "12523385"
+  :test
+  "12589138"
+  :train
+  "12617482"
+  :train
+  "12619951"
+  :train
+  "12624439"
+  :train
+  "12624873"
+  :dev
+  "12625505"
+  :test
+  "12639974"
+  :test
+  "12641835"
+  :train
+  "12709739"
+  :test
+  "12743607"
+  :test
+  "12772637"
+  :test
+  "12899421"
+  :test
+  "12933692"
+  :train
+  "12967758"
+  :dev
+  "13021834"
+  :dev
+  "13162820"
+  :train
+  "13164811"
+  :test
+  "13321102"
+  :train
+  "13561018"
+  :train
+  "13572918"
+  :dev
+  "13610295"
+  :test
+  "13751007"
+  :test
+  "13757335"
+  :test
+  "13892205"
+  :dev
+  "13931996"
+  :test
+  "14004451"
+  :train
+  "14063836"
+  :train
+  "14094082"
+  :test
+  "14098789"
+  :train
+  "14120268"
+  :dev
+  "14148427"
+  :test
+  "14227444"
+  :test
+  "14413683"
+  :train
+  "14462001"
+  :test
+  "14471401"
+  :train
+  "14522820"
+  :test
+  "14523160"
+  :dev
+  "14592533"
+  :test
+  "14596149"
+  :test
+  "14655155"
+  :test
+  "14700221"
+  :test
+  "15009513"
+  :test
+  "15312632"
+  :train
+  "15591532"
+  :train
+  "15593364"
+  :test
+  "15604588"
+  :train
+  "15613696"
+  :dev
+  "15654970"
+  :train
+  "15991739"
+  :test
+  "16521041"
+  :test
+  "16567734"
+  :train
+  "16582568"
+  :dev
+  "16618201"
+  :train
+  "16754554"
+  :train
+  "16816266"
+  :dev
+  "16902130"
+  :test
+  "16918027"
+  :train
+  "16940719"
+  :train
+  "16940721"
+  :train
+  "16994840"
+  :train
+  "17008338"
+  :train
+  "17713682"
+  :train
+  "17733031"
+  :test
+  "17868647"
+  :test
+  "17996481"
+  :train
+  "18177191"
+  :train
+  "18177193"
+  :train
+  "18177196"
+  :train
+  "18241974"
+  :train
+  "name:academy g"
+  :train
+  "name:afrique"
+  :test
+  "name:aigle g"
+  :train
+  "name:albe m"
+  :train
+  "name:aplh"
+  :train
+  "name:arlaud r"
+  :test
+  "name:arvay p"
+  :train
+  "name:audiard m"
+  :test
+  "name:bahiaoui d"
+  :test
+  "name:barlet p"
+  :test
+  "name:baudelaire"
+  :train
+  "name:baudelaire c"
+  :train
+  "name:baudier p"
+  :train
+  "name:beltz r"
+  :train
+  "name:bernard d"
+  :test
+  "name:beuzon j"
+  :test
+  "name:boudot-lamotte e"
+  :test
+  "name:boyden j"
+  :dev
+  "name:brenner j"
+  :train
+  "name:bronstein e"
+  :train
+  "name:brosse-le-vagneur"
+  :dev
+  "name:calvet-rogniat"
+  :test
+  "name:carle r"
+  :train
+  "name:carlotti j"
+  :test
+  "name:carroll"
+  :train
+  "name:carroll j"
+  :dev
+  "name:cendrars b"
+  :test
+  "name:chambelland g"
+  :train
+  "name:chardonne j"
+  :train
+  "name:chase l"
+  :train
+  "name:chevrillon a"
+  :train
+  "name:chopy c"
+  :test
+  "name:clouzot h"
+  :test
+  "name:club s"
+  :test
+  "name:colette"
+  :train
+  "name:collodi c"
+  :train
+  "name:cor p"
+  :train
+  "name:dantec d"
+  :train
+  "name:davis j"
+  :train
+  "name:defoe d"
+  :train
+  "name:delamaire m"
+  :test
+  "name:delannoy j"
+  :test
+  "name:deleuil s"
+  :train
+  "name:devigne r"
+  :dev
+  "name:dike v"
+  :train
+  "name:disney w"
+  :dev
+  "name:dufour e"
+  :train
+  "name:duvivier j"
+  :test
+  "name:edwards h"
+  :test
+  "name:ellerbrock k"
+  :train
+  "name:erel p"
+  :train
+  "name:essenine s"
+  :train
+  "name:faivre h"
+  :test
+  "name:farneti c"
+  :train
+  "name:french"
+  :test
+  "name:galland a"
+  :test
+  "name:gerard"
+  :train
+  "name:gershwin i"
+  :train
+  "name:gothot-mersch c"
+  :test
+  "name:grandsire e"
+  :test
+  "name:grelbin j"
+  :dev
+  "name:guastalla p"
+  :test
+  "name:guezennec l"
+  :test
+  "name:guillemin h"
+  :test
+  "name:hanau"
+  :train
+  "name:harcourt r"
+  :train
+  "name:hofer a"
+  :dev
+  "name:hughes w"
+  :dev
+  "name:hugo v"
+  :train
+  "name:hugues w"
+  :train
+  "name:jennep"
+  :train
+  "name:josse c"
+  :test
+  "name:josso c"
+  :test
+  "name:julian-damazy w"
+  :test
+  "name:klerx s"
+  :test
+  "name:labe l"
+  :train
+  "name:lanoux a"
+  :test
+  "name:lanz r"
+  :test
+  "name:lauvriere e"
+  :train
+  "name:lewis j"
+  :train
+  "name:lewis l"
+  :train
+  "name:liebens h"
+  :test
+  "name:lison h"
+  :train
+  "name:loti-viaud"
+  :dev
+  "name:ludwig a"
+  :test
+  "name:magny c"
+  :train
+  "name:magny o"
+  :dev
+  "name:maiakowsky v"
+  :train
+  "name:malassis e"
+  :test
+  "name:mallarme s"
+  :train
+  "name:marcireau j"
+  :train
+  "name:maret j"
+  :train
+  "name:matheus i"
+  :test
+  "name:mauriac c"
+  :test
+  "name:mauves-sur-loire"
+  :test
+  "name:mitchell c"
+  :train
+  "name:moody"
+  :dev
+  "name:mortier l"
+  :test
+  "name:mouveau p"
+  :train
+  "name:nardini"
+  :train
+  "name:naudin b"
+  :train
+  "name:nougier l"
+  :train
+  "name:pastoureau m"
+  :train
+  "name:pecnard j"
+  :test
+  "name:piron m"
+  :test
+  "name:poilliot g"
+  :dev
+  "name:prodomides j"
+  :test
+  "name:rainger r"
+  :train
+  "name:riou"
+  :test
+  "name:robin l"
+  :train
+  "name:romains j"
+  :train
+  "name:ronceray"
+  :dev
+  "name:ropes a"
+  :test
+  "name:rostand j"
+  :test
+  "name:roubille"
+  :test
+  "name:sainte-croix"
+  :train
+  "name:saintyves p"
+  :test
+  "name:salle b"
+  :train
+  "name:santaolaria v"
+  :test
+  "name:schubert f"
+  :train
+  "name:schurig d"
+  :test
+  "name:sennep"
+  :train
+  "name:serres r"
+  :test
+  "name:simond c"
+  :train
+  "name:sodergran e"
+  :dev
+  "name:spaak c"
+  :test
+  "name:stendhal"
+  :test
+  "name:stevenson r"
+  :dev
+  "name:streadman r"
+  :train
+  "name:super o"
+  :test
+  "name:thieck f"
+  :train
+  "name:thomas j"
+  :train
+  "name:topia a"
+  :train
+  "name:traynier j"
+  :test
+  "name:tubergue j"
+  :train
+  "name:verain j"
+  :test
+  "name:veron j"
+  :test
+  "name:warren h"
+  :train
+  "name:washburn c"
+  :train
+  "name:wheeler b"
+  :train
+  "name:wright c"
+  :train
+  "name:wright s"
+  :train
+  "name:yvonnet f"
+  :test}}

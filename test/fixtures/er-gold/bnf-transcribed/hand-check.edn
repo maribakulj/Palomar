@@ -1,0 +1,68 @@
+;; Hand check of the hard benchmark's gold (lot N3), 2026-11-11, before the freeze.
+;; :sample is (hand-check-sample benchmark 10): train only, stratified (one-word linked
+;; mentions, homonym cases, easy cases, variant/pseudonym/hand links, no-match cases), each
+;; stratum in SHA-256 order of the mention id. Each pair was read against the record's 245,
+;; its headings and the pool. :verdict :correct = the transcribed name is that person (linked)
+;; / no authority of the pool is that person (no-match).
+{:sample
+ {:one-word
+  [{:id ["cb350990154" "f" 0 0], :text "Colette", :label :linked, :reason :surname, :verdict :correct, :truth "11929807"}
+   {:id ["cb311263518" "a" 0 0], :text "Lavergnolle", :label :linked, :reason :hand, :verdict :correct, :role "Traduction nouvelle par", :truth "10504289"}
+   {:id ["cb354268255" "f" 0 0], :text "Colette", :label :linked, :reason :surname, :verdict :correct, :truth "11929807"}
+   {:id ["cb34752733j" "f" 0 0], :text "Colette", :label :linked, :reason :surname, :verdict :correct, :truth "11929807"}
+   {:id ["cb34972941g" "f" 0 0], :text "Colette", :label :linked, :reason :surname, :verdict :correct, :truth "11929807"}
+   {:id ["cb34566782k" "f" 0 0], :text "Colette", :label :linked, :reason :surname, :verdict :correct, :truth "11929807"}
+   {:id ["cb38487019x" "f" 0 0], :text "Roland-Bernard", :label :linked, :reason :variant, :verdict :correct, :truth "14063836"}
+   {:id ["cb34660672q" "f" 0 0], :text "Colette", :label :linked, :reason :surname, :verdict :correct, :truth "11929807"}
+   {:id ["cb41634291x" "f" 0 0], :text "Colette", :label :linked, :reason :surname, :verdict :correct, :truth "11929807"}
+   {:id ["cb31126352m" "a" 0 0], :text "Lavergnolle", :label :linked, :reason :hand, :verdict :correct, :role "Traduction nouvelle par", :truth "10504289"}]
+  :homonym
+  [{:id ["cb38363742t" "g" 0 0], :text "Lewis Carroll", :label :linked, :reason :surname, :verdict :correct, :truth "11885918"}
+   {:id ["cb40985810d" "f" 0 0], :text "Lewis Carroll", :label :linked, :reason :surname, :verdict :correct, :truth "11885918"}
+   {:id ["cb34992190w" "f" 0 0], :text "Jean-Paul Deremble", :label :linked, :reason :surname, :verdict :correct, :truth "12105472"}
+   {:id ["cb378255372" "f" 0 0], :text "Léon Daudet", :label :linked, :reason :surname, :verdict :correct, :truth "11898724"}
+   {:id ["cb45441155g" "f" 0 0], :text "J.-H. Rosny Aîné", :label :linked, :reason :surname, :verdict :correct, :truth "11922639"}
+   {:id ["cb47581170n" "f" 0 0], :text "J.-H. Rosny aîné", :label :linked, :reason :surname, :verdict :correct, :truth "11922639"}
+   {:id ["cb40894300h" "g" 0 0], :text "J. H. Rosny aîné", :label :linked, :reason :surname, :verdict :correct, :role "de", :truth "11922639"}
+   {:id ["cb412678394" "f" 0 0], :text "J.-H. Rosny aîné", :label :linked, :reason :surname, :verdict :correct, :role "par", :truth "11922639"}
+   {:id ["cb41637360n" "f" 0 0], :text "Léon Daudet", :label :linked, :reason :surname, :verdict :correct, :truth "11898724"}
+   {:id ["cb41637374b" "f" 0 0], :text "Léon Daudet", :label :linked, :reason :surname, :verdict :correct, :truth "11898724"}]
+  :easy
+  [{:id ["cb31126353z" "f" 0 0], :text "Edgard Poe", :label :linked, :reason :surname, :verdict :correct, :truth "11920094"}
+   {:id ["cb35011225d" "g" 0 1], :text "Michel Desbruères", :label :linked, :reason :surname, :verdict :correct, :role "éd. établie par", :truth "11899763"}
+   {:id ["cb311262572" "f" 0 0], :text "Edgar Allan Poe", :label :linked, :reason :surname, :verdict :correct, :truth "11920094"}
+   {:id ["cb392509594" "g" 1 0], :text "John Tenniel", :label :linked, :reason :surname, :verdict :correct, :role "ill.", :truth "11926193"}
+   {:id ["cb41225487k" "f" 0 0], :text "Pierre Loti", :label :linked, :reason :surname, :verdict :correct, :truth "11913405"}
+   {:id ["cb47072551n" "f" 0 0], :text "Edgar Allan Poe", :label :linked, :reason :surname, :verdict :correct, :truth "11920094"}
+   {:id ["cb32536178s" "f" 0 0], :text "Edgar Allan Poe", :label :linked, :reason :surname, :verdict :correct, :truth "11920094"}
+   {:id ["cb37002295w" "f" 0 0], :text "Colette Renard", :label :linked, :reason :surname, :verdict :correct, :truth "13321102"}
+   {:id ["cb409506806" "f" 0 1], :text "Anne Theis", :label :linked, :reason :surname, :verdict :correct, :truth "12641835"}
+   {:id ["cb350787936" "f" 0 0], :text "Pierre Loti", :label :linked, :reason :surname, :verdict :correct, :truth "11913405"}]
+  :residual
+  [{:id ["cb43827130k" "f" 0 0], :text "Colette Grevoz-Dufour", :label :linked, :reason :variant, :verdict :correct, :truth "15604588"}
+   {:id ["cb371011121" "g" 0 0], :text "Pierre P. Loti-Viaud", :label :linked, :reason :variant, :verdict :correct, :role "éd. établi par", :truth "12083386"}
+   {:id ["cb388474412" "f" 0 0], :text "Colette Sarrey", :label :linked, :reason :variant, :verdict :correct, :truth "14413683"}
+   {:id ["cb376078697" "f" 0 0], :text "Colette Maximin", :label :linked, :reason :variant, :verdict :correct, :truth "12224946"}
+   {:id ["cb34852592p" "f" 0 0], :text "Colette Grevoz", :label :linked, :reason :variant, :verdict :correct, :truth "15604588"}
+   {:id ["cb38901933q" "g" 0 0], :text "Pierre P. Loti-Viaud", :label :linked, :reason :variant, :verdict :correct, :role "éd. établie par", :truth "12083386"}
+   {:id ["cb346403985" "f" 0 0], :text "Lewis Carroll", :label :linked, :reason :hand, :verdict :correct, :truth "11885918"}
+   {:id ["cb37109613p" "f" 0 0], :text "Colette Lovinger", :label :linked, :reason :variant, :verdict :correct, :truth "13561018"}
+   {:id ["cb48655760n" "f" 0 0], :text "Lewis Carroll", :label :linked, :reason :hand, :verdict :correct, :truth "11885918"}
+   {:id ["cb37042021m" "f" 0 0], :text "Colette Lecourt", :label :linked, :reason :variant, :verdict :correct, :truth "12404952"}]
+  :no-match
+  [{:id ["cb318698622" "a" 0 2], :text "Goncourt's Academy", :label :no-match, :reason :no-heading, :verdict :correct, :role "Preface by"}
+   {:id ["cb43404532j" "g" 0 0], :text "Louis-René Nougier", :label :no-match, :reason :no-heading, :verdict :correct, :role "introduction"}
+   {:id ["cb37977991n" "f" 3 0], :text "Léo ROBIN", :label :no-match, :reason :no-heading, :verdict :correct}
+   {:id ["cb331386752" "a" 0 0], :text "Charles Baudelaire", :label :no-match, :reason :no-heading, :verdict :correct, :role "Notice et traduction de"}
+   {:id ["cb38326517z" "f" 0 2], :text "Daniel Defoë", :label :no-match, :reason :no-heading, :verdict :correct}
+   {:id ["cb311262859" "a" 0 0], :text "Grand'Aigle", :label :no-match, :reason :no-heading, :verdict :correct, :role "Illustrations de"}
+   {:id ["cb47460617r" "g" 0 0], :text "Bernard Sallé", :label :no-match, :reason :no-heading, :verdict :correct, :role "traduction de"}
+   {:id ["cb45641163f" "g" 0 0], :text "Karl Ellerbrock", :label :no-match, :reason :no-heading, :verdict :correct, :role "édition critique bilingue par"}
+   {:id ["cb31996882r" "a" 0 0], :text "Jennep", :label :no-match, :reason :no-heading, :verdict :correct, :role "Illustré par"}
+   {:id ["cb37977991n" "f" 1 1], :text "Vernon DIKE", :label :no-match, :reason :no-heading, :verdict :correct}]}
+ :verdicts {:correct 50}
+ :found-and-fixed
+ ;; The first draw of the no-match stratum held one error, fixed before the freeze: the
+ ;; name in the other order was not seen as a namesake; `surname-in-pool?` now reads that too,
+ ;; and the mention is hand-labelled (hand-labels.edn).
+ [{:id ["cb470665088" "g" 0 0] :text "Souvestre Lesbazeilles" :verdict :wrong :was :no-match :now :hand}]}

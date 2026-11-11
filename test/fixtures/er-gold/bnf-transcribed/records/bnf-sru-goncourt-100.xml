@@ -1,0 +1,1311 @@
+<?xml version="1.0" encoding="UTF-8"?><srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/" xmlns="http://catalogue.bnf.fr/namespaces/InterXMarc" xmlns:ixm="http://catalogue.bnf.fr/namespaces/InterXMarc" xmlns:mn="http://catalogue.bnf.fr/namespaces/motsnotices" xmlns:sd="http://www.loc.gov/zing/srw/diagnostic/">
+<srw:version>1.2</srw:version>
+<srw:echoedSearchRetrieveRequest>
+<srw:version>1.2</srw:version>
+<srw:query>(bib.author all "goncourt") and (bib.recordtype any "mon")</srw:query>
+</srw:echoedSearchRetrieveRequest>
+<srw:numberOfRecords>989</srw:numberOfRecords>
+<srw:records>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843730q" type="Bibliographic">   <mxc:leader>00590c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348437300000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843730q</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Théophile Gautier</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Le Roman de la Momie</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843730q</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348661902" type="Bibliographic">   <mxc:leader>00577c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661900000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348661902</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alphonse de Lamartine</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Poésies</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348661902</srw:recordIdentifier>
+<srw:recordPosition>2</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904750x" type="Bibliographic">   <mxc:leader>00606c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047500000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904750x</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1987        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alfred de Vigny</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Poèmes antiques et modernes</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="b">Les Destinées</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1987</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904750x</srw:recordIdentifier>
+<srw:recordPosition>3</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752751g" type="Bibliographic">   <mxc:leader>00561c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527510000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752751g</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Balzac</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Eugénie Grandet</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752751g</srw:recordIdentifier>
+<srw:recordPosition>4</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20111206</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347527713" type="Bibliographic">   <mxc:leader>00571c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527710000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347527713</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Cocteau</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les  Enfants terribles</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347527713</srw:recordIdentifier>
+<srw:recordPosition>5</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34879681d" type="Bibliographic">   <mxc:leader>00578c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34879681000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34879681d</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax   z     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Madame de Sévigné</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Lettres</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34879681d</srw:recordIdentifier>
+<srw:recordPosition>6</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34769081c" type="Bibliographic">   <mxc:leader>00612c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347690810000000</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34769081c</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Victor Hugo</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les Feuilles d'automne (suivi de) Les Rayons et les ombres</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34769081c</srw:recordIdentifier>
+<srw:recordPosition>7</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34771712r" type="Bibliographic">   <mxc:leader>00574c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717120000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34771712r</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">François Mauriac</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Thérèse Desqueyroux</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34771712r</srw:recordIdentifier>
+<srw:recordPosition>8</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347717222" type="Bibliographic">   <mxc:leader>00588c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717220000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347717222</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Paul Éluard</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Derniers poèmes d'amour</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347717222</srw:recordIdentifier>
+<srw:recordPosition>9</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843732d" type="Bibliographic">   <mxc:leader>00617c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348437320000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843732d</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Abbé Prévost</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Histoire du chevalier des Grieux et de Manon Lescaut</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843732d</srw:recordIdentifier>
+<srw:recordPosition>10</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904752m" type="Bibliographic">   <mxc:leader>00585c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047520000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904752m</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1987        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Villiers de l'Isle-Adam</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Contes cruels</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1987</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904752m</srw:recordIdentifier>
+<srw:recordPosition>11</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb349047429" type="Bibliographic">   <mxc:leader>00554c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047420000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb349047429</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Mallarmé</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Poésies</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb349047429</srw:recordIdentifier>
+<srw:recordPosition>12</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34866192r" type="Bibliographic">   <mxc:leader>00590c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661920000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34866192r</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Madame de Lafayette</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">La Princesse de Clèves</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34866192r</srw:recordIdentifier>
+<srw:recordPosition>13</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34866182f" type="Bibliographic">   <mxc:leader>00576c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661820000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34866182f</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Pierre de Ronsard</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les Amours</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34866182f</srw:recordIdentifier>
+<srw:recordPosition>14</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34778403n" type="Bibliographic">   <mxc:leader>00581c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347784030000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34778403n</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">François Villon</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Poésies</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34778403n</srw:recordIdentifier>
+<srw:recordPosition>15</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347527535" type="Bibliographic">   <mxc:leader>00552c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527530000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347527535</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Colette</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Chéri</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347527535</srw:recordIdentifier>
+<srw:recordPosition>16</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20111206</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752763g" type="Bibliographic">   <mxc:leader>00600c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527630000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752763g</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="142" ind1="1" ind2="0">      <mxc:subfield code="a">Igrok</mxc:subfield>      <mxc:subfield code="m">français</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Dostoïevski</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Le  Joueur</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752763g</srw:recordIdentifier>
+<srw:recordPosition>17</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348688836" type="Bibliographic">   <mxc:leader>00576c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348688830000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348688836</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax   z     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Pascal</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Pensées 1 à VIII</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348688836</srw:recordIdentifier>
+<srw:recordPosition>18</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348627437" type="Bibliographic">   <mxc:leader>00604c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627430000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348627437</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Paul Verlaine</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Poèmes saturniens</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="b">(suivi de) Sagesse</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348627437</srw:recordIdentifier>
+<srw:recordPosition>19</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34771714f" type="Bibliographic">   <mxc:leader>00626c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717140000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34771714f</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Arthur Rimbaud</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Poésies</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="b">(suivi de) une Saison en enfer</mxc:subfield>      <mxc:subfield code="b">(et des) Illuminations</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34771714f</srw:recordIdentifier>
+<srw:recordPosition>20</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347578540" type="Bibliographic">   <mxc:leader>00592c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347578540000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347578540</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d               </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Rousseau</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les Rêveries du promeneur solitaire</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347578540</srw:recordIdentifier>
+<srw:recordPosition>21</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34757844p" type="Bibliographic">   <mxc:leader>00572c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347578440000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34757844p</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Aragon</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les Yeux d'Elsa</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34757844p</srw:recordIdentifier>
+<srw:recordPosition>22</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348661844" type="Bibliographic">   <mxc:leader>00597c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661840000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348661844</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jules Barbey d'Aurevilly</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Le Chevalier Des Touches</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348661844</srw:recordIdentifier>
+<srw:recordPosition>23</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34866194f" type="Bibliographic">   <mxc:leader>00574c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661940000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34866194f</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax   z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Michel de Montaigne</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Essais</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34866194f</srw:recordIdentifier>
+<srw:recordPosition>24</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb349047440" type="Bibliographic">   <mxc:leader>00570c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047440000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb349047440</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Montesquieu</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Lettres persanes</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb349047440</srw:recordIdentifier>
+<srw:recordPosition>25</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843724s" type="Bibliographic">   <mxc:leader>00571c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348437240000000</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843724s</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Prosper Mérimée</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Colomba</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843724s</srw:recordIdentifier>
+<srw:recordPosition>26</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752755v" type="Bibliographic">   <mxc:leader>00564c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527550000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752755v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Émile Zola</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Thérèse Raquin</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752755v</srw:recordIdentifier>
+<srw:recordPosition>27</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20111206</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347527655" type="Bibliographic">   <mxc:leader>00569c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34752765000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347527655</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Boris Vian</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">L' Arrache-cœur</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347527655</srw:recordIdentifier>
+<srw:recordPosition>28</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34778395v" type="Bibliographic">   <mxc:leader>00594c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347783950000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34778395v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Chateaubriand</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Atala</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="b">(suivi de) René</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34778395v</srw:recordIdentifier>
+<srw:recordPosition>29</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34868885w" type="Bibliographic">   <mxc:leader>00579c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348688850000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34868885w</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alexandre Dumas</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">La Tulipe noire</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34868885w</srw:recordIdentifier>
+<srw:recordPosition>30</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34862745x" type="Bibliographic">   <mxc:leader>00578c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627450000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34862745x</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Benjamin Constant</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Adolphe</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34862745x</srw:recordIdentifier>
+<srw:recordPosition>31</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843726g" type="Bibliographic">   <mxc:leader>00589c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348437260000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843726g</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jean de La Fontaine</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Fables</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="e">livres I à IX</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843726g</srw:recordIdentifier>
+<srw:recordPosition>32</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904746p" type="Bibliographic">   <mxc:leader>00580c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047460000000</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904746p</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1987        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jules Michelet</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Le Peuple</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="a">1987</mxc:subfield>      <mxc:subfield code="d">1984 -</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904746p</srw:recordIdentifier>
+<srw:recordPosition>33</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348661964" type="Bibliographic">   <mxc:leader>00565c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661960000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348661964</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jean Giono</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Regain</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348661964</srw:recordIdentifier>
+<srw:recordPosition>34</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34871676w" type="Bibliographic">   <mxc:leader>00619c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348716760000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34871676w</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Carles [i.e. Charles] - Ferdinand Ramuz</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">La Grande peur dans la montagne</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34871676w</srw:recordIdentifier>
+<srw:recordPosition>35</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347717164" type="Bibliographic">   <mxc:leader>00589c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717160000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347717164</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alphonse Daudet</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les Lettres de mon moulin</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347717164</srw:recordIdentifier>
+<srw:recordPosition>36</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34868887k" type="Bibliographic">   <mxc:leader>00567c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348688870000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34868887k</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax   z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Machiavel</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Le Prince</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34868887k</srw:recordIdentifier>
+<srw:recordPosition>37</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34862747m" type="Bibliographic">   <mxc:leader>00574c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627470000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34862747m</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Sade</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les Crimes de l'amour</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34862747m</srw:recordIdentifier>
+<srw:recordPosition>38</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348796775" type="Bibliographic">   <mxc:leader>00584c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796770000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348796775</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">François Mauriac</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Thérèse Desqueyroux</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348796775</srw:recordIdentifier>
+<srw:recordPosition>39</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34879687g" type="Bibliographic">   <mxc:leader>00597c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796870000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34879687g</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Anatole France</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">La Rôtisserie de la reine Pédauque</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34879687g</srw:recordIdentifier>
+<srw:recordPosition>40</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752767v" type="Bibliographic">   <mxc:leader>00603c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527670000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752767v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Voltaire</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Candide ou l'Optimisme</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="b">(suivi de) Zadig ou la Destinée</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752767v</srw:recordIdentifier>
+<srw:recordPosition>41</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752757j" type="Bibliographic">   <mxc:leader>00572c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527570000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752757j</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alain-Fournier</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Le  Grand Meaulnes</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752757j</srw:recordIdentifier>
+<srw:recordPosition>42</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20111206</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34771718t" type="Bibliographic">   <mxc:leader>00571c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717180000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34771718t</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Charles Perrault</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Contes</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34771718t</srw:recordIdentifier>
+<srw:recordPosition>43</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904748c" type="Bibliographic">   <mxc:leader>00572c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047480000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904748c</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1987        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">La Rochefoucauld</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Maximes</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1987</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904748c</srw:recordIdentifier>
+<srw:recordPosition>44</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348627390" type="Bibliographic">   <mxc:leader>00569c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627390000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348627390</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Stendhal</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Armance</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348627390</srw:recordIdentifier>
+<srw:recordPosition>45</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34762499v" type="Bibliographic">   <mxc:leader>00581c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347624990000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34762499v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Gustave Flaubert</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Trois contes</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34762499v</srw:recordIdentifier>
+<srw:recordPosition>46</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347783997" type="Bibliographic">   <mxc:leader>00592c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347783990000000</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347783997</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Gérard de Nerval</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les  Filles du feu</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347783997</srw:recordIdentifier>
+<srw:recordPosition>47</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752769j" type="Bibliographic">   <mxc:leader>00570c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527690000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752769j</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Baudelaire</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les  Fleurs du mal</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752769j</srw:recordIdentifier>
+<srw:recordPosition>48</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347527597" type="Bibliographic">   <mxc:leader>00562c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527590000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347527597</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Maupassant</mxc:subfield>      <mxc:subfield code="h">[2] Boule de Suif</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347527597</srw:recordIdentifier>
+<srw:recordPosition>49</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20111206</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34879679v" type="Bibliographic">   <mxc:leader>00576c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796790000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34879679v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jules Renard</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Poil de Carotte</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34879679v</srw:recordIdentifier>
+<srw:recordPosition>50</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348796895" type="Bibliographic">   <mxc:leader>00594c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796890000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348796895</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Edmond et Jules de Goncourt</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Germinie Lacerteux</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348796895</srw:recordIdentifier>
+<srw:recordPosition>51</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34864999w" type="Bibliographic">   <mxc:leader>00578c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348649990000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34864999w</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l     a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Rabelais</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Pantagruel</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34864999w</srw:recordIdentifier>
+<srw:recordPosition>52</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801416</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752770r" type="Bibliographic">   <mxc:leader>00644c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34752770000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752770r</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Cocteau</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752770r</srw:recordIdentifier>
+<srw:recordPosition>53</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34879690c" type="Bibliographic">   <mxc:leader>00652c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796900000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34879690c</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Rudyard Kipling</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34879690c</srw:recordIdentifier>
+<srw:recordPosition>54</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34866200j" type="Bibliographic">   <mxc:leader>00648c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348662000000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34866200j</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f z             </mxc:controlfield>   <mxc:datafield tag="142" ind1="1" ind2="0">      <mxc:subfield code="a">Leiden des jungen Werthers</mxc:subfield>      <mxc:subfield code="m">français</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Goethe</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Les  Souffrances du jeune Werther</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34866200j</srw:recordIdentifier>
+<srw:recordPosition>55</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34757851z" type="Bibliographic">   <mxc:leader>00656c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347578510000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34757851z</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Stevenson</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34757851z</srw:recordIdentifier>
+<srw:recordPosition>56</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34862742w" type="Bibliographic">   <mxc:leader>00696c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627420000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34862742w</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Verlaine</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34862742w</srw:recordIdentifier>
+<srw:recordPosition>57</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347783935" type="Bibliographic">   <mxc:leader>00630c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347783930000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347783935</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Denis Diderot</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Le  Neveu de Rameau</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="b">(suivi de) Les Deux amis de Bourbonne</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1985</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347783935</srw:recordIdentifier>
+<srw:recordPosition>58</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34871673v" type="Bibliographic">   <mxc:leader>00661c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348716730000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34871673v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Henry James</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="a">[Circa 1986]</mxc:subfield>      <mxc:subfield code="d">1984 -</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34871673v</srw:recordIdentifier>
+<srw:recordPosition>59</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904745b" type="Bibliographic">   <mxc:leader>00650c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047450000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904745b</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1987        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Michelet</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Ca 1987]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904745b</srw:recordIdentifier>
+<srw:recordPosition>60</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34871675j" type="Bibliographic">   <mxc:leader>00703c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348716750000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34871675j</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Ramuz</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34871675j</srw:recordIdentifier>
+<srw:recordPosition>61</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34757847q" type="Bibliographic">   <mxc:leader>00647c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34757847000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34757847q</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jack London</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34757847q</srw:recordIdentifier>
+<srw:recordPosition>62</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34868888x" type="Bibliographic">   <mxc:leader>00659c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348688880000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34868888x</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Mark Twain</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34868888x</srw:recordIdentifier>
+<srw:recordPosition>63</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843729h" type="Bibliographic">   <mxc:leader>00717c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348437290000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843729h</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Théophile Gautier</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843729h</srw:recordIdentifier>
+<srw:recordPosition>64</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34757849d" type="Bibliographic">   <mxc:leader>00655c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347578490000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34757849d</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Agatha Christie</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34757849d</srw:recordIdentifier>
+<srw:recordPosition>65</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.801053</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34865000r" type="Bibliographic">   <mxc:leader>00703c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348650000000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34865000r</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Musset</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34865000r</srw:recordIdentifier>
+<srw:recordPosition>66</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348627406" type="Bibliographic">   <mxc:leader>00704c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627400000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348627406</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Conan Doyle</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348627406</srw:recordIdentifier>
+<srw:recordPosition>67</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34862750h" type="Bibliographic">   <mxc:leader>00694c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627500000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34862750h</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Conrad</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34862750h</srw:recordIdentifier>
+<srw:recordPosition>68</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348661813" type="Bibliographic">   <mxc:leader>00695c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661810000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348661813</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Ronsard</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348661813</srw:recordIdentifier>
+<srw:recordPosition>69</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904741z" type="Bibliographic">   <mxc:leader>00653c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047410000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904741z</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Mallarmé</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Ca 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904741z</srw:recordIdentifier>
+<srw:recordPosition>70</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34752752t" type="Bibliographic">   <mxc:leader>00651c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527520000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34752752t</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Colette</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34752752t</srw:recordIdentifier>
+<srw:recordPosition>71</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347784029" type="Bibliographic">   <mxc:leader>00698c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347784020000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347784029</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Villon</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347784029</srw:recordIdentifier>
+<srw:recordPosition>72</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34778392t" type="Bibliographic">   <mxc:leader>00695c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34778392000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34778392t</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Diderot</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34778392t</srw:recordIdentifier>
+<srw:recordPosition>73</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348661933" type="Bibliographic">   <mxc:leader>00575c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661930000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348661933</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Montaigne</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348661933</srw:recordIdentifier>
+<srw:recordPosition>74</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843733r" type="Bibliographic">   <mxc:leader>00707c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34843733000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843733r</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Edgar Poe</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843733r</srw:recordIdentifier>
+<srw:recordPosition>75</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34866195s" type="Bibliographic">   <mxc:leader>00609c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661950000000</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34866195s</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Giono</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34866195s</srw:recordIdentifier>
+<srw:recordPosition>76</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347717253" type="Bibliographic">   <mxc:leader>00709c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717250000007</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347717253</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Fitzgerald</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347717253</srw:recordIdentifier>
+<srw:recordPosition>77</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347527566" type="Bibliographic">   <mxc:leader>00641c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527560000000</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347527566</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alain-Fournier</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347527566</srw:recordIdentifier>
+<srw:recordPosition>78</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348796864" type="Bibliographic">   <mxc:leader>00654c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796860000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348796864</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d               </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Anatole France</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348796864</srw:recordIdentifier>
+<srw:recordPosition>79</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34866197g" type="Bibliographic">   <mxc:leader>00625c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661970000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34866197g</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Oscar Wilde.</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="a">[Circa 1986]</mxc:subfield>      <mxc:subfield code="d">1984 -</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34866197g</srw:recordIdentifier>
+<srw:recordPosition>80</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348661875" type="Bibliographic">   <mxc:leader>00646c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661870000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348661875</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Giraudoux</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348661875</srw:recordIdentifier>
+<srw:recordPosition>81</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843727t" type="Bibliographic">   <mxc:leader>00699c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348437270000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843727t</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Kafka</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843727t</srw:recordIdentifier>
+<srw:recordPosition>82</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34879678h" type="Bibliographic">   <mxc:leader>00694c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796780000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34879678h</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d               </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jules Renard</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34879678h</srw:recordIdentifier>
+<srw:recordPosition>83</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34871678k" type="Bibliographic">   <mxc:leader>00754c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348716780000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34871678k</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax f l             </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Cervantès</mxc:subfield>      <mxc:subfield code="h">[2]</mxc:subfield>      <mxc:subfield code="i">Nouvelles exemplaires</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1986</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34871678k</srw:recordIdentifier>
+<srw:recordPosition>84</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20120213</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34862748z" type="Bibliographic">   <mxc:leader>00701c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627480000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34862748z</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Lewis Carroll</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34862748z</srw:recordIdentifier>
+<srw:recordPosition>85</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34762498h" type="Bibliographic">   <mxc:leader>00699c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347624980000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34762498h</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Flaubert</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34762498h</srw:recordIdentifier>
+<srw:recordPosition>86</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34866189v" type="Bibliographic">   <mxc:leader>00668c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348661890000003</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34866189v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Lamartine</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34866189v</srw:recordIdentifier>
+<srw:recordPosition>87</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904749q" type="Bibliographic">   <mxc:leader>00658c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047490000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904749q</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1987        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alfred de Vigny</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Ca 1987]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904749q</srw:recordIdentifier>
+<srw:recordPosition>88</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347717195" type="Bibliographic">   <mxc:leader>00697c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34771719000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347717195</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Dickens</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347717195</srw:recordIdentifier>
+<srw:recordPosition>89</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800709</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb348796802" type="Bibliographic">   <mxc:leader>00723c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796800000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb348796802</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Madame de Sévigné</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="a">[1986]</mxc:subfield>      <mxc:subfield code="d">1984 -</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb348796802</srw:recordIdentifier>
+<srw:recordPosition>90</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34843721r" type="Bibliographic">   <mxc:leader>00708c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348437210000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34843721r</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d               </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Shakespeare</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34843721r</srw:recordIdentifier>
+<srw:recordPosition>91</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190915</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347527624" type="Bibliographic">   <mxc:leader>00666c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347527620000008</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347527624</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Dostoïevski</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347527624</srw:recordIdentifier>
+<srw:recordPosition>92</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34868882v" type="Bibliographic">   <mxc:leader>00650c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF34868882000000X</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34868882v</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Pascal</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34868882v</srw:recordIdentifier>
+<srw:recordPosition>93</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347717133" type="Bibliographic">   <mxc:leader>00694c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717130000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347717133</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Rimbaud</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">1984</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347717133</srw:recordIdentifier>
+<srw:recordPosition>94</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34771723d" type="Bibliographic">   <mxc:leader>00697c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347717230000002</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34771723d</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">George Sand</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34771723d</srw:recordIdentifier>
+<srw:recordPosition>95</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34904743n" type="Bibliographic">   <mxc:leader>00649c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF349047430000009</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34904743n</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Montesquieu</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Ca 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34904743n</srw:recordIdentifier>
+<srw:recordPosition>96</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34862744k" type="Bibliographic">   <mxc:leader>00708c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348627440000006</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34862744k</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1985        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Benjamin Constant</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1985]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34862744k</srw:recordIdentifier>
+<srw:recordPosition>97</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19870307</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34879684f" type="Bibliographic">   <mxc:leader>00651c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348796840000001</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34879684f</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Goldoni</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34879684f</srw:recordIdentifier>
+<srw:recordPosition>98</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb34868884j" type="Bibliographic">   <mxc:leader>00650c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF348688840000004</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb34868884j</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1986        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Alexandre Dumas</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[Circa 1986]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb34868884j</srw:recordIdentifier>
+<srw:recordPosition>99</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19871004</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb347578451" type="Bibliographic">   <mxc:leader>00647c5 m 2200027   45a </mxc:leader>   <mxc:controlfield tag="001">FRBNF347578450000005</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb347578451</mxc:controlfield>   <mxc:controlfield tag="008">840420s 1984        .... ....frfre     b  001 </mxc:controlfield>   <mxc:controlfield tag="009">ax d       a       </mxc:controlfield>   <mxc:datafield tag="245" ind1="1" ind2=" ">      <mxc:subfield code="a">Jules Verne</mxc:subfield>      <mxc:subfield code="h">[1]</mxc:subfield>      <mxc:subfield code="i">[Fascicule de présentation]</mxc:subfield>      <mxc:subfield code="d">Texte imprimé</mxc:subfield>      <mxc:subfield code="f">choisis par l'Académie Goncourt</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="260" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris</mxc:subfield>      <mxc:subfield code="c">EPI</mxc:subfield>      <mxc:subfield code="d">[1984]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="710" ind1=" " ind2=" ">      <mxc:subfield code="3">12013737</mxc:subfield>      <mxc:subfield code="1">ISNI0000000121514797</mxc:subfield>      <mxc:subfield code="w">20..b.....</mxc:subfield>      <mxc:subfield code="a">Académie Goncourt</mxc:subfield>      <mxc:subfield code="4">0360</mxc:subfield>   </mxc:datafield>   </mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb347578451</srw:recordIdentifier>
+<srw:recordPosition>100</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19860720</ixm:attr>
+<ixm:attr name="LastModificationDate">20190914</ixm:attr>
+<mn:score>8.800383</mn:score>
+</srw:extraRecordData>
+</srw:record>
+</srw:records>
+<srw:nextRecordPosition>101</srw:nextRecordPosition>
+</srw:searchRetrieveResponse>
