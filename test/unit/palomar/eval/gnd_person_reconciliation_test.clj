@@ -61,9 +61,9 @@
         wd   (reduce (fn [m [b g]] (update m b (fnil conj #{}) g)) {} (wikidata-pairs))
         has  (fn [iri] (set (keep #(when (some #{iri} (:same-as %)) (:id %)) gnd-entries)))
         by   (into {} (for [b bnf
-                            :let [isni (some-> (:isni b) (str/replace #"\s" ""))]]
+                            :let [isnis (map #(str/replace % #"\s" "") (:isni b))]]
                         [(:record-number b) {:ark      (has (:id b))
-                                             :isni     (if isni (has (str "https://isni.org/isni/" isni)) #{})
+                                             :isni     (into #{} (mapcat #(has (str "https://isni.org/isni/" %))) isnis)
                                              :wikidata (get wd (:record-number b) #{})}]))
         gnd  (update-vals by #(apply set/union (vals %)))
         owners (frequencies (mapcat seq (vals gnd)))]

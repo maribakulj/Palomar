@@ -30,8 +30,9 @@
    as the SRU serves it) is one entry: its `003` ARK as `:id`, its record
    number (the `001` without `FRBNF` and its check character, the form a
    bibliographic `$3` cites) as `:record-number`, the `100` `$a, $m` as label,
-   the `400`s as variants, the `100 $d` as dates, the `031 $a` whose `$2` says
-   ISNI as `:isni`, and the leader's position 9 as its kind (`p`: a person).
+   the `400`s as variants, the `100 $d` as dates, every `031 $a` whose `$2`
+   says ISNI as `:isni` (a vector, in the record's order; a cancelled `$z`
+   is not read), and the leader's position 9 as its kind (`p`: a person).
    The tags it does not read are listed under `:unread`.
 
    **Profiles** (lot M3, ADR 0038 amendment): an entry carries `:dates`, a
@@ -98,9 +99,24 @@
       (seq profile) profile
       (seq texts)   {:text (str/join ", " texts)})))
 
+(def ^:private same-as-p
+  "The predicates by which an authority record says another id names its
+   entity (lot N6, ADR 0059): `owl:sameAs`, `skos:exactMatch` and a MADS
+   exact external authority. A close match, a MADS close external
+   authority, says alike, not the same: it is not read."
+  (into #{"http://www.w3.org/2002/07/owl#sameAs" (str skos "exactMatch")} (mads "hasExactExternalAuthority")))
+
+(defn- same-as
+  "The IRIs record `s` states name its entity (`same-as-p`), itself left
+   out, sorted."
+  [idx s]
+  (vec (sort (distinct (remove #{s} (keep :iri (objs idx s same-as-p)))))))
+
 (defn pool
   "The reconciliation pool of an authority graph `triples` (see the ns doc):
-   `{:entries [{:id :label :variants}] :deprecated [{:id :label :replaced-by}]}`.
+   `{:entries [{:id :label :variants}] :deprecated [{:id :label :replaced-by}]}`;
+   an entry carries `:same-as` when its record states other ids of its
+   entity (`same-as-p`).
    `opts` may name the preferred label `:lang`."
   ([triples] (pool triples {}))
   ([triples {:keys [lang]}]
@@ -126,7 +142,9 @@
                (typed? idx s (into (mads "CorporateName") (mads "ConferenceName"))) (assoc :entity-type "corporateBody")
                (typed? idx s (mads "FamilyName"))                                  (assoc :entity-type "family")
                (typed? idx s (mads "PersonalName"))                                (assoc :entity-type "person")
-               (mads-dates idx s)                                                  (assoc :dates (mads-dates idx s)))))
+               (mads-dates idx s)                                                  (assoc :dates (mads-dates idx s))
+               ;; what the record states of its entity (lot N6, ADR 0059)
+               (seq (same-as idx s))                                               (assoc :same-as (same-as idx s)))))
       :deprecated
       (vec (for [s iri-subj
                  :when (and (typed? idx s (mads "Variant")) (not (typed? idx s authority)))]
@@ -250,14 +268,19 @@
    :kind}`, or nil: a relation field (`intermarc-relation-kind`) that links
    a record by `$3`; a 320 only with its `$0` relation code, a relation
    between two agents (a 320 without one, such as a museum holding the
-   person's manuscripts, says where, not who)."
+   person's manuscripts, says where, not who). A 331 says by its second
+   indicator what the linked record is (lot N6): `:target :pseudonym` (1, a
+   pseudonym of this record's person) or `:target :real-identity` (2, the
+   real identity whose pseudonym this record is)."
   [f]
   (let [tag (get-in f [:locator :tag])
         sfs (subfields-of f)
         k   (intermarc-relation-kind tag)
-        n   (when k (first-sub sfs "3"))]
+        n   (when k (first-sub sfs "3"))
+        dir (when (= :pseudonym k) ({"1" :pseudonym "2" :real-identity} (get-in f [:locator :ind2])))]
     (when (and n (or (not= "320" tag) (first-sub sfs "0")))
-      {:record-number n :tag tag :kind k})))
+      (cond-> {:record-number n :tag tag :kind k}
+        dir (assoc :target dir)))))
 
 (defn- intermarc-relations
   "The relations a record's `fragments` state to other authority records,
@@ -291,9 +314,9 @@
                 :let [ark   (value r "003")
                       n     (some->> (value r "001") (re-find #"^FRBNF(\d{8})") second)
                       life  (dates/parse-life-dates (first-sub h "d"))
-                      isni  (some #(let [sfs (subfields-of %)]
-                                     (when (some-> (first-sub sfs "2") (str/starts-with? "ISNI")) (first-sub sfs "a")))
-                                  (fields r "031"))
+                      isni  (vec (distinct (keep #(let [sfs (subfields-of %)]
+                                                    (when (some-> (first-sub sfs "2") (str/starts-with? "ISNI")) (first-sub sfs "a")))
+                                                 (fields r "031"))))
                       kind  (some-> (leader r) (as-> l (when (< 9 (count l)) (intermarc-kinds (nth l 9)))))
                       rels  (intermarc-relations (:fragments r))]]
             (cond-> {:id       (when (and ark (nil? (nt/iri-problem ark))) ark)
@@ -302,7 +325,7 @@
               n    (assoc :record-number n)
               life (assoc :dates life)
               kind (assoc :entity-type kind)
-              isni (assoc :isni isni)
+              (seq isni) (assoc :isni isni)
               (seq rels) (assoc :relations rels))))
      :unread (vec (sort (distinct (for [r records
                                         f (:fragments r)

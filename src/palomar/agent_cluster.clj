@@ -25,7 +25,8 @@
    - `:cannot-link`, `[{:a :b :reason}]`: pairs that are never one person.
      Besides those given (an M3 date rejection, a rejected alignment), two
      are derived, item by item, when two clusters would merge:
-     `:distinct-authorities` (two different authority records) and
+     `:distinct-authorities` (two different authority records, unless
+     their records state one entity: lot N6, ADR 0059) and
      `:incompatible-dates` (both dated, `agent-dates/compatibility`
      `:incompatible`), and `:incompatible-events` (lot M7: an item's typed
      events, `palomar.agent-events`, that the other's life dates cannot
@@ -83,6 +84,7 @@
    across batches (ADR 0018 §5)."
   (:require [clojure.string :as str]
             [palomar.agent-dates :as dates]
+            [palomar.agent-equivalence :as eq]
             [palomar.agent-events :as events]
             [palomar.curate :as curate]
             [palomar.model :as model]))
@@ -93,15 +95,17 @@
 
 (def default-join
   "The link bases that may join clusters: a curator's acceptance (a hard
-   must-link) and an outright proposal. A link for review never does."
-  #{:accepted :propose})
+   must-link), an equivalence the authority records state (lot N6, ADR
+   0059) and an outright proposal. A link for review never does."
+  #{:accepted :equivalence :propose})
 
-(def ^:private basis-rank {:accepted 0 :propose 1 :review 2})
+(def ^:private basis-rank {:accepted 0 :equivalence 1 :propose 2 :review 3})
 
 (defn- link-order
-  "Accepted first, then by decreasing weight (none last), ties by the ids."
+  "Accepted first, then stated equivalences, then by decreasing weight (none
+   last), ties by the ids."
   [l]
-  [(basis-rank (:basis l) 3) (- (or (:weight l) ##-Inf)) (str (:a l)) (str (:b l))])
+  [(basis-rank (:basis l) 4) (- (or (:weight l) ##-Inf)) (str (:a l)) (str (:b l))])
 
 (defn- strength [l] (vec (take 2 (link-order l))))
 
@@ -118,16 +122,23 @@
     (boolean (and (seq es) (:dates j)
                   (= :incompatible (:verdict (events/compatibility es (:dates j))))))))
 
+(defn- one-entity?
+  "Whether items `ix` and `iy` are records their statements make one entity
+   (`with-equivalences`)."
+  [ix iy]
+  (let [e (::entity ix)] (and (some? e) (= e (::entity iy)))))
+
 (defn cannot-link-reason
   "The reason `x` and `y` cannot be one person, or nil: a given constraint
-   (`index`, `constraint-index`), two different authorities, dates that
+   (`index`, `constraint-index`), two different authorities — unless the
+   records state they are one entity (lot N6, ADR 0059) —, dates that
    cannot be one person's, or one's typed events the other's dates cannot
    hold (lot M7)."
   [items index x y]
   (when (not= x y)
     (let [ix (items x) iy (items y)]
       (or (index #{x y})
-          (when (and (:authority? ix) (:authority? iy)) :distinct-authorities)
+          (when (and (:authority? ix) (:authority? iy) (not (one-entity? ix iy))) :distinct-authorities)
           (when (and (:dates ix) (:dates iy)
                      (= :incompatible (:verdict (dates/compatibility (:dates ix) (:dates iy)))))
             :incompatible-dates)
@@ -151,9 +162,20 @@
                :when r]
            {:a (v i) :b (v j) :reason r}))))
 
+(defn- with-equivalences
+  "`items` with each authority the records state one entity with another
+   marked so (`::entity`), and the equivalences (`eq/equivalences`) —
+   only when `join` lets equivalences join: otherwise none is read, and
+   two authorities are always two."
+  [items join]
+  (if (join :equivalence)
+    (let [e (eq/equivalences items)]
+      [(reduce-kv (fn [m id k] (assoc-in m [id ::entity] k)) items (:entity e)) e])
+    [items {:links [] :conflicts [] :warnings []}]))
+
 (defn- cluster-key
-  "A cluster's key: its authority when it holds one (at most one, by
-   construction), else its first member."
+  "A cluster's key: its first authority when it holds one (several only
+   when the records state they are one entity), else its first member."
   [items members]
   (or (first (sort-by str (filter (comp :authority? items) members)))
       (first (sort-by str members))))
@@ -181,15 +203,33 @@
       :refused    [{:link :violation {:a :b :reason} :tie?} ..]
       :conflicts  [{:links [accepted ..] :violations [{:a :b :reason} ..]} ..]
       :event-conflicts [{:links :violations} ..] ; accepted links kept despite an events constraint
-      :candidates [links that may not join] ; for a curator, never applied}
+      :candidates [links that may not join] ; for a curator, never applied
+      :equivalence-conflicts [{:reason :members ..} ..]  ; refused, `eq/equivalences`
+      :equivalence-warnings  [{:kind :members ..} ..]}   ; reported, not refused
 
-   Every item of `:items` or of a link is in exactly one cluster."
+   Every item of `:items` or of a link is in exactly one cluster.
+
+   **Stated equivalences** (lot N6, ADR 0059): an authority item may carry
+   what its record states of its entity — `:iri`, `:isni`, `:same-as`
+   (`palomar.agent-equivalence`). Two authorities the records state one
+   entity are not cannot-linked as two authorities, and a link `{:basis
+   :equivalence :evidence}` joins them (after the accepted links, before
+   the proposals; other constraints still hold). A cluster that holds such
+   a link names it under `:equivalence`. The equivalence links are tried in
+   id order, so when dates refuse one, the records of lower ids stay
+   together; an equivalence link is never part of a tie, and one refused by
+   life dates or events is listed under `:equivalence-warnings`
+   (`:dates-refuse-equivalence`): the records contradict each other. A
+   component `eq/equivalences` refuses is used for nothing and listed under
+   `:equivalence-conflicts`; its other findings are `:equivalence-warnings`.
+   None of this is read unless `join` holds `:equivalence`."
   [{:keys [items links cannot-link join] :or {join default-join}}]
   (let [ids      (distinct (concat (keys items) (mapcat (juxt :a :b) links)))
-        items    (merge (zipmap ids (repeat {})) items)
+        [items equiv] (with-equivalences (merge (zipmap ids (repeat {})) items) join)
         index    (constraint-index cannot-link)
         must     (filter #(and (= :accepted (:basis %)) (join :accepted)) links)
-        soft     (sort-by link-order (filter #(and (not= :accepted (:basis %)) (join (:basis %))) links))
+        soft     (sort-by link-order (filter #(and (not= :accepted (:basis %)) (join (:basis %)))
+                                             (concat links (:links equiv))))
         comps    (for [[ms ls] (components ids must)
                        :let [vs (inner-violations items index ms)]
                        :when (seq vs)]
@@ -218,32 +258,44 @@
                        (update st :joined conj l)
                        (if-let [v (first-violation items index (members ra) (members rb))]
                          (let [ends  (set [(:a v) (:b v) (:a l) (:b l)])
-                               rival (first (for [[i j] (map-indexed vector joined)
-                                                  :when (and (<= n-must i) (= (strength j) (strength l))
-                                                             (or (ends (:a j)) (ends (:b j))))]
-                                              i))]
+                               ;; an equivalence is no matter of strength: never a tie
+                               rival (when-not (= :equivalence (:basis l))
+                                       (first (for [[i j] (map-indexed vector joined)
+                                                    :when (and (<= n-must i) (not= :equivalence (:basis j))
+                                                               (= (strength j) (strength l))
+                                                               (or (ends (:a j)) (ends (:b j))))]
+                                                i)))]
                            (cond-> (update st :refused conj {:link l :violation v :tie? (some? rival)})
                              rival (update :tied conj rival)))
                          (update (merge-in st ra rb) :joined conj l)))))
         {:keys [members joined refused tied]} (reduce step phase-1 soft)
+        eq-links (filter #(= :equivalence (:basis %)) joined)
         clusters (sort-by (comp str :key)
                           (for [ms (vals members)
-                                :let [k (cluster-key items ms)]]
-                            {:key k :members ms :authority (when (:authority? (items k)) k)}))]
+                                :let [k  (cluster-key items ms)
+                                      es (vec (filter #(ms (:a %)) eq-links))]]
+                            (cond-> {:key k :members ms :authority (when (:authority? (items k)) k)}
+                              (seq es) (assoc :equivalence es))))]
     {:clusters   (vec clusters)
      :cluster-of (into {} (for [{:keys [key members]} clusters, m members] [m key]))
      :joined     (vec (map-indexed (fn [i l] (if (contains? tied i) (assoc l :tie? true) l)) joined))
      :refused    refused
      :conflicts  conflict
      :event-conflicts ev-confl
-     :candidates (vec (sort-by link-order (remove #(join (:basis %)) links)))}))
+     :candidates (vec (sort-by link-order (remove #(join (:basis %)) links)))
+     :equivalence-conflicts (:conflicts equiv)
+     :equivalence-warnings  (into (vec (:warnings equiv))
+                                  (for [{:keys [link violation]} refused
+                                        :when (and (= :equivalence (:basis link))
+                                                   (#{:incompatible-dates :incompatible-events} (:reason violation)))]
+                                    {:kind :dates-refuse-equivalence :members [(:a link) (:b link)] :violation violation}))}))
 
 (defn transitive-closure
   "The naive clustering, for comparison: the connected components of the
    joining `links` (as `cluster`'s `:join`), no constraint read.
    `{item key}`, the key a component's first member."
   [{:keys [items links join] :or {join default-join}}]
-  (:cluster-of (cluster {:items (update-vals (or items {}) #(dissoc % :authority? :dates :events))
+  (:cluster-of (cluster {:items (update-vals (or items {}) #(dissoc % :authority? :dates :events :isni :same-as :pseudonym :real-identity))
                          :links links :join join})))
 
 (defn violations
@@ -251,9 +303,9 @@
    cluster, under the same `items` and `cannot-link`: always empty for
    `cluster`, by construction. An events constraint among a curator's
    accepted links, kept and reported (`:event-conflicts`), is none."
-  [{:keys [items cannot-link]} clustering]
+  [{:keys [items cannot-link join] :or {join default-join}} clustering]
   (let [ids   (keys (:cluster-of clustering))
-        items (merge (zipmap ids (repeat {})) items)
+        items (first (with-equivalences (merge (zipmap ids (repeat {})) items) join))
         index (constraint-index cannot-link)
         kept  (set (mapcat :violations (:event-conflicts clustering)))]
     (vec (remove kept (mapcat #(inner-violations items index (:members %)) (:clusters clustering))))))
@@ -275,6 +327,27 @@
    events cannot be the life they join (lot M7, review): the curator wins,
    the constraint is reported."
   :reconcile/identity-events-conflict)
+
+(def equivalence-conflict-code
+  "The diagnostic code of authority records whose stated equivalences are
+   refused (lot N6, ADR 0059: an ISNI clash through a chain, a pseudonym
+   and its real identity made one): the component is used for nothing,
+   and reported."
+  :reconcile/equivalence-conflict)
+
+(def equivalence-warning-code
+  "The diagnostic code of what the authority records' statements say
+   against each other without a refusal (lot N6, ADR 0059): a direct
+   `sameAs` against disjoint ISNIs, disjoint ids of another scheme, a
+   duplicate in one file, an invalid ISNI, an equivalence that life dates
+   refuse."
+  :reconcile/equivalence-warning)
+
+(def person-nodes-conflict-code
+  "The diagnostic code of a cluster that holds accepted memberships to two
+   person nodes (lot N6): a curator accepted two persons the evidence now
+   makes one; neither is superseded."
+  :reconcile/person-nodes-conflict)
 
 (defn batch-fingerprint
   "The fingerprint of a batch: its records' ids. A person node is minted
@@ -335,7 +408,11 @@
    dates}` (a string or a profile) known beyond what the alignments
    compared, `:events`, `{agent-id [typed event ..]}` (lot M7, an agent's
    events as `palomar.agent-events` types them), and `:cannot-link`, more
-   `[{:a :b :reason}]`. A local agent's
+   `[{:a :b :reason}]`, and `:authorities`, authority entries (a pool's
+   `[{:id :isni :same-as :pseudonym :real-identity :relations} ..]`, lot
+   N6): an authority whose IRI names an entry's `:id` (in any spelling,
+   `eq/identifier-key`) carries what that record states of its entity
+   (`eq/stated`). A local agent's
    dates are those its alignments' provenance states (`?mention-dates`), an
    authority's those it was compared with (`?authority-dates`); a rejected
    alignment is a cannot-link (`:rejected-alignment`); an accepted
@@ -357,6 +434,10 @@
                               [id (cond-> {:authority? true :iri (:iri (ents id))} d (assoc :dates d))]))
                    (into {} (for [[id rid] locals :let [d (dates-of '?mention-dates id)]]
                               [id (cond-> {:record rid} d (assoc :dates d))])))
+         ;; keyed by the one form of the id: any spelling of an ARK matches
+         stated   (into {} (for [[iri st] (eq/stated (:authorities extra))] [(eq/identifier-key iri) st]))
+         items    (reduce-kv (fn [m id it] (if (:authority? it) (assoc m id (merge it (stated (eq/identifier-key (:iri it))))) m))
+                             items items)
          items    (reduce-kv (fn [m id d] (if (contains? m id) (assoc-in m [id :dates] (parse-dates d)) m))
                              items (:dates extra))
          items    (reduce-kv (fn [m id es] (if (and (contains? m id) (seq es)) (assoc-in m [id :events] (vec es)) m))
@@ -454,13 +535,97 @@
                 {:records (assoc records i r') :transitions (into transitions ts)}))]
     (reduce one {:records (vec records) :transitions []} (range (count records)))))
 
+(defn- equivalence-text
+  "What the records stated in `evidence` (between `a` and `b`), `items`
+   naming each record's IRI: `A and B: both state k` for one shared id,
+   `A and B: same record id k` for one record under two spellings, else
+   each statement."
+  ([items evidence] (equivalence-text items nil nil evidence))
+  ([items a b evidence]
+   (let [iri (fn [id] (or (:iri (items id)) (str id)))
+         [s1 s2 :as ss] evidence]
+     (cond
+       (and (= 1 (count ss)) (:same-record-id s1))
+       (str (str/join " and " (sort (map iri (remove nil? [a b])))) ": same record id " (:same-record-id s1))
+       (and (= 2 (count ss)) (= (:states s1) (:states s2)))
+       (str (str/join " and " (sort (map (comp iri :by) ss))) ": both state " (:states s1))
+       :else
+       (str/join "; " (for [{:keys [by states]} ss] (str (iri by) " states " states)))))))
+
+(defn- relation-text [iri {:keys [pseudonym of by]}]
+  (str (iri by) " states " (iri pseudonym) " is a pseudonym of " (iri of)))
+
+(defn- conflict-text
+  "Why a component of stated equivalences is refused (`eq/equivalences`)."
+  [items {:keys [reason pairs evidence relations with]}]
+  (let [iri (fn [id] (or (:iri (items id)) (str id)))]
+    (case reason
+      :isni-clash (str (str/join "; " (for [[a b] pairs] (str (iri a) " and " (iri b) " state different ISNIs")))
+                       ", and only a chain joins them: " (equivalence-text items evidence))
+      :pseudonym-in-component (str "it holds a pseudonym and its real identity: "
+                                   (str/join "; " (map #(relation-text iri %) relations)))
+      :pseudonym-crossed (str "it and " (str/join ", " (map iri with)) " are each other's pseudonym: "
+                              (str/join "; " (map #(relation-text iri %) relations))))))
+
+(defn- warning-text
+  [items {:keys [kind members scheme file value violation]}]
+  (let [iri (fn [id] (or (:iri (items id)) (str id)))
+        ms  (str/join " and " (map iri members))]
+    (case kind
+      :isni-disagreement        (str ms " are stated one entity by a sameAs, but state different ISNIs")
+      :scheme-disagreement      (str ms " are stated one entity, but state different " scheme " ids")
+      :same-file                (str ms " are two records of " file " stated one entity: a duplicate")
+      :invalid-identifier       (str "an ISNI whose check character is wrong is no id: " value)
+      :dates-refuse-equivalence (str ms " are stated one entity, but " (violation-text violation)))))
+
+(defn- aligned-to
+  "The `[record [links ..]]` of `input` aligning one of `members`."
+  [input members]
+  (let [ms (set members)]
+    (sort-by (comp str key) (group-by :record (filter #(and (:record %) (ms (:b %))) (:links input))))))
+
 (defn- with-conflicts
   "`records` with their conflict diagnostics restated: those of an earlier
    run removed, one per record and conflict added, naming the pairs, the
-   reason and the accepted claims involved."
-  [records result]
-  (let [diags (group-by first
+   reason and the accepted claims involved; one per record and refused
+   equivalence, or equivalence warning (lot N6), for each record aligning
+   one of its authorities; and one per record whose accepted membership
+   names one of two person nodes a cluster holds (lot N6)."
+  [records result input]
+  (let [items (:items input)
+        iri   (fn [id] (or (:iri (items id)) (str id)))
+        membs (:memberships (batch-view records))
+        diags (group-by first
                         (concat
+                         (for [{:keys [reason members isni pairs relations] :as c} (:equivalence-conflicts result)
+                               [rid ls] (aligned-to input members)]
+                           [rid (model/diagnostic
+                                 {:severity :warning :code equivalence-conflict-code :subject (:a (first (sort-by (comp str :a) ls)))
+                                  :message  (str "authority records stated one entity, refused: " (conflict-text items c)
+                                                 "; no equivalence of " (str/join ", " (map iri members)) " is used")
+                                  :detail   (cond-> {:reason reason :members (mapv iri members)}
+                                              isni      (assoc :isni (into (sorted-map) (for [[m i] isni] [(iri m) i])))
+                                              pairs     (assoc :pairs (mapv #(mapv iri %) pairs))
+                                              relations (assoc :relations (mapv #(update-vals % iri) relations)))})])
+                         (for [{:keys [kind members by] :as w} (:equivalence-warnings result)
+                               [rid ls] (aligned-to input (or members [by]))]
+                           [rid (model/diagnostic
+                                 {:severity :warning :code equivalence-warning-code :subject (:a (first (sort-by (comp str :a) ls)))
+                                  :message  (warning-text items w)
+                                  :detail   (cond-> {:kind kind :members (mapv iri (or members [by]))}
+                                              (:scheme w) (assoc :scheme (:scheme w))
+                                              (:value w)  (assoc :value (:value w)))})])
+                         (for [{:keys [members]} (:clusters result)
+                               :let [nodes (set (filter (comp :person? items) members))]
+                               :when (< 1 (count nodes))
+                               [local ms] (sort-by (comp str key) membs)
+                               m ms
+                               :when (and (model/in-force? m) (nodes (target m)))]
+                           [(::record m) (model/diagnostic
+                                          {:severity :warning :code person-nodes-conflict-code :subject local
+                                           :message  (str "accepted memberships to " (count nodes) " person nodes now in one cluster: "
+                                                          (str/join ", " (sort (map str nodes))) "; none is superseded")
+                                           :detail   {:nodes (vec (sort-by str nodes))}})])
                          (for [{:keys [links violations]} (:conflicts result)
                                [rid ls] (sort-by (comp str key) (group-by :record (filter :record links)))]
                            [rid (model/diagnostic
@@ -482,7 +647,9 @@
                                              :violations violations
                                              :claims     (mapv :assertion ls)}})])))]
     (mapv (fn [r]
-            (let [kept (vec (remove #(#{conflict-code events-conflict-code} (:code %)) (:diagnostics r)))
+            (let [kept (vec (remove #(#{conflict-code events-conflict-code equivalence-conflict-code
+                                        equivalence-warning-code person-nodes-conflict-code} (:code %))
+                                    (:diagnostics r)))
                   ds   (map second (get diags (:id r)))]
               (if (and (empty? ds) (= kept (vec (:diagnostics r))))
                 r
@@ -527,6 +694,8 @@
          c-of    (:cluster-of result)
          by-key  (into {} (map (juxt :key :members)) (:clusters result))
          size    (fn [k] (count (remove (comp :person? items) (by-key k))))
+         eq-of   (into {} (map (juxt :key :equivalence)) (:clusters result))
+         eqs     (fn [k] (mapv #(equivalence-text items (:a %) (:b %) (:evidence %)) (eq-of k)))
          pkey    (fn [k] (if (:authority? (items k))
                            (:iri (items k))
                            (str (first (sort-by str (filter (comp :record items) (by-key k)))))))
@@ -558,14 +727,15 @@
                            :else       {:record      (-> r1
                                                          (add-entity (model/entity {:id node :kind :reconcile/person}))
                                                          (update :assertions (fnil conj [])
-                                                                 (membership local node {'?cluster (pkey k) '?members (size k)})))
+                                                                 (membership local node (cond-> {'?cluster (pkey k) '?members (size k)}
+                                                                                          (seq (eqs k)) (assoc '?equivalence (eqs k))))))
                                         :transitions []})]
                      {:record r2 :transitions (-> transitions (into t1) (into t2))}))
          by-rec  (group-by val locals)
          out     (map (fn [r] (reduce revise {:record r :transitions []} (sort-by str (map key (get by-rec (:id r))))))
                       records)
          flagged (flag-refused (map :record out) result ctx)]
-     {:records     (with-conflicts (:records flagged) result)
+     {:records     (with-conflicts (:records flagged) result input)
       :clustering  result
       :input       input
       :transitions (-> [] (into (mapcat :transitions out)) (into (:transitions flagged)))})))
@@ -580,7 +750,7 @@
 
 (defn format-clustering
   "A human-readable summary of a `cluster` result, for a curator."
-  [{:keys [clusters refused conflicts candidates]}]
+  [{:keys [clusters refused conflicts candidates equivalence-conflicts equivalence-warnings]}]
   (str/join "\n"
             (concat [(str "Agent clusters: " (count (filter #(< 1 (count (:members %))) clusters)) " of two or more, "
                           (count refused) " link(s) refused, " (count conflicts) " conflict(s), "
@@ -589,4 +759,8 @@
                       (str "  refused " (:a link) " ~ " (:b link) " (" (name (:basis link)) "): "
                            (violation-text violation) (when tie? " (tie)")))
                     (for [{:keys [violations]} conflicts]
-                      (str "  conflict among accepted claims: " (str/join "; " (map violation-text violations)))))))
+                      (str "  conflict among accepted claims: " (str/join "; " (map violation-text violations))))
+                    (for [{:keys [members reason]} equivalence-conflicts]
+                      (str "  equivalence refused among " (str/join ", " members) " (" (name reason) ")"))
+                    (for [{:keys [kind members by]} equivalence-warnings]
+                      (str "  equivalence warning (" (name kind) "): " (str/join ", " (or members [by])))))))
