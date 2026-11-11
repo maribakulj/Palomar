@@ -35,6 +35,7 @@
             [palomar.agent-match :as fs]
             [palomar.agent-relations :as relations]
             [palomar.curate :as curate]
+            [palomar.mentions :as mentions]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.lrmoo.ntriples :as nt]))
@@ -127,7 +128,9 @@
           es (events/consistent-events (:events m) ds)]
       (cond-> {:name (:name m) :dates ds}
         (:record m) (assoc :record (:record m))
-        (seq es)    (assoc :events es)))
+        (seq es)    (assoc :events es)
+        ;; the kind the source states (lot N1): the local node's class
+        (:kind m)   (assoc :kind (:kind m))))
     {:name m :dates nil}))
 
 (defn- relational-mention
@@ -149,6 +152,7 @@
             (:dates m)  (assoc :dates (:dates m))
             (:record m) (assoc :record (:record m))
             (:events m) (assoc :events (:events m))
+            (:kind m)   (assoc :kind (:kind m))
             (some? (:id m)) (assoc :id (:id m))
             (:role m)   (assoc :role (:role m)))]
     (when (< 1 (count k)) k)))
@@ -408,12 +412,18 @@
   (boolean (and certifiable? (= :propose decision))))
 
 (defn- named-agent
-  "The local agent entity standing for the name `nm` on record `rid`: a Person
-   the record names, not yet identified (its id is scoped to the record, as
-   two records' homonyms are not the same person by name alone)."
-  [rid nm kind]
-  (model/entity {:id   (model/mint-entity-id kind [rid nm])
-                 :kind kind}))
+  "The local agent entity standing for the name `nm` on record `r`, not yet
+   identified: the node `palomar.mentions/local-agent` names (lot N1, one rule
+   for both) — scoped to the record (two records' homonyms are not the same
+   person by name alone, ADR 0041), of the class the proposal's mention
+   states (`:mention :kind`), else the authority's `entity-type`, else a
+   Person; a LIDO actor's the rules' node. Nil when the record cannot tell
+   which actor of that name it is."
+  [r nm p]
+  (when-let [{:keys [id kind]} (mentions/local-agent r nm {:kind        (get-in p [:mention :kind])
+                                                           :entity-type (:entity-type p)
+                                                           :mention     (get-in p [:mention :id])})]
+    (model/entity {:id id :kind kind})))
 
 (defn- evidence-bindings
   "A proposal's evidence as the bindings of its mapping's provenance: the
@@ -492,11 +502,12 @@
        (let [rid   (:id r)
              hits  (for [nm (distinct (map :name (agents/occurrences r)))
                          p (proposals-for rid (get by-name nm))
-                         :when (and (:authority-id p) (nil? (nt/iri-problem (:authority-id p))))]
+                         :when (and (:authority-id p) (nil? (nt/iri-problem (:authority-id p)))
+                                    (named-agent r nm p))]
                      p)]
          (reduce
-          (fn [r {:keys [name authority-id authority-label entity-type evidence] :as p}]
-            (let [local (named-agent rid name (agent-kind entity-type))
+          (fn [r {:keys [name authority-id authority-label evidence] :as p}]
+            (let [local (named-agent r name p)
                   ;; the authority as the alignment's target only: not an E21,
                   ;; since a proposal must not make an identified person
                   auth  (model/entity {:id (model/mint-entity-id :reconcile/authority authority-id)

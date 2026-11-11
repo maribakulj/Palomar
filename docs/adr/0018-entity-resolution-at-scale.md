@@ -477,7 +477,8 @@ catalogued under the artist's name made that rule unsafe.
    `:source` the record, field or event and the evidence it was read from.
    A small namespace, because the types already exist in two places and
    only need reading, not deciding again:
-   - **LIDO** (`lido-mentions`): the importer's event kind
+   - **LIDO** (`lido-mentions`, since lot N1 `palomar.mentions`, ADR
+     0058): the importer's event kind
      (`plugins.lido/event-kinds`, ADR 0056 §7: still code) and the actor's
      responsibility (creator or participant, ADR 0054, by role and
      attribution qualifier, K2). A production or design the actor carried
@@ -664,3 +665,27 @@ weighs 0, unmeasured. Where it is measured, in the other folds, it weighs
 source of the anchors (the oracle's gold, or the gold the curator reads)
 and finds its relational evidence unchanged, 141 of 141, in every setting.
 No confidence is written. Pinned by `palomar.agent-relations-test`.
+
+## Amendment (lot N1, 2026-11-11): one mention per occurrence, from one extraction
+
+What M3–M8 call a mention — `{:name :dates :events :record :id :role}` —
+is now produced in one place for every format: `palomar.mentions`
+([ADR 0058](./0058-a-mention-is-one-occurrence.md)). Each occurrence (a
+MARC-family field, a LIDO `actorInRole`, the heading of an authority
+record, a DC or MODS name) is read from itself alone, with a positional id
+(record, field, occurrence), its roles verbatim and relator codes (the
+first as `:role`/`:relator`, every one as `:roles`/`:relators`), its stated
+kind, its life dates as given, and its typed events. Subjects and
+provenance (a copy's former owner) are typed apart and left out by
+default. The local node has one rule, shared with `align-agents`: the
+mention's stated kind, else the authority's entity type, else a Person (a
+LIDO actor's node the rules'); but `align-agents` still finds agents
+through the canonical floor's names, so an INTERMARC 7XX/110/710 or a
+UNIMARC `$a, $b` heading gets no alignment before lot N2.
+
+What is tested: a golden file of 15 real records written by an independent
+reader of the XML; the origin of each mention's dates, roles and name in
+its own field on the real INTERMARC corpus; that the floor is not read;
+that `align-agents` mints each reachable mention's `:local`. The eval of
+M2–M8 reads its mentions from the extraction, and every number it asserts
+is unchanged (`palomar.eval.person-reconciliation-test`).

@@ -149,6 +149,27 @@
 (def ^:private agent-kinds
   {"person" :rico/Person "corporateBody" :rico/CorporateBody "family" :rico/Family})
 
+(defn- native [record p]
+  (some #(when (and (= p (:predicate %)) (string? (:value %))) (:value %))
+        (remove model/out-of-force? (:assertions record))))
+
+(defn agent-class
+  "The RiC-O class of the agent an EAC-CPF record describes: the one its
+   `entityType` names, `rico:Agent` when it names none."
+  [record]
+  (get agent-kinds (native record :eac/entity-type) :rico/Agent))
+
+(defn agent-node
+  "The node the projection makes of the agent an EAC-CPF record describes:
+   its `entityId`'s when that is an IRI (identity by an authority
+   identifier, ADR 0041), else the record's, of its `agent-class`.
+   `palomar.mentions` names the described agent's mention by it."
+  [record]
+  (let [kind (agent-class record)
+        eid  (native record :eac/entity-id)
+        iri  (when (and eid (nil? (nt/iri-problem eid))) eid)]
+    (model/mint-entity-id kind (if iri iri [(str (:id record))]))))
+
 (defn- runner
   [record]
   (let [rid   (:id record)
@@ -157,7 +178,7 @@
         kind  (get agent-kinds (some :value (vals :eac/entity-type)) :rico/Agent)
         eid   (some :value (vals :eac/entity-id))
         iri   (when (and eid (nil? (nt/iri-problem eid))) eid)
-        ag    (model/mint-entity-id kind (if iri iri [(str rid)]))
+        ag    (agent-node record)
         prov  (fn [a] (cond-> {:pass :infer :rule :rule.eac/project :derivation [rid]}
                         (seq (model/evidence-of a)) (assoc :evidence (model/evidence-of a))))
         claim (fn [p a] {:kind :assertion :value (model/assertion {:subject ag :predicate p :value (:value a) :status :asserted

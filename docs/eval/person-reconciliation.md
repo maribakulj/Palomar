@@ -35,6 +35,9 @@ constraints, is guaranteed, by unit tests).
 - **142 person mentions**: every `100` (90) and `700` (52) field. The other 7xx
   (collectivities, languages, series…) are not persons and are left out, and
   so are the person subject headings (`600`, see Limits).
+  Since lot N1 they are read by Palomar's common mention extraction
+  (`palomar.mentions`, ADR 0058), each field alone; every number below is
+  unchanged by it.
 - **The gold is `$3`**, the BnF authority record the cataloguer linked the field
   to. 141 mentions have one, citing 37 authorities; one mention (a `100`
   "Dumas, Alexandre") has none and is **undetermined**.

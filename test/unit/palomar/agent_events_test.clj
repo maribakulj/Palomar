@@ -9,6 +9,7 @@
             [palomar.agent-dates :as dates]
             [palomar.agent-events :as ae]
             [palomar.agent-match :as fs]
+            [palomar.mentions :as mentions]
             [palomar.model :as model]
             [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.lido :as lido]
@@ -27,7 +28,7 @@
   "test/fixtures/documentary/lido/ycba-oai-lido.xml")
 
 (def ^:private ycba-mentions
-  (delay (vec (mapcat ae/lido-mentions (:records (oai/import-response "lido" (slurp ycba)))))))
+  (delay (vec (mapcat mentions/mentions (:records (oai/import-response "lido" (slurp ycba)))))))
 
 (defn- of [nm] (filter #(= nm (:name %)) @ycba-mentions))
 
@@ -86,7 +87,7 @@
                  "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")]
     (first (:records (lido/importer {:validate? false} xml)))))
 
-(defn- event-of [spec] (first (:events (first (ae/lido-mentions (lido-record (merge {:type "production" :nm "X"} spec)))))))
+(defn- event-of [spec] (first (:events (first (mentions/mentions (lido-record (merge {:type "production" :nm "X"} spec)))))))
 
 (deftest a-lido-event-date-is-read-or-it-is-no-date
   (testing "earliest and latest, else the display date"
@@ -318,7 +319,7 @@
                                (when latest (str "<lido:latestDate>" latest "</lido:latestDate>")) "</lido:date>"))
                         "</lido:eventDate>"))
                  "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")]
-    (ae/lido-mentions (first (:records (lido/importer {:validate? false} xml))))))
+    (mentions/mentions (first (:records (lido/importer {:validate? false} xml))))))
 
 (def ^:private artists
   [{:id "rodin" :label "Rodin, Auguste" :dates (dates/parse-life-dates "1840-1917")}
