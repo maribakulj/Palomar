@@ -36,10 +36,13 @@
      death). Two items' events alone are no constraint: no life is known.
      A mention accepted for one authority therefore never
      joins another's: the two authorities cannot be one cluster.
-   Two mentions in one record with different roles are **not** a cannot-link:
-   a record's local agent is keyed by the record and the name, not by the
-   field or the role, and a person may be a record's author and its
-   illustrator; nothing in the IR tells the two cases apart.
+   Two mentions in one record are two local agents (lot O3, ADR 0063): a
+   local agent is minted per occurrence. They are joined only by an
+   accepted `palomar:sameAgentAs` (`reconcile/propose-same-agents` proposes
+   it when one name is given twice), or through the person they are each
+   linked to; a rejected one is a cannot-link (`:rejected-same-agent`).
+   Different roles alone are **not** a cannot-link: a person may be a
+   record's author and its illustrator.
 
    **Policy.** A curator's decision outranks the machine: `:accepted` links
    are hard must-links. Besides them, only `:propose` links join (`:join`,
@@ -91,6 +94,7 @@
             [palomar.agent-events :as events]
             [palomar.curate :as curate]
             [palomar.identity :as identity]
+            [palomar.mentions :as mentions]
             [palomar.model :as model]))
 
 ;; ---------------------------------------------------------------------------
@@ -387,10 +391,16 @@
                 (assoc a ::record (:id r)))
         membs (for [r records a (:assertions r)
                     :when (and (= identity/cluster-membership (:predicate a)) (= :reconcile/person (kind (target a))))]
+                (assoc a ::record (:id r)))
+        ;; two occurrences of one record proposed one agent (lot O3)
+        same  (for [r records a (:assertions r)
+                    :when (and (= identity/same-agent (:predicate a)) (ents (:subject a)) (ents (target a)))]
                 (assoc a ::record (:id r)))]
     {:ents        ents
      :alignments  align
-     :locals      (into {} (for [a (concat align membs)] [(:subject a) (::record a)]))
+     :same-agents same
+     :locals      (into {} (concat (for [a (concat align membs)] [(:subject a) (::record a)])
+                                   (for [a same x [(:subject a) (target a)]] [x (::record a)])))
      :memberships (group-by :subject membs)}))
 
 (defn- link-of
@@ -422,14 +432,20 @@
    (`eq/stated`). A local agent's
    dates are those its alignments' provenance states (`?mention-dates`), an
    authority's those it was compared with (`?authority-dates`); a rejected
-   alignment is a cannot-link (`:rejected-alignment`); an accepted
+   alignment is a cannot-link (`:rejected-alignment`); two local agents of
+   one record proposed one (`identity/same-agent`, lot O3) are an accepted
+   link once a curator accepts that claim alone (`identity/curated-claims`;
+   a policy's acceptance over a batch is a link for review, review of lot
+   O3), a link for review while it is pending,
+   a cannot-link (`:rejected-same-agent`) once rejected; an accepted
    membership is an accepted link from the local agent to its person node
    (an item `:person? true`), and, when the cluster it was accepted in was
    keyed by an authority of the batch (its `?cluster`), from the node to
    that authority: accepting a membership accepts the cluster it names."
   ([records] (clustering-input records {}))
   ([records extra]
-   (let [{:keys [ents alignments locals memberships]} (batch-view records)
+   (let [{:keys [ents alignments same-agents locals memberships]} (batch-view records)
+         curated  (into {} (for [r records] [(:id r) (identity/curated-claims r)]))
          dates-of (fn [k id] (some #(when (= id (if (= k '?mention-dates) (:subject %) (target %)))
                                       (parse-dates (bound % k)))
                                    alignments))
@@ -451,6 +467,19 @@
                              items (:events extra))]
      {:items       items
       :links       (-> (vec (keep link-of alignments))
+                       ;; two local agents of one record proposed one (lot O3):
+                       ;; accepted, a must-link; pending, a candidate for review
+                       ;; a must-link only for a curator's decision on that claim
+                       ;; alone (`identity/curated-claims`); a policy's
+                       ;; acceptance is a link for review (review of lot O3)
+                       (into (for [a same-agents
+                                   :when (or (model/in-force? a) (model/pending? a))
+                                   :let [id  (model/assertion-id a)
+                                         cur (and (model/in-force? a)
+                                                  (or (model/asserted? a) (contains? (curated (::record a)) id)))]]
+                               (cond-> {:a (:subject a) :b (target a) :record (::record a) :predicate (:predicate a)
+                                        :assertion id :basis (if cur :accepted :review)}
+                                 (and (model/in-force? a) (not cur)) (assoc :uncurated? true))))
                        (into (for [a accepted]
                                {:a (:subject a) :b (target a) :basis :accepted :membership? true
                                 :record (::record a) :assertion (model/assertion-id a)}))
@@ -462,9 +491,12 @@
                                                   items)]
                                     :when x]
                                 {:a (target a) :b x :basis :accepted :anchor? true}))))
-      :cannot-link (into (vec (for [a alignments :when (model/rejected? a)]
-                                {:a (:subject a) :b (target a) :reason :rejected-alignment}))
-                         (:cannot-link extra))})))
+      :cannot-link (-> (vec (for [a alignments :when (model/rejected? a)]
+                              {:a (:subject a) :b (target a) :reason :rejected-alignment}))
+                       ;; a curator who rejects two occurrences one agent keeps them apart (lot O3)
+                       (into (for [a same-agents :when (model/rejected? a)]
+                               {:a (:subject a) :b (target a) :reason :rejected-same-agent}))
+                       (into (:cannot-link extra)))})))
 
 (defn- violation-text [{:keys [a b reason]}] (str (name reason) " between " a " and " b))
 
@@ -670,10 +702,60 @@
                     :provenance (assoc (model/provenance {:pass :infer :rule membership-rule})
                                        :bindings bindings)}))
 
+(def same-agent-rule
+  "The rule that proposes two occurrences of one record one agent (lot O3)."
+  :reconcile/propose-same-agent)
+
+(defn- add-claim
+  "`r` with assertion `a`, unless it already holds a claim of that fact."
+  [r a]
+  (let [id (model/assertion-id a)]
+    (if (some #(= id (model/assertion-id %)) (:assertions r)) r (update r :assertions (fnil conj []) a))))
+
+(defn propose-same-agents
+  "`records` with, for each pair of occurrences `mentions/same-agent-proposals`
+   finds in a record (one name given twice, roles and dates compatible),
+   the two local agents (each with its name) and a `:proposed`
+   `identity/same-agent` claim between them (`palomar:sameAgentAs`, the
+   lower id its subject), its evidence the provenance bindings: the record,
+   the name, the occurrences, the roles, relators, name parts and dates.
+   It is never a fact by itself: a curator accepts it, claim by claim, and
+   the clustering then joins the two; rejected, it keeps them apart.
+   `cluster-records` runs it first, so every clustering of records makes
+   the proposals (review of lot O3). A record that holds the claim already,
+   whatever its status, is not changed. Returns the records."
+  [records]
+  (mapv
+   (fn [r]
+     (reduce
+      (fn [r {:keys [a b name kind occurrences evidence]}]
+        (let [[s o] (sort-by str [a b])
+              prov  (model/provenance {:pass :infer :rule same-agent-rule :derivation [(:id r)]})
+              named (fn [r id] (add-claim r (model/assertion {:subject id :predicate :crm/P190_has_symbolic_content
+                                                              :value name :status :asserted :provenance prov})))]
+          (-> r
+              (add-entity (model/entity {:id a :kind kind}))
+              (add-entity (model/entity {:id b :kind kind}))
+              (named a)
+              (named b)
+              (add-claim (model/assertion {:subject s :predicate identity/same-agent :value (model/reference o)
+                                           :status :proposed
+                                           :provenance (assoc prov :bindings {'?record      (:id r)
+                                                                              '?name        name
+                                                                              '?occurrences occurrences
+                                                                              '?roles       (:roles evidence)
+                                                                              '?relators    (:relators evidence)
+                                                                              '?name-parts  (:name-parts evidence)
+                                                                              '?dates       (:dates evidence)
+                                                                              '?date-texts  (:date-texts evidence)})})))))
+      r (mentions/same-agent-proposals r)))
+   records))
+
 (defn cluster-records
   "Cluster the agents `records` align (`clustering-input`, with `extra`'s
    `:dates`, `:cannot-link` and `:join`) and write the result into the
-   records (see the ns doc):
+   records (see the ns doc). It first proposes two occurrences of one name
+   in one record one agent (`propose-same-agents`, lot O3):
    - a local agent with an accepted membership is left as it is (a pending
      membership of it naming neither one of its accepted nodes nor its
      cluster's is rejected);
@@ -692,7 +774,8 @@
    :input :transitions}`."
   ([records] (cluster-records records {}))
   ([records {:keys [context join] :as extra}]
-   (let [ctx     (or context {})
+   (let [records (propose-same-agents records)
+         ctx     (or context {})
          input   (cond-> (clustering-input records extra) join (assoc :join join))
          result  (cluster input)
          items   (:items input)

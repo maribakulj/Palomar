@@ -54,7 +54,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0038](./0038-authority-files.md) | Authority files as reconciliation pools | Accepted |
 | [0039](./0039-archival-description.md) | Archival description: EAD units and EAC-CPF authorities | Accepted (amended by 0044) |
 | [0040](./0040-tuple-keys.md) | Identity keys are tuples, never joined strings | Accepted |
-| [0041](./0041-resemblance-identity-shared-node.md) | Resemblance is not identity, and identity alone shares a node | Accepted |
+| [0041](./0041-resemblance-identity-shared-node.md) | Resemblance is not identity, and identity alone shares a node | Accepted (amended by 0063) |
 | [0042](./0042-facts-only-by-default.md) | A target that states facts states only facts, by default | Accepted |
 | [0043](./0043-occurrences-and-node-fidelity.md) | Occurrences are kept, deletions reported, values checked on their node | Accepted |
 | [0044](./0044-archives-toward-ric-o.md) | Archives project to RiC-O, not to WEMI; EAD ids come from the source | Accepted (direction) |
@@ -71,11 +71,12 @@ decision from being read as shipped code (an audit honesty rule).
 | [0055](./0055-a-projection-states-what-its-rules-declare.md) | A projection states as facts only the relations its rules declare | Accepted |
 | [0056](./0056-who-did-what-and-what-it-shows-are-rules.md) | Who did what in an event, and what a work shows, are rules | Accepted |
 | [0057](./0057-the-identity-relation-between-persons.md) | Persons are clustered under constraints, and `skos:exactMatch` is written only where its transitivity holds | Accepted (amended by 0061) |
-| [0058](./0058-a-mention-is-one-occurrence.md) | A mention is one occurrence, read from itself alone, whatever the format | Accepted |
+| [0058](./0058-a-mention-is-one-occurrence.md) | A mention is one occurrence, read from itself alone, whatever the format | Accepted (amended by 0063) |
 | [0059](./0059-record-identity-is-not-entity-identity.md) | Record identity is not entity identity | Accepted |
 | [0060](./0060-candidate-generation-is-not-ranking.md) | Candidate generation is not ranking: lanes find, the matcher decides | Accepted |
-| [0061](./0061-an-agent-is-no-skos-concept.md) | An agent is no SKOS concept: identity has its own relations, and each export writes its own term | Accepted |
+| [0061](./0061-an-agent-is-no-skos-concept.md) | An agent is no SKOS concept: identity has its own relations, and each export writes its own term | Accepted (amended by 0063) |
 | [0062](./0062-what-a-weight-may-say-and-when-a-candidate-competes.md) | What a weight may say, and when a second candidate competes | Accepted |
+| [0063](./0063-occurrence-local-agent-identity.md) | The occurrence, the local agent and the identity; a pseudonym is a relation between two identities | Accepted |
 
 ## Template
 

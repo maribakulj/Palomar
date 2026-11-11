@@ -21,7 +21,9 @@
      `same-entity` (`palomar:sameEntityAs`). It names the clustering's
      equivalence links; the statement itself stays in the authority files;
    - (c) the clustering's result: `cluster-membership`
-     (`palomar:inCluster`), from a local agent to its batch's person node.
+     (`palomar:inCluster`), from a local agent to its batch's person node;
+   - (d) two occurrences of one record that may be one agent (lot O3, ADR
+     0063): `same-agent` (`palomar:sameAgentAs`), between two local agents.
 
    Each is a claim of the IR like any other: a status (`:asserted`,
    `:proposed`, `:needs-review`, `:accepted`, `:rejected`, ...), evidence
@@ -61,6 +63,12 @@
   "(c) A local agent belongs to its batch's person node (a cluster)."
   :palomar/inCluster)
 
+(def same-agent
+  "(d) Two local agents, two occurrences of one record, are one agent (lot
+   O3, ADR 0063): proposed by `reconcile/propose-same-agents` when one name
+   is given twice, and a fact only once a curator accepts it."
+  :palomar/sameAgentAs)
+
 (def relations
   "What each relation links and what Palomar guarantees of it. Not one is
    declared transitive for a reasoner: each guarantee is kept by the code,
@@ -92,7 +100,14 @@
     :between   [:agent :reconcile/person]
     :identity? true
     :closure   (str "the closure of a batch's memberships, through their person nodes, is the batch's "
-                    "clusters and nothing more: no cluster holds two cannot-linked agents")}})
+                    "clusters and nothing more: no cluster holds two cannot-linked agents")}
+   same-agent
+   {:iri       (str vocab "sameAgentAs")
+    :kind      :local
+    :between   [:agent :agent]
+    :identity? true
+    :closure   (str "symmetric; proposed only between two occurrences of one record; accepted, a must-link of "
+                    "the clustering, rejected, a cannot-link; never closed by Palomar's code")}})
 
 (def relation-iris
   "Relation keyword -> its IRI."
@@ -155,9 +170,11 @@
 (def conflict-codes
   "The diagnostics that name identity claims which cannot all hold:
    accepted claims the last clustering found in conflict (ADR 0057; lot
-   M7), and those the export finds itself (`palomar.identity-check`).
-   `owl:sameAs` would close them."
-  #{:reconcile/identity-conflict :reconcile/identity-events-conflict :reconcile/export-identity-conflict})
+   M7), those the export finds itself (`palomar.identity-check`), and
+   those `reconcile/apply-agent-links` refuses (lot O3). `owl:sameAs`
+   would close them."
+  #{:reconcile/identity-conflict :reconcile/identity-events-conflict :reconcile/export-identity-conflict
+    :reconcile/apply-identity-conflict})
 
 (def export-rule
   "What each destination profile writes for an identity claim. For each
@@ -190,7 +207,8 @@
                                      :else :internal}
                 authority-candidate {:else :internal}
                 same-entity         {:else :internal}
-                cluster-membership  {:else :internal}}
+                cluster-membership  {:else :internal}
+                same-agent          {:else :internal}}
    :linked-art {authority-match {:fact "equivalent" :when [:in-force :curated :no-conflict :kind-agrees]}}})
 
 (defn conflicted-claims

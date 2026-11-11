@@ -51,6 +51,7 @@
             [clojure.walk :as walk]
             [palomar.diagnostics :as dx]
             [palomar.identity :as identity]
+            [palomar.mentions :as mentions]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
@@ -117,13 +118,47 @@
   (cond-> {"type" "Person" "_label" label}
     iri (assoc "id" iri)))
 
+(defn- creator-locals
+  "`{name [local-agent ..]}`: the local agents of `record`'s creator
+   occurrences (`palomar.mentions`), by name, in document order: those whose
+   responsibility is `:creator`, or, when there are none, those with none
+   (as `agents/creators` reads the floor)."
+  [record]
+  (let [ms (filter #(= :agent (:type %)) (mentions/mentions record))
+        cs (filter #(= :creator (:responsibility %)) ms)
+        cs (if (seq cs) cs (filter #(nil? (:responsibility %)) ms))]
+    (reduce (fn [m {:keys [name local]}] (if local (update m name (fnil conj []) local) m)) {} cs)))
+
 (defn- persons
-  "Linked Art Person objects for the record's `names`, each carrying the
-   authority id of the identified agent that names it (`agents/identified`):
-   two identified creators keep two ids (post-audit 2, D1)."
+  "Linked Art Person objects for the record's `names`. A name given by one
+   creator occurrence is one Person: the authority id of the agent the
+   source identifies by that name (`agents/identified`, `:via :source`), or
+   the node of its local agent when an accepted identity claim identifies
+   it (`:via :claim`, lot O3: the actor is the local agent, and the
+   authority, when the export rule allows it, its `equivalent`), else a
+   bare label; two identified creators keep two ids (post-audit 2, D1). A
+   name given by two creator occurrences or more is one Person per
+   occurrence, each its own local agent's node (lot O3): one name is no
+   identity."
   [record names]
-  (let [iris (into {} (keep (fn [{:keys [name iri]}] (when name [name iri]))) (agents/identified record))]
-    (mapv #(person-obj % (iris %)) names)))
+  (let [ids     (agents/identified record)
+        iris    (into {} (keep (fn [{:keys [name iri via]}] (when (and name (= :source via)) [name iri]))) ids)
+        claimed (set (keep #(when (= :claim (:via %)) (:id %)) ids))
+        by-name (group-by :name (filter #(= :claim (:via %)) ids))
+        locals  (creator-locals record)]
+    (vec (mapcat (fn [nm]
+                   (let [ls (get locals nm)]
+                     (if (< 1 (count ls))
+                       (for [l ls] (person-obj nm (export/entity-iri l)))
+                       ;; the creator's own local agent, when a claim identifies
+                       ;; it; with no occurrence read (a record with no native
+                       ;; fields), the one local agent of that name a claim identifies
+                       (let [own (if (seq ls)
+                                   (first (filter claimed ls))
+                                   (let [cs (distinct (map :id (by-name nm)))] (when (= 1 (count cs)) (first cs))))]
+                         [(person-obj nm (or (iris nm) (some-> own export/entity-iri)))]))))
+                 names))))
+
 (defn- publishing
   "A Publishing `Activity` carried out by the publishers (Groups) — the Linked Art
    pattern for an edition's publication (model/document, Creation and Publication)."

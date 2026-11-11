@@ -242,3 +242,11 @@ authority id. When that id is a record's (a BnF catalogue ARK), the RDF
 export types the record's IRI as the person. This contradicts §1 of this
 ADR and the gate of ADR 0061. It is left as the input of lot O3, which
 re-models the agent nodes (the occurrence, the local agent, the entity).
+
+## Note (lot O3, ADR 0063, 2026-11-11): resolved for reconciliation
+
+`apply-agent-links` now keeps the occurrence's local agent and links it to
+a `:reconcile/authority` entity by an in-force `palomar:matchesAuthority`.
+No authority IRI is typed `E21_Person` or `E74_Group` by reconciliation.
+A LIDO actor's own authority URI is still its node; ADR 0063 lists it as
+decided, not implemented.

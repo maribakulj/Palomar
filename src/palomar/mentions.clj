@@ -8,7 +8,7 @@
 
      {:id       [record-id field n] ; the record, the field, its occurrence
       :record   record-id
-      :local    node-id             ; the record's local agent node (`local-agent`)
+      :local    node-id             ; this occurrence's local agent node (`local-agent`)
       :type     :agent | :subject | :provenance | :described
       :name     \"Dumas, Alexandre\" ; the heading, trimmed
       :role     \"0070\"             ; the first role, verbatim (code or term)
@@ -37,8 +37,10 @@
    `:role`).
 
    **The local node** is `local-agent`'s, the one rule
-   `reconcile/align-agents` uses too: for a MARC field, DC or MODS, the
-   record and the name (ADR 0041), of the class the mention's kind states,
+   `reconcile/align-agents` uses too: one local agent per occurrence (lot
+   O3, ADR 0063); for a MARC field, DC or MODS, the first occurrence of a
+   name keeps the record and the name (ADR 0041), a later one its
+   occurrence id (`local-key`), of the class the mention's kind states,
    else the authority's entity type, else a Person; for a LIDO actor, the
    rules' and Linked Art's node (`lido-rules/agent-node`); for EAC-CPF, the
    projection's agent (`eac/agent-node`). A mention's `:local` is computed
@@ -139,9 +141,20 @@
         (#{"corporateBody" "family"} entity-type)   :crm/E74_Group
         :else                                       :crm/E21_Person))
 
+(declare occurrences resolve-local)
+
+(defn- by-name
+  "The occurrences of `record` (`occurrences`) whose name is `nm`, trimmed."
+  [record nm]
+  (let [n (some-> nm str/trim)]
+    (filter #(= n (:name %)) (occurrences record))))
+
 (defn local-agent
   "The local agent node of the name `nm` on `record`, as `{:id :kind}`: the
    one rule `palomar.mentions` (`:local`) and `reconcile/align-agents` share.
+   A local agent is a hypothetical person or group, one per occurrence
+   (lot O3, ADR 0063): two occurrences of one name are two local agents,
+   never one on the strength of the name.
    - a LIDO record: the node the rules and Linked Art make of the actor of
      that name (`lido-rules/agent-node`: its authority URI's, else its
      occurrence's), of the class its type names; the actor is the mention's
@@ -149,9 +162,18 @@
      when they make one node; nil when they make several (which one, the
      name does not say);
    - an EAC-CPF record: the projection's agent (`eac/agent-node`);
-   - any other: the record and the name (ADR 0041), of `node-class` of the
-     mention's `:kind` and the authority's `:entity-type`."
-  [record nm {:keys [kind entity-type mention]}]
+   - any other: the occurrence's local agent (`resolve-local`), of
+     `node-class` of the mention's `:kind` and the authority's
+     `:entity-type`, its id `local-key`'s: a name given once keeps the
+     record and the name, a repeated one is keyed by its content. A name
+     the record names on its floor but in no occurrence keeps the record
+     and the name. Nil when the record gives the name twice or more and no
+     valid occurrence id says which.
+
+   A local agent's IRI is no stable identifier across re-imports: an edit
+   of the record may orphan it. It must not be published as an identity;
+   the identity is what curation links it to (ADR 0063)."
+  [record nm {:keys [mention] :as opts}]
   (case (source-format record)
     :lido    (let [fs    (filter #(and (= (some-> (:name %) str/trim) (some-> nm str/trim))
                                        (or (nil? mention) (= mention [(:id record) "actorInRole" (:event %) (:position %)])))
@@ -161,8 +183,33 @@
                                       :kind (rules/lookup-value :lido/actor-classes (or (:type f) ""))}))]
                (when (= 1 (count nodes)) (first nodes)))
     :eac-cpf {:id (eac/agent-node record) :kind (eac/agent-class record)}
-    (let [k (node-class kind entity-type)]
-      {:id (model/mint-entity-id k [(:id record) nm]) :kind k})))
+    (:local (resolve-local record nm opts))))
+
+(defn resolve-local
+  "What `local-agent` finds for the name `nm` on a MARC-family, DC or MODS
+   `record`, and why: `{:local {:id :kind}}`, or `{:reason r}` when it
+   finds none, `r` one of `:several-occurrences` (the record gives the name
+   as an agent twice or more, and no valid occurrence id says which) and
+   `:no-name`. A given occurrence id (`:mention`) is taken only when that
+   occurrence's name is `nm`, trimmed, and it is an agent's or the
+   described entity's (review of lot O3): an id an earlier version of the
+   record gave may name another field now. Otherwise the name decides."
+  [record nm {:keys [kind entity-type mention]}]
+  (let [k      (node-class kind entity-type)
+        n      (some-> nm str/trim)
+        os     (by-name record nm)
+        agents (filter #(#{:agent :described} (:type %)) os)
+        given  (when (some? mention)
+                 (first (filter #(and (= mention (:id %)) (= n (:name %)) (#{:agent :described} (:type %)))
+                                (occurrences record))))
+        one    (cond given                      given
+                     (= 1 (count agents))       (first agents)
+                     (and (empty? agents) (= 1 (count os))) (first os))]
+    (cond
+      one                    {:local {:id (model/mint-entity-id k (::key one)) :kind k}}
+      (and (empty? os) n)    {:local {:id (model/mint-entity-id k [(:id record) nm]) :kind k}}
+      (nil? n)               {:reason :no-name}
+      :else                  {:reason :several-occurrences})))
 
 (defn local-node
   "The id of `local-agent`."
@@ -351,7 +398,6 @@
     (when nm
       (cond-> {:id     [rid tag occurrence]
                :record rid
-               :local  (local-node record nm {:kind kind})
                :type   typ
                :name   nm
                :kind   kind
@@ -529,7 +575,6 @@
                     fld  (str (namespace p) ":" (name p))]
                 (cond-> {:id     [rid fld n]
                          :record rid
-                         :local  (local-node record nm {})
                          :type   :agent
                          :name   nm
                          :events []
@@ -555,6 +600,58 @@
   [record]
   (some (fn [{p :predicate}] (when (keyword? p) (formats (namespace p)))) (:assertions record)))
 
+(defn- raw-mentions
+  "Every occurrence of `record`, subjects and provenance included, in
+   document order, before their local agents are named."
+  [record]
+  (let [fmt (source-format record)]
+    (case fmt
+      (:intermarc :marc21 :unimarc) (marc-mentions record fmt)
+      :lido                         (lido-mentions record)
+      :eac-cpf                      (eac-mentions record)
+      :dc                           (indexed-mentions record :dc dc-roles)
+      :mods                         (indexed-mentions record :mods {:mods/name nil})
+      [])))
+
+(defn- content-of
+  "What an occurrence states besides its name: its field, its relators, its
+   life-dates text and its name parts."
+  [m]
+  [(get-in m [:source :field]) (vec (:relators m)) (or (get-in m [:dates :text]) "")
+   (vec (sort (:name-parts m)))])
+
+(defn local-key
+  "The key the local agent of each of `ms` (one record's occurrences, in
+   document order) is minted from (lot O3, and its review). A name and
+   class (`node-class` of its kind) the record gives once keeps `[record-id
+   name]` (ADR 0041), the id it always had. A name and class it gives more
+   than once, subjects and provenance included: each occurrence is keyed by
+   its content, `[record-id name field relators dates-text name-parts n]`,
+   `n` an ordinal only among occurrences of exactly that content, in
+   document order. So inserting, removing or moving another field changes
+   no other occurrence's key, and an edit of an occurrence orphans its old
+   id instead of giving it to another occurrence. Returns `ms` with the key
+   under `::key`."
+  [ms]
+  (let [group (fn [m] [(node-class (:kind m) nil) (:name m)])
+        sizes (frequencies (map group ms))]
+    (first (reduce (fn [[acc seen] m]
+                     (if (= 1 (sizes (group m)))
+                       [(conj acc (assoc m ::key [(:record m) (:name m)])) seen]
+                       (let [c (into [(:record m) (:name m)] (content-of m))
+                             i (get seen [(group m) c] 0)]
+                         [(conj acc (assoc m ::key (conj c i))) (assoc seen [(group m) c] (inc i))])))
+                   [[] {}] ms))))
+
+(defn- occurrences
+  "Every occurrence of `record` with its local agent (`:local`) and the key
+   it is minted from (`::key`)."
+  [record]
+  (case (source-format record)
+    (:lido :eac-cpf) (raw-mentions record)
+    (mapv #(assoc % :local (model/mint-entity-id (node-class (:kind %) nil) (::key %)))
+          (local-key (raw-mentions record)))))
+
 (defn mentions
   "The agent mentions of `record`, one per occurrence, in document order
    (see the ns doc). Subjects are left out unless `{:subjects? true}`,
@@ -562,14 +659,7 @@
    occurrence that names no one is no mention."
   ([record] (mentions record {}))
   ([record {:keys [subjects? provenance?]}]
-   (let [fmt (source-format record)
-         ms  (case fmt
-               (:intermarc :marc21 :unimarc) (marc-mentions record fmt)
-               :lido                         (lido-mentions record)
-               :eac-cpf                      (eac-mentions record)
-               :dc                           (indexed-mentions record :dc dc-roles)
-               :mods                         (indexed-mentions record :mods {:mods/name nil})
-               [])]
+   (let [ms (map #(dissoc % ::key) (occurrences record))]
      (filterv #(case (:type %) :subject subjects? :provenance provenance? true) ms))))
 
 (defn batch
@@ -577,3 +667,121 @@
    its own (`mentions`), whatever the others."
   ([records] (batch records {}))
   ([records opts] (vec (mapcat #(mentions % opts) records))))
+
+;; ---------------------------------------------------------------------------
+;; Two occurrences of one name in one record: a proposal, never a fact
+;; ---------------------------------------------------------------------------
+
+(defn- date-text
+  "An occurrence's life-dates text, its trailing punctuation dropped, or nil."
+  [m]
+  (some-> (get-in m [:dates :text]) (str/replace #"[\s.,;:]+$" "") str/trim not-empty))
+
+(defn- dates-verdict
+  "Whether two occurrences' life dates can be one life (review of lot O3):
+   their parsed profiles compared by `agent-dates/compatibility`.
+   `:incompatible` only when they cannot overlap (two births years apart:
+   two persons); `:compatible` when they can (\"1802-1870\", \"1802 -
+   1870\", \"1802–1870\", \"18..-1870\"); `:unknown` when one gives
+   none."
+  [x y]
+  (let [a (:dates x) b (:dates y)]
+    (if (and (dates/dated? a) (dates/dated? b))
+      (case (:verdict (dates/compatibility a b))
+        :incompatible :incompatible
+        :compatible   :compatible
+        :unknown)
+      :unknown)))
+
+(def marc-relator-terms
+  "MARC21 relator terms (`$e`, the Library of Congress's MARC Code List for
+   Relators) to their codes, for the terms Palomar reads; lowercased, final
+   punctuation dropped. A term not here is a free term: it never
+   conflicts."
+  {"actor" "act" "adapter" "adp" "annotator" "ann" "arranger" "arr" "artist" "art" "author" "aut"
+   "author of introduction" "aui" "binder" "bnd" "book designer" "bkd" "calligrapher" "cll"
+   "cartographer" "ctg" "cinematographer" "cng" "collector" "col" "colorist" "clr" "commentator" "cmm"
+   "compiler" "com" "composer" "cmp" "conductor" "cnd" "contributor" "ctb" "copyright holder" "cph"
+   "costume designer" "cst" "curator" "cur" "dedicatee" "dte" "designer" "dsr" "director" "drt"
+   "distributor" "dst" "donor" "dnr" "draftsman" "drm" "editor" "edt" "engraver" "egr" "etcher" "etr"
+   "former owner" "fmo" "founder" "fnd" "honoree" "hnr" "host" "hst" "illuminator" "ilu" "illustrator" "ill"
+   "instrumentalist" "itr" "interviewee" "ive" "interviewer" "ivr" "librettist" "lbt" "lithographer" "ltg"
+   "lyricist" "lyr" "narrator" "nrt" "organizer" "orm" "painter" "pnt" "performer" "prf" "photographer" "pht"
+   "printer" "prt" "printmaker" "prm" "producer" "pro" "publisher" "pbl" "reviewer" "rev" "screenwriter" "aus"
+   "sculptor" "scl" "singer" "sng" "speaker" "spk" "translator" "trl" "transcriber" "trc" "writer of preface" "wpr"})
+
+(defn- relator-set
+  "The relators an occurrence states: its relator codes, and, for MARC21,
+   its `$e` terms that `marc-relator-terms` holds."
+  [m]
+  (into (set (:relators m))
+        (when (= :marc21 (get-in m [:source :format]))
+          (keep #(marc-relator-terms (some-> % str/lower-case (str/replace #"[\s.,;:]+$" "") str/trim)) (:roles m)))))
+
+(defn- field-of
+  "The field roles are compared within: a MARC tag, a DC element; for LIDO,
+   the event (two actors of one event are two actors of one act)."
+  [m]
+  (if (= :lido (get-in m [:source :format])) [:event (:event m)] (get-in m [:source :field])))
+
+(defn- part-conflict?
+  "Whether two occurrences state one name part (`$b`, `$c`, `$q`) with two
+   values: \"Dumas, Alexandre, $c père\" and \"$c fils\" are two
+   persons. A part only one states is no conflict."
+  [x y]
+  (let [n #(some-> % str/lower-case (str/replace #"[\s.,;:()]+$" "") (str/replace #"^[\s(]+" "") str/trim)
+        a (:name-parts x) b (:name-parts y)]
+    (boolean (some (fn [[k v]] (and (contains? b k) (not= (n v) (n (get b k))))) a))))
+
+(defn- roles-verdict
+  "`:incompatible` when two occurrences state different name parts
+   (`part-conflict?`), or when, in one field (`field-of`: one MARC tag; one
+   LIDO event), both state relators (`relator-set`: codes, role concept
+   IRIs, MARC21 `$e` terms the table holds), their sets differ, and they do
+   not both give the same life dates. Within one field, a record that
+   names one agent twice with two functions gives the same heading twice,
+   dates included (the BnF's 700s: \"Bernard, Roland\", 1927-2019, 0610
+   and 0570); one undated heading twice with two functions is all a record
+   has to tell two homonyms apart, so it is read as two. Else
+   `:compatible`. Across fields (a 100 and a 700; INTERMARC's 723, 730,
+   731, 732; two LIDO events) one agent's functions are split by the
+   format, so their relators say nothing against one agent. A role that is
+   no relator (a Dublin Core element, a free term) never conflicts."
+  [x y]
+  (let [a (relator-set x) b (relator-set y)
+        d (date-text x)]
+    (if (or (part-conflict? x y)
+            (and (= (field-of x) (field-of y))
+                 (seq a) (seq b) (not= a b)
+                 (not (and d (= d (date-text y))))))
+      :incompatible
+      :compatible)))
+
+(defn same-agent-proposals
+  "The proposals that two occurrences of `record` are one agent (lot O3,
+   ADR 0058 amendment): every pair of its agent occurrences (`:type
+   :agent`) with the same name, exactly, two local agents of one class,
+   whose roles and dates are compatible (`roles-verdict`, `dates-verdict`):
+   life dates that can overlap, no two values of one name part, and, in one
+   field, no two different relator sets unless both give the same dates.
+   Each is `{:a :b :record :name :kind :occurrences [id id] :evidence
+   {:same-record true :same-name true :roles :relators :name-parts :dates
+   :date-texts}}`,
+   `:a` the earlier occurrence's local agent. It is a proposal, never a
+   fact: nothing joins the two until a curator accepts it. Subjects,
+   provenance and described entities are not proposed."
+  [record]
+  (let [v (filterv #(= :agent (:type %)) (mentions record))]
+    (vec (for [i (range (count v)) j (range (inc i) (count v))
+               :let [x (v i) y (v j)]
+               :when (and (= (:name x) (:name y)) (:local x) (:local y) (not= (:local x) (:local y))
+                          (= (node-class (:kind x) nil) (node-class (:kind y) nil)))
+               :let [roles (roles-verdict x y) dts (dates-verdict x y)]
+               :when (and (not= :incompatible roles) (not= :incompatible dts))]
+           {:a (:local x) :b (:local y) :record (:id record) :name (:name x)
+            :kind (node-class (:kind x) nil)
+            :occurrences [(:id x) (:id y)]
+            :evidence {:same-record true :same-name true
+                       :roles roles :relators [(vec (sort (relator-set x))) (vec (sort (relator-set y)))]
+                       :name-parts [(or (:name-parts x) {}) (or (:name-parts y) {})]
+                       :dates dts :date-texts [(get-in x [:dates :text]) (get-in y [:dates :text])]}}))))

@@ -21,6 +21,7 @@
    not source content and are not reported here: the projection accounts for them."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.mentions :as mentions]
             [palomar.model :as model]
             [palomar.plugins.qualified :as qualified]
             [palomar.spokes :as spokes]))
@@ -153,6 +154,23 @@
     (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :canon/agent :value nm
               :message (str "the provider " (pr-str nm) " of the digital surrogate has no " target
                             " element that does not state a role in the work; not written")})))
+
+(defn occurrence-losses
+  "One `:ambiguity-collapsed` export loss per name and role the source gives
+   more often than the canonical floor holds it (lot O3 review): two
+   identical `dc:creator` \"Martin, Jean\" are two occurrences (two local
+   agents, two Linked Art actors) but one floor value, so a floor export
+   (DC, MODS, MARC21) writes one name. A name the floor does not carry at
+   all is another loss's (`unexpressed`)."
+  [record target]
+  (let [floor (frequencies (for [{:keys [value coord]} (qualified/values record :canon/agent :canon/role)] [value coord]))
+        occs  (frequencies (for [m (mentions/mentions record) :when (= :agent (:type m))] [(:name m) (:responsibility m)]))]
+    (for [[[nm role :as k] n] (sort-by (comp pr-str key) occs)
+          :let [f (get floor k 0)]
+          :when (and (pos? f) (< f n))]
+      (dx/loss {:category :ambiguity-collapsed :subject (:id record) :edge :export :source-field :canon/agent
+                :message (str n " occurrences of " (pr-str nm) (when role (str " (" (name role) ")"))
+                              " are " f " value of the canonical floor: " target " writes the name " f " time(s)")}))))
 
 (defn scope-losses
   "One `:under-specified` loss per rights statement scoped to the digital

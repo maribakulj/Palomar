@@ -194,6 +194,7 @@
    (cov/unexpressed record written-canon "mods" "MODS")
    (unplaced-note-kinds record)
    (cov/provider-losses record "MODS")
+   (cov/occurrence-losses record "MODS")
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

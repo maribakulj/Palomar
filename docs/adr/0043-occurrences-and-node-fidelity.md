@@ -47,3 +47,14 @@ an RDF output, even on the wrong resource.
   fixture corpus only.
 - An OAI harvest can drive an incremental store: upserts from `:records`,
   deletions from `:deleted`.
+
+## Note (lot O3, ADR 0063, 2026-11-11): occurrences and distinct facts
+
+Two exports count agents two ways. Linked Art counts occurrences: two
+`dc:creator` "Martin, Jean" are two actors, each its local agent. The
+floor-based exports (DC, MODS, MARC21) count the floor's distinct facts:
+two identical values of one role are one floor value (ADR 0008), so they
+write one name. The value is present, so the audit sees no silent loss.
+They say it all the same: an `:ambiguity-collapsed` export loss on
+`:canon/agent` (`export-coverage/occurrence-losses`) whenever the source
+gives a name and role more often than the floor holds it.

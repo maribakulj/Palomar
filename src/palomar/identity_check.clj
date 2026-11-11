@@ -16,6 +16,10 @@
      with the agent's own dates): `:incompatible-dates`,
      `:incompatible-events`. The authority's dates, as the claim compared
      them, count as one more agent's;
+   - **two agents kept apart, one authority**: two local agents the
+     clustering is given as a cannot-link (a rejected `palomar:sameAgentAs`,
+     `agent-cluster/clustering-input`), each with an in-force claim to one
+     authority IRI (`:rejected-same-agent`, review of lot O3);
    - **one agent, two authorities**: one local agent with in-force claims
      to two authority IRIs (`:two-authorities`). Whether two authority
      records are one entity (ADR 0059) is the clustering's to say; the
@@ -27,7 +31,8 @@
    `:reconcile/export-identity-conflict` diagnostic on its record. A
    streamed conversion exports one record at a time, so it checks within
    each record only."
-  (:require [palomar.agent-dates :as dates]
+  (:require [palomar.agent-cluster :as ac]
+            [palomar.agent-dates :as dates]
             [palomar.agent-events :as events]
             [palomar.identity :as identity]
             [palomar.mentions :as mentions]
@@ -90,11 +95,22 @@
                      :let [why (incompatible (life c) {:dates (:authority-dates c)})]
                      :when why]
                  [(:id c) {:reason why :with (:iri c)}])
+        ;; two local agents the clustering keeps apart (a rejected
+        ;; `sameAgentAs`, review of lot O3), each with an in-force claim to
+        ;; one authority: both claims are in conflict
+        apart  (into {} (for [{:keys [a b reason]} (:cannot-link (ac/clustering-input records)) :when (not= a b)]
+                          [#{a b} reason]))
+        kept   (for [[_ xs] (group-by :iri cs)
+                     x xs y xs
+                     :when (not= (:agent x) (:agent y))
+                     :let [why (apart (hash-set (:agent x) (:agent y)))]
+                     :when why]
+                 [(:id x) {:reason why :with (:id y)}])
         two    (for [[_ xs] (group-by (juxt :record :agent) cs)
                      :when (< 1 (count (distinct (map :iri xs))))
                      x xs]
                  [(:id x) {:reason :two-authorities :with (first (remove #{(:iri x)} (sort (distinct (map :iri xs)))))}])]
-    (reduce (fn [m [id v]] (if (contains? m id) m (assoc m id v))) {} (concat same auth two))))
+    (reduce (fn [m [id v]] (if (contains? m id) m (assoc m id v))) {} (concat kept same auth two))))
 
 (defn with-conflicts
   "`records` with a `code` diagnostic for each claim of theirs in conflict

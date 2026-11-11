@@ -58,3 +58,12 @@ Applied here:
   reconciliation against an authority (ADR 0038), which is the honest path.
 - The creator-keyed Work remains a resemblance-based identity. It stays
   `:proposed` and, from C3 on, out of the default fact export.
+
+## Amendment (lot O3, ADR 0063, 2026-11-11): not even within one record
+
+A name-only agent was scoped to its record: the record and the name. Two
+fields of one record with one heading were still one node. A local agent
+is now minted per occurrence (ADR 0058 amendment O3). A name given once
+keeps the record-and-name id; a name given twice or more is keyed by each
+occurrence's content. Two occurrences of one name in one record are a `:proposed`
+`palomar:sameAgentAs`, never one node.

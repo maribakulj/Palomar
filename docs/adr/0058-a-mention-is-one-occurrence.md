@@ -373,3 +373,38 @@ after a contradictory review.
     0. It should apply only when the name agrees.
 - The role feature reads other records' relator codes: 21 of 186 dev true
   pairs have a known role level, and no test person does.
+
+## Amendment (lot O3, 2026-11-11): a local agent per occurrence
+
+§5 minted the local agent from the record and the name (ADR 0041). Two
+fields of one record with one heading were one node: an identity by name.
+ADR 0063 decides the levels; this amendment changes §5.
+
+1. **One local agent per occurrence** (`mentions/local-agent`,
+   `mentions/local-key`). A name and class the record gives once keeps
+   `[record-id name]`. A name and class it gives more than once: each
+   occurrence is keyed by its content (field, relators, dates, name parts),
+   an ordinal only among exact duplicates (revised after the review: an
+   edit orphans an id, never re-points it). LIDO and EAC-CPF are unchanged.
+2. **A name alone names no occurrence.** Without a valid mention id,
+   `local-agent` finds the record's one agent occurrence of the name; it
+   returns nil when there are two or more, and `align-agents` reports it
+   (`:reconcile/unplaced-proposal`). A mention id is taken only when its
+   occurrence has the name and is an agent's (review: an id an earlier
+   version of the record gave may name another field now).
+3. **`align-agents`** takes the proposals of every mention scoped to a
+   record, each on its own local agent. Before, a record with two scoped
+   mentions of one name took none.
+4. **Two occurrences of one name are a proposal**
+   (`mentions/same-agent-proposals`, `reconcile/propose-same-agents`):
+   `palomar:sameAgentAs`, `:proposed`, unless their dates, name parts or
+   roles are incompatible (ADR 0063 §3). `cluster-records` makes them
+   first; `reconcile` shows them. The clustering joins the two only for a
+   curator's per-claim acceptance.
+
+**Measured** (ADR 0063 §2): on the fixtures, 66 of 730 occurrence ids
+change (22 of 613 agent occurrences); on the M2–M8 corpus, 11 of 227 (2
+agent occurrences, whose name a subject shares); on the N3 design corpora,
+70 of 1 278 (64 of 1 260). No eval number moves: every asserted number of
+M2–M8, M6, N3 dev, N4, N5 and O4 is unchanged, and the evals' printed rows
+are identical.

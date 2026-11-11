@@ -89,9 +89,12 @@
         accept  #(assoc % :status :accepted :records :all)
         links   (mapv accept (rec/propose-agent-links ["Gustave Flaubert" "Victor Hugo"] pool))
         {:keys [records applied refused]} (rec/apply-agent-links [a b c] links)]
-    (testing "a link accepted for the whole corpus is applied to both Flaubert records, as the same node"
+    (testing "a link accepted for the whole corpus is applied to both Flaubert records: each local agent keeps its node, both link the one authority (lot O3)"
       (is (= #{:r/a :r/b} (set (map :record applied))))
-      (is (= 1 (count (distinct (map :id (mapcat :entities (take 2 records))))))))
+      (is (= 2 (count (distinct (map :local applied)))))
+      (is (= 1 (count (distinct (keep #(when (:iri %) (:id %)) (mapcat :entities (take 2 records)))))))
+      (is (every? #(= :reconcile/authority (:kind %)) (filter :iri (mapcat :entities (take 2 records))))
+          "the authority is never typed the person"))
     (testing "the id-less Victor Hugo match (the metro station) is refused, never applied"
       (is (= [["Victor Hugo" :not-certifiable]] (map (juxt :name :reason) refused)))
       (is (empty? (:entities (nth records 2)))))
@@ -198,7 +201,8 @@
                  :certifiable? true :status :accepted :records #{:r/c} :entity-type "corporateBody"}
           {:keys [records applied]} (rec/apply-agent-links [r] [link])]
       (is (= 1 (count applied)))
-      (is (= [:crm/E74_Group] (map :kind (filter :iri (:entities (first records))))))
+      (is (= [:reconcile/authority] (map :kind (filter :iri (:entities (first records))))))
+      (is (= [:crm/E74_Group] (map :kind (remove :iri (:entities (first records))))) "the local agent is a Group (lot O3)")
       (is (= 1 (:distinct (rec/reconcile-agents records))) "and reconcile-agents sees it")))
   (testing "a proposal carries the authority's entity type to the alignment and back"
     (let [props (rec/propose-agent-links ["Marist College"] [{:id "http://ex.org/mc" :label "Marist College" :entity-type "corporateBody"}])
@@ -225,6 +229,7 @@
       (is (= #{["Marx, Karl" marx] ["Engels, Friedrich" engels]} (set (map (juxt :name :iri) applied))))
       (is (empty? refused))
       (is (= #{marx engels} (set (keep :iri (:entities (first records))))))
+      (is (= 2 (count (filter #(= :crm/E21_Person (:kind %)) (:entities (first records))))) "two local agents")
       (testing "and each agent keeps its own name"
         (is (= {marx "Marx, Karl" engels "Engels, Friedrich"}
                (into {} (map (juxt :iri :label)) (:agents (rec/reconcile-agents records)))))))))
@@ -259,14 +264,24 @@
       (is (empty? refused)))))
 
 (deftest linked-art-names-each-identified-creator
-  (testing "with two identified creators, each Linked Art Person carries its own authority id"
+  (testing "with two identified creators, each Linked Art Person is its own local agent (lot O3); the authority is its equivalent only for a curator's per-claim decision"
     (let [r    (-> (record-with-agents :r/m "Marx, Karl" "Engels, Friedrich")
                    (update :entities (fnil conj []) (model/entity {:id :m/m :kind :lrmoo/F3_Manifestation}))
                    (update :assertions conj (model/assertion {:subject :m/m :predicate :lrmoo/R33_has_string :value "Manifest"})))
-          out  (first (:records (rec/apply-agent-links [r] [(link "Marx, Karl" marx :r/m) (link "Engels, Friedrich" engels :r/m)])))
-          doc  (first (linked-art/documents out))]
-      (is (= {"Marx, Karl" marx "Engels, Friedrich" engels}
-             (into {} (map (juxt #(get % "_label") #(get % "id"))) (get-in doc ["created_by" "carried_out_by"])))))))
+          {out :records applied :applied} (rec/apply-agent-links [r] [(link "Marx, Karl" marx :r/m) (link "Engels, Friedrich" engels :r/m)])
+          doc  (first (linked-art/documents (first out)))
+          node (into {} (map (juxt :name (comp export/entity-iri :local))) applied)]
+      (is (= node (into {} (map (juxt #(get % "_label") #(get % "id"))) (get-in doc ["created_by" "carried_out_by"]))))
+      (is (not-any? #(contains? % "equivalent") (get-in doc ["created_by" "carried_out_by"])) "a link applied in bulk is no curator's decision")
+      (testing "a signed per-claim acceptance gives the equivalent"
+        (let [props [{:name "Marx, Karl" :authority-id marx :score 1.0 :certifiable? true :status :proposed :decision :propose}
+                     {:name "Engels, Friedrich" :authority-id engels :score 1.0 :certifiable? true :status :proposed :decision :propose}]
+              [al]  (rec/align-agents [r] props)
+              acc   (reduce (fn [x a] (:record (curate/decide-one x a :accept "right" {:by "curator"})))
+                            al (filter #(= :palomar/matchesAuthority (:predicate %)) (:assertions al)))
+              d     (first (linked-art/documents acc))]
+          (is (= {"Marx, Karl" [marx] "Engels, Friedrich" [engels]}
+                 (into {} (map (juxt #(get % "_label") #(mapv (fn [e] (get e "id")) (get % "equivalent")))) (get-in d ["created_by" "carried_out_by"])))))))))
 
 ;; --- dates as contrary evidence (lot M3) ------------------------------------
 
