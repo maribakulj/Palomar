@@ -12,6 +12,7 @@
             [palomar.curate :as curate]
             [palomar.identity :as identity]
             [palomar.ir :as ir]
+            [palomar.mentions :as mentions]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.lrmoo.dataset :as dataset]
@@ -370,6 +371,44 @@
             res (convert/export-records :ntriples two {})]
         (is (empty? (filter #(str/includes? % "sameAs") (lines (:output res)))))
         (is (= #{:two-authorities} (set (map #(get-in % [:detail :reason]) (filter #(= :reconcile/export-identity-conflict (:code %)) (:loss res))))))))))
+
+(defn- lido-production
+  "A LIDO object record (as the pivot) whose one actor, `nm`, carried out
+   its production, dated `year`."
+  [nm year]
+  (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>E-1</lido:lidoRecID><lido:descriptiveMetadata>"
+                 "<lido:eventWrap><lido:eventSet><lido:event><lido:eventType>"
+                 "<lido:conceptID>http://terminology.lido-schema.org/eventType/production</lido:conceptID><lido:term>production</lido:term></lido:eventType>"
+                 "<lido:eventActor><lido:actorInRole><lido:actor lido:type=\"person\"><lido:nameActorSet><lido:appellationValue>" nm
+                 "</lido:appellationValue></lido:nameActorSet></lido:actor></lido:actorInRole></lido:eventActor>"
+                 "<lido:eventDate><lido:displayDate>" year "</lido:displayDate><lido:date><lido:earliestDate>" year
+                 "</lido:earliestDate><lido:latestDate>" year "</lido:latestDate></lido:date></lido:eventDate>"
+                 "</lido:event></lido:eventSet></lido:eventWrap></lido:descriptiveMetadata></lido:lido>")]
+    (first (:records (convert/to-wemi :lido {:validate? false} xml)))))
+
+(deftest the-export-checks-identity-conflicts-on-events
+  (let [nm      "Dumas, Alexandre"
+        obj     (lido-production nm "1700")
+        [a b]   (rec/align-agents [obj (named :doc/b nm)]
+                                  [(prop (:id obj) nm isni) (prop :doc/b nm isni :propose "1802-1870")])
+        acc     (curate-all [a b])
+        res     (convert/export-records :ntriples acc {})
+        found   (filter #(= :reconcile/export-identity-conflict (:code %)) (:loss res))]
+    (testing "the setting: the object's maker is undated, and their production of 1700 is a typed creation event"
+      (is (= 2 (count (mapcat #(claims % identity/authority-match) acc))))
+      (is (= [:creation] (distinct (map :kind (mapcat :events (filter #(= nm (:name %)) (mentions/mentions obj))))))))
+    (testing "dates alone cannot refuse it: one side is undated"
+      (is (every? #(nil? (get-in % [:provenance :bindings '?mention-dates])) (claims (first acc) identity/authority-match))))
+    (testing "a creation in 1700 cannot be the work of a person born in 1802: no owl:sameAs for either claim"
+      (is (empty? (filter #(str/includes? % "sameAs") (lines (:output res)))))
+      (is (= 2 (count (filter #(str/includes? % "matchesAuthority") (lines (:output res)))))))
+    (testing "and a :reconcile/export-identity-conflict warning for each, with the reason"
+      (is (= 2 (count found)))
+      (is (every? #(= :warning (:severity %)) found))
+      (is (= #{:incompatible-events} (set (map #(get-in % [:detail :reason]) found)))))
+    (testing "exported alone, each record has nothing to compare with: both are owl:sameAs"
+      (is (seq (same-as-lines :ntriples [(first acc)])))
+      (is (seq (same-as-lines :ntriples [(second acc)]))))))
 
 (deftest the-gates-of-owl-same-as
   (let [one (fn [iri & {:as more}]
