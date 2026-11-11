@@ -29,8 +29,6 @@
     :infers
     {:crm/P12i_was_present_at
      "an event of the object that is no production, acquisition, modification or design, nor precedes it (a commissioning, a planning), is one it was present at"
-     :crm/P62_depicts
-     "a person a made object's record names as its subject (subjectActor) is one it depicts; subject concepts are the rules' (post-audit 8, K5)"
      :crm/P45_consists_of
      "the object consists of its production's materials, and of those of an event of no stated kind that says nothing else (museum-digital's practice)"
      :crm/P50_has_current_keeper

@@ -512,6 +512,17 @@
                          e    (assoc "end_of_the_end" e)))))
         place-ids (fn [ev] (filter #(nil? (nt/iri-problem %)) (event-strings record :lido/event-place-id (:index ev))))
         subjects (flds :lido/subject-concept)
+        ;; the persons, groups and places it represents or is about, each
+        ;; the node the CRM view's rules make of it (N7)
+        shown    (for [p [:lido/subject-person :lido/subject-place] f (flds p)
+                       ;; one IRI, one class: one a concept names is that concept (N7 review)
+                       :when (not (contains? (set (keep :uri subjects)) (:uri f)))]
+                   (let [k (lido-rules/subject-class p f)
+                         n (lido-rules/subject-node (:id record) p f)]
+                     {:node n
+                      :ref  {"id"     (or (:uri f) (export/entity-iri n))
+                             "type"   (case k :crm/E74_Group "Group" :crm/E53_Place "Place" "Person")
+                             "_label" (:name f)}}))
         rights   (flds :lido/rights-work-type)
         ;; a former repository is no current custodian (post-audit 7, I3)
         keepers  (remove :former (flds :lido/keeper))
@@ -557,7 +568,7 @@
               ts       (assoc "timespan" ts)
               (seq ps) (assoc "took_place_at" (mapv (fn [u] {"id" u "type" "Place"}) ps))
               (seq tq) (assoc "technique" (mapv #(type-ref % "Type") tq)))))
-        visual?  (or (seq subjects) (seq rights))
+        visual?  (or (seq subjects) (seq shown) (seq rights))
         hmo      (cond-> {"@context" context
                           "id"       (object-id record)
                           "type"     "HumanMadeObject"
@@ -604,15 +615,27 @@
         depicted (set (for [a (:assertions record)
                             :when (and (= :crm/P62_depicts (:predicate a)) (= :asserted (:status a)) (model/reference-value? (:value a)))]
                         (:value/target (:value a))))
+        ;; what the CRM view's rules say it depicts it represents; any other
+        ;; subject, a concept, a person or a place, it is about (K5, N7)
+        ;; one node the CRM view says it depicts and is about (two subject
+        ;; sets) is written in both (N7 review)
+        meant    (set (for [a (:assertions record)
+                            :when (and (= :crm/P129_is_about (:predicate a)) (= :asserted (:status a)) (model/reference-value? (:value a)))]
+                        (:value/target (:value a))))
+        about?   (fn [n] (or (meant n) (not (depicted n))))
+        node     #(lido-rules/concept-node (:id record) %)
+        ;; one id once: one AAT term YCBA gives twice ("shops", "stores") is
+        ;; one node, written under its first label (N7 review)
+        once     (fn [refs] (second (reduce (fn [[seen out :as acc] r] (if (seen (get r "id")) acc [(conj seen (get r "id")) (conj out r)])) [#{} []] refs)))
+        rep      (once (concat (for [c subjects :when (and (:uri c) (depicted (node c)))] (type-ref c "Type"))
+                               (for [{n :node r :ref} shown :when (depicted n)] r)))
+        abt      (once (concat (for [c subjects :when (and (:uri c) (about? (node c)))] (type-ref c "Type"))
+                               (for [{n :node r :ref} shown :when (about? n)] r)))
         vi       (when visual?
                    (cond-> {"@context" context "id" (visual-iri record) "type" "VisualItem"
                             "_label" (str "Visual content of " (get hmo "_label"))}
-                     ;; what the CRM view's rules say it depicts it represents;
-                     ;; any other subject, it is about (post-audit 8, K5)
-                     (seq (filter #(and (:uri %) (depicted (lido-rules/concept-node (:id record) %))) subjects))
-                     (assoc "represents" (vec (for [c subjects :when (and (:uri c) (depicted (lido-rules/concept-node (:id record) c)))] (type-ref c "Type"))))
-                     (seq (filter #(and (:uri %) (not (depicted (lido-rules/concept-node (:id record) %)))) subjects))
-                     (assoc "about" (vec (for [c subjects :when (and (:uri c) (not (depicted (lido-rules/concept-node (:id record) c))))] (type-ref c "Type"))))
+                     (seq rep) (assoc "represents" rep)
+                     (seq abt) (assoc "about" abt)
                      (seq rights) (assoc "subject_to" (vec (for [r rights]
                                                              (cond-> {"type" "Right"}
                                                                (:label r) (assoc "_label" (:label r))
@@ -756,7 +779,7 @@
   "The LIDO natives a museum object's documents write (ADR 0052)."
   #{:lido/title :lido/inventory-number :lido/work-type-concept :lido/classification-concept :lido/dimension
     :lido/material :lido/event :lido/actor :lido/event-description :lido/event-place-id :lido/subject-concept
-    :lido/rights-work-type :lido/keeper :lido/repository :lido/repository-id :lido/materials :lido/measurements
+    :lido/subject-person :lido/subject-place :lido/rights-work-type :lido/keeper :lido/repository :lido/repository-id :lido/materials :lido/measurements
     :lido/description :lido/inscription :lido/credit-line :lido/resource :lido/title-name})
 
 (defn- object-losses
@@ -820,6 +843,11 @@
                             :lido/dimension        #{:value :extent}
                             :lido/resource         #{:url}
                             :lido/subject-concept  #{:uri :label}
+                            ;; a reference names a person or a place, no more:
+                            ;; its life dates, its point, its subject's type are not
+                            ;; written (N7)
+                            :lido/subject-person   #{:name :uri}
+                            :lido/subject-place    #{:name :uri}
                             :lido/material         #{:uri :label}
                             :lido/rights-work-type #{:uri :label}
                             :lido/keeper           #{:name :uri}
@@ -864,6 +892,22 @@
      (for [k (native-fields record :lido/keeper) :when (and (nil? (:uri k)) (not (:former k)))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/keeper :value k
                  :message (str "keeper " (pr-str (:name k)) " has no IRI: a Linked Art reference cannot name it")}))
+     ;; a subject concept's IRI is written once, under its first label (N7 review)
+     (let [first-label (reduce (fn [m {:keys [uri label]}] (if (or (nil? uri) (contains? m uri)) m (assoc m uri label))) {} (native-fields record :lido/subject-concept))]
+       (for [c (native-fields record :lido/subject-concept) :when (and (:uri c) (not= (:label c) (first-label (:uri c))))]
+         (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/subject-concept :value c :fields [:label]
+                   :message (str "subject " (pr-str (:label c)) " has the IRI of " (pr-str (first-label (:uri c))) ", " (:uri c) ": a VisualItem names it once, under that label")})))
+     ;; so is a person's or a place's, under its first name (Wales, Cymru)
+     (let [first-name (reduce (fn [m {:keys [uri name]}] (if (or (nil? uri) (contains? m uri)) m (assoc m uri name)))
+                              {} (mapcat #(native-fields record %) [:lido/subject-person :lido/subject-place]))]
+       (for [p [:lido/subject-person :lido/subject-place] f (native-fields record p)
+             :when (and (:uri f) (not= (:name f) (first-name (:uri f))))]
+         (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p :value f :fields [:name]
+                   :message (str (pr-str (:name f)) " has the IRI of " (pr-str (first-name (:uri f))) ", " (:uri f) ": a VisualItem names it once, under that name")})))
+     (let [concepts (set (keep :uri (native-fields record :lido/subject-concept)))]
+       (for [p [:lido/subject-person :lido/subject-place] f (native-fields record p) :when (concepts (:uri f))]
+         (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field p :value f :fields [:name :uri]
+                   :message (str (pr-str (:name f)) " is named by " (:uri f) ", a subject concept of the record: written once, as that concept")})))
      (for [c (native-fields record :lido/subject-concept) :when (nil? (:uri c))]
        (dx/loss {:category :dropped :subject (:id record) :edge :export :source-field :lido/subject-concept :value c
                  :message (str "subject " (pr-str (:label c)) " has no URI: a VisualItem cannot be about it")}))

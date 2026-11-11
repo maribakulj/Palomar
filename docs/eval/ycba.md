@@ -58,7 +58,7 @@ the study recommended:
 | object types (`classified_as`) | 1 210 | **0** | 1 343 (710 shared) |
 | materials (`made_of`) | 1 027 | **0** | 1 027 (1 004 shared) |
 | dimensions | 1 492 | 1 492 | 1 492 |
-| subjects of the visual item (distinct labels) | 6 089 `represents`, 80 `about` | **0** | 4 572 `about` |
+| subjects of the visual item (distinct labels) | 6 089 `represents`, 80 `about` | **0** | 4 572 `about` (5 385 `represents`, 6 `about` since N7, below) |
 
 The custodian row counts that one is given. YCBA names itself by its own
 group URI, Palomar by ULAN 500303557: the same institution, two ids.
@@ -118,7 +118,67 @@ Linked Art writes what the CIDOC CRM view states: the same 4 572 are
 stay as above. The makers Palomar writes fall from 497 to 492: one node
 named twice in a production is written once. YCBA's 6 089
 also count the persons and places a work represents (`subjectActor`,
-`subjectPlace`), which Palomar does not write in the visual item.
+`subjectPlace`), which Palomar did not write in the visual item before N7
+(below).
+
+### Persons and places a work represents (N7)
+
+*2026-11-11, lot N7, ADR 0056 amendment. The frozen corpus, 0 pairs not as
+frozen (`verify.py`). Before is Palomar at `3f70852`; N7 as first written,
+and after its review (ADR 0056, "The review of N7"); each converted with
+`convert.clj` and compared with
+`compare.py --manifest`, which since N7 counts the subjects of type
+`Person`/`Group` and `Place` apart (distinct normalised labels).*
+
+Palomar now reads each `subjectActor` and `subjectPlace` with the type of
+its subject set and of its ids, and the rules decide. YCBA types every
+subject set as a description, so its persons and places are depicted, and
+Linked Art writes them as `represents`, but for a person whose id YCBA
+types `subjectActorAbout`.
+
+| (frozen corpus) | YCBA | Palomar before N7 | N7 as first written | N7 after its review |
+|---|---|---|---|---|
+| subjects `represents` (all, distinct labels) | 6 089 | 4 572 | 5 441 | 5 385 |
+| subjects `about` | 80 | 0 | 0 | 6 |
+| … the same label, any relation | — | 4 572 | 5 439 | 5 389 |
+| persons `represents` | 125 | 0 | 131 | 125 |
+| … the same label and relation | — | 0 | 124 | 124 |
+| persons `about` | 6 | 0 | 0 | 6 |
+| … the same label and relation | — | 0 | 0 | 6 |
+| places `represents` | 737 | 0 | 738 | 726 |
+| … the same label and relation | — | 0 | 737 | 725 |
+| places `about` | 0 | 0 | 0 | 0 |
+
+All other rows are unchanged, in every column.
+
+What differs, after the review:
+- **Shakespeare (6 records), now as YCBA has him.** YCBA's LIDO types the
+  subject set a description and the person's id `subjectActorAbout`. N7 as
+  first written read only the set's type, and wrote `represents`. A
+  vocabulary now says that an id typed so is one of what the work is
+  about, whatever its set (`subject-id-types.edn`, ADR 0056 review, 4):
+  Palomar writes him `about`, as YCBA does.
+- **One IRI, written once (12 place labels, 38 concept labels).** YCBA
+  writes one TGN place under two names ("Wales" and "Cymru", "China" and
+  "Zhonghua", "India" and "South Asia", which its LIDO gives one TGN id),
+  and one AAT term under two labels (in the committed fixture, "shops" and
+  "stores"). Palomar now lists an id once in a list, under its first label,
+  and reports the other (review, 3). By label, these are the labels lost
+  since N7 as first written: the same places and terms are written.
+- **One person, two spellings (1).** YCBA's label of Sir Robert Smyth has a
+  double space; Palomar reads the LIDO's text with its spaces collapsed.
+  The same person, counted apart by the label match.
+- **Place des Vosges (1).** Named only by a Wikipedia URL, which is no IRI
+  of a place: Palomar writes it as the record's own node, and reports the
+  URL. YCBA does not write it.
+- **The rest of the gap** are concepts. Of the 655 concept labels YCBA
+  represents and N7 as first written did not, 583 are terms the LIDO names
+  by no AAT, TGN or ULAN id (YCBA's own terms, "moonlight", "couple"): a
+  concept no authority names is not written in a `VisualItem`, and that is
+  reported. The other 72 were not examined.
+- Matching is by label: YCBA names persons and places by its own URIs, and
+  this comparison does not fetch their equivalents. Palomar names them by
+  ULAN, TGN and the other authorities the LIDO gives.
 
 ### Materials: an error this comparison found
 
@@ -211,7 +271,9 @@ All other rows are as above.
 - The disagreements left are choices (proposing "attributed to", naming no
   maker for "follower of"), the limits of matching, or readings that differ
   without contradicting each other.
-- Subjects are the one large gap left, and it is known and planned (K5).
+- Subjects were the one large gap left. K5 made them `represents`, as YCBA
+  has them; N7 adds the persons and places a work represents. What remains
+  is mostly concepts no authority names.
 - This is the agreement of two independent mappings, not a measure of
   correctness: YCBA's mapping is not annotated truth, and both can share an
   error. Where they disagree, the report says which and why.

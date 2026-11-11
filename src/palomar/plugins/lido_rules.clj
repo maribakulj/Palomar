@@ -7,11 +7,14 @@
      (`P14`), took part (`P11`), or, in an acquisition, gave up or received
      the title (`P23`, `P22`, proposed: a role's words do not establish who
      held the title, and both imply `P14`);
-   - **what a made object shows**: a subject typed as a description or an
+   - **what a made object shows**, a concept, a person, a group or a place
+     (lot N7): a subject typed as a description or an
      identification, or of no type but named by a vocabulary of images
      (Iconclass), is what it depicts (`P62`); any other, an interpretation or
      a subject of no type in another vocabulary, is what the visual item it
-     shows is about (`P65` → `E36` → `P129`), never said to be depicted.
+     shows is about (`P65` → `E36` → `P129`), never said to be depicted. A
+     person or a place of no type is a named individual, LIDO's
+     identification: depicted (N7 review).
 
    An actor is its occurrence: the record, the event and its position there,
    unless an authority URI names it. Two actors of one name are two.
@@ -127,30 +130,83 @@
                              (not [?r :lido/work-type ?nt] (vocab-some? :lido/object-types ?nt :object/natural))
                              (not [?r :lido/classification ?nc] (vocab-some? :lido/object-types ?nc :object/natural))])))]]])
 
-(def ^:private concept-ids
-  [["authority" '[(field ?c :uri ?cu)] '(mint :crm/E55_Type ?cu)]
-   ["local"     '[(not (field ?c :uri _)) (field ?c :label ?cl)] '(mint :crm/E55_Type (str ?r) ?cl)]])
+(def ^:private iconclass
+  "Some IRI of the subject, its first or another, names it in a vocabulary of
+   images (Iconclass): a test, which binds nothing (N7 review)."
+  '(not (not (any [(field ?c :uri ?cs) (vocab-some? :lido/subject-schemes ?cs :subject/ofness)]
+                  [(field ?c :other-ids ?co) (vocab-some? :lido/subject-schemes ?co :subject/ofness)]))))
+
+(def ^:private ofness '[(field ?c :subject-type ?st) (vocab-all? :lido/subject-types ?st :subject/ofness)])
+
+(def ^:private marked-about
+  "An id of the subject is typed as one of what the work is about, whatever
+   its set's type (YCBA's `subjectActorAbout`, `subject-id-types.edn`)."
+  '[(field ?c :id-type ?it) (vocab-some? :lido/subject-id-types ?it :subject/aboutness)])
+
+(def ^:private concept-decisions
+  "A concept: depicted when typed so, or of no type but named by a vocabulary
+   of images; else what the visual item is about (K5)."
+  [["depicted" ofness]
+   ["shown"    ['(not (field ?c :subject-type _)) iconclass]]
+   ["meant"    [(list* 'not ofness) (list 'not '(not (field ?c :subject-type _)) iconclass)]]])
+
+(def ^:private named-decisions
+  "A person, a group or a place: a named individual. LIDO's subjectWrap
+   defines Identification as \"the specific subject, including named
+   historical, mythological, or fictional subjects\": of no type, it is one
+   the work depicts, as typed a description or an identification; typed
+   otherwise (an interpretation), or by an id typed so, it is what the
+   visual item is about (N7 review)."
+  [["depicted"     (into [(list* 'not marked-about)] ofness)]
+   ["named"        [(list* 'not marked-about) '(not (field ?c :subject-type _))]]
+   ["meant-marked" marked-about]
+   ["meant"        [(list* 'not marked-about) '(field ?c :subject-type ?st) (list* 'not ofness)]]])
+
+(def ^:private subject-kinds
+  "What a work may show or mean, each read like a concept (lot N7): `[label
+   predicate ids decisions]`, the native it is read from, how its node is
+   named and classed (an authority's URI, else a node of the record, by its
+   name, never one of another record; a person's or a group's class by its
+   actor type), and what decides whether it is depicted. One IRI is one
+   class: a person or a place whose IRI is a subject concept of the record is
+   that concept, and no node of its own (N7 review). A concept's rules keep
+   their ids (K5)."
+  [[nil :lido/subject-concept
+    [["authority" '[(field ?c :uri ?cu)] '(mint :crm/E55_Type ?cu)]
+     ["local"     '[(not (field ?c :uri _)) (field ?c :label ?cl)] '(mint :crm/E55_Type (str ?r) ?cl)]]
+    concept-decisions]
+   ["person" :lido/subject-person
+    [["authority" '[(field ?c :type ?ct) (field ?c :uri ?cu) (not [?r :lido/subject-concept ?k] (field ?k :uri ?cu))]
+      '(mint (lookup :lido/actor-classes ?ct) ?cu)]
+     ["local"     '[(field ?c :type ?ct) (not (field ?c :uri _))] '(mint (lookup :lido/actor-classes ?ct) (str ?r) ?cl)]]
+    named-decisions]
+   ["place" :lido/subject-place
+    [["authority" '[(field ?c :uri ?cu) (not [?r :lido/subject-concept ?k] (field ?k :uri ?cu))] '(mint :crm/E53_Place ?cu)]
+     ["local"     '[(not (field ?c :uri _))] '(mint :crm/E53_Place (str ?r) ?cl)]]
+    named-decisions]])
 
 (def subject-rules
+  "What a made object shows, its concepts, and the persons and places it
+   represents (lot N7): one rule per kind, identity, decision and test of
+   making. Depicted (`P62`), or what the visual item is about (`P65` → `E36`
+   → `P129`), by `concept-decisions` and `named-decisions`. A person is never
+   depicted by code."
   (vec
-   (for [[mlabel mmatch]      made
-         [clabel cmatch ctype] concept-ids
-         [slabel smatch]      [["depicted" '[(field ?c :subject-type ?st) (vocab-all? :lido/subject-types ?st :subject/ofness)]]
-                               ;; no type, but a vocabulary of images: depicted
-                               ["shown"    '[(not (field ?c :subject-type _))
-                                             (field ?c :uri ?cs) (vocab-some? :lido/subject-schemes ?cs :subject/ofness)]]
-                               ["meant"    '[(not (field ?c :subject-type ?st) (vocab-all? :lido/subject-types ?st :subject/ofness))
-                                             (not (not (field ?c :subject-type _))
-                                                  (field ?c :uri ?cs) (vocab-some? :lido/subject-schemes ?cs :subject/ofness))]]]
+   (for [[kind pred ids decisions] subject-kinds
+         [mlabel mmatch]           made
+         [clabel cmatch ctype]     ids
+         [slabel smatch]           decisions
          :let [obj '(mint :lido/object (str ?r))
-               vi  '(mint :crm/E36_Visual_Item (str ?r))]]
-     {:id      (keyword "rule.lido.subject" (str slabel "-" clabel "-" mlabel))
+               vi  '(mint :crm/E36_Visual_Item (str ?r))
+               nm  (if kind :name :label)]]
+     {:id      (keyword "rule.lido.subject" (str (some-> kind (str "-")) slabel "-" clabel "-" mlabel))
       :phase   :infer
-      :doc     (str "A subject concept (" clabel ") of a made object (" mlabel "): " slabel ".")
+      :doc     (str "A subject " (or kind "concept") " (" clabel ") of a made object (" mlabel "): " slabel ".")
       ;; the record first: what is said of it (made) is tested once, not once a subject
-      :match   (vec (concat '[[?r :meta/id ?r]] mmatch '[[?r :lido/subject-concept ?c] (optional (field ?c :label ?cl))] cmatch smatch))
+      :match   (vec (concat '[[?r :meta/id ?r]] mmatch [['?r pred '?c] (if kind (list 'field '?c nm '?cl) (list 'optional (list 'field '?c nm '?cl)))]
+                            cmatch smatch))
       :produce {:construct (vec (concat
-                                 (if (#{"depicted" "shown"} slabel)
+                                 (if (#{"depicted" "shown" "named"} slabel)
                                    [[obj :crm/P62_depicts ctype {:status :asserted}]]
                                    [[obj :crm/P65_shows_visual_item vi {:status :asserted}]
                                     [vi :crm/P129_is_about ctype {:status :asserted}]])
@@ -171,6 +227,24 @@
   "The node the rules make of a subject concept of record `rid`."
   [rid {:keys [uri label]}]
   (if uri (model/mint-entity-id :crm/E55_Type [uri]) (model/mint-entity-id :crm/E55_Type [(str rid) label])))
+
+(defn subject-class
+  "The class of the node the rules make of a subject `fields` read as native
+   `p`: a concept's `E55_Type`, a person's or a group's by its actor type, a
+   place's `E53_Place` (lot N7)."
+  [p fields]
+  (case p
+    :lido/subject-person (rules/lookup-value :lido/actor-classes (or (:type fields) ""))
+    :lido/subject-place  :crm/E53_Place
+    :crm/E55_Type))
+
+(defn subject-node
+  "The node the rules make of a subject `fields` of record `rid`, read as
+   native `p` (a concept, a person, a place): its authority's, else the
+   record's own, by its name (lot N7)."
+  [rid p {:keys [uri label name] :as fields}]
+  (let [k (subject-class p fields)]
+    (if uri (model/mint-entity-id k [uri]) (model/mint-entity-id k [(str rid) (or name label)]))))
 
 (defn declared
   "What each rule states, as `palomar.inferences` reads it (ADR 0055): the

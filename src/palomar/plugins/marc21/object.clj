@@ -110,11 +110,28 @@
   [uri]
   (condp re-find (str uri)
     #"d-nb\.info/gnd"                    ["7" "gnd"]
-    #"iconclass\.org"                    ["7" "iconclass"]
     #"vocab\.getty\.edu/aat"             ["7" "aat"]
+    #"vocab\.getty\.edu/ulan"            ["7" "ulan"]
+    #"vocab\.getty\.edu/tgn"             ["7" "tgn"]
+    #"wikidata\.org/(?:entity|wiki)/"     ["7" "wikidata"]
     #"id\.loc\.gov/authorities/subjects" ["0" nil]
     #"id\.loc\.gov/authorities/genreForms" ["7" "lcgft"]
     ["4" nil]))
+
+(defn- name-source
+  "The second indicator and `$2` of a person's, a group's or a place's IRI in
+   a 600, 610 or 651: `0` for the LC Name Authority File, whose names are
+   headings of these fields, else as `source` (N7 review)."
+  [uri]
+  (if (re-find #"id\.loc\.gov/authorities/(?:names|subjects)/" (str uri)) ["0" nil] (source uri)))
+
+(defn- iconclass-notation
+  "The Iconclass notation an Iconclass IRI names, or nil: written in `084`
+   with the classification source code `iconclass`, Iconclass being no
+   subject heading system MARC lists for a 650 (N7 review)."
+  [uri]
+  (some-> (second (re-find #"^https?://(?:www\.)?iconclass\.org/(?:rkd/)?(.+)$" (str uri)))
+          (java.net.URLDecoder/decode "UTF-8")))
 
 (defn org-code
   "The MARC organization code (`003`) a lidoRecID's source `src` gives: the
@@ -132,7 +149,7 @@
   "The LIDO natives this profile writes."
   #{:lido/inventory-number :lido/actor :lido/title :lido/event :lido/event-place :lido/measurements
     :lido/materials :lido/inscription :lido/description :lido/rights-work-type :lido/event-description
-    :lido/subject-concept :lido/work-type-concept :lido/classification-concept :lido/repository
+    :lido/subject-concept :lido/subject-person :lido/subject-place :lido/work-type-concept :lido/classification-concept :lido/repository
     :lido/resource-url :lido/record-link :lido/title-name})
 
 (defn ->marcxml
@@ -197,6 +214,18 @@
                        d  (event-strings record :lido/event-description (:index ev))]
                    (datafield "561" " " " " [["a" d]]))
                  (map #(concept "650" %) (fields record :lido/subject-concept))
+                 (for [{:keys [uri]} (fields record :lido/subject-concept) :let [n (iconclass-notation uri)] :when n]
+                   (datafield "084" " " " " [["a" n] ["2" "iconclass"]]))
+                 ;; the persons, groups and places it represents or is about:
+                 ;; a 6XX says not which (N7)
+                 (for [{:keys [name uri type birth death]} (fields record :lido/subject-person)
+                       :let [[ind2 code] (name-source uri)
+                             group?      (lido/group-types type)]]
+                   (datafield (if group? "610" "600") (cond group? "2" (str/includes? name ",") "1" :else "0") ind2
+                              [["a" name] ["d" (when (and (not group?) (or birth death)) (str birth "-" death))] ["0" uri] ["2" code]]))
+                 (for [{:keys [name uri]} (fields record :lido/subject-place)
+                       :let [[ind2 code] (name-source uri)]]
+                   (datafield "651" " " ind2 [["a" name] ["0" uri] ["2" code]]))
                  (map #(concept "655" %) (concat (fields record :lido/work-type-concept) (fields record :lido/classification-concept)))
                  ;; 852 is where the object is: a former repository is
                  ;; none, written as provenance (post-audit 7, I3 review)
@@ -250,6 +279,9 @@
                             :lido/event #{:date}
                             ;; a 650 has no place for what kind of subject it is
                             :lido/subject-concept #{:uri :label}
+                            ;; nor what kind of person, nor where a place is (N7)
+                            :lido/subject-person #(if (lido/group-types (:type %)) #{:name :uri} #{:name :uri :birth :death})
+                            :lido/subject-place #{:name :uri}
                             :lido/title-name #{:content}}
                            "in the MARC21 object profile")
      (for [a (in-force record :lido/materials)

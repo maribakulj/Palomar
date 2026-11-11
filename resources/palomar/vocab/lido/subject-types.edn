@@ -2,13 +2,21 @@
 ;; subjectWrap documentation: a subject is a description or identification of
 ;; what the work depicts ("ofness"), or an interpretation of its meaning
 ;; ("aboutness"). The LIDO Terminology's codes for these types are not listed:
-;; they could not be checked offline, and a code is not guessed.
+;; they could not be checked offline, and a code is not guessed. Since lot
+;; N7's review, the codes of the LIDO Terminology the review named are:
+;; lido00525 Description, lido00136 Identification, lido00524 Interpretation,
+;; and lido00745 Iconclass notation (a notation of what an image shows: of
+;; ofness); a LIDO 1.0 `…/subject_type/<name>` URI is read by its name.
 {:id     :lido/subject-types
  :source "LIDO 1.1 schema, subjectWrap (lido-schema.org, CC BY 4.0)"
  :concepts
  {:subject/ofness
   {:doc   "What is depicted: generic content (description) or a named subject (identification)."
-   :terms ["description" "identification" "beschreibung" "identifizierung" "identifikation"]}
+   :terms ["description" "identification" "beschreibung" "identifizierung" "identifikation"]
+   :patterns ["^https?://terminology\\.lido-schema\\.org/(?:lido00525|lido00136|lido00745)$"
+              "^https?://terminology\\.lido-schema\\.org/subject_type/(?:description|identification|iconclass_notation)$"]}
   :subject/aboutness
   {:doc   "What the work means: its iconographical, thematic or symbolic interpretation."
-   :terms ["interpretation" "deutung" "interprétation"]}}}
+   :terms ["interpretation" "deutung" "interprétation"]
+   :patterns ["^https?://terminology\\.lido-schema\\.org/lido00524$"
+              "^https?://terminology\\.lido-schema\\.org/subject_type/interpretation$"]}}}

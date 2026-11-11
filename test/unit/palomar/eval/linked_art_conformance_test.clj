@@ -221,6 +221,25 @@
           (is (= "Acquisition" (get-in d ["changed_ownership_through" 0 "type"])))
           (is (= (get-in d ["shows" 0 "id"]) (get (first vis) "id")) "it shows its VisualItem, which is about the subjects"))))))
 
+(deftest represented-persons-and-places-validate
+  (testing "a VisualItem that represents, or is about, persons, a group and places, by authority or the record's own node, validates strictly (N7)"
+    (let [la   (fn [from opts src] (filter #(= "VisualItem" (get % "type"))
+                                           (map json/read-str (remove str/blank? (str/split-lines (:output (convert/convert {:from from :opts opts :to :linked-art :source src})))))))
+          subj (fn [type body]
+                 (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>N-7</lido:lidoRecID><lido:descriptiveMetadata>"
+                      "<lido:objectClassificationWrap><lido:objectWorkTypeWrap><lido:objectWorkType><lido:term>painting</lido:term></lido:objectWorkType></lido:objectWorkTypeWrap></lido:objectClassificationWrap>"
+                      "<lido:objectRelationWrap><lido:subjectWrap><lido:subjectSet><lido:subject lido:type=\"" type "\">" body
+                      "</lido:subject></lido:subjectSet></lido:subjectWrap></lido:objectRelationWrap></lido:descriptiveMetadata></lido:lido>"))
+          body (str "<lido:subjectActor><lido:actor><lido:actorID lido:source=\"ULAN\">500012489</lido:actorID><lido:nameActorSet><lido:appellationValue>Blake</lido:appellationValue></lido:nameActorSet></lido:actor></lido:subjectActor>"
+                    "<lido:subjectActor><lido:actor lido:type=\"organization\"><lido:nameActorSet><lido:appellationValue>Guild</lido:appellationValue></lido:nameActorSet></lido:actor></lido:subjectActor>"
+                    "<lido:subjectPlace><lido:place><lido:placeID lido:source=\"TGN\">7011961</lido:placeID><lido:namePlaceSet><lido:appellationValue>Dorset</lido:appellationValue></lido:namePlaceSet></lido:place></lido:subjectPlace>"
+                    "<lido:subjectPlace><lido:displayPlace>Arkadia</lido:displayPlace></lido:subjectPlace>")
+          vis  (concat (la :lido {} (subj "description" body)) (la :lido {} (subj "interpretation" body))
+                       (la :oai {:metadata-prefix "lido"} (slurp "test/fixtures/documentary/lido/ycba-oai-lido.xml"))
+                       (la :oai {:metadata-prefix "lido"} (slurp "test/fixtures/documentary/lido/museum-digital-westfalen-lido.xml")))]
+      (is (= #{"Person" "Group" "Place"} (set (for [v vis k ["represents" "about"] s (get v k) :when (not= "Type" (get s "type"))] (get s "type")))))
+      (doseq [d vis] (is (= [] (errors-against image-schema (json/write-str d))) (get d "_label"))))))
+
 (deftest a-production-with-participants-validates
   (testing "creators carry out the production, participants a part of it: still a valid HumanMadeObject (post-audit 4, F2)"
     (let [xml (str "<lido:lido xmlns:lido=\"http://www.lido-schema.org\"><lido:lidoRecID>R-2</lido:lidoRecID><lido:descriptiveMetadata>"

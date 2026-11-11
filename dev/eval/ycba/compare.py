@@ -75,8 +75,13 @@ def dims(o, extent=True):
     return collections.Counter(key(d) for d in o.get('dimension', []))
 
 
-def subjects(visuals, key):
-    return {norm(s.get('_label', '')) for v in visuals for s in v.get(key, [])}
+def subjects(visuals, key, types=None):
+    """The distinct normalised labels of the subjects `key` of `visuals`, of
+    the Linked Art `types` only, if given (Person, Group, Place: N7)."""
+    return {norm(s.get('_label', '')) for v in visuals for s in v.get(key, [])
+            if types is None or s.get('type') in types}
+
+AGENTS, PLACES = {'Person', 'Group'}, {'Place'}
 
 def load_palomar(path):
     lines = [json.loads(l) for l in open(path) if l.strip()]
@@ -114,6 +119,13 @@ def compare(root, name, only=None):
         c['subjects represented (distinct labels): YCBA'] += len(yr); c['subjects represented (distinct labels): Palomar'] += len(pr)
         c['subjects about (distinct labels): YCBA'] += len(ya); c['subjects about (distinct labels): Palomar'] += len(pa)
         c['subjects: same label, any relation'] += len((yr | ya) & (pr | pa))
+        # the persons and places a work represents, or is about (N7)
+        for kind, ts in (('persons', AGENTS), ('places', PLACES)):
+            yk = {k: subjects(y['visual'], k, ts) for k in ('represents', 'about')}
+            pk = {k: subjects(pv, k, ts) for k in ('represents', 'about')}
+            for k in ('represents', 'about'):
+                c[f'{kind} {k} (distinct labels): YCBA'] += len(yk[k]); c[f'{kind} {k} (distinct labels): Palomar'] += len(pk[k])
+                c[f'{kind} {k}: same label, same relation'] += len(yk[k] & pk[k])
         yc = {g.get('id') for g in yo.get('current_owner', []) + yo.get('current_custodian', [])}
         pc = {g.get('id') for g in po.get('current_owner', []) + po.get('current_custodian', [])}
         c['custodian given: YCBA'] += bool(yc); c['custodian given: Palomar'] += bool(pc)

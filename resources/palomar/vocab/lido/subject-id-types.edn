@@ -1,0 +1,11 @@
+;; The type an institution gives the id of a subject's actor or place
+;; (actorID/@lido:type, placeID/@lido:type) when it says what the subject is
+;; there: the Yale Center for British Art types the id of a person a work is
+;; about, not one it depicts, `subjectActorAbout`, inside a subject set typed
+;; a description. It outweighs the set's type (lot N7 review).
+{:id     :lido/subject-id-types
+ :source "Yale Center for British Art, LIDO over OAI-PMH (oai.odai.yale.edu), observed on 6 of 500 records, 2026-11-04"
+ :concepts
+ {:subject/aboutness
+  {:doc   "The id's subject is what the work is about, whatever its set's type."
+   :terms ["subjectactorabout"]}}}
