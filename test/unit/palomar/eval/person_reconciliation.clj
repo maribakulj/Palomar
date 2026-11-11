@@ -11,9 +11,11 @@
 
    - A **mention** is one `100` or `700` field (persons; the other 7xx are
      collectivities, languages, series… and are left out). The name the matcher
-     sees is `$a, $m` — for a `100`, Palomar's own `:canon/agent`; for a `700`,
-     which the classic INTERMARC (SRU) mapping does not carry to `:canon/agent`, the same
-     recombination from the field. `$3` (the BnF authority the cataloguer
+     sees is `$a, $m` of the field. Since lot N1 the mentions are the common
+     extraction's (`palomar.mentions`), which reads each field alone (M2
+     rebuilt a `700`'s name from its field, which the classic INTERMARC
+     (SRU) mapping does not carry); every number asserted since M2 is
+     unchanged by it. `$3` (the BnF authority the cataloguer
      linked) is kept as the **truth** and never reaches a matcher; neither does
      `$1` (ISNI) or `$d` (dates).
    - The **pool** is one `{:id :label :variants}` entry per authority record:
@@ -66,13 +68,12 @@
   (:require [clojure.string :as str]
             [palomar.agent-cluster :as ac]
             [palomar.agent-dates :as dates]
-            [palomar.agent-events :as ae]
             [palomar.agent-match :as fs]
             [palomar.agent-relations :as ar]
             [palomar.curate :as curate]
+            [palomar.mentions :as mentions]
             [palomar.model :as model]
             [palomar.plugins :as plug]
-            [palomar.plugins.agents :as agents]
             [palomar.plugins.authorities :as authorities]
             [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.mapping :as mapping]
@@ -121,23 +122,29 @@
                r (intermarc/ingest (slurp (str bib-dir f)) {})]
            (:record (runtime/run-phase r compiled :normalize))))))
 
-(defn- mentions-of [record]
-  (for [tag ["100" "700"]
-        f   (fields record tag)
-        :let [sfs (get-in f [:locator :subfields])
-              nm  (if (= "100" tag) (first (agents/creators record)) (heading sfs))]
-        :when nm]
-    {:record    (:id record)
-     :tag       tag
-     :occurrence (get-in f [:locator :occurrence])
-     :name      nm
-     :surname   (sub sfs "a")
-     :family    (family (sub sfs "a"))
-     :truth     (sub sfs "3")
-     :role      (or (sub sfs "4") tag)
-     :relator   (sub sfs "4")
-     :dates     (dates/parse-life-dates (sub sfs "d"))
-     :subfields sfs}))
+(defn mentions-of
+  "A record's mentions: its `100` and `700` occurrences as the common
+   extraction gives them (`palomar.mentions`, lot N1: name, dates, role,
+   relator, events, id, local node, read from each field alone), 100s first,
+   each with what the eval adds — the field's tag and occurrence, the
+   surname (`$a`), the family, the truth (`$3`), the subfields, and
+   `:dates` nil when the field has no `$d`. The
+   truth never reaches a matcher: each task passes it the keys it reads."
+  [record]
+  (let [ms (mentions/mentions record)]
+    (for [tag ["100" "700"]
+          m   ms
+          :when (= tag (get-in m [:source :field]))
+          :let [sfs (get-in m [:source :subfields])]]
+      (assoc m
+             :tag        tag
+             :occurrence (get-in m [:source :occurrence])
+             :surname    (sub sfs "a")
+             :family     (family (sub sfs "a"))
+             :truth      (sub sfs "3")
+             :subfields  sfs
+             ;; an undated mention is passed as `{:name :dates nil}`, as M2 passed it
+             :dates      (:dates m)))))
 
 (defn legacy-authority-pool
   "M2's test-side reader of the authority records in `xml`, kept to check
@@ -753,10 +760,10 @@
 
 (defn with-edition-events
   "The mentions of corpus `c`, each with `:events`: its record's edition
-   events (`agent-events/edition-events`), typed for its role."
-  [{:keys [records mentions]}]
-  (let [by-id (into {} (map (juxt :id identity)) records)]
-    (mapv #(assoc % :events (ae/edition-events (by-id (:record %)) (:role %))) mentions)))
+   events (`agent-events/edition-events`), typed for its role — as the
+   common extraction (`palomar.mentions`) gives every mention."
+  [{:keys [mentions]}]
+  (mapv #(update % :events vec) mentions))
 
 (defn- event-rejections
   "Over task-A `scored` mentions: the candidates rejected for the mention's
@@ -845,13 +852,13 @@
    Returns `{:mentions :pool :kinds :rejected :truth-rejected
    :as-creation {:rejected :truth-rejected :by-kind}}`."
   [records]
-  (let [ms    (for [m (mapcat ae/lido-mentions records)
+  (let [ms    (for [m (mentions/batch records)
                     :let [u (first (filter #(str/starts-with? % ulan-prefix) (:ids m)))]
-                    :when (and u (= "person" (:type m)))]
+                    :when (and u (= "person" (:actor-type m)))]
                 (assoc m :truth u))
         mode  (fn [xs] (key (first (sort-by (juxt (comp - val) (comp str key)) (frequencies xs)))))
         pool  (vec (for [[u xs] (sort-by key (group-by :truth ms))
-                         :let [ds (remove nil? (map :dates xs))]]
+                         :let [ds (filter dates/dated? (map :dates xs))]]
                      (cond-> {:id u :label (mode (map :name xs))}
                        (seq ds) (assoc :dates (mode ds)))))
         run   (fn [f]
@@ -875,9 +882,10 @@
 ;; ---------------------------------------------------------------------------
 
 (defn mention-id
-  "A mention's id: its record, its field's tag and occurrence."
+  "A mention's id: its record, its field's tag and occurrence — the common
+   extraction's `:id` (`palomar.mentions`)."
   [m]
-  [(:record m) (:tag m) (:occurrence m)])
+  (:id m))
 
 (defn relational-mention
   "A mention as the relational matcher reads it: `{:id :name :dates :record

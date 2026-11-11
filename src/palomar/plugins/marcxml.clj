@@ -63,7 +63,7 @@
             (text-of e)))
         (elements record-elem)))
 
-(defn- xpath-step
+(defn xpath-step
   "One XPath step selecting the `n`-th (1-based) child `local` whose attribute
    `attr` is `v`, by local name (MARCXChange and MARC21slim differ only in
    namespace)."

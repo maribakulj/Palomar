@@ -10,7 +10,8 @@
 
    **Where the kinds come from.** Palomar already types both sources' events;
    this namespace reads those types, it does not decide them again:
-   - **LIDO** (`lido-mentions`): the importer's `:lido/event` (its `:kind`,
+   - **LIDO** (`lido-kind`, `lido-date`, read for each actor by
+     `palomar.mentions`, lot N1): the importer's `:lido/event` (its `:kind`,
      `palomar.plugins.lido/event-kinds`) and `:lido/actor` (its
      `:responsibility`, creator or participant, by `creator?` and the
      attribution qualifier, ADR 0054, K2). A production or a design an actor
@@ -171,10 +172,6 @@
 ;; LIDO
 ;; ---------------------------------------------------------------------------
 
-(defn- fields [a] (when (model/structured-value? (:value a)) (:value/fields (:value a))))
-
-(defn- xpath [a] (some->> (model/evidence-of a) first :selector :value))
-
 (defn- vocab? [concept terms]
   (boolean (some #(some (fn [cs] (contains? cs concept)) (rules/vocab-concepts :lido/event-types %))
                  (remove str/blank? terms))))
@@ -212,57 +209,6 @@
   [{t :type role :role}]
   (boolean (or (and (not-blank t) (or (lido/group-types t) (re-find group-type t)))
                (and role (re-find group-role role)))))
-
-(defn lido-mentions
-  "The actors `record` (a LIDO object) names, each as a mention the matcher
-   reads: `{:name :record :event :position :type :ids :dates :events}`,
-   `:type` the actor's (person, corporation…), `:ids` the
-   authority ids its record gives it (every `actorID` that is an IRI),
-   `:dates` its vital dates as the record states them (a profile, absent
-   when none is read), `:events` the one event it is named in, typed for it
-   (`lido-kind`, `lido-date`), citing the evidence of the event and of the
-   actor."
-  [record]
-  (let [live   (remove model/out-of-force? (:assertions record))
-        evs    (into {} (for [a live :when (= :lido/event (:predicate a)) :let [f (fields a)]]
-                          [(:index f) [f a]]))
-        id-nat (for [a live :when (and (= :lido/actor-id (:predicate a)) (string? (:value a)))]
-                 [(xpath a) (str/trim (:value a))])]
-    (vec (for [a live
-               :when (= :lido/actor (:predicate a))
-               :let [f       (fields a)
-                     [e ea]  (evs (:event f))
-                     path    (xpath a)
-                     ids     (distinct (keep not-blank (cons (:uri f)
-                                                             (for [[p v] id-nat
-                                                                   :when (and path p (str/starts-with? p (str path "/"))
-                                                                              (re-find #"^[a-z][a-z0-9+.-]*:" v))]
-                                                               v))))
-                     life    (when (or (:birth f) (:death f))
-                               (dates/parse-life-dates (str (or (not-blank (:birth f)) "....") "-"
-                                                            (or (not-blank (:death f)) "...."))))
-                     date    (when e (lido-date e))
-                     grp     (group? f)
-                     typed   (when e
-                               (cond-> {:kind   (lido-kind e f)
-                                        :role   (:responsibility f)
-                                        :source {:record   (:id record)
-                                                 :event    (:event f)
-                                                 :evidence (vec (concat (model/evidence-of ea) (model/evidence-of a)))}}
-                                 (:role f)        (assoc :role-terms (:role f))
-                                 (:attribution f) (assoc :attribution (:attribution f))
-                                 grp              (assoc :group? true)
-                                 date             (assoc :date date)))]
-               :when (not-blank (:name f))]
-           (cond-> {:name     (:name f)
-                    :record   (:id record)
-                    :event    (:event f)
-                    :position (:position f)
-                    :type     (:type f)
-                    :ids      (vec ids)
-                    :events   (if typed [typed] [])}
-             grp                 (assoc :group? true)
-             (dates/dated? life) (assoc :dates life))))))
 
 ;; ---------------------------------------------------------------------------
 ;; MARC family
