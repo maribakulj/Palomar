@@ -212,9 +212,10 @@
 
 (defn- informational
   "`m` without what names a run's files but not what they hold: the path of
-   a reconciliation's model file (its version is its content, lot N2)."
+   a reconciliation's model file and whether it was read from the classpath
+   or a file (its version is its content, lot N2; `:source`, lot N4)."
   [m]
-  (cond-> m (get-in m [:reconcile :model :path]) (update-in [:reconcile :model] dissoc :path)))
+  (cond-> m (map? (get-in m [:reconcile :model])) (update-in [:reconcile :model] dissoc :path :source)))
 
 (defn diff
   "What differs between manifests `a` and `b`, ignoring the run times and

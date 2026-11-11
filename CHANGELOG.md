@@ -36,6 +36,20 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
   groups the mentions into persons. `--format edn` writes what the API
   returns. The run manifest names the engine and the model's parameter
   file by path and SHA-256 under `:reconcile`.
+- **A Fellegi-Sunter model fitted on the hard benchmark** (lot N4,
+  `docs/eval/person-reconciliation-hard.md`, section N4; ADR 0058
+  amendment): `palomar/models/agent-match-n3.edn`, m, u and the prior from
+  the N3 train split, thresholds chosen by a 5-fold cross-validation of
+  train under a stated criterion, its provenance in the file, not
+  calibrated (its held-out report misses the bar). Named with `--model
+  palomar/models/agent-match-n3.edn`: a path under `palomar/models/` is
+  read from the classpath, the version says `:source :classpath`, and a
+  `..` segment or a file shadowing a shipped model is refused. The M2
+  model stays the default. It refuses to score its own training split and
+  data files. A calibration report takes the review band it measures
+  (`:band`), by default [0.5, 0.95) as before. The eval compares the Jaccard, names+dates and three
+  Fellegi-Sunter runs (shipped, recalibrated, with a role feature) on the
+  same candidates, per stratum, and reports one test run.
 - **A hard person-reconciliation benchmark** (lot N3,
   `docs/eval/person-reconciliation-hard.md`): 1 300 BnF INTERMARC records
   (Etalab 2.0) and the 292 person authorities they cite

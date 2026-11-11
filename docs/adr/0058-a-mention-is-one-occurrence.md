@@ -299,3 +299,72 @@ contradictory review (items below marked *review*).
 - With a star of links (each mention to its authorities), a rejection
   cannot change a cluster's members: a mention never has a link to an
   authority it was rejected against. It is listed as a cannot-link.
+
+## Amendment (lot N4, 2026-11-11): a second model file, fitted on one split
+
+Lot N3 built a hard benchmark of transcribed mentions. This lot fits a
+Fellegi-Sunter model on its train split and ships it beside the M2 model.
+It changes no default. The measurements are in
+`docs/eval/person-reconciliation-hard.md`, section N4. It was revised
+after a contradictory review.
+
+1. **A second model file**, `palomar/models/agent-match-n3.edn`, follows
+   §6's contract: counts for every feature, a prior, thresholds, the bar,
+   and its provenance as data (its `:data`: the nine design corpora, the
+   benchmark and the split file, with their SHA-256; `:split :n3-train`;
+   the train keys; the pool; Licence Ouverte / Etalab 2.0; "Source :
+   Bibliothèque nationale de France"). m, u and the prior come from train
+   only. The thresholds (0.8 / 0.5) were chosen by a 5-fold
+   cross-validation of train, by person, under a stated criterion; dev
+   only confirmed them. A test checks the file is that fit.
+2. **A shipped file is named by its classpath path.** `read-model` (and
+   `--model`) reads a path under `palomar/models/` from the classpath when
+   the classpath has it. The version says where it was read, `:source
+   :classpath` or `:file`; the manifest shows it, and `manifest/diff`
+   ignores it as it ignores the path (the version is the content). A `..`
+   segment in such a path is refused. A file on disk that shadows a
+   shipped model at the same path is refused, never read in its place;
+   `./palomar/models/...` names the file. The M2 model stays the default.
+3. **A model refuses its own split.** `in-sample?` now also says yes for
+   any model scoring the source files its provenance names (`:data`, by
+   SHA-256), and for a model with `:train-keys` scoring a mention whose
+   split key is one of them. An in-sample model is still refused on its
+   pool; a model fitted on one split is not, since every split of the
+   benchmark is matched against the same pool.
+4. **No calibration ships.** The N3 model's held-out report misses the
+   bar: on dev, 43 distinct true mentions (100 needed) and a bin 0.71 off;
+   on five folds of train+dev, a bin 0.40 off. So the file carries no
+   `:calibration`, and no confidence is written. A report now measures the
+   review band it is given (`fs/calibration` `:band`, the model's own
+   [review, propose)); by default it is still [0.5, 0.95), so M2's reports
+   do not change. The CLI's refusal of a `--model` file that carries a
+   calibration is unchanged, and applies to a shipped file named by
+   `--model` as well. If a shipped model ever meets the bar, the plan is to
+   accept a calibration only from a model whose version says `:source
+   :classpath`, never from a file on disk and never by its path string: a
+   fingerprint is public, so a file on disk could forge a matching report.
+5. **Roles still weigh nothing in the engine.** A role-agreement feature
+   (the transcribed role phrase's class against the relator codes of the
+   candidate's headings in other records) was fitted and measured in the
+   eval only. The engine has no such feature for a transcription.
+
+### Limits
+
+- On dev, the N3 model makes the M2 model's links, no more. It is shipped
+  for use by name, not as a default.
+- It learnt no date weight: its training mentions have no dates.
+- Its propose threshold is a pool's: with 11 Simenons in the N3 pool, an
+  exact heading reaches only 0.922, so a threshold above that proposes no
+  Simenon. Another pool needs its own.
+- **For the next lot, two model defects in `agent-match`:**
+  - the non-increasing rule caps every name level below an unmeasured one
+    at 0 (here `:same-tokens`, an artefact of the inversion, and
+    `:surname-typo`), so measured agreements weigh nothing. Lifting the
+    cap alone loses links under the current competing rule (165 → 99 on
+    dev). The fix is both: skip unmeasured levels in the chain, and make
+    the competing rule relative;
+  - the `:variant` form weight (+5.18) applies whatever the name level, so
+    a variant with a disagreeing name reaches 0.0976 from a name weight of
+    0. It should apply only when the name agrees.
+- The role feature reads other records' relator codes: 21 of 186 dev true
+  pairs have a known role level, and no test person does.

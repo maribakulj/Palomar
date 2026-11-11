@@ -235,15 +235,16 @@
 (deftest the-model-version-is-derived-from-the-model
   (let [{:keys [version model]} (api/reconciliation-model)]
     (testing "the sha256 of the parameters as the model holds them, the fingerprint of its weights, and an informational path"
-      (is (= #{:sha256 :weights :path} (set (keys version))))
+      (is (= #{:sha256 :weights :path :source} (set (keys version))))
+      (is (= :classpath (:source version)))
       (is (= 64 (count (:sha256 version))))
       (is (= (fs/fingerprint (:weights model)) (:weights version)))
-      (is (= (rc/model-version model) (dissoc version :path)))
+      (is (= (rc/model-version model) (dissoc version :path :source)))
       (is (= "palomar/models/agent-match.edn" (:path version)) "classpath-relative"))
     (testing "a comment or a change of layout is no new version"
       (let [text (slurp (io/resource "palomar/models/agent-match.edn"))
             f    (tmp-model (str ";; another comment\n\n" (str/replace text "\n " "\n     ")))]
-        (is (= (dissoc version :path) (dissoc (:version (api/reconciliation-model f)) :path)))))
+        (is (= (dissoc version :path :source) (dissoc (:version (api/reconciliation-model f)) :path :source)))))
     (testing "a changed parameter is"
       (let [v (:version (api/reconciliation-model (tmp-model (assoc @shipped-params :prior 0.2))))]
         (is (not= (:sha256 version) (:sha256 v)))
@@ -258,6 +259,30 @@
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"version"
                             (api/reconcile @records nil {:engine :probabilistic
                                                          :model {:model (held-out "Dumas") :version version}}))))))
+
+(deftest a-shipped-model-is-named-by-its-classpath-path-and-nothing-else
+  (testing "a path under palomar/models/ with no file there is read from the classpath, and says so"
+    (let [{:keys [version]} (rc/read-model "palomar/models/agent-match.edn")]
+      (is (= :classpath (:source version)))
+      (is (= (:sha256 (:version (rc/read-model))) (:sha256 version)))))
+  (testing "a file is a file"
+    (is (= :file (:source (:version (rc/read-model (tmp-model @shipped-params)))))))
+  (testing "a path outside palomar/models/ is never read from the classpath"
+    (is (thrown? Exception (rc/read-model "agent-match.edn")))
+    (is (thrown? Exception (rc/read-model "palomar/vocab/../models/agent-match.edn"))))
+  (testing "a .. segment is refused"
+    (doseq [p ["palomar/models/../models/agent-match.edn" "palomar/models/../../palomar/models/agent-match.edn"]]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"\.\." (rc/read-model p)) p)))
+  (testing "a file that shadows a shipped model is refused, never read in its place"
+    (let [f (io/file "palomar/models/agent-match.edn")
+          made (not (.exists (io/file "palomar")))]
+      (try
+        (io/make-parents f)
+        (spit f (pr-str (assoc @shipped-params :thresholds {:propose 0.6 :review 0.05})))
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"shadows" (rc/read-model "palomar/models/agent-match.edn")))
+        (finally
+          (.delete f)
+          (when made (.delete (io/file "palomar/models")) (.delete (io/file "palomar"))))))))
 
 (deftest a-model-file-is-checked-before-it-is-used
   (doseq [[why params] [["a prior of 1" {:prior 1.0}]

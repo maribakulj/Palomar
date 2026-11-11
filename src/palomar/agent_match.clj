@@ -509,11 +509,13 @@
    fingerprints `:pool` and `:gold`:
 
      {:n :distinct-pairs :positives :distinct-positives :review-pairs :brier
-      :ece :max-bin-gap :bins :bar :pool :gold :meets-bar? :review-covered?}
+      :ece :max-bin-gap :bins :bar :band :pool :gold :meets-bar? :review-covered?}
 
    The Brier score, the ECE and the bins are over every prediction; the bar's
    counts are distinct pairs, distinct true mentions and distinct pairs in
-   the review band [`:review`, `:propose`) of `default-thresholds`. With
+   the review band `:band` [review, propose) — by default that of
+   `default-thresholds`, [0.5, 0.95); a model's own thresholds when given
+   (lot N4) — which the report states. With
    `:relations` (lot M8, `agent-relations/relations-fingerprint`), the report
    says the predictions were scored with that relational evidence: the
    relational weights and the anchor set they read. With `:model`
@@ -521,11 +523,11 @@
    a report proves the confidence of that model alone (`calibrated?`), so a
    report without it proves nothing."
   ([preds] (calibration preds nil))
-  ([preds {:keys [bar pool gold relations model]}]
+  ([preds {:keys [bar pool gold relations model band]}]
    (let [bar      (merge default-bar bar)
          keyed    (map-indexed (fn [i x] (assoc x ::pair (get x :pair [::i i]) ::mention (get x :mention [::i i]))) preds)
          uniq     (vals (into {} (map (juxt ::pair identity)) keyed))
-         {:keys [review propose]} default-thresholds
+         [review propose] (or band ((juxt :review :propose) default-thresholds))
          bins     (reliability preds (:bins bar))
          r        {:n                  (count preds)
                    :distinct-pairs     (count uniq)
@@ -537,6 +539,7 @@
                    :max-bin-gap        (reduce max 0.0 (map #(Math/abs (- (:mean-p %) (:observed %))) bins))
                    :bins               bins
                    :bar                bar
+                   :band               [review propose]
                    :pool               pool
                    :gold               gold}]
      (cond-> (assoc r :meets-bar? (meets? r bar) :review-covered? (review-covered? r bar))
