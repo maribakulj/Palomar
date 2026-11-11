@@ -509,6 +509,36 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Changed
 
+- **An agent is no SKOS concept** (lot O2, ADR 0061). SKOS gives
+  `skos:exactMatch` and `skos:closeMatch` the domain and range
+  `skos:Concept` (SKOS Reference S19, S20, S39–S42), so a reasoner typed
+  every linked person as a concept. Identity between agents now has
+  Palomar's own relations (`palomar.identity`, `urn:palomar:vocab#`):
+  `matchesAuthority` (an identity claim to an authority, was
+  `exactMatch`), `resemblesAuthority` (a candidate for review, was
+  `closeMatch`), `inCluster` (a membership, was `exactMatch` to the person
+  node) and `sameEntityAs` (the clustering's equivalence links). Status,
+  evidence, provenance and curation are unchanged. One rule says what each
+  destination writes (`identity/export-rule`): in RDF, a `matchesAuthority`
+  is `owl:sameAs` only when a curator accepted it, one claim at a time and
+  signed (a bulk policy, `--policy accept --by` included, never qualifies:
+  only `curate/decide-one` and `curate/supersede` mark a decision
+  `:curated`), no conflict names it (the last clustering's, or one the
+  export finds itself over the records it writes, named in the
+  conversion report's `:identity-conflicts`), the authority's stated type agrees with the
+  agent's kind (the `:reconcile/authority` entity now carries
+  `:entity-type`), and its IRI names the person itself (an ISNI, not a
+  catalogue record; GND, VIAF, Wikidata and data.bnf.fr only with a stated
+  type); else Palomar's relation. Linked Art writes such a claim as the
+  `equivalent` of the actor of its type, and none on a name shared by
+  actors of two types; MARC21, DC, MODS and IIIF are unchanged. An old and
+  a new claim of one fact are made one on upgrade. A record IRI typed as
+  the person after `apply-agent-links` is left to lot O3. Concepts keep SKOS. Old IR documents, curation decisions
+  included, are upgraded when read (`identity/upgrade`). A property test
+  checks that no person or group gets a SKOS mapping in any fixture and
+  any RDF export. The claim ids of identity claims change; the eval
+  numbers do not.
+
 - The archival view is RiC-O (ADR 0045): EAD units are `rico:RecordSet` /
   `rico:Record` with their record set type, title, identifier, date, scope,
   typed creators and `rico:isOrWasIncludedIn`, instead of LRMoo

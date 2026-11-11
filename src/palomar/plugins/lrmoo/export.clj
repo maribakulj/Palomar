@@ -20,6 +20,7 @@
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.identity :as identity]
             [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
             [palomar.plugins.lrmoo.ntriples :as nt]
@@ -80,6 +81,10 @@
 
 (def skos-base "http://www.w3.org/2004/02/skos/core#")
 
+(def vocab-base
+  "The `palomar:` vocabulary (`identity/vocab`)."
+  identity/vocab)
+
 (def rico-base
   "The RiC-O namespace, for the archival view (ADR 0045)."
   "https://www.ica.org/standards/RiC/ontology#")
@@ -87,16 +92,21 @@
 (defn viewable-predicate?
   "Predicates the RDF view expresses: the LRMoo WEMI vocabulary, the CIDOC-CRM
    predicates the rich graph carries (e.g. `:crm/P129_is_about` for a subject),
-   and the SKOS mapping properties of an alignment (`:skos/exactMatch`, ADR
-   0032). The floor (`:canon/*`) and native (`:intermarc/*`) predicates are
-   still export loss."
+   the SKOS ones (for concepts), RiC-O, and Palomar's identity relations
+   between agents (`palomar.identity`, ADR 0061), written by
+   `identity/export-rule`. The floor (`:canon/*`) and native
+   (`:intermarc/*`) predicates are still export loss."
   [p]
-  (and (keyword? p) (contains? #{"lrmoo" "crm" "skos" "rico"} (namespace p))))
+  (and (keyword? p) (or (contains? #{"lrmoo" "crm" "skos" "rico"} (namespace p))
+                        (identity/relation? p))))
 
 (defn term-iri
-  "IRI of an `:lrmoo/*`, `:crm/*` or `:skos/*` term (class or property)."
+  "IRI of an `:lrmoo/*`, `:crm/*`, `:skos/*`, `:rico/*` term (class or
+   property), or of a Palomar identity relation (its own IRI; what an export
+   writes for it is `identity/rdf-predicate`'s)."
   [k]
   (cond (crm-term? k)               (str crm-base (name k))
+        (identity/relation? k)      (identity/relation-iris k)
         (= "skos" (namespace k))    (str skos-base (name k))
         (= "rico" (namespace k))    (str rico-base (name k))
         :else                       (lrmoo/iri k)))
@@ -185,6 +195,10 @@
    is written through an E41 Appellation (`string-triples`). Each item is
    `[s-iri p-iri o]` with `o` = `{:iri s}` | `{:lit v}`.
 
+   An identity claim between agents (`palomar.identity`) is written as
+   `identity/rdf-predicate` says (`owl:sameAs`, its own relation, or not at
+   all), never as a SKOS mapping (ADR 0061).
+
    With `{:certified-only? true}` (D7), only `:asserted` assertions are emitted —
    the proof-backed subgraph an institution can ship with no fabricated identity —
    and only the entities those certified claims reference are typed."
@@ -207,7 +221,8 @@
          ;; Manifestation is kept, but a string-key Work (no iri, only :proposed
          ;; claims) is not (audit R2).
          ents    (cond->> (:entities record)
-                   certified-only? (filterv #(or (:iri %) (contains? refd (:id %)))))]
+                   certified-only? (filterv #(or (:iri %) (contains? refd (:id %)))))
+         ctx     (identity/context record)]
      (concat
       (for [e ents
             :when (typed-kind? (:kind e))]
@@ -215,6 +230,11 @@
       (mapcat (fn [a]
                 (let [v (:value a)]
                   (cond
+                    (and (identity/relation? (:predicate a)) (model/reference-value? v))
+                    (let [o (iri (:value/target v))]
+                      (when-let [p (identity/rdf-predicate a ctx)]
+                        [[(iri (:subject a)) p {:iri o}]]))
+
                     (model/reference-value? v)
                     [[(iri (:subject a)) (term-iri (:predicate a)) {:iri (iri (:value/target v))}]]
 
@@ -270,6 +290,7 @@
 (def ^:private rdf-prefixes
   {"crm"   "http://www.cidoc-crm.org/cidoc-crm/"
    "lrmoo" "http://iflastandards.info/ns/lrm/lrmoo/"
+   "owl"   "http://www.w3.org/2002/07/owl#"
    "rdf"   "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    "skos"  "http://www.w3.org/2004/02/skos/core#"})
 

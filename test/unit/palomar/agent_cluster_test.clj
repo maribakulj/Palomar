@@ -199,13 +199,13 @@
                     [(prop :doc/a "Dumas, Alexandre" "1802-1870" 9.0)
                      (prop :doc/b "Dumas, Alexandre" nil 7.0)]))
 
-(defn- local-of [r] (some #(when (#{:skos/exactMatch :skos/closeMatch} (:predicate %)) (:subject %)) (:assertions r)))
+(defn- local-of [r] (some #(when (#{:palomar/matchesAuthority :palomar/resemblesAuthority} (:predicate %)) (:subject %)) (:assertions r)))
 
 (defn- membership-of [r]
   (let [ms (ac/memberships r)] (first (vals ms))))
 
 (defn- alignment-of [r]
-  (first (filter #(and (#{:skos/exactMatch :skos/closeMatch} (:predicate %))
+  (first (filter #(and (#{:palomar/matchesAuthority :palomar/resemblesAuthority} (:predicate %))
                        (str/includes? (str (get-in % [:value :value/target])) "authority"))
                  (:assertions r))))
 
@@ -227,7 +227,7 @@
       (doseq [r [a b]]
         (let [[m] (membership-of r)]
           (is (= (local-of r) (:subject m)))
-          (is (= [:skos/exactMatch :proposed person] [(:predicate m) (:status m) (get-in m [:value :value/target])]))
+          (is (= [:palomar/inCluster :proposed person] [(:predicate m) (:status m) (get-in m [:value :value/target])]))
           (is (= :reconcile/cluster-agents (get-in m [:provenance :rule])))
           (is (= {'?cluster dumas-iri '?members 3} (get-in m [:provenance :bindings])))
           (is (some #(= {:id person :kind :reconcile/person} %) (:entities r))))))
@@ -380,17 +380,17 @@
   (testing "a name-only proposal scoring 1.0 is a close match: it is no decision to propose"
     (let [[r] (rec/align-agents [(named :doc/a "Dumas, Alexandre")]
                                 [{:name "Dumas, Alexandre" :authority-id dumas-iri :certifiable? true :status :proposed :score 1.0}])]
-      (is (= [:skos/closeMatch] (map :predicate (filter #(= "skos" (namespace (:predicate %))) (:assertions r)))))))
+      (is (= [:palomar/resemblesAuthority] (map :predicate (filter #(= "palomar" (namespace (:predicate %))) (:assertions r)))))))
   (let [records (rec/align-agents [(named :doc/a "Dumas, Alexandre") (named :doc/b "Dumas, Alexandre")]
                                   [(prop :doc/a "Dumas, Alexandre" nil 9.0)
                                    (prop :doc/b "Dumas, Alexandre" nil 3.0 :review)])
         b       (second records)
         close   (alignment-of b)
         b'      (:record (rec/confirm-identity b close "same person: the title page says so" {:by "curator"}))
-        exact   (first (filter #(= :skos/exactMatch (:predicate %)) (:assertions b')))]
-    (is (= :skos/closeMatch (:predicate close)))
+        exact   (first (filter #(= :palomar/matchesAuthority (:predicate %)) (:assertions b')))]
+    (is (= :palomar/resemblesAuthority (:predicate close)))
     (testing "the close match is superseded by an accepted exact match, with the reason, in its history"
-      (is (= :superseded (:status (first (filter #(= :skos/closeMatch (:predicate %)) (:assertions b'))))))
+      (is (= :superseded (:status (first (filter #(= :palomar/resemblesAuthority (:predicate %)) (:assertions b'))))))
       (is (= [:accepted (:value close)] [(:status exact) (:value exact)]))
       (is (= "same person: the title page says so" (:reason (last (curate/history b' close))))))
     (testing "clustering reads the accepted exact match: the confirmed agent joins"
@@ -416,23 +416,24 @@
         a       (first out)
         person  (export/entity-iri (ac/person-id [:authority dumas-iri (ac/batch-fingerprint (aligned))]))
         nq      (str/split-lines (dataset/->nquads a))
-        line    (fn [lines] (filter #(and (str/includes? % "exactMatch") (str/includes? % person)) lines))]
-    (testing "an outright proposal is a proposed skos:exactMatch to the authority; a membership one to the person node"
+        line    (fn [lines] (filter #(and (str/includes? % "urn:palomar:vocab#inCluster") (str/includes? % person)) lines))]
+    (testing "an outright proposal is a proposed palomar:matchesAuthority to the authority; a membership a palomar:inCluster to the person node (ADR 0061)"
       (is (some #(str/includes? % "graph:proposals") (line nq)))
-      (is (some #(and (str/includes? % "exactMatch") (str/includes? % dumas-iri) (str/includes? % "graph:proposals")) nq)))
+      (is (some #(and (str/includes? % "urn:palomar:vocab#matchesAuthority") (str/includes? % dumas-iri) (str/includes? % "graph:proposals")) nq)))
     (testing "accepted, both are facts"
       (let [acc (first (:records (curate/curate [a] curate/accept-all)))
             nq  (str/split-lines (dataset/->nquads acc))]
         (is (some #(str/includes? % "graph:facts") (line nq)))))
     (testing "a review proposal is a close match, never exact"
       (let [[r] (rec/align-agents [(named :doc/r "Dumas, Alexandre")] [(prop :doc/r "Dumas, Alexandre" nil 3.0 :review)])]
-        (is (= [:skos/closeMatch] (map :predicate (filter #(= "skos" (namespace (:predicate %))) (:assertions r)))))))
-    (testing "no owl:sameAs, and no exactMatch between two records' local agents"
+        (is (= [:palomar/resemblesAuthority] (map :predicate (filter #(= "palomar" (namespace (:predicate %))) (:assertions r)))))))
+    (testing "no SKOS mapping, no owl:sameAs for a proposal, and no identity claim between two records' local agents"
       (let [nt (str (export/->ntriples a) (export/->ntriples (second out)))]
         (is (not (str/includes? nt "sameAs")))
+        (is (not (str/includes? nt "skos/core#")))
         (is (every? #(or (str/includes? % dumas-iri) (str/includes? % person))
-                    (filter #(str/includes? % "exactMatch") (str/split-lines nt))))))
-    (testing "Linked Art states no proposal and no membership: an identity reaches it only as the authority's node"
+                    (filter #(str/includes? % "urn:palomar:vocab#") (str/split-lines nt))))))
+    (testing "Linked Art states no proposal and no membership: an accepted identity alone is an equivalent (ADR 0061)"
       (let [doc (str (vec (linked-art/documents a)))]
         (is (not (str/includes? doc person)))
         (is (not (str/includes? doc "equivalent")))))))

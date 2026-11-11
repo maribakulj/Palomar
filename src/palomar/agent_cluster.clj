@@ -7,10 +7,12 @@
    accepted link names an authority that authority's node, and the eval's
    `:top-1` rules group mentions by their top proposal. Each is a closure
    through the authority with no check: two mentions linked to one authority
-   are one person, whatever else is known of them. And SKOS makes
-   `skos:exactMatch` transitive (SKOS Reference S45; symmetric, S44; a
-   sub-property of `closeMatch`, S42), so a consumer closing the alignments
-   gets the same closure. A chain A~X, X~C where A and C cannot be one person
+   are one person, whatever else is known of them. And until lot O2 the
+   alignments were `skos:exactMatch`, which SKOS makes transitive (SKOS
+   Reference S45; symmetric, S44; a sub-property of `closeMatch`, S42), so a
+   consumer closing them got the same closure. They are now Palomar's own
+   relations (`palomar.identity`, ADR 0061), declared nothing a reasoner
+   closes; the guarantees below are kept by this code. A chain A~X, X~C where A and C cannot be one person
    (their dates) ends with A and C merged.
 
    **Inputs** (`cluster`), plain data:
@@ -67,7 +69,8 @@
 
    `cluster-records` runs it on the alignments and the memberships a batch
    of records holds, and writes each local agent's cluster as a membership
-   claim: `local-agent skos:exactMatch person-node`, the person node a
+   claim: `local-agent palomar:inCluster person-node`
+   (`identity/cluster-membership`), the person node a
    `:reconcile/person` entity minted from the cluster's key (its authority's
    IRI, or its first agent) **and the batch** (`batch-fingerprint`), so the
    memberships of two batches never name one node. Every claim the machine
@@ -87,6 +90,7 @@
             [palomar.agent-equivalence :as eq]
             [palomar.agent-events :as events]
             [palomar.curate :as curate]
+            [palomar.identity :as identity]
             [palomar.model :as model]))
 
 ;; ---------------------------------------------------------------------------
@@ -314,19 +318,22 @@
 ;; In the IR: alignments and memberships in, memberships out
 ;; ---------------------------------------------------------------------------
 
-(def mapping-predicates #{:skos/exactMatch :skos/closeMatch})
+(def mapping-predicates
+  "The predicates of an alignment to an authority: the identity claim and
+   the candidate for review (ADR 0061)."
+  #{identity/authority-match identity/authority-candidate})
 
 (def membership-rule :reconcile/cluster-agents)
 
 (def conflict-code
   "The diagnostic code of a conflict between accepted claims (ADR 0057)."
-  :reconcile/identity-conflict)
+  (identity/conflict-codes :reconcile/identity-conflict))
 
 (def events-conflict-code
   "The diagnostic code of accepted claims kept although a mention's typed
    events cannot be the life they join (lot M7, review): the curator wins,
    the constraint is reported."
-  :reconcile/identity-events-conflict)
+  (identity/conflict-codes :reconcile/identity-events-conflict))
 
 (def equivalence-conflict-code
   "The diagnostic code of authority records whose stated equivalences are
@@ -379,7 +386,7 @@
                     :when (and (mapping-predicates (:predicate a)) (= :reconcile/authority (kind (target a))))]
                 (assoc a ::record (:id r)))
         membs (for [r records a (:assertions r)
-                    :when (and (= :skos/exactMatch (:predicate a)) (= :reconcile/person (kind (target a))))]
+                    :when (and (= identity/cluster-membership (:predicate a)) (= :reconcile/person (kind (target a))))]
                 (assoc a ::record (:id r)))]
     {:ents        ents
      :alignments  align
@@ -396,9 +403,9 @@
               :assertion (model/assertion-id a)}
         w    (bound a '?match-weight)]
     (cond
-      (and (model/in-force? a) (= :skos/exactMatch (:predicate a)))
+      (and (model/in-force? a) (= identity/authority-match (:predicate a)))
       (assoc base :basis :accepted)
-      (and (model/pending? a) (= :skos/exactMatch (:predicate a)) (= :propose (bound a '?decision)))
+      (and (model/pending? a) (= identity/authority-match (:predicate a)) (= :propose (bound a '?decision)))
       (cond-> (assoc base :basis :propose) (number? w) (assoc :weight (double w)))
       (model/pending? a)
       (cond-> (assoc base :basis :review) (number? w) (assoc :weight (double w))))))
@@ -658,7 +665,7 @@
 
 (defn- membership
   [local person bindings]
-  (model/assertion {:subject local :predicate :skos/exactMatch :value (model/reference person)
+  (model/assertion {:subject local :predicate identity/cluster-membership :value (model/reference person)
                     :status :proposed
                     :provenance (assoc (model/provenance {:pass :infer :rule membership-rule})
                                        :bindings bindings)}))
@@ -745,7 +752,7 @@
    status (`out-of-force` ones included: the history)."
   [record]
   (let [kind (into {} (map (juxt :id :kind)) (:entities record))]
-    (group-by :subject (filter #(and (= :skos/exactMatch (:predicate %)) (= :reconcile/person (kind (target %))))
+    (group-by :subject (filter #(and (= identity/cluster-membership (:predicate %)) (= :reconcile/person (kind (target %))))
                                (:assertions record)))))
 
 (defn format-clustering

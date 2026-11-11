@@ -276,7 +276,7 @@
         r1       (rec/agent-candidates [m-ferat] pool {:model model :anchors (ar/freeze-anchors (cons p-anchor base))})
         prop     (first (filter #(= :propose (:decision %)) (:proposals r1)))
         aligned  (first (rec/align-agents [(named :r1 "Férat, Jules")] (:proposals r1)))
-        exact    (first (claims aligned :skos/exactMatch))
+        exact    (first (claims aligned :palomar/matchesAuthority))
         curated  (:record (curate/decide-one aligned exact :accept "the curator agrees"))
         [link]   (rec/accepted-links [curated])]
     (testing "the proposal states its support, the alignment writes it, the accepted claim keeps it"
@@ -306,7 +306,7 @@
         _     (is (= #{:review} (set (map :decision (:proposals r)))) "still competing: both for review")
         al    (first (rec/align-agents [(named :r7 "Férat, Jules")] (:proposals r)))
         close (first (filter #(= ferat (:iri (some (fn [e] (when (= (:id e) (get-in % [:value :value/target])) e)) (:entities al))))
-                             (claims al :skos/closeMatch)))
+                             (claims al :palomar/resemblesAuthority)))
         conf  (:record (rec/confirm-identity al close "the curator knows the illustrator"))
         [l]   (rec/accepted-links [conf])]
     (is (= {:mention :m7 :role "0440" :support #{:p} :authority-id ferat}
@@ -334,7 +334,7 @@
             m4   [{:name "Dumas, Alexandre" :dates "1802-1870" :record :r1} {:name "Dumas, Alexandre" :dates "1802-1870" :record :r1}]
             out  (fn [ms] (rec/align-agents [(named :r1 "Dumas, Alexandre")] (rec/propose-agent-links ms p1 {:model fs-model})))]
         (is (= (out m4) (out two)))
-        (is (= 1 (count (claims (first (out two)) :skos/exactMatch))))))
+        (is (= 1 (count (claims (first (out two)) :palomar/matchesAuthority))))))
     (testing "an empty anchor set, or anchors that say nothing of these mentions: M4's decisions, scores and weights"
       (let [dec (fn [res] (map (juxt :name :authority-id :decision :score :match-weight :evidence) (concat (:proposals res) (:abstained res))))]
         (is (= (dec (rec/agent-candidates ms pool {:model fs-model}))
@@ -354,7 +354,7 @@
         (is (= #{"0070"} (set (get-in v [:evidence :relations :candidate-roles]))))))
     (testing "the evidence is stated in the alignment's provenance"
       (let [[r] (rec/align-agents [(named :r1 "Férat, Jules")] (:proposals after))
-            b   (get-in (first (claims r :skos/exactMatch)) [:provenance :bindings])]
+            b   (get-in (first (claims r :palomar/matchesAuthority)) [:provenance :bindings])]
         (is (= :same-role (get b '?role-level)))
         (is (= :shared (get b '?neighbours-level)))))))
 

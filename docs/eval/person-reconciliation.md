@@ -531,7 +531,8 @@ weights the stronger side wins
 
 Not measured here, guaranteed by unit tests
 (`palomar.agent-cluster-test`): a cluster in the IR is a set of
-`:proposed` `skos:exactMatch` claims from each local agent to a person
+`:proposed` `skos:exactMatch` claims (`palomar:inCluster` since lot O2,
+ADR 0061) from each local agent to a person
 node minted per cluster and batch; a re-clustering after a new date or a
 rejected link rejects the pending memberships that no longer hold, with
 the reason, and reopens a claim proposed again rather than copying it; a

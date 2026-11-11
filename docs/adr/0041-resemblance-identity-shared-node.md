@@ -29,7 +29,8 @@ see that it was a guess.
 
 Palomar distinguishes three operations, and only the third shares a node:
 1. **Resemblance**: two things look alike. It is a proposal, a
-   `skos:closeMatch` or `exactMatch` with a score (ADR 0032), never a shared
+   `skos:closeMatch` or `exactMatch` with a score (ADR 0032; between agents
+   `palomar:resemblesAuthority` or `palomar:matchesAuthority` since ADR 0061), never a shared
    id.
 2. **Identity**: two things are one, established by an authority identifier,
    by the source's own structure, or by a curator's decision, each with its

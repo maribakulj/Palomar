@@ -35,6 +35,7 @@
             [palomar.agent-match :as fs]
             [palomar.agent-relations :as relations]
             [palomar.curate :as curate]
+            [palomar.identity :as identity]
             [palomar.mentions :as mentions]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
@@ -455,7 +456,8 @@
                            (if (exact? p) "  exact" "  close")))))))
 
 (defn- exact?
-  "Whether a proposal is put forward as `skos:exactMatch`: certifiable and
+  "Whether a proposal is put forward as an identity claim
+   (`palomar:matchesAuthority`, ADR 0061): certifiable and
    proposed outright (`:decision :propose`, lot M4). Anything else — a
    proposal for review, a name-only proposal (which no model decided,
    whatever its score) — is a close match (ADR 0057): an exact match a
@@ -527,9 +529,10 @@
   "Put `propose-agent-links` proposals into `records` as data (ADR 0032): for
    each record naming a proposal's `:name`, a local agent entity for that name
    (labelled with it), the authority entity (its `:iri` the authority id), and a
-   `:proposed` assertion between them — `:skos/exactMatch` for a certifiable
-   proposal proposed outright (`:decision :propose`, scored), `:skos/closeMatch`
-   otherwise — a proposal for review, and every name-only one (ADR 0057). The score and the
+   `:proposed` assertion between them — `identity/authority-match`
+   (`palomar:matchesAuthority`, ADR 0061) for a certifiable proposal proposed
+   outright (`:decision :propose`, scored), `identity/authority-candidate`
+   (`palomar:resemblesAuthority`) otherwise — a proposal for review, and every name-only one (ADR 0057). The score and the
    evidence are its provenance bindings (the authority's label, the name
    score, the dates, and for a scored proposal its probability, weight,
    decision and levels); its `:confidence` is the proposal's `:confidence`
@@ -539,8 +542,9 @@
    uncalibrated posterior or a confidence a caller put on a proposal is never
    written as a confidence. The authority is
    the mapping's target, not an identified person: it is no `:crm/E21_Person`
-   until a curator accepts the match and `apply-agent-links` applies it. Curation then accepts or rejects it like any claim; nothing is
-   ever an `owl:sameAs`, and a rejected alignment stays in the record's history.
+   until a curator accepts the match and `apply-agent-links` applies it. Curation then accepts or rejects it like any claim; the IR states no
+   `owl:sameAs` (an export may write one for an accepted claim, by
+   `identity/export-rule`), and a rejected alignment stays in the record's history.
 
    A proposal stays with the mention that made it (`:mention`, lot M3): a
    record takes the proposals of the mention scoped to it (`:record`), else of
@@ -563,10 +567,12 @@
             (let [local (named-agent r name p)
                   ;; the authority as the alignment's target only: not an E21,
                   ;; since a proposal must not make an identified person
-                  auth  (model/entity {:id (model/mint-entity-id :reconcile/authority authority-id)
-                                       :kind :reconcile/authority :iri authority-id})
+                  auth  (model/entity (cond-> {:id (model/mint-entity-id :reconcile/authority authority-id)
+                                               :kind :reconcile/authority :iri authority-id}
+                                        ;; the type the authority states, which the export checks (ADR 0061)
+                                        (string? (:entity-type p)) (assoc :entity-type (:entity-type p))))
                   prov  (model/provenance {:pass :infer :rule :reconcile/propose-agent-link :derivation [rid]})
-                  pred  (if (exact? p) :skos/exactMatch :skos/closeMatch)
+                  pred  (if (exact? p) identity/authority-match identity/authority-candidate)
                   add   (fn [r e] (if (some #(= (:id e) (:id %)) (:entities r)) r (update r :entities (fnil conj []) e)))]
               (-> r
                   (add local)
@@ -585,7 +591,7 @@
 
 (defn accepted-links
   "The alignments a curator accepted in `records`, as `apply-agent-links` links:
-   an `:accepted` (or `:asserted`) `:skos/exactMatch` from a record's local
+   an `:accepted` (or `:asserted`) `identity/authority-match` from a record's local
    agent to an authority entity. A close match is never a link: it says the two
    are alike, not the same. Each link is scoped to the record it was accepted
    in (`:records #{rid}`, ADR 0041): that this record's \"Gustave Flaubert\" is
@@ -607,7 +613,7 @@
                                          :when (= :crm/P190_has_symbolic_content (:predicate a))]
                                      [(:subject a) (:value a)]))]
               a (:assertions r)
-              :when (and (= :skos/exactMatch (:predicate a)) (#{:accepted :asserted} (:status a)))
+              :when (and (= identity/authority-match (:predicate a)) (#{:accepted :asserted} (:status a)))
               :let [auth (ents (:value/target (:value a)))]
               :when (and auth (:iri auth) (names (:subject a)))]
           (cond-> {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted
@@ -717,7 +723,7 @@
 
 (defn confirm-identity
   "A curator confirms a review candidate (ADR 0057): the close match `close`
-   (`:skos/closeMatch` from a record's local agent to an authority, pending
+   (`identity/authority-candidate` from a record's local agent to an authority, pending
    or in force) is superseded by the accepted exact match between the same
    two (`curate/supersede`), with `reason` and the curator `context`. A
    pending close match is first accepted (the curator read it), then
@@ -727,10 +733,10 @@
    match: an accepted close match alone joins nothing."
   ([record close reason] (confirm-identity record close reason {}))
   ([record close reason context]
-   (when-not (= :skos/closeMatch (:predicate close))
+   (when-not (= identity/authority-candidate (:predicate close))
      (throw (ex-info "confirm-identity: not a close match" {:assertion close})))
    (let [{r1 :record t1 :transitions} (curate/decide-one record close :accept reason context)
-         exact (assoc close :predicate :skos/exactMatch)
+         exact (assoc close :predicate identity/authority-match)
          {r2 :record t2 :transitions} (curate/supersede r1 (assoc close :status :accepted) exact reason context)
          ;; the exact match keeps what the close match's provenance stated (its
          ;; evidence, and for lot M8 its mention, role and support)

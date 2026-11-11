@@ -26,7 +26,7 @@
 (def history-graph    "urn:palomar:graph:history")
 (def provenance-graph "urn:palomar:graph:provenance")
 
-(def ^:private pal "urn:palomar:vocab#")
+(def ^:private pal export/vocab-base)
 
 (def ^:private graph-classes
   "What each graph holds, stated in the default graph."

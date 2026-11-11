@@ -3,7 +3,10 @@
 - Status: Accepted (partially implemented — the certified + fuzzy agent tiers are
   landed; the equivalence-verdict store and the live-reconciliation yield are
   deferred, see below; §2 amended by [ADR 0032](./0032-graded-alignments.md):
-  verdicts are graded SKOS mapping claims, never `owl:sameAs`)
+  verdicts are graded mapping claims, never `owl:sameAs` in the IR; amended
+  by [ADR 0061](./0061-an-agent-is-no-skos-concept.md): between agents they
+  are Palomar's own relations, and an export writes `owl:sameAs` only for a
+  curator's identity claim that passes its gates)
 - Date: 2026-06-02
 - Partially implemented (2026-06-04): the **certified tier** of decisions 1 and 5
   — reconcile *to an authority*, by a determinate id, never pairwise — is real for
@@ -352,11 +355,11 @@ rules below are the revised ones.
    evidence for.
 4. **Decision.** Posterior p = 1/(1+2^-(w + log2(λ/(1-λ)))). At p >= 0.95 a
    candidate is **proposed** (`:decision :propose`, `skos:exactMatch` when
-   certifiable) — **but only when it is its mention's one candidate at or
+   certifiable; `palomar:matchesAuthority` since ADR 0061) — **but only when it is its mention's one candidate at or
    above 0.5**; with several, all of them go to **review**
    (`:review-reason :competing`), so a mention never has two outright
    proposals. At 0.5 <= p < 0.95 a candidate is for review
-   (`skos:closeMatch`); below 0.5 the matcher **abstains**: the candidate is
+   (`skos:closeMatch`; `palomar:resemblesAuthority` since ADR 0061); below 0.5 the matcher **abstains**: the candidate is
    listed under `:abstained` with its evidence and makes no claim. The
    thresholds are stated in the model (`default-thresholds`), set before
    measuring, not tuned. Each proposal carries `:score` (p),
@@ -442,6 +445,7 @@ decides:
    candidate merge, listed, never applied. A curator confirms one with
    `reconcile/confirm-identity`.
 3. **Revisable, in the IR**: the clusters are `skos:exactMatch` claims
+   (`palomar:inCluster` since ADR 0061)
    from each local agent to a `:reconcile/person` node minted per cluster
    and batch, `:proposed` until accepted. Re-clustering rejects (through
    `palomar.curate`, with the reason) the pending memberships that no

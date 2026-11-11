@@ -264,7 +264,7 @@
                           :assertions [(model/assertion {:subject :doc/a :predicate :canon/agent :value "Hugo, Victor"})]})
         ps (rec/propose-agent-links [{:name "Hugo, Victor" :record :doc/a :events [(ev :creation 1930 1930)]}] pool)
         [out] (rec/align-agents [r] ps)
-        a  (first (filter #(#{:skos/exactMatch :skos/closeMatch} (:predicate %)) (:assertions out)))]
+        a  (first (filter #(#{:palomar/matchesAuthority :palomar/resemblesAuthority} (:predicate %)) (:assertions out)))]
     (is (= "http://ex.org/hugo" (:iri (first (filter #(= :reconcile/authority (:kind %)) (:entities out))))))
     (is (= :compatible (get-in a [:provenance :bindings '?events])))))
 
@@ -286,7 +286,7 @@
       (let [r     (model/record {:id :doc/a :kind :book
                                  :assertions [(model/assertion {:subject :doc/a :predicate :canon/agent :value "Hugo, Victor"})]})
             [out] (rec/align-agents [r] (rec/propose-agent-links ["Hugo, Victor"] pool))
-            local (:subject (first (filter #(= :skos/closeMatch (:predicate %)) (:assertions out))))
+            local (:subject (first (filter #(= :palomar/resemblesAuthority (:predicate %)) (:assertions out))))
             input (ac/clustering-input [out] {:events {local [(ev :creation 1930 1930)] :elsewhere [(ev :creation 1 1)]}})]
         (is (= [(ev :creation 1930 1930)] (get-in input [:items local :events])))
         (is (not (contains? (:items input) :elsewhere)) "only for an agent the batch holds")))))
@@ -400,7 +400,7 @@
       (let [r     (model/record {:id :doc/a :kind :book
                                  :assertions [(model/assertion {:subject :doc/a :predicate :canon/agent :value "Hugo, Victor"})]})
             [out] (rec/align-agents [r] (rec/propose-agent-links ["Hugo, Victor"] [{:id "http://ex.org/x" :label "Hugo, Victor"}]))
-            a     (first (filter #(= :skos/closeMatch (:predicate %)) (:assertions out)))
+            a     (first (filter #(= :palomar/resemblesAuthority (:predicate %)) (:assertions out)))
             acc   (:record (rec/confirm-identity out a "curator"))
             local (:subject a)
             auth  (:value/target (:value a))
@@ -409,7 +409,7 @@
         (is (empty? (:conflicts clustering)))
         (is (= 1 (count diags)))
         (is (= :incompatible-events (get-in (first diags) [:detail :reason])))
-        (is (some #(and (= :skos/exactMatch (:predicate %)) (= :accepted (:status %))) (:assertions (first records)))
+        (is (some #(and (= :palomar/matchesAuthority (:predicate %)) (= :accepted (:status %))) (:assertions (first records)))
             "the curator's claim stays in force")))))
 
 (deftest a-group-has-no-life-to-constrain

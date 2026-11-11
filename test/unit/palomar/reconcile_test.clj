@@ -136,10 +136,11 @@
 
 (defn- confirm
   "A curator confirms every pending close match of `r` to an authority
-   (`rec/confirm-identity`)."
-  [r]
-  (reduce (fn [r a] (:record (rec/confirm-identity r a "confirmed by the curator")))
-          r (filter #(and (= :skos/closeMatch (:predicate %)) (model/pending? %)) (:assertions r))))
+   (`rec/confirm-identity`), with the curator `context`."
+  ([r] (confirm r {}))
+  ([r context]
+   (reduce (fn [r a] (:record (rec/confirm-identity r a "confirmed by the curator" context)))
+           r (filter #(and (= :palomar/resemblesAuthority (:predicate %)) (model/pending? %)) (:assertions r)))))
 
 (deftest a-proposal-is-a-proposed-skos-mapping-not-a-merge
   (let [props   [{:name "Gustave Flaubert" :authority-id "https://isni.org/isni/0000000122762442"
@@ -147,10 +148,10 @@
                  {:name "G. Flaubert" :authority-id "https://isni.org/isni/0000000122762442"
                   :authority-label "Flaubert, Gustave" :score 0.5 :certifiable? true :status :proposed}]
         [a b]   (rec/align-agents [(named :doc/a "Gustave Flaubert") (named :doc/b "G. Flaubert")] props)
-        preds   (fn [r] (set (keep #(when (= "skos" (namespace (:predicate %))) [(:predicate %) (:status %)]) (:assertions r))))]
+        preds   (fn [r] (set (keep #(when (= "palomar" (namespace (:predicate %))) [(:predicate %) (:status %)]) (:assertions r))))]
     (testing "a name-only proposal, exact or partial, is a close match (ADR 0057: no model decided it); only proposed"
-      (is (= #{[:skos/closeMatch :proposed]} (preds a)))
-      (is (= #{[:skos/closeMatch :proposed]} (preds b))))
+      (is (= #{[:palomar/resemblesAuthority :proposed]} (preds a)))
+      (is (= #{[:palomar/resemblesAuthority :proposed]} (preds b))))
     (testing "nothing is linked until a curator confirms the identity; an accepted close match is never a link"
       (is (empty? (rec/accepted-links [a b])))
       (is (empty? (rec/accepted-links (:records (curate/curate [a b] curate/accept-all)))))
@@ -158,15 +159,18 @@
         (is (= ["Gustave Flaubert"] (map :name (rec/accepted-links acc))))
         (testing "and the accepted link rewrites the record onto the authority's agent"
           (is (= 1 (count (:applied (rec/apply-agent-links acc (rec/accepted-links acc)))))))))
-    (testing "the alignment reaches RDF as SKOS, never as owl:sameAs"
+    (testing "the alignment reaches RDF as Palomar's relation, never as SKOS (ADR 0061); owl:sameAs only once accepted, to the person's own IRI"
       (let [nt (export/->ntriples a)]
-        (is (str/includes? nt "skos/core#closeMatch"))
-        (is (str/includes? (export/->ntriples (confirm a)) "skos/core#exactMatch"))
+        (is (str/includes? nt "urn:palomar:vocab#resemblesAuthority"))
+        (is (str/includes? (export/->ntriples (confirm a {:by "curator"})) "http://www.w3.org/2002/07/owl#sameAs")
+            "a signed curator's confirmation")
+        (is (not (str/includes? (export/->ntriples (confirm a)) "owl#sameAs")) "an unsigned one is no curator's")
+        (is (not (str/includes? (str nt (export/->ntriples (confirm a))) "skos/core#")))
         (is (not (str/includes? nt "sameAs")))))
     (testing "a rejected alignment moves to the history graph"
       (let [rej (first (:records (curate/curate [a] curate/reject-all)))
             nq  (dataset/->nquads rej)]
-        (is (some #(and (str/includes? % "closeMatch") (str/includes? % "graph:history")) (str/split-lines nq)))))))
+        (is (some #(and (str/includes? % "resemblesAuthority") (str/includes? % "graph:history")) (str/split-lines nq)))))))
 
 (deftest an-accepted-alignment-does-not-identify-a-homonym
   (testing "accepting \"Gustave Flaubert\" = the authority in one record leaves another record's Gustave Flaubert alone (post-audit test 01)"
@@ -329,16 +333,16 @@
 (deftest a-proposal-carries-its-evidence-into-the-ir
   (let [props (rec/propose-agent-links [{:name "Dumas, Alexandre" :dates "1802-1870"}] dumas)
         [r]   (rec/align-agents [(named :doc/d "Dumas, Alexandre")] props)
-        maps  (filter #(= "skos" (namespace (:predicate %))) (:assertions r))]
+        maps  (filter #(= "palomar" (namespace (:predicate %))) (:assertions r))]
     (testing "one proposed mapping, to the father (a close match: name-only); the son, rejected, is no claim"
-      (is (= [[:skos/closeMatch :proposed]] (map (juxt :predicate :status) maps)))
+      (is (= [[:palomar/resemblesAuthority :proposed]] (map (juxt :predicate :status) maps)))
       (is (= #{pere} (set (keep :iri (:entities r))))))
     (testing "the mapping's provenance names the name score and the dates verdict and values"
       (is (= {'?label "Dumas, Alexandre" '?name-score 1.0 '?dates :compatible
               '?mention-dates "1802-1870" '?authority-dates "1802-1870"}
              (get-in (first maps) [:provenance :bindings]))))))
 
-(defn- mappings [r] (filter #(= "skos" (namespace (:predicate %))) (:assertions r)))
+(defn- mappings [r] (filter #(= "palomar" (namespace (:predicate %))) (:assertions r)))
 
 (deftest a-proposal-stays-with-the-mention-that-made-it
   (let [pere-m {:name "Dumas, Alexandre" :dates "1802-1870"}
@@ -441,7 +445,7 @@
       (is (= :review (:decision p)))
       (is (< 0.8 (:score p) 0.9)))
     (testing "a proposal for review is a close match, never an exact one"
-      (is (= [:skos/closeMatch :proposed] ((juxt :predicate :status) a))))
+      (is (= [:palomar/resemblesAuthority :proposed] ((juxt :predicate :status) a))))
     (testing "its provenance states the posterior, the weight, the decision and the levels — as evidence, not confidence"
       (is (nil? (:confidence a)))
       (is (= {'?label "Gustave Flaubert" '?name-score 1.0 '?posterior (:score p) '?match-weight (:match-weight p)
@@ -459,7 +463,7 @@
       (is (every? #(< 0.95 (:score %)) props))
       (is (= [[:review :competing] [:review :competing]] (map (juxt :decision :review-reason) props))))
     (testing "so the record never takes two exact matches"
-      (is (= #{:skos/closeMatch} (set (map :predicate (mappings (first (rec/align-agents [(named :doc/r "Martin, Jean")] props)))))))))
+      (is (= #{:palomar/resemblesAuthority} (set (map :predicate (mappings (first (rec/align-agents [(named :doc/r "Martin, Jean")] props)))))))))
   (testing "undated père and fils weigh alike: neither is proposed outright"
     (let [ps (rec/propose-agent-links [{:name "Dumas, Alexandre"}] dumas {:model (assoc fs-model :thresholds {:propose 0.8 :review 0.5})})]
       (is (= #{pere fils} (set (map :authority-id ps))))

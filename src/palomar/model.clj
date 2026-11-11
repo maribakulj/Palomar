@@ -149,6 +149,10 @@
    ;; known from the source (transcription) or reconciliation; RDF export prefers
    ;; it over a synthetic `urn:palomar:` IRI. See ADR 0013 (interoperable output).
    [:iri {:optional true} :string]
+   ;; Optional entity type its authority states (\"person\", \"corporateBody\",
+   ;; \"family\", or the authority's own term): on a `:reconcile/authority`
+   ;; entity, what the export of an identity claim checks (ADR 0061).
+   [:entity-type {:optional true} :string]
    [:provenance {:optional true} Provenance]])
 
 ;; ---------------------------------------------------------------------------
@@ -591,9 +595,10 @@
    optional. `id` is normally produced by `mint-entity-id`; `:kind` is a plugin
    keyword (e.g. :lrmoo/work); `:iri` is the external authority IRI when known.
    See ADR 0017."
-  [{:keys [id kind iri provenance]}]
+  [{:keys [id kind iri entity-type provenance]}]
   (cond-> {:id id :kind kind}
     iri        (assoc :iri iri)
+    entity-type (assoc :entity-type entity-type)
     provenance (assoc :provenance provenance)))
 
 (defn assertion

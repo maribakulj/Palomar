@@ -56,18 +56,24 @@
 (defn- decision-annotation
   "The annotation recording `transition` about assertion `a`: a structured value
    with the verdict, the statuses, the reason and the curator context (`:by`,
-   `:at`), each field present only when known."
-  [a transition context]
-  (let [fields (cond-> {:verdict (:verdict transition) :to (:to transition)}
-                 (:from transition)        (assoc :from (:from transition))
-                 (:reason transition)      (assoc :reason (:reason transition))
-                 (:replaced-by transition) (assoc :replaced-by (model/assertion-id (:replaced-by transition)))
-                 (:by context)             (assoc :by (:by context))
-                 (:at context)             (assoc :at (:at context)))]
-    (model/annotation {:about     a
-                       :predicate decision-predicate
-                       :value     (model/structured fields)
-                       :provenance (model/provenance {:rule :curate/decision})})))
+   `:at`), each field present only when known. `curated?` marks an
+   acceptance or a supersession made one claim at a time (`decide-one`,
+   `supersede`), never one a policy applied to a batch (`curate-record`,
+   `curate`): `:curated true`. The context never sets it (ADR 0061: an
+   export writes `owl:sameAs` only for a curated, signed acceptance)."
+  ([a transition context] (decision-annotation a transition context false))
+  ([a transition context curated?]
+   (let [fields (cond-> {:verdict (:verdict transition) :to (:to transition)}
+                  (and curated? (contains? #{:accept :supersede} (:verdict transition))) (assoc :curated true)
+                  (:from transition)        (assoc :from (:from transition))
+                  (:reason transition)      (assoc :reason (:reason transition))
+                  (:replaced-by transition) (assoc :replaced-by (model/assertion-id (:replaced-by transition)))
+                  (:by context)             (assoc :by (:by context))
+                  (:at context)             (assoc :at (:at context)))]
+     (model/annotation {:about     a
+                        :predicate decision-predicate
+                        :value     (model/structured fields)
+                        :provenance (model/provenance {:rule :curate/decision})}))))
 
 (defn- curate-assertion
   "Resolve one assertion. If `a` is pending, apply `decide` and transition its
@@ -90,6 +96,8 @@
          reason (assoc :reason reason))])
     [a nil]))
 
+(declare curate-record*)
+
 (defn curate-record
   "Apply curation `decide` to every *pending* assertion of `record` (ADR 0005).
    Returns `{:record record' :transitions [..]}` — `record'` with pending statuses
@@ -105,15 +113,20 @@
    `:retracted`, `:superseded`) pass through unchanged; a record with no
    assertions is returned untouched."
   ([record decide] (curate-record record decide {}))
-  ([record decide context]
-   (if-let [assertions (seq (:assertions record))]
-     (let [pairs (map #(curate-assertion decide %) assertions)
-           notes (for [[a [_ t]] (map vector assertions pairs) :when t]
-                   (decision-annotation a t context))]
-       {:record      (cond-> (assoc record :assertions (mapv first pairs))
-                       (seq notes) (update :annotations (fnil into []) notes))
-        :transitions (vec (keep second pairs))})
-     {:record record :transitions []})))
+  ([record decide context] (curate-record* record decide context false)))
+
+(defn- curate-record*
+  "`curate-record`, its acceptances marked `:curated` when `curated?` (one
+   claim at a time, `decide-one`)."
+  [record decide context curated?]
+  (if-let [assertions (seq (:assertions record))]
+    (let [pairs (map #(curate-assertion decide %) assertions)
+          notes (for [[a [_ t]] (map vector assertions pairs) :when t]
+                  (decision-annotation a t context curated?))]
+      {:record      (cond-> (assoc record :assertions (mapv first pairs))
+                      (seq notes) (update :annotations (fnil into []) notes))
+       :transitions (vec (keep second pairs))})
+    {:record record :transitions []}))
 
 (defn history
   "The curation decisions recorded about assertion `a` (an assertion or its id)
@@ -172,7 +185,7 @@
                        (update :annotations (fnil conj [])
                                (decision-annotation found {:verdict :supersede :from (:status found)
                                                            :to :superseded :reason reason :replaced-by new}
-                                                    context)))
+                                                    context true)))
       :transitions [{:subject     (:subject found)
                      :predicate   (:predicate found)
                      :from        (:status found)
@@ -194,7 +207,7 @@
      (if-not (and target (model/pending? target))
        {:record record :transitions []}
        (let [{cur :record ts :transitions}
-             (curate-record (assoc record :assertions [target] :annotations []) (constantly [verdict reason]) context)]
+             (curate-record* (assoc record :assertions [target] :annotations []) (constantly [verdict reason]) context true)]
          {:record      (-> record
                            (update :assertions (partial mapv #(if (= id (model/assertion-id %)) (first (:assertions cur)) %)))
                            (update :annotations (fnil into []) (:annotations cur)))

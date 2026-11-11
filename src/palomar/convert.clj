@@ -22,6 +22,7 @@
             [palomar.plugins.lido :as lido]
             [palomar.plugins.events :as events]
             [palomar.plugins.oai :as oai]
+            [palomar.identity-check :as identity-check]
             [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.model :as model]
@@ -330,9 +331,22 @@
   [to]
   (get-in exporters [to :scopes]))
 
+(def ^:private identity-profiles
+  "The targets that write an identity claim as `owl:sameAs` or Linked Art's
+   `equivalent` (`identity/export-rule`), and so check its conflicts over
+   the records they export (`identity-check`)."
+  #{:ntriples :turtle :jsonld :crm :crm-only :nquads :trig :linked-art})
+
 (defn export-records
   "Render WEMI `records` (from `to-wemi`, possibly curated) to target `to`. Returns
    `{:output String :loss [export-loss…] :withheld n}`.
+
+   A target of `identity-profiles` first checks the in-force identity claims
+   of `records` against each other (`identity-check/with-conflicts`, ADR
+   0061): a claim in conflict is no `owl:sameAs` (no `equivalent`), and its
+   diagnostic (`:reconcile/export-identity-conflict`, a warning, no loss) is
+   returned with the export's diagnostics under `:loss`. The records given
+   are not changed.
 
    The status policy is applied here, once, for every target (audit S08). An
    out-of-force assertion (`:rejected`, `:superseded`, `:retracted`) is never
@@ -353,7 +367,11 @@
    (when-not (contains? exporters to)
      (throw (ex-info "Unknown target format" {:to to :supported (target-formats)})))
    (check-accepts! to records)
-   (let [{:keys [render losses]} (exporters to)
+   (let [{checked :records found :diagnostics} (if (identity-profiles to)
+                                                 (identity-check/with-conflicts records)
+                                                 {:records records :diagnostics []})
+         records  checked
+         {:keys [render losses]} (exporters to)
          facts?   (not (or (keeps-history? to) with-proposals?))
          withheld (if facts? (count (filter model/pending? (mapcat :assertions records))) 0)
          records  (mapv (cond
@@ -364,7 +382,7 @@
      {:output   (let [docs (into [] (comp (map render) (remove str/blank?)) records)]
                   ;; a stream wraps once, around all its records (`collection`)
                   (if bare? (str/join "\n" docs) (wrap to docs)))
-      :loss     (into [] (mapcat #(concat (losses %) (provenance-losses to %))) records)
+      :loss     (into (vec found) (mapcat #(concat (losses %) (provenance-losses to %))) records)
       :withheld withheld})))
 
 (defn- invalid-records
@@ -413,16 +431,19 @@
         bad             (invalid-records records)
         _               (when fail-on-invalid? (refuse-invalid! bad))
         projection-loss (dx/collect-many records)
-        {output :output export-loss :loss withheld :withheld} (export-records to records {:with-proposals? with-proposals?})]
+        {output :output export-loss :loss withheld :withheld} (export-records to records {:with-proposals? with-proposals?})
+        found           (filter #(= identity-check/code (:code %)) export-loss)]
     {:output  output
      :records (count records)
      ;; an OAI response's deleted records (post-audit test 07): a synchroniser
      ;; must remove them, so they are part of the result, not dropped
      :deleted (vec deleted)
      :invalid (invalid-report bad)
-     :loss    (assoc (lr/conversion-report (concat ingest projection-loss export-loss)
-                                           {:records (count records)})
-                     :withheld-proposals withheld)}))
+     :loss    (cond-> (assoc (lr/conversion-report (concat ingest projection-loss export-loss)
+                                                   {:records (count records)})
+                             :withheld-proposals withheld)
+                ;; identity claims the export found in conflict: no owl:sameAs (ADR 0061)
+                (seq found) (assoc :identity-conflicts (vec found)))}))
 
 (defn convert-report
   "Convenience: `convert` plus the human-readable loss report appended, for CLI /

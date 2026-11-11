@@ -5,6 +5,9 @@
 - Amends: [ADR 0032](./0032-graded-alignments.md) (what an alignment's
   predicate commits to; a name-only proposal is a close match), [ADR 0018](./0018-entity-resolution-at-scale.md)
   §2 and §4 (the equivalence verdicts and their revision)
+- Amended by: [ADR 0061](./0061-an-agent-is-no-skos-concept.md) (the
+  identity claims are Palomar's own relations, not SKOS; each export writes
+  its own term)
 - Builds on: [ADR 0041](./0041-resemblance-identity-shared-node.md)
   (name-only agents scoped to their record), ADR 0005 (statuses), ADR 0028
   (decisions as annotations), ADR 0029 (graphs by status)
@@ -267,3 +270,34 @@ new. The predicates of outright and review proposals stand.
   as the M3/M4 matchers are.
 - Pinned by `palomar.agent-cluster-test` and, for `apply-agent-links`,
   `palomar.reconcile-test/apply-agent-links-never-joins-two-incompatible-mentions-on-one-node`.
+
+## Amendment (lot O2, ADR 0061, 2026-11-11): an agent is no SKOS concept
+
+SKOS gives `skos:semanticRelation`, and so `skos:exactMatch` and
+`skos:closeMatch`, the domain and range `skos:Concept` (SKOS Reference
+S19, S20, S39, S40, S42). Every person and group linked by the claims of
+§2 and §3 was a concept for an RDFS reasoner. ADR 0061 replaces the
+predicates one for one, and keeps everything else of this ADR:
+
+- an outright proposal, and an accepted identity, to an authority:
+  `palomar:matchesAuthority` (was `skos:exactMatch`);
+- a review candidate, and every name-only proposal:
+  `palomar:resemblesAuthority` (was `skos:closeMatch`);
+- a membership: `palomar:inCluster` (was `skos:exactMatch` to the person
+  node);
+- the equivalence links of ADR 0059: `palomar:sameEntityAs`.
+
+The transitivity this ADR relied on is now a guarantee of the code, stated
+on the internal relations and pinned by tests (ADR 0061 §2): the
+memberships close to the clusters and nothing more, and Palomar never
+closes `matchesAuthority`.
+
+What each target writes (§3) changes: a `matchesAuthority` a curator
+accepted, one claim at a time and signed, is an `owl:sameAs` in the RDF
+targets when no conflict names it (the last clustering's, or one the export
+finds itself), the authority's stated type agrees with the agent's kind,
+and its IRI names the person (an ISNI, not a catalogue record); else the
+internal relation (ADR 0061 §3). Linked Art writes an accepted identity as the
+actor's `equivalent`. The "no `owl:sameAs`" of §3 holds for proposals,
+memberships, review candidates and record IRIs. Old IR documents are
+upgraded when read.
