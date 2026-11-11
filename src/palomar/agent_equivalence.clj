@@ -37,7 +37,8 @@
 
    Only what the batch holds is read: there is no network lookup and no
    store across batches."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [palomar.identity :as identity]))
 
 ;; ---------------------------------------------------------------------------
 ;; Identifiers
@@ -225,7 +226,8 @@
    item}`, `cluster`'s, those with `:authority? true`; see the ns doc):
 
      {:entity    {id entity}  ; the items of one accepted component, two or more
-      :links     [{:a :b :basis :equivalence :evidence [{:by :states} ..]} ..]
+      :links     [{:a :b :basis :equivalence :predicate identity/same-entity
+                    :evidence [{:by :states} ..]} ..]  ; `palomar:sameEntityAs`
       :conflicts [{:reason :isni-clash :members :isni :pairs :evidence}
                   {:reason :pseudonym-in-component :members :relations}
                   {:reason :pseudonym-crossed :members :with :relations} ..]
@@ -281,7 +283,7 @@
                                  [{:same-record-id (first (sort (filter (own b) (own a))))}])))]
     {:entity    (into {} (for [ms good m ms] [m (first ms)]))
      :links     (vec (for [ms good [a b] (pairs ms)]
-                       {:a a :b b :basis :equivalence :evidence (evidence a b)}))
+                       {:a a :b b :basis :equivalence :predicate identity/same-entity :evidence (evidence a b)}))
      :conflicts (vec (concat
                       (for [[i cs] (sort isni-bad) :let [ms (comps i)]]
                         {:reason   :isni-clash

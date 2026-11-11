@@ -998,10 +998,10 @@
                   (reduce (fn [r a]
                             (let [t (truth (mid a))]
                               (cond
-                                (and (= :skos/exactMatch (:predicate a)) (= :proposed (:status a))
+                                (and (= :palomar/matchesAuthority (:predicate a)) (= :proposed (:status a))
                                      (not (conf (mid a))) (some? t) (= t (target r a)))
                                 (:record (curate/decide-one r a :accept "right, by the gold"))
-                                (and (= :skos/closeMatch (:predicate a)) (= :proposed (:status a))
+                                (and (= :palomar/resemblesAuthority (:predicate a)) (= :proposed (:status a))
                                      (conf (mid a)) (some? t) (= t (target r a)))
                                 (:record (reconcile/confirm-identity r a "confirmed by the curator"))
                                 :else r)))

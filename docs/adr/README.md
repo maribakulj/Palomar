@@ -70,10 +70,11 @@ decision from being read as shipped code (an audit honesty rule).
 | [0054](./0054-who-created-a-museum-object.md) | Who created a museum object is said by the role, not by the event | Accepted |
 | [0055](./0055-a-projection-states-what-its-rules-declare.md) | A projection states as facts only the relations its rules declare | Accepted |
 | [0056](./0056-who-did-what-and-what-it-shows-are-rules.md) | Who did what in an event, and what a work shows, are rules | Accepted |
-| [0057](./0057-the-identity-relation-between-persons.md) | Persons are clustered under constraints, and `skos:exactMatch` is written only where its transitivity holds | Accepted |
+| [0057](./0057-the-identity-relation-between-persons.md) | Persons are clustered under constraints, and `skos:exactMatch` is written only where its transitivity holds | Accepted (amended by 0061) |
 | [0058](./0058-a-mention-is-one-occurrence.md) | A mention is one occurrence, read from itself alone, whatever the format | Accepted |
 | [0059](./0059-record-identity-is-not-entity-identity.md) | Record identity is not entity identity | Accepted |
 | [0060](./0060-candidate-generation-is-not-ranking.md) | Candidate generation is not ranking: lanes find, the matcher decides | Accepted |
+| [0061](./0061-an-agent-is-no-skos-concept.md) | An agent is no SKOS concept: identity has its own relations, and each export writes its own term | Accepted |
 
 ## Template
 

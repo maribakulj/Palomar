@@ -3,7 +3,8 @@
 - Status: Accepted
 - Date: 2026-10-25
 - Amends: [ADR 0018](./0018-entity-resolution-at-scale.md) §2 (the equivalence predicate)
-- Amended by: [ADR 0057](./0057-the-identity-relation-between-persons.md) (what `exactMatch` commits to; cluster memberships)
+- Amended by: [ADR 0057](./0057-the-identity-relation-between-persons.md) (what `exactMatch` commits to; cluster memberships),
+  [ADR 0061](./0061-an-agent-is-no-skos-concept.md) (between agents, Palomar's own relations instead of SKOS; `owl:sameAs` in RDF for an accepted identity to an entity's IRI)
 
 ## Context
 
@@ -81,3 +82,16 @@ ADR 0057 amends §1 and §2:
 - §2's shared node is refused (`apply-agent-links`, `:conflict`) for two
   accepted links to one authority whose mentions' dates cannot be one
   person's.
+
+## Amendment (lot O2, ADR 0061, 2026-11-11): no SKOS mapping between agents
+
+A SKOS mapping property makes both its ends `skos:Concept`s (SKOS Reference
+S19, S20). Between agents, the alignment is now `palomar:matchesAuthority`
+(the exact grade) or `palomar:resemblesAuthority` (the close grade), graded
+and curated as this ADR says. §4 changes: the RDF view writes a
+`matchesAuthority` a curator accepted (one claim at a time, signed) as
+`owl:sameAs` when no conflict names it, the stated type agrees and the
+authority's IRI names the person itself (ADR 0061 §3); any other claim as Palomar's own
+relation, in the graph of its status. §1's "Palomar emits no `owl:sameAs`"
+now holds for proposals and record IRIs only. `skos:relatedMatch` is not
+offered for agents.

@@ -29,6 +29,7 @@
    same assertion always names the same statement, before and after a curator
    changes its status."
   (:require [clojure.walk :as walk]
+            [palomar.identity :as identity]
             [palomar.model :as model]
             [palomar.plugins.lrmoo :as lrmoo]
             [palomar.plugins.lrmoo.export :as export]
@@ -36,7 +37,7 @@
 
 (def ^:private rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 (def ^:private prov "http://www.w3.org/ns/prov#")
-(def ^:private pal  "urn:palomar:vocab#")
+(def ^:private pal  export/vocab-base)
 (def ^:private xsd  "http://www.w3.org/2001/XMLSchema#")
 
 (defn- digest
@@ -46,9 +47,12 @@
 
 (defn- term-iri
   "IRI of a predicate keyword: LRMoo and CRM terms by their own namespaces,
+   a Palomar identity relation by its own (`palomar.identity`: the record
+   states the claim as the IR holds it, whatever an export writes for it),
    any other by a `urn:palomar:pred:` IRI."
   [k]
   (case (namespace k)
+    "palomar" (or (identity/relation-iris k) (str "urn:palomar:pred:" (namespace k) ":" (name k)))
     "lrmoo" (lrmoo/iri k)
     "crm"   (str export/crm-base (name k))
     "skos"  (str export/skos-base (name k))

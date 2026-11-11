@@ -24,6 +24,7 @@
             [clojure.string :as str]
             [clojure.walk :as walk]
             [malli.core :as m]
+            [palomar.identity :as identity]
             [palomar.model :as model]))
 
 (def version
@@ -79,7 +80,9 @@
 (defn read-records
   "The records of IR document `s` (a string or a `java.io.Reader`), in order.
    Throws on a form that is not an envelope, on an unknown version and on a
-   record that fails `model/Record`."
+   record that fails `model/Record`. A record an older Palomar wrote with
+   SKOS identity claims between agents is upgraded to Palomar's relations,
+   its curation decisions with them (`identity/upgrade`, ADR 0061)."
   [s]
   (let [r (java.io.PushbackReader. (if (string? s) (java.io.StringReader. s) s))]
     (loop [acc []]
@@ -99,7 +102,7 @@
           (throw (ex-info "ir: not a valid record"
                           {:id (get-in form [:record :id]) :explain (model/explain-record (:record form))}))
 
-          :else (recur (conj acc (:record form))))))))
+          :else (recur (conj acc (identity/upgrade (:record form)))))))))
 
 (defn- name-fns
   "A malli form with its function objects named, and generator hints removed."

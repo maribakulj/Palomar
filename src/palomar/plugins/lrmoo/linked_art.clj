@@ -48,7 +48,9 @@
    avoid a require cycle."
   (:require [clojure.data.json :as json]
             [clojure.string :as str]
+            [clojure.walk :as walk]
             [palomar.diagnostics :as dx]
+            [palomar.identity :as identity]
             [palomar.model :as model]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
@@ -643,13 +645,70 @@
     (cond-> [(cond-> hmo (empty? (get hmo "representation")) (dissoc "representation"))]
       vi (conj vi))))
 
-(defn documents
-  "The Linked Art JSON-LD documents for `record`'s WEMI view: one
-   `LinguisticObject` per Manifestation (a Manifestation is an edition, not a
-   physical object), then one `HumanMadeObject` per F5 Item. The record-level
-   canonical fields attach to the text when the record has exactly one
-   Manifestation; with none or several they cannot be attributed and are
-   reported as loss (`export-losses`). Empty for a record with neither."
+(defn- equivalents
+  "The identity claims of `record` Linked Art writes as an `equivalent`
+   (`identity/linked-art-equivalent?`: in force, a curator's decision, in
+   no conflict, the authority's stated type the agent's kind), each with
+   the IRI of its local agent (`:node`), its name, the authority's IRI and
+   the actor's Linked Art type, by the agent's kind."
+  [record]
+  (let [ctx   (identity/context record)
+        ents  (:entities ctx)
+        names (into {} (for [a (:assertions record) :when (= :crm/P190_has_symbolic_content (:predicate a))]
+                         [(:subject a) (:value a)]))]
+    (for [a (:assertions record)
+          :when (and (identity/relation? (:predicate a)) (model/reference-value? (:value a)))
+          :let [iri (:iri (ents (:value/target (:value a))))]
+          :when (and (string? iri) (nil? (nt/iri-problem iri)) (identity/linked-art-equivalent? a ctx))]
+      {:claim a :node (export/entity-iri (:subject a)) :name (names (:subject a)) :iri iri
+       :type  (if (= :crm/E74_Group (:kind (ents (:subject a)))) "Group" "Person")})))
+
+(defn- actors-of
+  "Every Linked Art `Person` and `Group` of `docs`."
+  [docs]
+  (let [acc (atom [])]
+    (walk/postwalk #(do (when (and (map? %) (#{"Person" "Group"} (get % "type"))) (swap! acc conj %)) %) docs)
+    @acc))
+
+(defn- ambiguous-names
+  "The names that, on actors bearing no id, are actors of more than one
+   type in `docs` (a creator Person and a publisher Group of one name): no
+   name of them says which actor a claim is about."
+  [docs]
+  (into #{} (keep (fn [[nm as]] (when (< 1 (count (distinct (map #(get % "type") as)))) nm)))
+        (group-by #(get % "_label") (remove #(get % "id") (actors-of docs)))))
+
+(defn- with-equivalents
+  "`doc` with each Linked Art `Person` or `Group` that stands for a local
+   agent of an accepted identity claim given the authority as its
+   `equivalent` (lot O2, ADR 0061: Linked Art's own pattern for an external
+   IRI of the same entity, which, unlike `exact_match`, makes no
+   `skos:Concept` of the actor). An actor is the agent's when its type is
+   the claim's (a Person for a person agent, a Group for a group) and it
+   bears the agent's IRI, or, bearing none, its name (the local agent is
+   scoped to the record, ADR 0041) — unless the name is on actors of
+   several types (`ambiguous`), where it is none's. An actor that already
+   is the authority gets none."
+  [doc eqs ambiguous]
+  (if (empty? eqs)
+    doc
+    (walk/postwalk
+     (fn [m]
+       (if (and (map? m) (#{"Person" "Group"} (get m "type")))
+         (let [id   (get m "id")
+               mine (filter #(and (= (get m "type") (:type %))
+                                  (or (= id (:node %))
+                                      (and (nil? id) (= (get m "_label") (:name %)) (not (ambiguous (:name %)))))
+                                  (not= id (:iri %)))
+                            eqs)
+               refs (vec (for [[iri es] (sort-by key (group-by :iri mine))]
+                           (cond-> {"id" iri "type" (:type (first es))}
+                             (:name (first es)) (assoc "_label" (:name (first es))))))]
+           (cond-> m (seq refs) (assoc "equivalent" refs)))
+         m))
+     doc)))
+
+(defn- documents*
   [record]
   (cond
     (manifest? record) [(manifest-doc record)]
@@ -660,6 +719,49 @@
     (let [ts (texts record)]
       (into (mapv #(text-doc record % (= 1 (count ts))) ts)
             (map #(item-doc record %) (view/items record))))))
+
+(defn documents
+  "The Linked Art JSON-LD documents for `record`'s WEMI view: one
+   `LinguisticObject` per Manifestation (a Manifestation is an edition, not a
+   physical object), then one `HumanMadeObject` per F5 Item. The record-level
+   canonical fields attach to the text when the record has exactly one
+   Manifestation; with none or several they cannot be attributed and are
+   reported as loss (`export-losses`). Empty for a record with neither. An
+   actor of an accepted identity claim carries the authority as its
+   `equivalent` (`with-equivalents`)."
+  [record]
+  (let [eqs  (equivalents record)
+        docs (documents* record)
+        amb  (if (seq eqs) (ambiguous-names docs) #{})]
+    (mapv #(with-equivalents % eqs amb) docs)))
+
+(defn- written-equivalents
+  "The ids of `record`'s identity claims its documents write as an
+   `equivalent`."
+  [record]
+  (let [eqs  (equivalents record)
+        refs (when (seq eqs)
+               (let [acc (atom #{})]
+                 (walk/postwalk #(do (when (and (map? %) (contains? % "equivalent"))
+                                       (swap! acc into (for [e (get % "equivalent")] [(get % "id") (get % "_label") (get e "id")])))
+                                     %)
+                                (documents record))
+                 @acc))]
+    (into #{} (for [{:keys [claim node name iri]} eqs
+                    :when (some (fn [[id label e]] (and (= e iri) (or (= id node) (and (nil? id) (= label name))))) refs)]
+                (model/assertion-id claim)))))
+
+(defn- ambiguous-equivalents
+  "The claims of `record` Linked Art would write as an `equivalent` but
+   for their name being on actors of several types: `[[claim name types] ..]`."
+  [record]
+  (let [eqs (equivalents record)]
+    (when (seq eqs)
+      (let [docs (documents* record)
+            amb  (ambiguous-names docs)]
+        (for [{:keys [claim name]} eqs
+              :when (amb name)]
+          [claim name (sort (distinct (map #(get % "type") (filter #(and (nil? (get % "id")) (= name (get % "_label"))) (actors-of docs)))))])))))
 
 (defn- json-leaves [x]
   (cond (string? x)     [x]
@@ -929,11 +1031,33 @@
 
 (declare non-object-losses)
 
+(declare export-losses*)
+
 (defn export-losses
   "Export-edge loss (ADR 0015): every predicate the Linked Art profile does not
    express (dates, relations, native source predicates), one per distinct
    [subject predicate]; one per agent left out (`non-creator-losses`); and the
-   structural losses (`structure-losses`)."
+   structural losses (`structure-losses`). An identity claim written as an
+   `equivalent` is no loss: a subject's claims of one relation are reported
+   only while one of them is not written."
+  [record]
+  (let [written (written-equivalents record)
+        all?    (fn [s p] (every? #(contains? written (model/assertion-id %))
+                                  (filter #(and (= s (:subject %)) (= p (:predicate %))) (:assertions record))))]
+    (cond-> (cond->> (export-losses* record)
+              (seq written) (into [] (remove #(let [p (dx/loss-source-field %)]
+                                                (and (identity/relation? p) (all? (:subject %) p))))))
+      true (into (for [[claim nm types] (ambiguous-equivalents record)]
+                   (dx/loss {:category     :dropped
+                             :subject      (:subject claim)
+                             :edge         :export
+                             :source-field (:predicate claim)
+                             :aspect       :relation
+                             :message      (str "the name " (pr-str nm)
+                                                " names actors of different types (" (str/join ", " types)
+                                                "): no equivalent written")}))))))
+
+(defn- export-losses*
   [record]
   (cond
     (and (object? record) (lido/natural? record) (not (lido/human-made? record)))

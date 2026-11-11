@@ -30,6 +30,7 @@
             [clojure.string :as str]
             [palomar.convert :as convert]
             [palomar.diagnostics :as dx]
+            [palomar.identity :as identity]
             [palomar.inferences :as inferences]
             [palomar.model :as model]
             [palomar.plugins.export-coverage :as cov]
@@ -173,10 +174,13 @@
 
 (defn- predicate-iris
   "The IRIs that may carry predicate `p` in the output: its own, and the
-   CIDOC-CRM super-property the pure-CRM export writes in its place."
+   CIDOC-CRM super-property the pure-CRM export writes in its place; for an
+   identity relation between agents, each term `identity/export-rule` may
+   write it as (`owl:sameAs` or its own IRI, ADR 0061)."
   [p]
   (cond-> #{(export/term-iri p)}
-    (crm/replaced-properties p) (conj (str export/crm-base (crm/replaced-properties p)))))
+    (crm/replaced-properties p) (conj (str export/crm-base (crm/replaced-properties p)))
+    (identity/relation? p)      (into (identity/output-iris p))))
 
 (defn- relations
   "The relations of `record` the RDF view expresses, as `{:subject :predicate

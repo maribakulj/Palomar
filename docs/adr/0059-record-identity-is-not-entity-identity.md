@@ -232,3 +232,13 @@ the batch, so it is revised when a record changes.
 - The M2 to M8 numbers do not move: the evals give the clustering no
   authority statements.
 - Pinned by `palomar.agent-equivalence-test`.
+
+## Note (lot O2, ADR 0061, 2026-11-11): a record's IRI typed as the person
+
+ADR 0061 writes `owl:sameAs` only to an IRI that names the entity, not a
+record. But `apply-agent-links` still gives an accepted link the
+authority's node, an `E21_Person` (or `E74_Group`) whose IRI is the
+authority id. When that id is a record's (a BnF catalogue ARK), the RDF
+export types the record's IRI as the person. This contradicts §1 of this
+ADR and the gate of ADR 0061. It is left as the input of lot O3, which
+re-models the agent nodes (the occurrence, the local agent, the entity).

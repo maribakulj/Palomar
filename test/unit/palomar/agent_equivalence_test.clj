@@ -102,7 +102,7 @@
       (is (= #{#{:m1 :m2 :x :y}} (members-of res)))
       (is (empty? (:refused res))))
     (testing "the cluster says which equivalence lifted the constraint, and who stated it"
-      (is (= [{:a :x :b :y :basis :equivalence
+      (is (= [{:a :x :b :y :basis :equivalence :predicate :palomar/sameEntityAs
                :evidence [{:by :x :states (str "isni:" isni)} {:by :y :states (str "isni:" isni)}]}]
              (:equivalence (first (:clusters res))))))
     (testing "the equivalence is a joining link, after a curator's and before any proposal"

@@ -19,6 +19,7 @@
     [:id [:or :keyword :string :uuid]]
     [:kind :keyword]
     [:iri {:optional true} :string]
+    [:entity-type {:optional true} :string]
     [:provenance
      {:optional true}
      [:map
