@@ -139,3 +139,126 @@ Only a production or a design carried out as its maker can constrain a
 life, and only when it ends more than 10 years before a candidate's
 birth. A posthumous cast, impression, reissue or copy names its artist as
 maker as often as not, so a creation after death is never evidence.
+
+## Amendment (lot N7, 2026-11-11): the persons and places a work represents
+
+Decision 5 was for concepts. A person a work showed (`subjectActor`) was
+still code: stated as depicted (`P62`) whatever its subject's type, and not
+written in Linked Art. A place (`subjectPlace`) was not read at all, only
+reported unread. They are now read and decided like concepts.
+
+1. **Read.** Each `subjectActor` and `subjectPlace` of a subject is read with
+   the type of its subject (`lido:type`), as its concepts are:
+   - a person (`:lido/subject-person`): its name, its first id that is an IRI
+     (an id by source and code resolved through the id-sources vocabulary,
+     K1: ULAN `500012489` is `http://vocab.getty.edu/ulan/500012489`), its
+     actor type, its life dates;
+   - a place (`:lido/subject-place`): its name (else its displayed name), its
+     first id that is an IRI (TGN, GND, Wikidata…), and its point as given
+     (`gml:coordinates` or `gml:pos`).
+
+   Every display, name in every language, id and coordinate is also kept as
+   it was read, so no text under them is reported unread.
+2. **The rules decide** (`lido-rules/subject-rules`, one table of kinds):
+   typed as a description or an identification it is depicted (`P62`);
+   typed otherwise, what the visual item is about (`P65` → `E36` → `P129`);
+   of no type, see the review below. No code states `P62` any
+   more; the projection's code declares no `P62` (`palomar.inferences`). An
+   object not said to be made depicts nothing, and that is reported for
+   persons and places as for concepts.
+3. **Their nodes.** A person is an `E21_Person`, a group an `E74_Group` (by
+   the actor-classes vocabulary, as an event's actor), a place an
+   `E53_Place`. An authority's URI names the node. Without one, the node is
+   the record's own, by its name, as a local concept is: two records' "John
+   Smith" are two, never merged by name; one record's two of one name are
+   one, as its two local concepts of one label are.
+4. **Exports.**
+   - Linked Art writes them in the `VisualItem`, read from the CIDOC CRM
+     view: `represents` what it depicts, `about` the rest, each a reference
+     (`Person`, `Group`, `Place`) by its authority's IRI or the CRM node's.
+     A reference has no place for life dates, a point, an actor type or the
+     subject's type: these are reported.
+   - MARC21 (object profile): a person in `600` (with `$d` life dates), a
+     group in `610`, a place in `651`, each with its `$0` and, for a
+     vocabulary MARC lists (ULAN, TGN, GND, Wikidata, AAT…), `#7` and `$2`.
+     A 6XX does not say whether the work depicts or means it: reported.
+   - Dublin Core: the canonical floor has no subject (nor coverage), so
+     neither concepts nor persons nor places are written. Each is reported.
+   - The coordinates are not projected. They are read as given, but not the
+     reference system and axis order a definition of the place would need
+     (YCBA's `gml:coordinates` name none; museum-digital's `srsName` is not
+     read), so no `P168_place_is_defined_by` is stated. A Linked Art
+     reference has no place for them either. This is reported, value by
+     value, in the CIDOC CRM view and in Linked Art.
+
+### Consequences
+
+*As N7 was first written; its review, below, changed the first two points
+(a named person or place of no type is depicted; an id typed as aboutness
+outweighs its set).*
+
+- **What is said changed.** A person of a subject typed as an
+  interpretation is no longer depicted. In N7 as first written, one of a
+  subject of no type, named by no vocabulary of images, was `about`.
+- **YCBA**, N7 as first written: persons 0 → 131 `represents` labels
+  (YCBA: 125), places 0 → 738 (YCBA: 737). See the review for the numbers
+  now.
+- The identity of a local depicted person is unchanged (record and name);
+  one named by an authority keeps its IRI.
+
+### The review of N7 (2026-11-11)
+
+A contradictory review of N7 changed what follows; the decisions are the
+coordinator's, each with its test (`palomar.plugins.lido-subjects-test`).
+
+1. **A named person or place of no type is depicted.** LIDO's subjectWrap
+   defines Identification as "the specific subject, including named
+   historical, mythological, or fictional subjects". A `subjectActor` or a
+   `subjectPlace` names an individual, so, its set typed nothing, it is an
+   identification: `P62_depicts`, Linked Art `represents`. Typed an
+   interpretation (or any type that is no description or identification),
+   it is still what the visual item is about. The rule for concepts is
+   unchanged: a concept of no type is depicted only when Iconclass names it.
+   So the Städel's Fanny Janauschek, Nick Bottom, Pyramus and Nemesis, and
+   museum-digital's Olympia, are depicted, which N7 had made `about`.
+2. **Every id is read.** A concept is Iconclass's when any of its ids is,
+   not only its first. A person's or a place's IRI is chosen by an order of
+   sources, stated in `id-sources.edn` (`:entity-preference`: ULAN, GND,
+   TGN, Wikidata, LoC, VIAF, then the others in the record's order), never
+   alphabetically. An Iconclass notation, a page of the BnF catalogue or a
+   Wikipedia article is never a person's or a place's IRI
+   (`:not-an-entity`): it is reported, and with no other the node is the
+   record's.
+3. **One IRI, one class.** A person or a place whose IRI is a subject
+   concept of the same record is that concept: no node of its own, and
+   that is reported (the Städel files GND subject headings, Berg, Gebäude,
+   as places). On every LIDO fixture, no IRI of a record is typed two of
+   `E55`, `E53`, `E21`, `E74`, and Linked Art lists an id once in
+   `represents` and once in `about`: two labels of one IRI (YCBA's "shops"
+   and "stores", "Wales" and "Cymru") are written under the first, the
+   other reported.
+4. **An id typed as aboutness outweighs its set.** YCBA types the id of a
+   person a work is about `subjectActorAbout`, in a set typed a
+   description. A vocabulary says so (`subject-id-types.edn`, its source
+   YCBA): such a person is what the visual item is about.
+5. **LIDO Terminology URIs** name a subject's type: `lido00525`
+   (Description), `lido00136` (Identification) and `lido00745` (Iconclass
+   notation, a notation of what an image shows) are ofness, `lido00524`
+   (Interpretation) aboutness, as are the 1.0 `…/subject_type/<name>`
+   URIs (`subject-types.edn`).
+6. **A node both depicted and about** (two subject sets) is written in both
+   `represents` and `about`, as the CIDOC CRM view states both.
+7. **IRIs as the sources write them.** A Wikidata page or entity URL is the
+   entity `http://www.wikidata.org/entity/Q…`; an Iconclass notation with a
+   space is percent-encoded, so the Städel's
+   `61BB2(JANAUSCHEK, Fanny)1` is an IRI, and a concept with it.
+8. **MARC.** An LC name or subject IRI makes a `600`, `610` or `651` ind2 `0`
+   (LCNAF, LCSH), with its `$0`. Iconclass is no subject heading source
+   MARC lists: its concept's `650` is ind2 `4` with its `$0`, and its
+   notation is a classification, `084` with `$2 iconclass`.
+9. **A person named only as displayed** (`displayActor`) is a node of the
+   record, as a place is.
+
+On YCBA (`docs/eval/ycba.md`): persons 125 `represents` and 6 `about`, as
+YCBA has them (the 6 Shakespeare records now `about`); places 726
+`represents`, against 737, because one IRI is written once.

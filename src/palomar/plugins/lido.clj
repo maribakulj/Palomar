@@ -83,18 +83,67 @@
                      k (concat names (map str/lower-case uris))]
                  [k {:prefix prefix :code (re-pattern code)}])))))
 
+(defn- normal-iri
+  "An IRI as the id sources write it (lot N7 review): a Wikidata page or
+   entity URL, `https://www.wikidata.org/wiki/Q90`, is the entity
+   `http://www.wikidata.org/entity/Q90`; an Iconclass notation's spaces
+   (`61BB2(JANAUSCHEK, Fanny)1`) are percent-encoded, so it is an IRI."
+  [v]
+  (let [v (if-let [[_ q] (re-matches #"https?://(?:www\.)?wikidata\.org/(?:wiki|entity)/(Q[1-9]\d*)" v)]
+            (str "http://www.wikidata.org/entity/" q)
+            v)]
+    (if (re-find #"^https?://(?:www\.)?iconclass\.org/" v) (str/replace v " " "%20") v)))
+
 (defn- id-iri
-  "The IRI an id element names: its text when that is an IRI, else, given by
-   its `lido:source` and a code of that source's form, the source's IRI for
-   it (`AAT` and `300033618`: `http://vocab.getty.edu/aat/300033618`); nil
-   for a local id or an unknown source."
+  "The IRI an id element names: its text when that is an IRI (`normal-iri`),
+   else, given by its `lido:source` and a code of that source's form, the
+   source's IRI for it (`AAT` and `300033618`:
+   `http://vocab.getty.edu/aat/300033618`); nil for a local id or an unknown
+   source."
   [n]
-  (when-let [v (text n)]
+  (when-let [v (some-> (text n) normal-iri)]
     (if (nil? (nt/iri-problem v))
       v
       (let [src (some-> (attr n "source") str/trim str/lower-case (str/replace #"/+$" ""))
             {:keys [prefix code]} (get @id-schemes src)]
         (when (and prefix (re-find code v)) (str prefix v))))))
+
+(def ^:private entity-sources
+  "Which IRI names a represented person or place, and which may not
+   (`id-sources.edn`, `:entity-preference` and `:not-an-entity`, N7 review)."
+  (delay
+    (let [{:keys [entity-preference not-an-entity]} (edn/read-string (slurp (io/resource "palomar/vocab/lido/id-sources.edn")))]
+      {:preference (mapv re-pattern entity-preference)
+       :not        (mapv (fn [{:keys [pattern what]}] [(re-pattern pattern) what]) not-an-entity)})))
+
+(defn not-an-entity
+  "What IRI `v` is when it names no person and no place (an Iconclass
+   notation, a catalogue's page, a Wikipedia article), else nil."
+  [v]
+  (some (fn [[re what]] (when (re-find re (str v)) what)) (:not @entity-sources)))
+
+(defn- entity-iris
+  "Of the IRIs `iris` (in the record's order) a represented person or place
+   is given, `[uri others]`: the one that names it, by the preference order
+   of the id sources, then the record's, never one that names no person
+   or place; and all the others, those included (N7 review)."
+  [iris]
+  (let [iris  (distinct iris)
+        named (remove not-an-entity iris)
+        rank  (fn [v] (or (first (keep-indexed (fn [i re] (when (re-find re v) i)) (:preference @entity-sources)))
+                          (count (:preference @entity-sources))))
+        uri   (first (sort-by rank named))]
+    [uri (remove #{uri} iris)]))
+
+(defn- marked-ids
+  "The types of the ids `ids` that say what their subject is there, whatever
+   its set's type (`subject-id-types.edn`: YCBA's `subjectActorAbout`),
+   `; `-joined, or nil (N7 review)."
+  [ids]
+  (some->> ids
+           (keep #(when-let [t (some-> (attr % "type") str/trim not-empty)]
+                    (when (seq (filter seq (rules/vocab-concepts :lido/subject-id-types t))) t)))
+           distinct seq (str/join "; ")))
 
 (defn- named-in
   "Every element named `nm` under `node`, at any depth, as `[el nil]`."
@@ -517,23 +566,65 @@
                (let [st (some-> (attr s "type") str/trim not-empty)]
                  (mapcat (fn [c] (concat (terms :lido/subject c)
                                          (when-let [cc (concept c)]
-                                           [[:lido/subject-concept (model/structured (cond-> cc st (assoc :subject-type st))) (second c)]])))
+                                           ;; its other IRIs too: an Iconclass one among them says
+                                           ;; what the image shows (N7 review)
+                                           (let [others (remove #{(:uri cc)} (distinct (keep id-iri (descend c "conceptID"))))]
+                                             [[:lido/subject-concept (model/structured (cond-> cc
+                                                                                         st (assoc :subject-type st)
+                                                                                         (seq others) (assoc :other-ids (str/join "; " others))))
+                                               (second c)]]))))
                          (kids s "subjectConcept"))))
              (cnodes "objectRelationWrap" "subjectWrap" "subjectSet" "subject"))
-     ;; the people a work depicts
-     (mapcat (fn [sa]
-               (let [a  (kid sa "actor")
-                     nm (some-> a (descend "nameActorSet" "appellationValue") first text)
-                     id (some id-iri (when a (kids a "actorID")))]
-                 (concat (strings :lido/subject-actor-display (kids sa "displayActor"))
-                         (strings :lido/subject-actor (when a (descend a "nameActorSet" "appellationValue")))
-                         (strings :lido/subject-actor-id (when a (kids a "actorID")))
-                         (strings :lido/subject-actor-dates (when a (concat (descend a "vitalDatesActor" "earliestDate")
-                                                                            (descend a "vitalDatesActor" "latestDate"))))
-                         (when nm [[:lido/subject-person (model/structured (cond-> {:name nm :type (or (term-name (attr a "type")) "")}
-                                                                             id (assoc :uri id)))
-                                    (second sa)]]))))
-             (cnodes "objectRelationWrap" "subjectWrap" "subjectSet" "subject" "subjectActor"))
+     ;; the persons and places a work represents, each with the type of its
+     ;; subject (`lido:type`), as its concepts: what the rules decide it
+     ;; depicts or means (lot N7, ADR 0056 amendment)
+     (mapcat (fn [s]
+               (let [st (some-> (attr s "type") str/trim not-empty)]
+                 (concat
+                  (mapcat (fn [sa]
+                            (let [a  (kid sa "actor")
+                                  ;; its name, else as displayed: a node of the record (N7 review)
+                                  nm (or (some-> a (descend "nameActorSet" "appellationValue") first text)
+                                         (some-> (kid sa "displayActor") text))
+                                  [id others] (entity-iris (keep id-iri (when a (kids a "actorID"))))
+                                  it (marked-ids (when a (kids a "actorID")))
+                                  vd (fn [k] (some-> a (kid "vitalDatesActor") (kid k) text))]
+                              (concat (strings :lido/subject-actor-display (kids sa "displayActor"))
+                                      (strings :lido/subject-actor (when a (descend a "nameActorSet" "appellationValue")))
+                                      (strings :lido/subject-actor-id (when a (kids a "actorID")))
+                                      (strings :lido/subject-actor-dates (when a (concat (descend a "vitalDatesActor" "earliestDate")
+                                                                                         (descend a "vitalDatesActor" "latestDate"))))
+                                      (when nm [[:lido/subject-person (model/structured (cond-> {:name nm :type (or (term-name (attr a "type")) "")}
+                                                                                          id (assoc :uri id)
+                                                                                          (seq others) (assoc :other-ids (str/join "; " others))
+                                                                                          it (assoc :id-type it)
+                                                                                          st (assoc :subject-type st)
+                                                                                          (vd "earliestDate") (assoc :birth (vd "earliestDate"))
+                                                                                          (vd "latestDate") (assoc :death (vd "latestDate"))))
+                                                 (second sa)]]))))
+                          (kids s "subjectActor"))
+                  (mapcat (fn [sp]
+                            (let [pl (kid sp "place")
+                                  nm (or (some-> pl (descend "namePlaceSet" "appellationValue") first text)
+                                         (some-> (kid sp "displayPlace") text))
+                                  [id others] (entity-iris (keep id-iri (when pl (kids pl "placeID"))))
+                                  it (marked-ids (when pl (kids pl "placeID")))
+                                  ;; its point, as given (`gml:coordinates` or `gml:pos`):
+                                  ;; read, and reported where no view carries it
+                                  co (when pl (concat (descend pl "gml" "Point" "coordinates") (descend pl "gml" "Point" "pos")))]
+                              (concat (strings :lido/subject-place-display (kids sp "displayPlace"))
+                                      (strings :lido/subject-place-name (when pl (descend pl "namePlaceSet" "appellationValue")))
+                                      (strings :lido/subject-place-id (when pl (kids pl "placeID")))
+                                      (strings :lido/subject-place-coordinates co)
+                                      (when nm [[:lido/subject-place (model/structured (cond-> {:name nm}
+                                                                                         id (assoc :uri id)
+                                                                                         (seq others) (assoc :other-ids (str/join "; " others))
+                                                                                         it (assoc :id-type it)
+                                                                                         st (assoc :subject-type st)
+                                                                                         (some text co) (assoc :coordinates (some text co))))
+                                                 (second sp)]]))))
+                          (kids s "subjectPlace")))))
+             (cnodes "objectRelationWrap" "subjectWrap" "subjectSet" "subject"))
      ;; administrative metadata
      (when am
        (concat
@@ -872,9 +963,11 @@
    time-span, `P32` its techniques, and `P45` the object's materials), keeper
    (`P50` → the repository's `E74_Group`), a restoration or other
    modification (`P31i` → `E11_Modification`, `P126` the materials it
-   employed: never the object's, post-audit 5, G1), subjects (`P62_depicts`), images
+   employed: never the object's, post-audit 5, G1), images
    (`P138i_has_representation` → `E36_Visual_Item`) and rights (`P104`), all
-   `:asserted`: the record's own statements."
+   `:asserted`: the record's own statements. What the object shows, its
+   concepts and the persons and places it represents, is the rules'
+   (`lido-rules/subject-rules`)."
   [record]
   (let [rid    (:id record)
         as     (remove model/out-of-force? (:assertions record))
@@ -1046,18 +1139,40 @@
                         (claim obj (if (:former (fields a)) :crm/P49_has_former_or_current_keeper :crm/P50_has_current_keeper) (model/reference g) a)
                         (claim g :crm/P190_has_symbolic_content name a)]))
              (of :lido/keeper))
-     ;; only a human-made thing depicts (P62's domain is E24)
-     (if made?
-       (concat
-        ;; a subject concept is the rules': depicted, or what it is about (K5)
-        (mapcat (fn [a] (let [{:keys [name uri type]} (fields a)
-                              kind (if (group-types type) :crm/E74_Group :crm/E21_Person)
-                              pe   (model/mint-entity-id kind (or uri [(str rid) name]))]
-                          [(entity pe kind uri) (claim obj :crm/P62_depicts (model/reference pe) a)
-                           (claim pe :crm/P190_has_symbolic_content name a)]))
-                (of :lido/subject-person)))
-       (concat (unsaid :lido/subject-concept "a subject of an object not said to be human-made: P62_depicts takes an E24, not projected")
-               (unsaid :lido/subject-person "a person depicted by an object not said to be human-made: P62_depicts takes an E24, not projected")))
+     ;; only a human-made thing depicts (P62's domain is E24): what it
+     ;; shows, a concept, a person or a place, is the rules' (K5, N7); its
+     ;; point is read as given, and no reference system nor axis order with
+     ;; it: no definition of the place is stated, and that is reported
+     (concat
+      ;; one IRI, one class: a person or a place whose IRI is a subject
+      ;; concept of the record is that concept (N7 review)
+      (let [concepts (set (keep #(:uri (fields %)) (of :lido/subject-concept)))]
+        (for [p [:lido/subject-person :lido/subject-place] a (of p)
+              :let [{:keys [name uri] :as f} (fields a)]
+              :when (and made? (concepts uri))]
+          {:kind :diagnostic
+           :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field p :value f :fields [:name :uri]
+                            :message (str (pr-str name) ", given as a " (if (= p :lido/subject-place) "place" "person")
+                                          ", is named by " uri ", a subject concept of the record: one IRI is one class, it is that concept")})}))
+      ;; an IRI that names no person and no place is not its node's (N7 review)
+      (for [p [:lido/subject-person :lido/subject-place] a (of p)
+            :let [{:keys [name uri other-ids] :as f} (fields a)]
+            v (some-> other-ids (str/split #"; "))
+            :let [what (not-an-entity v)]
+            :when what]
+        {:kind :diagnostic
+         :value (dx/loss {:category :under-specified :subject rid :edge :projection :source-field p :value f :fields [:other-ids]
+                          :message (str v ", an id of " (pr-str name) ", is " what ": no IRI of a "
+                                        (if (= p :lido/subject-place) "place" "person") (if uri ", not its node's" ": its node is the record's"))})})
+      (for [a (of :lido/subject-place) :let [{:keys [name coordinates] :as f} (fields a)] :when coordinates]
+        {:kind :diagnostic
+         :value (dx/loss {:category :dropped :subject rid :edge :projection :source-field :lido/subject-place :value f :fields [:coordinates]
+                          :message (str "the coordinates " (pr-str coordinates) " of " (pr-str name)
+                                        " are read with no reference system nor axis order: no P168_place_is_defined_by is stated")})})
+      (when-not made?
+        (concat (unsaid :lido/subject-concept "a subject of an object not said to be human-made: P62_depicts takes an E24, not projected")
+                (unsaid :lido/subject-person "a person depicted by an object not said to be human-made: P62_depicts takes an E24, not projected")
+                (unsaid :lido/subject-place "a place depicted by an object not said to be human-made: P62_depicts takes an E24, not projected"))))
      (mapcat (fn [a] (let [{:keys [url]} (fields a)
                            v (model/mint-entity-id :crm/E36_Visual_Item url)]
                        [(entity v :crm/E36_Visual_Item url) (claim obj :crm/P138i_has_representation (model/reference v) a)]))

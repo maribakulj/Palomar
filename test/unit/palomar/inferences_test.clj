@@ -35,7 +35,9 @@
   (testing "the audit tells what was inferred and what no rule declares"
     (let [{:keys [inferences]} (fidelity/audit {:from :lido :to :ntriples :source (slurp "test/fixtures/documentary/lido/staedel-lido-wrap.xml")})]
       (is (= [] (:undeclared inferences)))
-      (is (pos? (get (:inferred inferences) [:rule.lido/project :crm/P62_depicts] 0)) "a picture's subjects are read as what it depicts"))))
+      (is (pos? (reduce + 0 (for [[[r p] n] (:inferred inferences) :when (and (= :crm/P62_depicts p) (= "rule.lido.subject" (namespace r)))] n)))
+          "a picture's subjects are read as what it depicts, by the rules")
+      (is (zero? (get (:inferred inferences) [:rule.lido/project :crm/P62_depicts] 0)) "never by code, a person neither (N7)"))))
 
 (deftest every-lido-relation-is-declared
   (testing "a record of every kind of event and role LIDO's projection knows states only what its rule declares"

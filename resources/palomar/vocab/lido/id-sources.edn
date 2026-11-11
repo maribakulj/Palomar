@@ -24,4 +24,21 @@
    :prefix "http://www.wikidata.org/entity/" :code "^Q[1-9]\\d*$"}
   {:names ["viaf" "virtual international authority file (viaf)" "virtual international authority file"]
    :uris  ["http://viaf.org/viaf" "https://viaf.org/viaf"]
-   :prefix "http://viaf.org/viaf/" :code "^[1-9]\\d*$"}]}
+   :prefix "http://viaf.org/viaf/" :code "^[1-9]\\d*$"}]
+ ;; The IRI that names a person, a group or a place a work represents, when
+ ;; its record gives several: the first of these sources, in this order, then
+ ;; any other in the record's order; never alphabetical (lot N7 review).
+ :entity-preference
+ ["^https?://vocab\\.getty\\.edu/ulan/"
+  "^https?://d-nb\\.info/gnd/"
+  "^https?://vocab\\.getty\\.edu/tgn/"
+  "^http://www\\.wikidata\\.org/entity/"
+  "^https?://id\\.loc\\.gov/"
+  "^https?://viaf\\.org/viaf/"]
+ ;; What an IRI may be that names no person and no place: a notation, a
+ ;; catalogue's page, an article. Never a represented person's or place's
+ ;; IRI: reported, the node the record's own (lot N7 review).
+ :not-an-entity
+ [{:pattern "^https?://(?:www\\.)?iconclass\\.org/" :what "an Iconclass notation"}
+  {:pattern "^https?://catalogue\\.bnf\\.fr/" :what "a page of the BnF catalogue"}
+  {:pattern "^https?://[a-z-]+\\.(?:m\\.)?wikipedia\\.org/" :what "a Wikipedia article"}]}

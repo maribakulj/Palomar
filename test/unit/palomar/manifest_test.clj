@@ -135,6 +135,6 @@
         (let [vs (vocabularies-from [(.toURL (.toURI over)) (.toURL (.toURI jar))])]
           (is (= (:sha256 (manifest/fingerprint "{:changed true}"))
                  (:sha256 (first (filter #(= "palomar/vocab/lido/actor-roles.edn" (:path %)) vs)))))
-          (is (= 10 (count vs)) "listed from the anchor's root, the jar"))
+          (is (= 11 (count vs)) "listed from the anchor's root, the jar"))
         (finally (.delete f) (.delete (.getParentFile f)) (.delete (.getParentFile (.getParentFile f)))
                  (.delete (io/file over "palomar")) (.delete over) (.delete jar))))))
