@@ -86,6 +86,60 @@ For reproducible research a conversion has to say what it was.
   manifest cannot be, the run exits 2 and says so: the output is new, and no
   manifest describes it.
 
+## Amendment (lot O1, 2026-11-11): one guard for the paths of every command
+
+- The L1 refusal was written for `convert` and copied, in part, into the
+  other commands: `reconcile` compared `--manifest` with its input only, so
+  `reconcile notices.xml --from intermarc --authorities autorites.edn
+  --manifest autorites.edn` replaced the authority file with the manifest
+  and exited 0, and `--manifest` naming `--model` replaced the model.
+- Every command of the CLI now declares its file roles beside its entry in
+  the dispatch table (`palomar.cli/commands`): what it reads (the input,
+  the dump of `authorities index`, `--authorities`, `--model`) and what it
+  writes (`--out`, `--manifest`). `run` checks them before the command
+  runs, so no command reads or writes first and none can skip the check; a
+  command without roles is not run, and a test fails for a command of the
+  table whose roles are not stated.
+- A written path that names the same file as another path of the run,
+  read or written, is refused, exit 2, naming both roles and the path.
+  Read paths are not compared with one another. "Same file" is L1's
+  `same-file?`: the file system's identity when both exist (a symbolic or
+  a hard link is the same file), else the canonical paths (the links of the
+  directories followed; a dangling link names itself, where it is replaced),
+  with case folded where the directory folds it.
+- `-` names a file to this CLI, not a stream, and is compared as one; a
+  device or a pipe is compared as a file, as `convert` did since L1
+  (written into, not replaced, when it is used). stdin and stdout are used
+  when a role is not given, and are not compared.
+- The refusal names the command as typed (`authorities index`, `reconcile
+  explain`) and the written path first, as L1 did (`--manifest is --out`).
+  A read file that is not there is left to the command, which reports it as
+  not found and writes nothing, before any comparison. A written path that
+  is a directory is refused.
+- Canonical paths are compared in Unicode NFC and, where the directory
+  folds case, lower-cased in the root locale (`palomar.paths/path-key`). A
+  path the JVM cannot encode (a name outside `sun.jnu.encoding`) cannot be
+  compared, and the run is refused.
+- The check is made again at publication (review of O1). At the check, the
+  identity of each read file is recorded (its real path and its file key)
+  and the written paths at which nothing is. Just before the output and the
+  manifest are moved, each written path and the file it resolves to are
+  checked again: one that now names a read file, by its real path or its
+  key (a hard link), or that is a symbolic link where nothing was, is
+  refused, exit 2, nothing published and the staged files removed.
+- What remains: the window between that second check and the move itself,
+  a race inside the final move, is not covered; nor is a written path that
+  comes, during the run, to name the other written path, or one that comes
+  to name a read file in `authorities index`, whose index is published by
+  `palomar.authority-index/build!` without the second check.
+- A link that names no path, `/dev/stdout` when stdout is a pipe
+  (`/proc/self/fd/1` → `pipe:[…]`), is written into, as a device or a pipe
+  is; before, resolving it failed the run.
+- The dev tool that writes files, `dev/eval/ycba/convert.clj`, refuses an
+  output name that is the input of a pair (`lido.xml`), by `same-file?`,
+  before it writes anything. The Python scripts of `dev/eval/ycba` are not
+  covered.
+
 ## Amendment (lot M6, 2026-11-09): the authorities a reconciliation matched against
 
 - `reconcile --manifest <file>` writes a run manifest, as `convert` does: the
@@ -101,4 +155,5 @@ For reproducible research a conversion has to say what it was.
   date, another dump, or other bytes). Two reconciliations against the same
   index differ only in their times.
 - The manifest is written beside its path and moved, as for `convert`; a
-  `--manifest` that names the input is refused.
+  `--manifest` that names the input, `--authorities` or `--model` is
+  refused (lot O1).

@@ -2,9 +2,15 @@
 ;; Art, written beside it as `<name>` (default palomar-la.json), so that two
 ;; versions of Palomar can be compared on the same pairs.
 ;;   clojure -M dev/eval/ycba/convert.clj <dir> [name]
-(require '[palomar.convert :as c] '[clojure.java.io :as io])
+;; An output name that names a pair's input, lido.xml, by any spelling or
+;; link, is refused before anything is written (lot O1 review).
+(require '[palomar.convert :as c] '[palomar.paths :as paths] '[clojure.java.io :as io])
 (let [[dir nm] *command-line-args*
       nm (or nm "palomar-la.json")]
+  (doseq [d (.listFiles (io/file dir "pairs")) :when (.isDirectory d)]
+    (when (paths/same-file? (io/file d "lido.xml") (io/file d nm))
+      (throw (ex-info (str "the output name " nm " is the input " (io/file d "lido.xml") "; choose another name")
+                      {:dir (str d) :name nm}))))
   (doseq [d (.listFiles (io/file dir "pairs")) :when (.isDirectory d)]
     (let [src (slurp (io/file d "lido.xml"))
           out (try (:output (c/convert {:from :oai :opts {:metadata-prefix "lido"} :to :linked-art :source src}))

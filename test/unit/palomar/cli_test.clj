@@ -538,16 +538,19 @@
 (deftest a-manifest-that-cannot-be-published-is-not-a-success
   (testing "the output published, the manifest not: exit 2, and the report says what was published (L1)"
     (doseq [stream? [false true]]
+      ;; a directory where the manifest goes, made once the paths are
+      ;; checked (a directory given as --manifest is refused, O1 review):
+      ;; the move over it fails
       (let [d (scratch-dir)
             out (str d "/out.nt")
-            man (str d "/m.edn")]
-        ;; a directory where the manifest goes: the move over it fails
-        (.mkdirs (java.io.File. (str man "/x")))
-        (let [{:keys [exit err]} (cli/run (cond-> ["convert" marc21 "--from" "marc21" "--to" "ntriples" "--out" out "--manifest" man]
-                                            stream? (conj "--stream")))]
-          (is (= 2 exit) err)
-          (is (str/includes? (str err) "the output was published") err)
-          (is (str/includes? (str err) "no manifest describes") err))))))
+            man (str d "/m.edn")
+            ->edn manifest/->edn
+            {:keys [exit err]} (with-redefs [manifest/->edn (fn [m] (.mkdirs (java.io.File. (str man "/x"))) (->edn m))]
+                                 (cli/run (cond-> ["convert" marc21 "--from" "marc21" "--to" "ntriples" "--out" out "--manifest" man]
+                                            stream? (conj "--stream"))))]
+        (is (= 2 exit) err)
+        (is (str/includes? (str err) "the output was published") err)
+        (is (str/includes? (str err) "no manifest describes") err)))))
 
 (deftest an-output-is-written-where-its-path-leads
   (testing "a link is written through, a private file stays private, a pipe is written into (L1 review)"

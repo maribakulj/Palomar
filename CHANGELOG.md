@@ -422,6 +422,27 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Fixed
 
+- **No command writes over a file it reads** (lot O1, ADR 0030 amendment):
+  `palomar reconcile --authorities a.edn --manifest a.edn` replaced the
+  authority file with the manifest and exited 0, as `--manifest` naming
+  `--model` replaced the model: only the input was compared. Every command
+  now declares the files it reads and writes beside its entry in the
+  dispatch table, and one guard, run before any command reads or writes,
+  refuses (exit 2, naming both roles and the path) a written path that
+  names another of the run's files, by any spelling, a symbolic or a hard
+  link. The per-command checks of `convert` and `authorities index` are
+  replaced by it, with their wording (`convert: --manifest is --out (…)`,
+  `authorities index: --out is the dump (…)`); a refusal names the second
+  path too when it is spelled otherwise, and a read file that is not there
+  is still reported as not found first. Each written path is checked again
+  just before it is published: one that came to name a file the run reads
+  (a link or a hard link made during the run), or to be a link where
+  nothing was, publishes nothing. A directory as `--out` or `--manifest` is
+  refused (`authorities index --out <dir>` replaced an empty directory);
+  `--out /dev/stdout` into a pipe is written into instead of failing;
+  names are compared in NFC, folded in the root locale where case folds.
+  `dev/eval/ycba/convert.clj` refuses an output name that is its input.
+
 - **The PROV-O record keeps the history** (ADR 0025): rejected, superseded and
   retracted assertions reach the `:prov` output, reified with their status,
   where they used to be dropped while the target declared no loss. Every other

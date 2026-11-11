@@ -54,6 +54,7 @@
             [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.manifest :as manifest]
+            [palomar.paths :as paths]
             [palomar.reconciliation :as reconciliation]
             [palomar.validate :as validate]))
 
@@ -206,52 +207,82 @@
 
 (def ^:private no-links (make-array java.nio.file.LinkOption 0))
 
-(defn- case-folded?
-  "Whether the directory of `f` folds case: a name differing only in case
-   names the same file. Probed with a temp file of its own, else false."
-  [^java.io.File f]
-  (try
-    (let [t (java.io.File/createTempFile "palomar-case-" ".probe" (.getParentFile f))]
-      (try (.exists (java.io.File. (.getParentFile t) (str/upper-case (.getName t))))
-           (finally (.delete t))))
-    (catch java.io.IOException _ false)))
-
-(defn- same-file?
-  "Whether paths `a` and `b` name one file: by the file system when both
-   exist (a symbolic link, a hard link), else by their canonical paths, and,
-   where the directory folds case, by their canonical paths in any case
-   (review of 2026-11-09, L1)."
-  [a b]
-  (let [fa (.getAbsoluteFile (io/file a))
-        fb (.getAbsoluteFile (io/file b))]
-    (if (and (.exists fa) (.exists fb))
-      (java.nio.file.Files/isSameFile (.toPath fa) (.toPath fb))
-      (let [ca (.getCanonicalPath fa) cb (.getCanonicalPath fb)]
-        (or (= ca cb)
-            (and (= (str/lower-case ca) (str/lower-case cb)) (case-folded? (io/file ca))))))))
+(defn- present
+  "The roles of `rs` that name a path: a role not given names none."
+  [rs]
+  (filterv (comp string? second) rs))
 
 (defn- path-collision
-  "The refusal of a conversion two of whose paths, the input, `--out` and
-   `--manifest`, name one file, or nil. The output or the manifest would
-   replace the source, or one another, after a run said to succeed (L1)."
-  [{:strs [out manifest]} input]
-  (first (for [[an a bn b] [["--out" out "the input file" input]
-                            ["--manifest" manifest "the input file" input]
-                            ["--manifest" manifest "--out" out]]
-               :when (and a b (same-file? a b))]
-           {:exit 2 :out "" :err (str "convert: " an " is " bn " (" a "); choose another path")})))
+  "The refusal of a run of `command` one of whose written paths names the
+   same file as another of its paths, read or written, or nil (lot O1).
+   `roles` is what the command declares: `{:reads [[label path] ..] :writes
+   [[label path] ..]}`, a role absent (stdin, stdout) having no path. Two
+   paths are one file by `paths/same-file?`: the file system's identity
+   when both exist (a symbolic or a hard link), else their canonical paths,
+   in NFC, which follow the links of a directory and, for a dangling link,
+   name the link. Every path is compared, `-` (a file name to this CLI, not
+   a stream) and a device or a pipe included. Read paths are not compared
+   with one another: reading one file twice replaces nothing. Each written
+   path is compared with the read paths, then with the written paths
+   declared before it, and the refusal names it first (`--manifest is
+   --out`). Before L1, `--manifest` naming the input replaced the source;
+   before O1, `reconcile --manifest` naming `--authorities` or `--model`
+   replaced them, both with exit 0."
+  [command {:keys [reads writes]}]
+  (let [reads  (present reads)
+        writes (present writes)]
+    (first (for [[i [wl w]] (map-indexed vector writes)
+                 [ol o]     (concat reads (subvec writes 0 i))
+                 :when (paths/same-file? w o)]
+             {:exit 2 :out ""
+              :err  (str command ": " wl " is " ol " (" w (when (not= w o) (str " and " o " are one file"))
+                         "); choose another path")}))))
+
+(def ^:dynamic *checked*
+  "What `run` found of a command's paths when it checked them (lot O1):
+   `{:reads [{:label :identity}] :absent #{path}}`, the identity of each
+   read file and the absolute written paths at which nothing was there.
+   Each written path is checked against it again just before it is
+   published. nil outside `run`."
+  nil)
+
+(defn- check-paths
+  "Check the declared `roles` of a run of `command` before it reads or
+   writes: `{:refusal r}`, or `{:checked c}` for `*checked*`. A read file
+   that is not there is left for the command to report as not found, as
+   before O1, and its paths are not compared: the command refuses the run
+   before it writes. A written path that is a directory is refused."
+  [command {:keys [reads writes]}]
+  (let [reads  (present reads)
+        writes (present writes)
+        abs    (fn [path] (.toPath (.getAbsoluteFile (io/file path))))]
+    (cond
+      (some #(not (java.nio.file.Files/exists (abs (second %)) no-links)) reads)
+      {:checked {:reads [] :absent #{}}}
+
+      :else
+      (if-let [r (or (path-collision command {:reads reads :writes writes})
+                     (first (for [[wl w] writes :when (.isDirectory (io/file w))]
+                              {:exit 2 :out "" :err (str command ": " wl " (" w ") is a directory; choose a file")})))]
+        {:refusal r}
+        {:checked {:reads  (vec (for [[l path] reads] {:label l :identity (paths/file-identity path)}))
+                   :absent (set (for [[_ w] writes
+                                      :let [p (abs w)]
+                                      :when (not (java.nio.file.Files/exists p (into-array [java.nio.file.LinkOption/NOFOLLOW_LINKS])))]
+                                  (str p)))}}))))
 
 (defn- staging
-  "Where to write what will be published at `path`: `{:tmp :dst :move?}`.
-   A file that is or will be a regular file, followed through its links, is
-   written beside it and moved over it, so a failed run leaves it as it was.
-   A device or a pipe, or a file whose directory takes no new file, is
-   written into, as before L1 (L1 review)."
+  "Where to write what will be published at `path`: `{:tmp :dst :move?
+   :path}`. A file that is or will be a regular file, followed through its
+   links, is written beside it and moved over it, so a failed run leaves
+   it as it was. A device or a pipe, or a file whose directory takes no new
+   file, is written into, as before L1 (L1 review); so is a link whose
+   target names no path (`/dev/stdout` into a pipe, O1 review)."
   [path prefix]
   (let [p        (.toPath (.getAbsoluteFile (io/file path)))
-        exists?  (java.nio.file.Files/exists p (make-array java.nio.file.LinkOption 0))
-        regular? (and exists? (java.nio.file.Files/isRegularFile p (make-array java.nio.file.LinkOption 0)))
-        dst      (if exists? (.toRealPath p (make-array java.nio.file.LinkOption 0)) p)
+        exists?  (java.nio.file.Files/exists p no-links)
+        regular? (and exists? (java.nio.file.Files/isRegularFile p no-links))
+        dst      (if exists? (try (.toRealPath p no-links) (catch java.io.IOException _ p)) p)
         ;; a new file is written beside it or not at all: its directory
         ;; refuses it before anything is published (K6 review)
         beside   (cond
@@ -259,8 +290,21 @@
                    regular?      (try (java.io.File/createTempFile prefix ".part" (.toFile (.getParent dst)))
                                       (catch java.io.IOException _ nil)))]
     (if beside
-      {:tmp beside :dst dst :move? true}
-      {:tmp (java.io.File/createTempFile prefix ".part") :dst dst :move? false})))
+      {:tmp beside :dst dst :move? true :path p}
+      {:tmp (java.io.File/createTempFile prefix ".part") :dst dst :move? false :path p})))
+
+(defn- changed-under-run
+  "What the staged `s` would now be published over that the check did not
+   see, or nil: a file the run reads (by its real path or its file key, a
+   hard link too), or a symbolic link where nothing was (O1 review)."
+  [{:keys [^java.nio.file.Path path ^java.nio.file.Path dst]}]
+  (when-let [{:keys [reads absent]} *checked*]
+    (let [now (keep paths/file-identity [(str path) (str dst)])]
+      (or (some (fn [{:keys [label identity]}]
+                  (when (some #(paths/same-identity? identity %) now) (str "names the same file as " label)))
+                reads)
+          (when (and (contains? absent (str path)) (java.nio.file.Files/isSymbolicLink path))
+            "is a symbolic link")))))
 
 (defn- keep-attributes!
   "Give `tmp` the permissions and owner of the file it replaces, so a private
@@ -288,16 +332,24 @@
   "Publish the staged output `o` at `out`, then the staged manifest `m` at
    `mpath` (either may be nil). nil on success, else the error, which says
    what was published: two files cannot be replaced at once, so a manifest
-   that fails after its output is reported, never a success (L1)."
+   that fails after its output is reported, never a success (L1). Both are
+   checked again first: a path that came to name a file the run reads, or
+   to be a link where nothing was, publishes nothing (O1 review)."
   [o out m mpath]
-  (cond
-    (and o (not (publish-one! o)))
-    (str "error: could not move the output to " out "; nothing was published")
+  (if-let [[role path why] (first (for [[s role path] [[o "--out" out] [m "--manifest" mpath]]
+                                        :when s
+                                        :let [why (changed-under-run s)]
+                                        :when why]
+                                    [role path why]))]
+    (str "error: " role " (" path ") " why ", which it was not when the paths were checked; nothing was published")
+    (cond
+      (and o (not (publish-one! o)))
+      (str "error: could not move the output to " out "; nothing was published")
 
-    (and m (not (publish-one! m)))
-    (str "error: " (when o (str "the output was published to " out ", but "))
-         "the manifest could not be written to " mpath "; no manifest describes this run"
-         " (a file already there describes an earlier one)")))
+      (and m (not (publish-one! m)))
+      (str "error: " (when o (str "the output was published to " out ", but "))
+           "the manifest could not be written to " mpath "; no manifest describes this run"
+           " (a file already there describes an earlier one)"))))
 
 (defn- do-convert [{:strs [from to record-id out with-proposals] :as flags} input]
   (cond
@@ -308,52 +360,50 @@
     {:exit 2 :out "" :err (str "input file not found: " input)}
 
     :else
-    (or
-     (path-collision flags input)
-     (let [tmps (atom [])]
-       (try
-         (let [started (java.util.Date.)
-               rid    (cond record-id      (->record-id record-id)
-                            (= from "dc")   (keyword "doc" (file-stem input))
-                            :else           nil)
-               opts   (cond-> {}
-                        rid                         (assoc :record-id rid)
-                        (get flags "metadata-prefix") (assoc :metadata-prefix (get flags "metadata-prefix")))
-               result (convert/convert {:from   (keyword from)
-                                        :to     (keyword to)
-                                        :source (slurp (io/file input))
-                                        :with-proposals? (boolean with-proposals)
-                                        :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
-                                        :opts   opts})
-               mpath  (get flags "manifest")
+    (let [tmps (atom [])]
+      (try
+        (let [started (java.util.Date.)
+              rid    (cond record-id      (->record-id record-id)
+                           (= from "dc")   (keyword "doc" (file-stem input))
+                           :else           nil)
+              opts   (cond-> {}
+                       rid                         (assoc :record-id rid)
+                       (get flags "metadata-prefix") (assoc :metadata-prefix (get flags "metadata-prefix")))
+              result (convert/convert {:from   (keyword from)
+                                       :to     (keyword to)
+                                       :source (slurp (io/file input))
+                                       :with-proposals? (boolean with-proposals)
+                                       :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
+                                       :opts   opts})
+              mpath  (get flags "manifest")
               ;; written beside their paths, then moved: the manifest names
               ;; the output as it is published, byte for byte (L1)
-               o      (when out (doto (staging out "palomar-out-") (#(swap! tmps conj (:tmp %))) (#(spit (:tmp %) (:output result)))))
-               m      (when mpath
-                        (doto (staging mpath "palomar-manifest-") (#(swap! tmps conj (:tmp %)))
-                              (#(spit (:tmp %) (manifest-edn {:from (keyword from) :to (keyword to) :input input :out out
-                                                              :result (cond-> result o (assoc :output (:tmp o))) :started-at started
-                                                              :opts (cond-> opts with-proposals (assoc :with-proposals? true))})))))
-               report (str (lr/format-conversion-report (:loss result))
-                           "\n(" (:records result) " record"
-                           (when (not= 1 (:records result)) "s") " converted)"
-                           (when (seq (:deleted result))
-                             (str "\n(" (count (:deleted result)) " record"
-                                  (when (not= 1 (count (:deleted result))) "s")
-                                  " deleted at the source: " (str/join " " (:deleted result)) ")"))
-                           (invalid-note (:invalid result))
-                           (zero-records-note (:records result) from input))]
-           (if-let [err (publish! o out m mpath)]
-             {:exit 2 :out "" :err err}
-             (if out
-               {:exit 0 :out "" :err (str "wrote " out "\n" report)}
-               {:exit 0 :out (:output result) :err report})))
-         (catch clojure.lang.ExceptionInfo e
-           (refused-or-error e))
-         (catch Exception e
-           {:exit 2 :out "" :err (str "error: " (.getMessage e))})
-         (finally
-           (doseq [^java.io.File t @tmps :when (.exists t)] (.delete t))))))))
+              o      (when out (doto (staging out "palomar-out-") (#(swap! tmps conj (:tmp %))) (#(spit (:tmp %) (:output result)))))
+              m      (when mpath
+                       (doto (staging mpath "palomar-manifest-") (#(swap! tmps conj (:tmp %)))
+                             (#(spit (:tmp %) (manifest-edn {:from (keyword from) :to (keyword to) :input input :out out
+                                                             :result (cond-> result o (assoc :output (:tmp o))) :started-at started
+                                                             :opts (cond-> opts with-proposals (assoc :with-proposals? true))})))))
+              report (str (lr/format-conversion-report (:loss result))
+                          "\n(" (:records result) " record"
+                          (when (not= 1 (:records result)) "s") " converted)"
+                          (when (seq (:deleted result))
+                            (str "\n(" (count (:deleted result)) " record"
+                                 (when (not= 1 (count (:deleted result))) "s")
+                                 " deleted at the source: " (str/join " " (:deleted result)) ")"))
+                          (invalid-note (:invalid result))
+                          (zero-records-note (:records result) from input))]
+          (if-let [err (publish! o out m mpath)]
+            {:exit 2 :out "" :err err}
+            (if out
+              {:exit 0 :out "" :err (str "wrote " out "\n" report)}
+              {:exit 0 :out (:output result) :err report})))
+        (catch clojure.lang.ExceptionInfo e
+          (refused-or-error e))
+        (catch Exception e
+          {:exit 2 :out "" :err (str "error: " (.getMessage e))})
+        (finally
+          (doseq [^java.io.File t @tmps :when (.exists t)] (.delete t)))))))
 
 (defn- do-validate [{:strs [from policy record-id]} input]
   (cond
@@ -466,65 +516,63 @@
 
     ;; the stream is read while --out is written: the same file would be replaced
     ;; by the output at the end, losing the source (audit S40); nor may the
-    ;; manifest name either (L1)
+    ;; manifest name either (L1). `run` refuses such paths before this (O1).
     :else
-    (or
-     (path-collision flags input)
     ;; Stream to a sibling temp file and atomically rename on success, so a
     ;; mid-stream failure (e.g. a malformed input) leaves NO partial --out — the
     ;; same all-or-nothing guarantee the batch path gives (it spits only at the end).
     ;; Everything that can throw — including creating the temp file (a bad --out
     ;; directory) — is inside the try, so the verb always returns a clean exit, and
     ;; the `finally` deletes the temp in every failure path (on success it was renamed away).
-     (let [fromk (keyword from)
-           opts  (cond-> {} record-id (assoc :record-id (->record-id record-id)))
-           sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest (io/file input)))
-           started (java.util.Date.)
-           o     (atom nil)
-           m     (atom nil)]
-       (try
-         (reset! o (staging out "palomar-stream-"))
-         (let [[open close] (convert/collection (keyword to))
-               res (with-open [r (io/reader (io/file input))
-                               w (io/writer (:tmp @o))]
-                     (when open (.write w open) (.write w "\n"))
-                     (let [res (convert/convert-stream
-                                {:from fromk :to (keyword to)
-                                 :with-proposals? (boolean (get flags "with-proposals"))
-                                 :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
+    (let [fromk (keyword from)
+          opts  (cond-> {} record-id (assoc :record-id (->record-id record-id)))
+          sha   (when (.isFile (java.io.File. ^String input)) (convert/source-digest (io/file input)))
+          started (java.util.Date.)
+          o     (atom nil)
+          m     (atom nil)]
+      (try
+        (reset! o (staging out "palomar-stream-"))
+        (let [[open close] (convert/collection (keyword to))
+              res (with-open [r (io/reader (io/file input))
+                              w (io/writer (:tmp @o))]
+                    (when open (.write w open) (.write w "\n"))
+                    (let [res (convert/convert-stream
+                               {:from fromk :to (keyword to)
+                                :with-proposals? (boolean (get flags "with-proposals"))
+                                :fail-on-invalid? (boolean (get flags "fail-on-invalid"))
                                 ;; one more read, in constant memory: the same
                                 ;; document digest as batch (post-audit 7, I2);
                                 ;; a pipe can be read but once (I2 review)
-                                 :source-sha256 sha
-                                 :records (convert/stream-source fromk opts r)}
-                                (fn [doc] (.write w doc) (.write w "\n")))]
-                       (when close (.write w close) (.write w "\n"))
-                       res))]
+                                :source-sha256 sha
+                                :records (convert/stream-source fromk opts r)}
+                               (fn [doc] (.write w doc) (.write w "\n")))]
+                      (when close (.write w close) (.write w "\n"))
+                      res))]
           ;; the run manifest, as batch writes it: the output is the file
           ;; written, fingerprinted as it is read (post-audit 8, K6). It is
           ;; written beside its path first, so a manifest that cannot be
           ;; written leaves --out as it was (K6 review)
-           (when-let [mpath (get flags "manifest")]
-             (reset! m (staging mpath "palomar-manifest-"))
-             (spit (:tmp @m) (manifest-edn {:from fromk :to (keyword to) :input input :out out
-                                            :result (assoc res :output (:tmp @o)) :started-at started
-                                            :opts (cond-> (assoc opts :stream? true)
-                                                    (get flags "with-proposals") (assoc :with-proposals? true))})))
-           (if-let [err (publish! @o out @m (get flags "manifest"))]
-             {:exit 2 :out "" :err err}
-             {:exit 0 :out ""
-              :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")
-                         " streamed (bounded memory)\n"
-                         (lr/format-conversion-report (:loss res))
-                         (invalid-note (:invalid res))
-                         (when-not sha "\nnote: the input is no regular file (a pipe): it is read once, so no record names its document by a digest\n")
-                         (zero-records-note (:records res) from input))}))
-         (catch clojure.lang.ExceptionInfo e
-           (refused-or-error e))
-         (catch Exception e
-           {:exit 2 :out "" :err (str "error: " (.getMessage e))})
-         (finally
-           (doseq [{t :tmp} [@o @m] :when (and t (.exists ^java.io.File t))] (.delete ^java.io.File t))))))))
+          (when-let [mpath (get flags "manifest")]
+            (reset! m (staging mpath "palomar-manifest-"))
+            (spit (:tmp @m) (manifest-edn {:from fromk :to (keyword to) :input input :out out
+                                           :result (assoc res :output (:tmp @o)) :started-at started
+                                           :opts (cond-> (assoc opts :stream? true)
+                                                   (get flags "with-proposals") (assoc :with-proposals? true))})))
+          (if-let [err (publish! @o out @m (get flags "manifest"))]
+            {:exit 2 :out "" :err err}
+            {:exit 0 :out ""
+             :err  (str "wrote " out " — " (:records res) " record" (when (not= 1 (:records res)) "s")
+                        " streamed (bounded memory)\n"
+                        (lr/format-conversion-report (:loss res))
+                        (invalid-note (:invalid res))
+                        (when-not sha "\nnote: the input is no regular file (a pipe): it is read once, so no record names its document by a digest\n")
+                        (zero-records-note (:records res) from input))}))
+        (catch clojure.lang.ExceptionInfo e
+          (refused-or-error e))
+        (catch Exception e
+          {:exit 2 :out "" :err (str "error: " (.getMessage e))})
+        (finally
+          (doseq [{t :tmp} [@o @m] :when (and t (.exists ^java.io.File t))] (.delete ^java.io.File t)))))))
 
 (defn- jsonable
   "Render a value as JSON-safe data for the loss report: every keyword — whether a
@@ -603,6 +651,13 @@
 
 (def ^:private reconcile-subcommands #{"explain" "clusters"})
 
+(defn- reconcile-args
+  "The subcommand of `reconcile` (or nil) and its input file."
+  [positional]
+  (if (reconcile-subcommands (first positional))
+    [(first positional) (second positional)]
+    [nil (first positional)]))
+
 (defn- reconcile-output
   "What `reconcile [sub]` writes for `result`: its text, or the result as
    EDN (`--format edn`)."
@@ -657,7 +712,7 @@
    as `palomar.api`'s is. With `--manifest`, the run manifest names the
    input, each authority file or index used, the engine and its model."
   [{:strs [from record-id authorities manifest engine model format mention] :as flags} positional]
-  (let [[sub input] (if (reconcile-subcommands (first positional)) [(first positional) (second positional)] [nil (first positional)])
+  (let [[sub input] (reconcile-args positional)
         {:keys [err from source opts]} (read-source from input record-id (str "reconcile" (when sub (str " " sub))))
         problem (when-not err (reconcile-problem sub flags))
         loaded  (when (and model (not err) (not problem))
@@ -678,36 +733,34 @@
       {:exit 2 :out "" :err (str "authority file not found: " authorities)}
 
       :else
-      (or
-       (path-collision (select-keys flags ["manifest"]) input)
-       (guard (fn [] (let [started (java.util.Date.)
-                           {:keys [records]} (convert/to-wemi from opts source)
-                           pool   (when authorities (reconciliation/read-authorities authorities))
-                           ropts  (cond-> {:engine (if engine (keyword engine) reconciliation/default-engine)}
-                                    loaded (assoc :model loaded))
-                           result (case sub
-                                    nil        (reconciliation/reconcile records pool ropts)
-                                    "explain"  (reconciliation/explain records pool (edn/read-string mention) ropts)
-                                    "clusters" (reconciliation/clusters records pool ropts))
-                           out    (reconcile-output sub format result)
-                           m      (when manifest
-                                    (doto (staging manifest "palomar-manifest-")
-                                      (#(spit (:tmp %)
-                                              (manifest/->edn
-                                               (manifest/manifest {:from        from
-                                                                   :to          nil
-                                                                   :opts        opts
-                                                                   :inputs      [{:path input :content (let [f (io/file input)] (when (.isFile f) f))}]
-                                                                   :outputs     [{:path "-" :content out}]
-                                                                   :authorities (when pool [(:manifest pool)])
-                                                                   :reconcile   (reconciliation/manifest-entry result)
-                                                                   :started-at  started
-                                                                   :finished-at (java.util.Date.)}))))))]
-                       (try
-                         (if-let [e (publish! nil nil m manifest)]
-                           {:exit 2 :out "" :err e}
-                           {:exit 0 :out out :err ""})
-                         (finally (when-let [^java.io.File t (:tmp m)] (when (.exists t) (.delete t))))))))))))
+      (guard (fn [] (let [started (java.util.Date.)
+                          {:keys [records]} (convert/to-wemi from opts source)
+                          pool   (when authorities (reconciliation/read-authorities authorities))
+                          ropts  (cond-> {:engine (if engine (keyword engine) reconciliation/default-engine)}
+                                   loaded (assoc :model loaded))
+                          result (case sub
+                                   nil        (reconciliation/reconcile records pool ropts)
+                                   "explain"  (reconciliation/explain records pool (edn/read-string mention) ropts)
+                                   "clusters" (reconciliation/clusters records pool ropts))
+                          out    (reconcile-output sub format result)
+                          m      (when manifest
+                                   (doto (staging manifest "palomar-manifest-")
+                                     (#(spit (:tmp %)
+                                             (manifest/->edn
+                                              (manifest/manifest {:from        from
+                                                                  :to          nil
+                                                                  :opts        opts
+                                                                  :inputs      [{:path input :content (let [f (io/file input)] (when (.isFile f) f))}]
+                                                                  :outputs     [{:path "-" :content out}]
+                                                                  :authorities (when pool [(:manifest pool)])
+                                                                  :reconcile   (reconciliation/manifest-entry result)
+                                                                  :started-at  started
+                                                                  :finished-at (java.util.Date.)}))))))]
+                      (try
+                        (if-let [e (publish! nil nil m manifest)]
+                          {:exit 2 :out "" :err e}
+                          {:exit 0 :out out :err ""})
+                        (finally (when-let [^java.io.File t (:tmp m)] (when (.exists t) (.delete t)))))))))))
 
 (defn- do-authorities
   "`authorities index <dump> --out <index> [--built YYYY-MM-DD]`: build the
@@ -724,9 +777,6 @@
 
     (not (.isFile (io/file dump)))
     {:exit 2 :out "" :err (str "dump not found: " dump)}
-
-    (same-file? dump out)
-    {:exit 2 :out "" :err (str "authorities index: --out is the dump (" out "); choose another path")}
 
     :else
     (guard #(let [h (index/build! dump out {:built (or built (str (java.time.LocalDate/now java.time.ZoneOffset/UTC)))})]
@@ -802,28 +852,75 @@
                  :out  ""
                  :err  (if (seq diagnostics) (str (dx/format-report diagnostics) "\n" verdict) verdict)})))))
 
+(defn- no-files
+  "The roles of a command that reads and writes no file."
+  [_ _]
+  {:reads [] :writes []})
+
+(defn- input-only
+  "The roles of a command that reads its input file and writes only to
+   stdout and stderr."
+  [_ positional]
+  {:reads [["the input file" (first positional)]] :writes []})
+
+(def commands
+  "The commands of the CLI, by name: `:run`, called with the flags and the
+   positionals, and `:roles`, what files it reads and writes, as `(roles
+   flags positional)` → `{:label :reads [[label path] ..] :writes [[label
+   path] ..]}` (lot O1), `:label` naming the command as typed in a
+   refusal. `run` checks the roles of every command before it runs
+   it, so no command reads or writes before its paths are known to be
+   distinct, and a command that declares no roles is not run. A command
+   that reads or writes another file declares it here."
+  {"formats"       {:roles no-files
+                    :run   (fn [_ _] {:exit 0 :out ""
+                                      :err (str (fmt-line "from: " (convert/source-formats)) "\n"
+                                                (fmt-line "to:   " (convert/target-formats)))})}
+   "ir-schema"     {:roles no-files
+                    :run   (fn [_ _] {:exit 0 :out (ir/schema-edn) :err ""})}
+   "convert"       {:roles (fn [{:strs [out manifest]} positional]
+                             {:reads  [["the input file" (first positional)]]
+                              :writes [["--out" out] ["--manifest" manifest]]})
+                    :run   (fn [flags positional]
+                             (if (get flags "stream")
+                               (do-convert-stream flags (first positional))
+                               (do-convert flags (first positional))))}
+   "validate"      {:roles input-only :run (fn [flags positional] (do-validate flags (first positional)))}
+   "report"        {:roles input-only :run (fn [flags positional] (do-report flags (first positional)))}
+   "inspect"       {:roles input-only :run (fn [flags positional] (do-inspect flags (first positional)))}
+   "reconcile"     {:roles (fn [{:strs [authorities model manifest]} positional]
+                             (let [[sub input] (reconcile-args positional)]
+                               {:label  (str "reconcile" (when sub (str " " sub)))
+                                :reads  [["the input file" input] ["--authorities" authorities] ["--model" model]]
+                                :writes [["--manifest" manifest]]}))
+                    :run   do-reconcile}
+   "authorities"   {:roles (fn [{:strs [out]} [sub dump]]
+                             (if (= "index" sub)
+                               {:label "authorities index" :reads [["the dump" dump]] :writes [["--out" out]]}
+                               {:reads [] :writes []}))
+                    :run   do-authorities}
+   "apply-repairs" {:roles input-only :run (fn [flags positional] (do-apply-repairs flags (first positional)))}
+   "conformance"   {:roles input-only :run (fn [flags positional] (do-conformance flags (first positional)))}})
+
 (defn run
   "Pure CLI core: parse `args`, run the command, return `{:exit :out :err}`.
-   Never prints, never exits."
+   Never prints, never exits. Before the command reads or writes a file,
+   its declared roles are checked: a written path that names the same file
+   as another of its paths is refused, exit 2 (lot O1)."
   [args]
-  (let [{:keys [command help? flags positional]} (parse-args args)]
+  (let [{:keys [command help? flags positional]} (parse-args args)
+        {:keys [roles] :as cmd} (get commands command)]
     (cond
       (or help? (nil? command)) {:exit 0 :out "" :err usage}
-      (= command "formats")     {:exit 0 :out ""
-                                 :err (str (fmt-line "from: " (convert/source-formats)) "\n"
-                                           (fmt-line "to:   " (convert/target-formats)))}
-      (= command "ir-schema")   {:exit 0 :out (ir/schema-edn) :err ""}
-      (= command "convert")     (if (get flags "stream")
-                                  (do-convert-stream flags (first positional))
-                                  (do-convert flags (first positional)))
-      (= command "validate")    (do-validate flags (first positional))
-      (= command "report")      (do-report flags (first positional))
-      (= command "inspect")     (do-inspect flags (first positional))
-      (= command "reconcile")   (do-reconcile flags positional)
-      (= command "authorities") (do-authorities flags positional)
-      (= command "apply-repairs") (do-apply-repairs flags (first positional))
-      (= command "conformance") (do-conformance flags (first positional))
-      :else                     {:exit 2 :out "" :err (str "unknown command: " command "\n\n" usage)})))
+      (nil? cmd)                {:exit 2 :out "" :err (str "unknown command: " command "\n\n" usage)}
+      (not (fn? roles))         {:exit 2 :out "" :err (str command ": declares no file roles; not run")}
+      :else
+      (let [{:keys [refusal checked]}
+            (try (let [r (roles flags positional)] (check-paths (or (:label r) command) r))
+                 (catch Exception e
+                   {:refusal {:exit 2 :out "" :err (str command ": its paths could not be compared: " (.getMessage e))}}))]
+        (or refusal
+            (binding [*checked* checked] ((:run cmd) flags positional)))))))
 
 (defn -main [& args]
   (let [{:keys [exit out err]} (run (vec args))]
