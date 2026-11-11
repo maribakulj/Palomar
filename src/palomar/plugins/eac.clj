@@ -13,7 +13,8 @@
 
    Its `entityId`, when it is an IRI, is the agent's IRI: identity by an
    authority identifier (ADR 0041). A local `recordId` names the record, not
-   the agent. Its relations are kept as natives and reported as loss: their
+   the agent. Its `otherRecordId`s are kept as natives
+   (`:eac/other-record-id`, lot N5), not projected. Its relations are kept as natives and reported as loss: their
    targets in the samples are file names, not IRIs, and RiC-O's relation
    types need their own mapping. Every other description element is reported
    too. EAC-CPF 1.x and 2.0 are both read, by local name.
@@ -112,6 +113,10 @@
                           (nat :eac/entity-id (text (child ident "entityId")) (x "cpfDescription" "identity" "entityId"))
                           (nat :eac/exist-dates (text (child desc "existDates")) (x "cpfDescription" "description" "existDates"))
                           (nat :eac/biog-hist (text (child desc "biogHist")) (x "cpfDescription" "description" "biogHist"))]
+                         ;; the record's ids in other systems (lot N5): kept
+                         ;; as natives, read by `palomar.mentions` as ids
+                         (map-indexed (fn [i o] (nat :eac/other-record-id (text o) (x "control" ["otherRecordId" (inc i)])))
+                                      (children control "otherRecordId"))
                          (map-indexed (fn [i {n :name path :path}]
                                         (nat (if (zero? i) :eac/authorized-name :eac/name) n (apply x path)))
                                       names)

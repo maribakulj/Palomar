@@ -217,8 +217,10 @@
    calibrated on this pool for its decision (`fs/confidence`). With `block`
    (lot M6), a mention is compared with the entries `(block name)` returns
    instead of every entry; the surname frequencies, the pool size and the
-   pool's fingerprint are still the whole pool's."
-  [mentions authority model block anchors]
+   pool's fingerprint are still the whole pool's. An entry whose id is in
+   `unnamed` (lot N5: a candidate another lane than the name brought) is
+   compared and weighed even when no name level agrees."
+  [mentions authority model block anchors unnamed]
   (when (and (some? anchors) (not (relations/frozen? anchors)))
     (throw (ex-info "agent-candidates: :anchors must be a frozen anchor set (agent-relations/freeze-anchors), unchanged since"
                     {:anchors (if (map? anchors) (select-keys anchors [:fingerprint]) (type anchors))})))
@@ -232,7 +234,7 @@
                  (for [cand (cond->> (if block (block (:name m)) authority) resolved (map #(get resolved % %)))
                        :let [c (fs/compare-pair m cand {:surname-counts counts :pool-size size})
                              lv (:levels c)]
-                       :when (not= :none (:name lv))
+                       :when (or (not= :none (:name lv)) (contains? unnamed (:id cand)))
                        :let [evs (events-evidence (:events m) cand)
                              kx  (kind-evidence (:kind m) cand)
                              blocked? (or kx (= :incompatible (:dates lv)) (= :incompatible (:verdict evs)))
@@ -262,10 +264,18 @@
                      (nil? p)            (assoc :reason (or (rejection ev) :incompatible-dates))
                      (mention-key m)     (assoc :mention (mention-key m))
                      (:entity-type cand) (assoc :entity-type (:entity-type cand)))))
+        ;; lot N5: a candidate no name agrees with (only `unnamed` admits
+        ;; one) is for review at most, and never competes with one a name
+        ;; agrees with; without `unnamed` every candidate is named
+        named? #(not= :none (get-in % [:evidence :comparison :name]))
+        cap    #(if (and (not (named? %)) (= :propose (:decision %)))
+                  (assoc % :decision :review :review-reason :no-name-agreement)
+                  %)
         one    (fn [cs]
-                 (let [n (count (filter #(#{:propose :review} (:decision %)) cs))]
+                 (let [cs (map cap cs)
+                       n  (count (filter #(and (named? %) (#{:propose :review} (:decision %))) cs))]
                    (for [c cs]
-                     (if (and (< 1 n) (#{:propose :review} (:decision c)))
+                     (if (and (< 1 n) (named? c) (#{:propose :review} (:decision c)))
                        (assoc c :decision :review :review-reason :competing)
                        c))))
         ;; a decision rests on every candidate's relational evidence (a
@@ -325,6 +335,15 @@
    threshold of 0 or less admits every entry, which no lookup can block: the
    whole pool is then scanned.
 
+   **Lanes (N5)**: `palomar.candidates/rank` generates a mention's
+   candidates by lanes and passes them as `:block`. With a model,
+   `{:score-unnamed ids}` makes the entries of those ids compared and
+   weighed even at name level `:none` (a candidate an identifier found, its
+   name in another script), on its names and dates as any candidate: the
+   id itself weighs nothing. Such a candidate is for review at most
+   (`:review-reason :no-name-agreement`), never proposed outright, and it
+   never makes a candidate a name agrees with `:competing`.
+
    **Relations (M8)**: with `{:model m :anchors a}`, `a` a frozen anchor set
    (`agent-relations/freeze-anchors`; anything else is refused), a mention
    `{:id :record :role :event :works}` is also compared with each candidate
@@ -376,7 +395,7 @@
   ([mentions authority] (agent-candidates mentions authority 0.5))
   ([mentions authority opts]
    (if (and (map? opts) (:model opts))
-     (scored-candidates mentions authority (:model opts) (:block opts) (:anchors opts))
+     (scored-candidates mentions authority (:model opts) (:block opts) (:anchors opts) (set (:score-unnamed opts)))
      (let [threshold (if (map? opts) (:threshold opts 0.5) opts)
            block     (when (and (map? opts) (pos? threshold)) (:block opts))
            scored (for [m    (map mention mentions)

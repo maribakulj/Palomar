@@ -153,13 +153,22 @@
               :dates         dumas-pere-life
               :entity-type   "person"
               :isni          ["0000000121012885"]
+              :isni-sources  [{:isni "0000000121012885" :source "ISNI chargé à partir de la base ISNI"}]
               :relations     [{:record-number "16258491" :tag "320" :kind :agent}
                               {:record-number "12306195" :tag "320" :kind :agent}
                               {:record-number "11901062" :tag "320" :kind :agent}]}
              (by-n "11901063"))))
-    (testing "an ISNI the record cancels ($z) is not the ISNI; a VIAF number is none"
-      (is (= ["0000000444583295"] (:isni (by-n "11901062"))))
-      (is (nil? (:isni (by-n "11105601")))))
+    (testing "an ISNI the record cancels ($z) is not the ISNI"
+      (is (= ["0000000444583295"] (:isni (by-n "11901062")))))
+    (testing "$2 names where the ISNI came from, not its scheme (N5 review): a 031 $a whose $2 says VIAF is an ISNI too"
+      (is (= ["0000000120138240"] (:isni (by-n "11105601"))))
+      (is (= [{:isni "0000000120138240" :source "VIAF"}] (:isni-sources (by-n "11105601"))))
+      (is (= ["0000000083834780"] (:isni (by-n "12692700"))) "Wlassikoff's, which the GND states too")
+      (is (= [{:isni "0000000444583295" :source "ISNI chargé à partir de la base ISNI"}] (:isni-sources (by-n "11901062")))))
+    (testing "a 031 $a that fails the ISNI check is no ISNI, whatever its $2"
+      (let [x' (str/replace-first @bnf-authorities "<mxc:subfield code=\"a\">0000000120138240</mxc:subfield>"
+                                  "<mxc:subfield code=\"a\">0000000120138241</mxc:subfield>")]
+        (is (nil? (:isni (some #(when (= "11105601" (:record-number %)) %) (:entries (authorities/read-pool :intermarc x'))))))))
     (testing "every ISNI the record states, in its order (lot N6): two 031 $a"
       (let [x   @bnf-authorities
             f31 "<mxc:subfield code=\"a\">0000000121012885</mxc:subfield>"

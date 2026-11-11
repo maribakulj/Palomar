@@ -30,9 +30,12 @@
    as the SRU serves it) is one entry: its `003` ARK as `:id`, its record
    number (the `001` without `FRBNF` and its check character, the form a
    bibliographic `$3` cites) as `:record-number`, the `100` `$a, $m` as label,
-   the `400`s as variants, the `100 $d` as dates, every `031 $a` whose `$2`
-   says ISNI as `:isni` (a vector, in the record's order; a cancelled `$z`
-   is not read), and the leader's position 9 as its kind (`p`: a person).
+   the `400`s as variants, the `100 $d` as dates, every `031 $a` that
+   passes the ISNI check as `:isni` (a vector, in the record's order; a
+   cancelled `$z` is not read), its `$2` kept as where it came from
+   (`:isni-sources [{:isni :source}]`: the BnF writes \"VIAF\" or \"ISNI
+   chargé à partir de VIAF\" there, never another scheme; lot N5 review),
+   and the leader's position 9 as its kind (`p`: a person).
    The tags it does not read are listed under `:unread`.
 
    **Profiles** (lot M3, ADR 0038 amendment): an entry carries `:dates`, a
@@ -44,6 +47,7 @@
    contributes nothing."
   (:require [clojure.string :as str]
             [palomar.agent-dates :as dates]
+            [palomar.agent-equivalence :as eq]
             [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.lrmoo.ntriples :as nt]
             [palomar.rdfxml :as rdfxml]
@@ -314,9 +318,14 @@
                 :let [ark   (value r "003")
                       n     (some->> (value r "001") (re-find #"^FRBNF(\d{8})") second)
                       life  (dates/parse-life-dates (first-sub h "d"))
-                      isni  (vec (distinct (keep #(let [sfs (subfields-of %)]
-                                                    (when (some-> (first-sub sfs "2") (str/starts-with? "ISNI")) (first-sub sfs "a")))
+                      ;; `$2` names where the ISNI came from (ISNI, VIAF…), not
+                      ;; its scheme: every `$a` that passes the check is one
+                      srcs  (vec (distinct (keep #(let [sfs (subfields-of %)
+                                                        a   (first-sub sfs "a")]
+                                                    (when (some-> (eq/identifier-key a) (str/starts-with? "isni:"))
+                                                      (cond-> {:isni a} (first-sub sfs "2") (assoc :source (first-sub sfs "2")))))
                                                  (fields r "031"))))
+                      isni  (vec (distinct (map :isni srcs)))
                       kind  (some-> (leader r) (as-> l (when (< 9 (count l)) (intermarc-kinds (nth l 9)))))
                       rels  (intermarc-relations (:fragments r))]]
             (cond-> {:id       (when (and ark (nil? (nt/iri-problem ark))) ark)
@@ -325,7 +334,7 @@
               n    (assoc :record-number n)
               life (assoc :dates life)
               kind (assoc :entity-type kind)
-              (seq isni) (assoc :isni isni)
+              (seq isni) (assoc :isni isni :isni-sources srcs)
               (seq rels) (assoc :relations rels))))
      :unread (vec (sort (distinct (for [r records
                                         f (:fragments r)

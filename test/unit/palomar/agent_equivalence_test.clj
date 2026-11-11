@@ -273,10 +273,10 @@
         stahl   "http://catalogue.bnf.fr/ark:/12148/cb16492882d"
         crossed #{[hetzel "https://d-nb.info/gnd/111910582X"] [stahl "https://d-nb.info/gnd/118949047"]}]
     (testing "the records state exactly the eval's ARK and ISNI bridges, but for the two Hetzel/Stahl pairs refused"
-      (is (= 14 (count (bridged [:ark :isni]))))
+      (is (= 19 (count (bridged [:ark :isni]))) "14 until the 031 ISNIs whose $2 says VIAF were read (N5 review)")
       (is (= (set/difference (bridged [:ark :isni]) crossed) pairs))
-      (is (= 12 (count links)))
-      (is (= 3 (count (set/intersection (bridged [:ark]) (bridged [:isni])))) "3 pairs are bridged by both"))
+      (is (= 17 (count links)))
+      (is (= 7 (count (set/intersection (bridged [:ark]) (bridged [:isni])))) "7 pairs are bridged by both"))
     (testing "Hetzel and Stahl: the ISNIs pair each BnF record with the other's GND record, and both files state which is the pseudonym of which; both components are refused"
       (is (= #{[:pseudonym-crossed #{hetzel "https://d-nb.info/gnd/111910582X"}]
                [:pseudonym-crossed #{stahl "https://d-nb.info/gnd/118949047"}]}

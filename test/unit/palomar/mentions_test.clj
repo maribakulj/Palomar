@@ -463,3 +463,74 @@
                                                 (model/assertion {:subject (:id r) :predicate :canon/agent :value "Someone Else"}))))]
     (is (some #(= "canon" (namespace (:predicate %))) (:assertions r)) "the floor is there to be ignored")
     (is (= (mentions/mentions @im) (mentions/mentions r) (mentions/mentions r')))))
+
+;; ---------------------------------------------------------------------------
+;; Identifiers (lot N5)
+;; ---------------------------------------------------------------------------
+
+(deftest a-mention-carries-the-ids-its-occurrence-states
+  (testing "INTERMARC: $1, the ISNI as written, is an id; $3 is the authority control the cataloguer stated, apart"
+    (let [r  (intermarc-record "cb3"
+                               (mxc-df "100" "3" "11907966" "1" "ISNI0000000121200982" "a" "Hugo" "m" "Victor")
+                               (mxc-df "700" "a" "Férat" "m" "Jules")
+                               (mxc-df "710" "3" "11865012" "a" "Hetzel et Cie"))
+          ms (mentions/mentions r)]
+      (is (= [["ISNI0000000121200982"] nil nil] (map :ids ms)))
+      (is (= ["http://catalogue.bnf.fr/ark:/12148/cb11907966z" nil "http://catalogue.bnf.fr/ark:/12148/cb118650124"]
+             (map :authority-record ms))
+          "the BnF record number, as that record's ARK")))
+  (testing "an invalid ISNI stays an id, so that it is reported; a value no id form reads is kept apart, as unread"
+    (let [[m] (mentions/mentions (intermarc-record "cb5" (mxc-df "700" "1" "ISNI0000000121200983" "1" "n/a" "a" "Hugo" "m" "Victor")))]
+      (is (= ["ISNI0000000121200983"] (:ids m)))
+      (is (= ["n/a"] (:unread-ids m)))))
+  (testing "MARC21: $0 and $1, a URI as given, a source code or an organisation code (any case) as the IRI it names"
+    (let [r (first (marc21/ingest (marcxml (df "100" "1" "a" "Hugo, Victor," "0" "(DE-588)118554700" "1" "http://www.wikidata.org/entity/Q535")
+                                           (df "700" "1" "a" "Doré, Gustave," "0" "(DLC)n  79021164" "0" "(OCoLC)fst00034567")
+                                           (df "700" "1" "a" "Smith, J." "0" "http://id.loc.gov/authorities/names/n79021165")
+                                           (df "700" "1" "a" "Verne, Jules," "0" "(de-588)118626620" "0" "(isni)0000000121400562"
+                                               "0" "(viaf)51700132" "0" "(orcid)0000-0002-1825-0097" "0" "(uri)http://example.org/verne")
+                                           (df "700" "1" "a" "Férat, Jules," "0" "(DE-588a)15521666X" "0" "(DLC)sh 85082139"))
+                                  {}))
+          ms (mentions/mentions r)]
+      (is (= [["https://d-nb.info/gnd/118554700" "http://www.wikidata.org/entity/Q535"]
+              ["http://id.loc.gov/authorities/names/n79021164"]
+              ["http://id.loc.gov/authorities/names/n79021165"]
+              ["https://d-nb.info/gnd/118626620" "ISNI 0000000121400562" "http://viaf.org/viaf/51700132"
+               "https://orcid.org/0000-0002-1825-0097" "http://example.org/verne"]
+              ["http://id.loc.gov/authorities/subjects/sh85082139"]]
+             (map :ids ms)))
+      (is (= [nil ["(OCoLC)fst00034567"] nil nil ["(DE-588a)15521666X"]] (map :unread-ids ms))
+          "an old GND number names no current record; an LC subject heading is read as LCSH, never as a name")))
+  (testing "UNIMARC: $o, the ISNI; $3 the authority control, a BnF ARK only in a BnF record"
+    (let [bnf (first (unimarc/ingest (mxc "UNIMARC" "cb4"
+                                          (mxc-df "700" "3" "11928016" "o" "ISNI0000000121400562" "a" "Verne" "b" "Jules")
+                                          (mxc-df "801" "a" "FR" "b" "FR-751131015"))
+                                     {}))
+          other (first (unimarc/ingest (str/replace (mxc "UNIMARC" "cb4" (mxc-df "700" "3" "026927608" "o" "ISNI0000000121400562" "a" "Verne" "b" "Jules"))
+                                                    #"<mxc:controlfield tag=\"001\">[^<]*</mxc:controlfield>"
+                                                    "<mxc:controlfield tag=\"001\">026927608X</mxc:controlfield>")
+                                       {}))]
+      (is (= [["ISNI0000000121400562"] "http://catalogue.bnf.fr/ark:/12148/cb11928016k"]
+             ((juxt :ids :authority-record) (first (mentions/mentions bnf)))))
+      (is (= [["ISNI0000000121400562"] nil] ((juxt :ids :authority-record) (first (mentions/mentions other))))
+          "a record number of a file the record does not name is no ARK")))
+  (testing "UNIMARC: the BnF's Verne and Hugo records, read whole"
+    (doseq [f ["test/fixtures/documentary/unimarc/sru/bnf-sru-verne-unimarc.xml" "test/fixtures/documentary/unimarc/sru/bnf-sru-hugo-unimarc.xml"]]
+      (let [ms   (mentions/batch (unimarc/ingest (slurp f) {}))
+            sfs  (comp :subfields :source)
+            with (fn [c] (filter (fn [m] (some #(= c (first %)) (sfs m))) ms))]
+        (is (seq (with "o")) f)
+        (is (every? #(seq (:ids %)) (with "o")) "every $o is an id")
+        (is (every? #(str/starts-with? (:authority-record %) "http://catalogue.bnf.fr/ark:/12148/cb") (with "3")) "every $3 a BnF ARK")
+        (is (not-any? #(some (fn [i] (str/includes? i "catalogue.bnf.fr")) (:ids %)) ms) "no $3 among the ids"))))
+  (testing "EAC-CPF: its entityId and its otherRecordIds, when each is an id"
+    (let [r (first (:records (eac/importer {} (str "<eac xmlns=\"https://archivists.org/ns/eac/v2\"><control><recordId>r1</recordId>"
+                                                   "<otherRecordId>ISNI 0000 0001 2120 0982</otherRecordId><otherRecordId>local-42</otherRecordId>"
+                                                   "<maintenanceAgency><agencyCode>X</agencyCode></maintenanceAgency></control>"
+                                                   "<cpfDescription><identity><entityId>http://viaf.org/viaf/9847974</entityId><entityType value=\"person\"/>"
+                                                   "<nameEntry status=\"authorized\"><part>Victor Hugo</part></nameEntry></identity></cpfDescription></eac>"))))]
+      (is (= [["http://viaf.org/viaf/9847974" "ISNI 0000 0001 2120 0982"]] (map :ids (mentions/mentions r))))
+      (is (= [["local-42"]] (map :unread-ids (mentions/mentions r))))
+      (is (= ["ISNI 0000 0001 2120 0982" "local-42"]
+             (keep #(when (= :eac/other-record-id (:predicate %)) (:value %)) (:assertions r)))
+          "the importer keeps every otherRecordId as a native"))))

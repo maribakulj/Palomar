@@ -21,6 +21,9 @@
                 | :label | :participant
       :dates    profile             ; `agent-dates/parse-life-dates` of the text given
       :events   [typed event ..]    ; `palomar.agent-events`, typed for this occurrence
+      :ids      [\"…\" ..]           ; the ids the occurrence states (lot N5, `field-ids`)
+      :unread-ids [\"…\" ..]         ; the values of id subfields no id form reads
+      :authority-record \"…\"        ; the authority the cataloguer linked (`$3`), apart
       :source   {:format :field :occurrence :evidence ..}}
 
    a key absent when the source does not say. `:dates` is the parsed
@@ -102,6 +105,7 @@
    later fields of its tag, as an edited source would."
   (:require [clojure.string :as str]
             [palomar.agent-dates :as dates]
+            [palomar.agent-equivalence :as eq]
             [palomar.agent-events :as ae]
             [palomar.model :as model]
             [palomar.plugins.eac :as eac]
@@ -177,8 +181,10 @@
    `:family-ind`), `:responsibility`, `:type`, the name subfields (`:name`,
    the first of each, joined by \", \"), the life-dates subfield (`:dates`),
    the role subfields (`:role`, the first code present gives `:role` and
-   `:roles`), the relator subfield (`:relator`, `:relators`), and the name
-   parts kept apart (`:parts`).
+   `:roles`), the relator subfield (`:relator`, `:relators`), the name
+   parts kept apart (`:parts`), the id subfields (`:ids`, lot N5, read by
+   `field-ids`) and the authority-control subfield (`:control`, the record
+   number of the authority the cataloguer linked: `authority-record`).
 
    INTERMARC follows the BnF's INTERMARC (B) sheets (version 10.0, March
    2014, zones 700, 701, 702, 710, 711, 712, 720, 721, 722, 730) and its
@@ -192,15 +198,15 @@
    from the data alone (the corpus's 723s are record labels: Toccata
    classics, Webmusic, Decca), no sheet being at hand; 713 is not read."
   (let [im-person (fn [resp & kv] (apply spec :person-or-family resp :family-ind :ind2 :name ["a" "m"] :dates "d"
-                                         :role ["4"] :relator "4" kv))
-        im-group  (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["4"] :relator "4" kv))
+                                         :role ["4"] :relator "4" :ids ["1"] :control "3" kv))
+        im-group  (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["4"] :relator "4" :ids ["1"] :control "3" kv))
         m21-pers  (fn [resp & kv] (apply spec :person-or-family resp :family-ind :ind1 :name ["a"] :dates "d"
-                                         :role ["e" "4"] :relator "4" :parts ["b" "c" "q"] kv))
-        m21-group (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["e" "4"] :relator "4" :parts ["b"] kv))
-        m21-meet  (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["j" "4"] :relator "4" :parts ["e"] kv))
-        um-person (fn [resp & kv] (apply spec :person resp :name ["a" "b"] :dates "f" :role ["4"] :relator "4" kv))
-        um-group  (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["4"] :relator "4" kv))
-        um-family (fn [resp & kv] (apply spec :family resp :name ["a"] :dates "f" :role ["4"] :relator "4" kv))]
+                                         :role ["e" "4"] :relator "4" :parts ["b" "c" "q"] :ids ["0" "1"] kv))
+        m21-group (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["e" "4"] :relator "4" :parts ["b"] :ids ["0" "1"] kv))
+        m21-meet  (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["j" "4"] :relator "4" :parts ["e"] :ids ["0" "1"] kv))
+        um-person (fn [resp & kv] (apply spec :person resp :name ["a" "b"] :dates "f" :role ["4"] :relator "4" :ids ["o"] :control "3" kv))
+        um-group  (fn [resp & kv] (apply spec :group resp :name ["a"] :role ["4"] :relator "4" :ids ["o"] :control "3" kv))
+        um-family (fn [resp & kv] (apply spec :family resp :name ["a"] :dates "f" :role ["4"] :relator "4" :ids ["o"] :control "3" kv))]
     {:intermarc {"100" (im-person :creator) "101" (im-person :performer)
                  "700" (im-person :contributor) "701" (im-person :performer) "702" (im-person :collaborator)
                  "703" (im-person nil :type :provenance)
@@ -266,6 +272,65 @@
   (let [parts (keep #(first-of sfs %) codes)]
     (when (seq parts) (str/join ", " parts))))
 
+(def ^:private marc-sources
+  "How a MARC21 `$0` `(code)value` is read, by its code, any case: a source
+   code (`isni`, `viaf`, `orcid`, `uri`, MARC Source Codes) or an
+   organisation code (the GND's `DE-588`, the Library of Congress's `DLC`:
+   a name heading as LCNAF, a subject heading as LCSH). A code not here
+   (`DE-588a`, an old GND number that names no current record; `OCoLC`) is
+   not read: the value is kept as unread."
+  {"isni"   (fn [v] (str "ISNI " v))
+   "viaf"   (fn [v] (str "http://viaf.org/viaf/" (str/trim v)))
+   "orcid"  (fn [v] (str "https://orcid.org/" (str/trim v)))
+   "uri"    str/trim
+   "de-588" (fn [v] (str "https://d-nb.info/gnd/" (str/trim v)))
+   "dlc"    (fn [v] (let [n (str/replace v #"\s" "")]
+                      (if (str/starts-with? n "sh")
+                        (str "http://id.loc.gov/authorities/subjects/" n)
+                        (str "http://id.loc.gov/authorities/names/" n))))})
+
+(defn field-ids
+  "The ids a MARC-family field's `sfs` state in the subfields `codes`, in
+   source order (lot N5): `{:ids [..] :unread [..]}`. A MARC21 `(code)value`
+   is read by its code (`marc-sources`); any other value as given, when it
+   is an id by itself (an IRI, an ISNI, an `ISNI…` string). An ISNI whose
+   check character is wrong is an id still, so that the identifier lane
+   reports it. A value read as neither is `:unread`."
+  [sfs codes]
+  (let [read (for [c codes
+                   v (all-of sfs c)
+                   :let [org (re-matches #"\(([^)]+)\)\s*(.+)" v)
+                         id  (if org
+                               (when-let [f (marc-sources (str/lower-case (second org)))] (f (nth org 2)))
+                               (when (eq/identifier v) v))]]
+               [v id])]
+    {:ids    (vec (distinct (keep second read)))
+     :unread (vec (distinct (for [[v id] read :when (nil? id)] v)))}))
+
+(defn- bnf-record?
+  "Whether a MARC-family `record` is the BnF's: its `001` an `FRBNF`
+   number, its `003` a BnF ARK, or an `801 $b` the BnF's ISIL."
+  [record]
+  (boolean (some (fn [{{:keys [tag value subfields]} :locator}]
+                   (case tag
+                     "001" (some-> value (str/starts-with? "FRBNF"))
+                     "003" (some-> value (str/starts-with? "http://catalogue.bnf.fr/ark:/12148/"))
+                     "801" (some #(= ["b" "FR-751131015"] %) subfields)
+                     nil))
+                 (:fragments record))))
+
+(defn authority-record
+  "The authority record a field's control subfield links (lot N5 review):
+   INTERMARC `$3`, and UNIMARC `$3` in a BnF record (`bnf-record?`), the
+   BnF record number, as that record's ARK (`agent-equivalence/bnf-ark`).
+   It is the link the cataloguer already made, not an id to reconcile:
+   never an `:ids`, never read by a lane. Nil when the field has none, or
+   when the record does not say whose number it is."
+  [record fmt sfs code]
+  (when-let [v (and code (first-of sfs code))]
+    (when (or (= :intermarc fmt) (bnf-record? record))
+      (eq/bnf-ark v))))
+
 (defn- marc-mention
   [record fmt {{:keys [tag occurrence subfields] :as loc} :locator fid :id} sp]
   (let [rid   (:id record)
@@ -280,6 +345,8 @@
         rel   (first rels)
         dts   (some->> (:dates sp) (first-of subfields) dates/parse-life-dates)
         parts (into (sorted-map) (keep (fn [c] (when-let [v (first-of subfields c)] [c v]))) (:parts sp))
+        ids   (field-ids subfields (:ids sp))
+        arec  (authority-record record fmt subfields (:control sp))
         typ   (if (and (= :intermarc fmt) (= :agent (:type sp)) (copy-function? rel)) :provenance (:type sp))]
     (when nm
       (cond-> {:id     [rid tag occurrence]
@@ -299,7 +366,10 @@
         rel                  (assoc :relator rel :relators rels)
         (and (:responsibility sp) (= :agent typ)) (assoc :responsibility (:responsibility sp))
         dts                  (assoc :dates dts)
-        (seq parts)          (assoc :name-parts parts)))))
+        (seq parts)          (assoc :name-parts parts)
+        (seq (:ids ids))     (assoc :ids (:ids ids))
+        (seq (:unread ids))  (assoc :unread-ids (:unread ids))
+        arec                 (assoc :authority-record arec)))))
 
 (defn authority-record?
   "Whether a MARC-family `record` is an authority record: its kind's name
@@ -421,6 +491,10 @@
         nm   (of :eac/authorized-name)
         kind (some-> (of :eac/entity-type) :value str/trim eac-kinds)
         eid  (some-> (of :eac/entity-id) :value not-blank)
+        vals (distinct (keep identity (cons eid (keep #(when (= :eac/other-record-id (:predicate %)) (some-> (:value %) not-blank))
+                                                      live))))
+        ids  (vec (filter eq/identifier vals))
+        unread (vec (remove eq/identifier vals))
         dts  (some-> (of :eac/exist-dates) :value dates/parse-life-dates)]
     (if-let [n (some-> nm :value not-blank)]
       [(cond-> {:id     [rid "identity" 0]
@@ -432,7 +506,8 @@
                 :source {:format :eac-cpf :field "identity" :occurrence 0 :evidence (vec (model/evidence-of nm))}}
          kind (assoc :kind kind)
          dts  (assoc :dates dts)
-         (and eid (re-find #"^[a-z][a-z0-9+.-]*:" eid)) (assoc :ids [eid]))]
+         (seq ids)    (assoc :ids ids)
+         (seq unread) (assoc :unread-ids unread))]
       [])))
 
 (def ^:private dc-roles

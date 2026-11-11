@@ -83,8 +83,10 @@ as contrary evidence).
    the INTERMARC importer: `:id` the `003` ARK, `:record-number` the `001`
    without `FRBNF` and its check character (the form a bibliographic `$3`
    cites), label the `100 $a, $m`, variants the `400`s, `:dates` the `100 $d`,
-   `:isni` the `031 $a` whose `$2` says ISNI (a cancelled `$z` is not read,
-   a VIAF number is no ISNI). The tags not read are listed under `:unread`
+   `:isni` every `031 $a` that passes the ISNI check (a cancelled `$z` is
+   not read). Corrected by lot N5's review (ADR 0060): this read the `$a`
+   only when its `$2` said ISNI, and took a `$2` "VIAF" for a VIAF number.
+   `$2` is where the ISNI came from; it is kept as `:isni-sources`. The tags not read are listed under `:unread`
    (among them the `008`, which also holds dates for some records).
 
 The person-reconciliation eval reads its pool with this reader; a test checks

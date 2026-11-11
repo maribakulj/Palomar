@@ -27,9 +27,13 @@ entity's.
 
 The records often say who they are the same as. What Palomar already reads:
 
-- an INTERMARC authority (BnF) gives its ISNIs in `031 $a` when `$2` says
-  ISNI. The pool now keeps every one, as a vector (`:isni`); a cancelled
-  ISNI (`$z`) is not read;
+- an INTERMARC authority (BnF) gives its ISNIs in `031 $a`. The pool now
+  keeps every one, as a vector (`:isni`); a cancelled ISNI (`$z`) is not
+  read. (Amended by lot N5's review: `$2` says where the ISNI came from,
+  "ISNI" or "VIAF" or "ISNI chargé à partir de VIAF", not its scheme. Every
+  `$a` that passes the ISNI check is an ISNI, and `$2` is kept as its
+  source, `:isni-sources`. Until then a `$a` was read only when its `$2`
+  began "ISNI".);
 - a lobid GND record gives `sameAs` links to VIAF, ISNI, Wikidata, the
   Library of Congress and the BnF (`plugins/gnd`, `:same-as`). It was read
   as data, never as a match feature;
@@ -211,10 +215,12 @@ the batch, so it is revised when a record changes.
 ## Consequences
 
 - On the M6 fixtures (33 BnF authorities, 197 GND records), the records
-  state 14 BnF–GND pairs: exactly the eval's ARK and ISNI bridges (3 pairs
-  have both). The 5 more the eval bridges come from Wikidata's pairs,
-  outside the records. 12 pairs are kept, one GND record each. No two
-  records of one file are made one.
+  state 19 BnF–GND pairs: exactly the eval's ARK and ISNI bridges (7 pairs
+  have both). The one more authority the eval bridges comes from
+  Wikidata's pairs alone, outside the records. 17 pairs are kept, one GND
+  record each. No two records of one file are made one. (Before the 031
+  correction of lot N5's review: 14 pairs, 3 with both, 12 kept. The 5
+  pairs it adds are all kept; they bring no new refusal and no warning.)
 - **Hetzel and his pseudonym Stahl are refused.** The ISNIs are crossed
   between the two files: the BnF's Hetzel shares an ISNI with the GND's
   "Stahl, P.-J." record, and the BnF's Stahl with the GND's "Hetzel,
