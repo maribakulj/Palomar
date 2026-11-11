@@ -22,6 +22,8 @@ mentions against a GND snapshot (lot M6) in
 contrary evidence (lot M7) in [Typed events (M7)](#typed-events-m7), and a
 mention's relational neighbourhood as evidence (lot M8) in
 [Collective reconciliation (M8)](#collective-reconciliation-m8). The
+recall of candidate generation, per lane (lot N5), is in
+[Candidate generation by lanes (N5)](#candidate-generation-by-lanes-n5). The
 numbers are measurements, not a guarantee: no row in `guarantees.md` cites
 them (the behaviour of the date block, of abstention and of the confidence
 rule, of the clustering's constraints and revisions, and of the events'
@@ -567,29 +569,39 @@ from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
   scan's 142 × 197 = 27 974 (17 %); the proposals, rejections and
   abstentions are the full scan's, mention by mention (tested).
 - **The truth**, by **bridges** the matcher never sees: the GND record's
-  `sameAs` to the BnF ARK (7 authorities), an ISNI both records state (10),
-  and Wikidata's BnF and GND ids (17; `bnf-gnd-wikidata.csv`). 19 of the 33
+  `sameAs` to the BnF ARK (7 authorities), an ISNI both records state (19),
+  and Wikidata's BnF and GND ids (17; `bnf-gnd-wikidata.csv`). 20 of the 33
   BnF authorities are bridged to a GND record of the extract; where two
   bridges speak they agree, but for one pair. **Hetzel and his pseudonym
   Stahl are contested**: the BnF's Hetzel has the ISNI of the GND's "Stahl,
   P.-J." record, the BnF's Stahl the ISNI the GND's "Hetzel, Pierre-Jules"
   carries, and Wikidata pairs Hetzel with Hetzel. Their 2 mentions are scored
-  for nothing. The 14 others have no bridge, nor do the 4 authorities
+  for nothing. The 13 others have no bridge, nor do the 4 authorities
   outside the M2 pool: what the matcher does for them
   is reported, not judged.
+- **Correction (N5 review).** Until lot N5 the ISNI bridge counted 10
+  authorities and the truth 19. The BnF reader kept a `031 $a` as an ISNI
+  only when its `$2` said "ISNI". But `$2` says where the ISNI came from
+  ("VIAF", "ISNI chargé à partir de VIAF"…), not its scheme: all 32 `$a`
+  values of the pool pass the ISNI check. The reader now keeps every one
+  that passes, and keeps its `$2` as its source. 9 more authorities are
+  bridged by ISNI, 8 of which an ARK or Wikidata already bridged. The one new truth
+  is Wlassikoff (1 mention), whose ISNI the BnF labels `$2 VIAF`. It moves
+  from "no bridge, proposed outright" to "bridged, right, proposed
+  outright". Every other number of this section is unchanged.
 
 ### What the matcher does
 
 | outcome of the mention (its top candidate) | bridged, right | contested | no bridge | undetermined | all |
 |---|---:|---:|---:|---:|---:|
-| proposed outright | 101 | 0 | 11 | 0 | 112 |
+| proposed outright | 102 | 0 | 10 | 0 | 112 |
 | for review        | 8   | 2 | 1  | 1 | 12  |
 | abstained         | 0   | 0 | 11 | 0 | 11  |
 | no candidate left | 0   | 0 | 7  | 0 | 7   |
-| **all**           | 109 | 2 | 30 | 1 | 142 |
+| **all**           | 110 | 2 | 29 | 1 | 142 |
 
-- **Every uncontested bridged mention's top proposal is its GND record**: 109 of 109,
-  101 proposed outright; no wrong link, no bridged truth rejected for its
+- **Every uncontested bridged mention's top proposal is its GND record**: 110 of 110,
+  102 proposed outright; no wrong link, no bridged truth rejected for its
   dates or abstained. The 8 for review have a GND namesake above 0.5: Victor
   Hugo and two undated "Hugo, Victor" records (0.983 each), François-Victor
   and Charles-Victor Hugo (0.656), 6 "Verne, Jean Jules" (the GND's "Jules-Verne,
@@ -597,11 +609,11 @@ from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
 - **Contested**: Hetzel's mention has GND Hetzel first (1.000) and GND
   Stahl second (0.653), Stahl's mention the reverse; all four for review
   (competing).
-- **No bridge** (30 mentions of 18 authorities: the 14 unbridged, and the 4
-  the BnF SRU does not serve): 11 are proposed outright to a
+- **No bridge** (29 mentions of 17 authorities: the 13 unbridged, and the 4
+  the BnF SRU does not serve): 10 are proposed outright to a
   GND record of the same name (heading or tokens) and compatible or no dates (Robert-Dumas,
   Charles ×5; Paltsits, Victor Hugo ×2, whose BnF authority the SRU did not
-  serve in M2; Wlassikoff; Martínez González; Dumas de Rauly; D'Paola, to
+  serve in M2; Martínez González; Dumas de Rauly; D'Paola, to
   "Paola, Víctor Hugo d'"), plausible but not measurable here; Escala is for
   review (an undated GND "Escala, Victor Hugo", 0.998, against a "Zwinz,
   Victor Hugo" whose dates agree, 0.656); 11 abstained, the extract holding
@@ -617,12 +629,12 @@ from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
 
   | outcome | bridged, right | contested | no bridge | undetermined | all |
   |---|---:|---:|---:|---:|---:|
-  | proposed outright | 80 | 0 | 11 | 0 | 91 |
+  | proposed outright | 81 | 0 | 10 | 0 | 91 |
   | for review        | 29 | 2 | 4  | 1 | 36 |
   | abstained         | 0  | 0 | 8  | 0 | 8  |
   | no candidate left | 0  | 0 | 7  | 0 | 7  |
 
-  Still no wrong top proposal among the 109, but 21 more of them go to
+  Still no wrong top proposal among the 110, but 21 more of them go to
   review: the 20 "Férat, Jules" (Férat, Jules-Descartes, and Jules Verne
   above 0.5 against them, the "others" fold having learnt from the four
   author families only) and Rascón Banda. Three unbridged "Víctor Hugo"
@@ -642,7 +654,7 @@ from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
   BnF. Its abstentions are where the GND has no such person.
 - It is the easy case still: controlled headings against controlled
   headings, a pool drawn around the gold's names, and a truth only for the
-  19 authorities a bridge reaches (111 mentions of 141, 2 of them contested). The 11 outright
+  20 authorities a bridge reaches (112 mentions of 141, 2 of them contested). The 10 outright
   proposals without a bridge are unscored; a wrong one among them would not
   be seen.
 - The bridges are not independent of each other nor always right: the
@@ -650,13 +662,16 @@ from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
   national files.
 - **As stated equivalences (lot N6, ADR 0059).** Read as what the records
   say of their entity rather than as a truth, the ARK and ISNI bridges are
-  14 BnF–GND pairs, exactly the bridges above (3 pairs have both). The
-  Wikidata pairs are no statement of the records and are not read. 12
+  19 BnF–GND pairs, exactly the bridges above (7 pairs have both). The
+  Wikidata pairs are no statement of the records and are not read. 17
   pairs are kept, one GND record each, and no two records of one file are
   joined. The 2 Hetzel/Stahl pairs are refused. The ISNIs are crossed
   between the files, and both files state which record is the pseudonym of
   which: lifted to the two pairs, each pair is the other's pseudonym. The
-  numbers above do not use these equivalences, and do not move.
+  numbers above do not use these equivalences, and do not move. (Until
+  the N5 correction above: 14 pairs, 3 with both, 12 kept. Reading the
+  VIAF-labelled ISNIs adds 5 pairs, all kept, one GND record each, and no
+  new refusal or warning.)
   `palomar.agent-equivalence-test/the-gnd-and-bnf-extracts-state-which-of-their-records-are-one-person`.
 
 ## Typed events (M7)
@@ -904,6 +919,102 @@ closure's 437.
   editors in each fold, where `:other-role` would be measured for every
   family.
 - No spoke and no CLI command passes anchors yet.
+
+## Candidate generation by lanes (N5)
+
+Lot N5 separates finding candidates from ranking them (ADR 0060).
+`palomar.candidates` finds them by **lanes**; the matcher ranks their union.
+Two lanes exist. The **name lane** is the authority index's block of M6:
+the entries sharing a blocking key with the mention's name. The
+**identifier lane** is the entries whose stated ids (IRI, ISNI, `sameAs`)
+match an id the mention carries. This section measures the **recall of
+generation**: is the truth among the candidates, before any ranking?
+`palomar.eval.candidate-lanes-test`.
+
+### The name lane alone moves nothing
+
+With the name lane alone, generation then ranking gives every result of
+M2 (name-only), M3 (dates), M4 (each fold's model) and M6 (the GND index),
+mention by mention, item by item. On M6 the lane gives the block's 4 764
+(mention, entry) pairs. No number of this document moves because of the
+lanes. The M6 numbers moved for another reason, the 031 correction (see
+M6, "Correction").
+
+### Method
+
+- **Judged**: the mentions whose truth is in the pool. A mention is found
+  by a lane when its truth is among that lane's candidates.
+- **Cost**: the candidates over all the mentions of the set. A full scan of
+  the BnF pool is 142 × 33 = 4 686; of the GND pool, 27 974.
+- **What a mention passes**: its name, its dates, its `:ids` and its
+  `:unread-ids`. On these records the ids are the field's `$1`, an ISNI the
+  cataloguer wrote. **`$3` is not an id here.** It is the authority the
+  cataloguer already linked, and it is the gold: the mention keeps it
+  apart, as `:authority-record`, and no lane reads it. A test checks that
+  no `$3`, no ARK made from one, no truth and no field subfields reach a
+  lane or the matcher, in any eval of this document (M2 to M8, N5). The
+  truth is passed apart from the mentions.
+- **The ISNI is not independent of the truth.** The cataloguer who wrote
+  `$1` also linked `$3`. It is matched against the ISNIs the authority's
+  `031` states.
+- **M6**: the truth is the bridged GND records (110 uncontested mentions).
+  An ISNI reaches a GND record through its `sameAs`.
+- **Stress (synthetic)**: M4's perturbed names, each with its gold
+  mention's ids.
+- **Script (synthetic)**: each distinct gold heading in the pool (33),
+  written letter by letter in Cyrillic, with its gold mention's ids. A
+  probe of a name in another script, not a sample of real cataloguing.
+- **M7, LIDO**: the 8 YCBA person actors against their ULAN ids. The pool
+  is built from those ids, so the identifier lane's recall is circular
+  there.
+
+### Recall per lane
+
+| benchmark | judged | name lane: found / candidates | identifier lane: found / candidates | union: found / candidates | truths only the identifier lane finds |
+|---|---:|---:|---:|---:|---:|
+| M2 BnF | 136 | 136 / 935 | 135 / 135 | 136 / 935 | 0 |
+| M6 GND | 110 | 110 / 4 764 | 90 / 92 | 110 / 4 764 | 0 |
+| Stress (synthetic) | 143 | 143 / 792 | 138 / 138 | 143 / 792 | 0 |
+| Script (synthetic) | 33 | 2 / 14 | 32 / 32 | 32 / 44 | 30 |
+| M7 LIDO (identifier lane circular) | 8 | 8 / 12 | 8 / 8 | 8 / 12 | 0 |
+
+- **The name lane already finds every truth on the real benchmarks.** It
+  costs 6.6 candidates per mention on the BnF pool and 33.5 on the GND
+  pool. On the stress set its cost by kind is 134 (initials), 100 (dropped
+  forename), 233 (reversed), 95 (accents removed) and 230 (typo), for 33,
+  33, 33, 11 and 33 variants.
+- **The identifier lane costs about one candidate per mention that has an
+  id.** On M2 every ISNI a field states names its authority: 135 of the
+  136, one candidate each, no report. The one it misses has no `$1`. On M6
+  no id names two GND records; 43 name none of the extract.
+- **On M6 it finds 2 candidates that are no bridged truth**: Hetzel's and
+  Stahl's ISNIs name each other's GND record, the crossed ISNIs of ADR
+  0059. A short-circuit on the id would link them crosswise.
+- **The identifier lane brings truths the name lane misses only where the
+  name cannot match.** In Cyrillic letters the name lane finds 2 of the 33:
+  Hugo and Verne, whose BnF records hold a Cyrillic variant (Виктор,
+  Верне). The ISNI finds 32, these 2 among them. So the identifier lane
+  alone finds 30. The 33rd has no ISNI and no name key: no lane finds it.
+- **Ranked, every truth an id brings is abstained.** The model has no
+  identifier feature (ADR 0060 §5). Fed the union, the M4 model fitted on
+  all five families weighs those candidates on names (`:none`, −4.46) and
+  dates (agreeing, +3.67). All 32 truths found are abstained, none
+  proposed, none for review. Verne's is among them: a name key finds it,
+  at name level `:none`, and its ISNI finds it too. Every candidate a lane
+  other than the name lane finds is weighed, so the name key no longer
+  hides it from ranking.
+
+### What it shows, and what it does not
+
+- Generation is not where these benchmarks lose: every truth in the pool
+  is a name-lane candidate. What they measure is ranking.
+- The identifier lane's value cannot be measured here. Its ids come from
+  the same cataloguer as the gold. A benchmark where the ids and the truth
+  are independent, with names the block misses, is lot N3's.
+  `candidates/recall` and `candidates/candidate-sets` are what it can
+  call.
+- An id that brings a candidate gives it no weight. Whether it should is a
+  question for a model measured on such a benchmark, not set by hand.
 
 ## Limits
 

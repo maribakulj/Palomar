@@ -126,8 +126,8 @@
   (let [t (truth (:entries @idx))]
     (is (= 197 (count (:entries @idx))))
     (testing "the BnF authorities a bridge sends to the GND, and those it sends nowhere"
-      (is (= 19 (count (filter (comp seq :gnd) (vals t)))))
-      (is (= 14 (count (remove (comp seq :gnd) (vals t))))))
+      (is (= 20 (count (filter (comp seq :gnd) (vals t)))))
+      (is (= 13 (count (remove (comp seq :gnd) (vals t))))))
     (testing "Hetzel and his pseudonym Stahl are contested: the ISNIs and Wikidata pair them crosswise"
       (is (= #{"12008284" "16492882"} (set (keep (fn [[k v]] (when (:contested? v) k)) t))))
       (is (= {:ark #{} :isni #{"https://d-nb.info/gnd/111910582X"} :wikidata #{"https://d-nb.info/gnd/118949047"}}
@@ -153,11 +153,11 @@
     (is (= 142 (:mentions s)))
     (testing "what the matcher did: the mention's top candidate proposed, for review, abstained, or none at all"
       (is (= {:abstain 11 :nothing 7 :propose 112 :review 12} (:did s))))
-    (testing "against the bridged truth: every bridged mention's top proposal is its GND record"
-      (is (= {:contested 2 :right 109 :unbridged 30 :undetermined 1} (:verdicts s)))
+    (testing "against the bridged truth: every bridged mention's top proposal is its GND record (110 since the 031 ISNIs whose $2 says VIAF are read: Wlassikoff, N5 review)"
+      (is (= {:contested 2 :right 110 :unbridged 29 :undetermined 1} (:verdicts s)))
       (is (= {[:contested :review] 2
-              [:right :propose] 101 [:right :review] 8
-              [:unbridged :abstain] 11 [:unbridged :nothing] 7 [:unbridged :propose] 11 [:unbridged :review] 1
+              [:right :propose] 102 [:right :review] 8
+              [:unbridged :abstain] 11 [:unbridged :nothing] 7 [:unbridged :propose] 10 [:unbridged :review] 1
               [:undetermined :review] 1}
              (:by s))))
     (testing "no bridged mention's GND record is rejected for its dates or abstained"
@@ -174,10 +174,10 @@
     (let [rs @lofo-runs
           s  (summary rs (truth (:entries @idx)))]
       (is (= {:abstain 8 :nothing 7 :propose 91 :review 36} (:did s)))
-      (is (= {:contested 2 :right 109 :unbridged 30 :undetermined 1} (:verdicts s)))
+      (is (= {:contested 2 :right 110 :unbridged 29 :undetermined 1} (:verdicts s)))
       (is (= {[:contested :review] 2
-              [:right :propose] 80 [:right :review] 29
-              [:unbridged :abstain] 8 [:unbridged :nothing] 7 [:unbridged :propose] 11 [:unbridged :review] 4
+              [:right :propose] 81 [:right :review] 29
+              [:unbridged :abstain] 8 [:unbridged :nothing] 7 [:unbridged :propose] 10 [:unbridged :review] 4
               [:undetermined :review] 1}
              (:by s)))
       (is (= 173 (reduce + (map (comp count :proposals :result) rs))))

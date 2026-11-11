@@ -140,6 +140,27 @@
     {:stated  (vec (distinct (for [[_ r] rs :let [k (:key r)] :when (and k (not (own k)))] {:by id :states k})))
      :invalid (vec (distinct (for [[v r] rs :when (:invalid r)] {:kind :invalid-identifier :by id :value v})))}))
 
+(defn authority-keys
+  "Every id authority entry `e` is known by or states, in `identifier-key`
+   form, sorted (lot N5, the identifier lane of `palomar.candidates`): its
+   own (`:iri`, else `:id`; a BnF ARK also as `bnf-record:N`), its valid
+   ISNIs (`:isni`) and its `:same-as` ids. An invalid ISNI is no id."
+  [e]
+  (let [it {:iri (or (:iri e) (:id e)) :isni (:isni e) :same-as (:same-as e)}]
+    (vec (sort (distinct (concat (own-keys it) (map :states (:stated (statements nil it)))))))))
+
+(def ^:private noid-digits "0123456789bcdfghjkmnpqrstvwxz")
+
+(defn bnf-ark
+  "The catalogue ARK of BnF record number `n` (8 digits, as an INTERMARC
+   `$3` gives it): `http://catalogue.bnf.fr/ark:/12148/cb` + `n` + its NOID
+   check character, computed over `cb` + `n`. Nil for anything else."
+  [n]
+  (when-let [n (some->> n str str/trim (re-matches #"\d{8}"))]
+    (let [s (str "cb" n)
+          t (reduce + (map-indexed (fn [i c] (* (inc i) (max 0 (str/index-of noid-digits c)))) s))]
+      (str "http://catalogue.bnf.fr/ark:/12148/" s (nth noid-digits (mod t 29))))))
+
 ;; ---------------------------------------------------------------------------
 ;; The graph
 ;; ---------------------------------------------------------------------------

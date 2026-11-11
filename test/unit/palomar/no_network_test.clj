@@ -89,7 +89,13 @@
 (def ^:private path-sources
   "The source files of the index, the GND reader and the matcher."
   ["src/palomar/authority_index.clj" "src/palomar/plugins/gnd.clj" "src/palomar/plugins/authorities.clj"
-   "src/palomar/reconcile.clj" "src/palomar/agent_match.clj" "src/palomar/agent_dates.clj"])
+   "src/palomar/reconcile.clj" "src/palomar/agent_match.clj" "src/palomar/agent_dates.clj" "src/palomar/candidates.clj"
+   "src/palomar/agent_equivalence.clj"])
+
+(def ^:private import-form
+  "A java.net class named in an import form, apart from its package:
+   `(:import (java.net URL))`, `[java.net URI URL]`."
+  #"java\.net[\s\]\)\[(]+(?:[A-Za-z]+\s+)*(?:URL|URI|Socket|HttpURLConnection)\b")
 
 (deftest no-network-client-on-the-path-by-design
   (doseq [f path-sources
@@ -97,4 +103,13 @@
     (testing f
       (doseq [needle ["java.net.http" "HttpURLConnection" "HttpClient" "openConnection" "openStream"
                       "java.net.Socket" "java.net.URL" "as-url" "URI."]]
-        (is (not (str/includes? s needle)) (str f " names " needle))))))
+        (is (not (str/includes? s needle)) (str f " names " needle)))
+      ;; an import form names the class apart from its package: (:import (java.net URL))
+      (is (nil? (re-find import-form s))
+          (str f " imports a java.net class")))))
+
+(deftest the-import-needle-sees-an-import-form
+  (is (re-find import-form "(:import (java.net URL))"))
+  (is (re-find import-form "(:import [java.net URI URL])"))
+  (is (re-find import-form "(:import (java.net InetAddress Socket))"))
+  (is (nil? (re-find import-form "java.net.http is named in a docstring, not imported"))))
