@@ -212,7 +212,9 @@
           (let [a (read-edn (slurp ma)) b (read-edn (slurp mb))]
             (is (= rel (get-in a [:reconcile :model :path])) "the path is kept, for information")
             (is (empty? (manifest/diff a b)))
-            (is (= (dissoc (:version shipped) :path) (dissoc (get-in a [:reconcile :model]) :path)))
+            (is (= (dissoc (:version shipped) :path :source) (dissoc (get-in a [:reconcile :model]) :path :source)))
+            (is (= [:classpath :file] [(get-in (read-edn (slurp mp)) [:reconcile :model :source]) (get-in a [:reconcile :model :source])])
+                "the manifest says where the model was read, for information")
             (is (empty? (manifest/diff (read-edn (slurp mp)) a)) "and the same as the shipped model's"))
           (finally (.delete f)))))
     (testing "explain and clusters write a manifest too"

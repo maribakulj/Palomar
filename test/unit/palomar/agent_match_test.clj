@@ -256,6 +256,15 @@
              :u {:name {:exact 0.1 :none 0.9} :form {:heading 1.0} :dates {:unknown 1.0}}
              :prior 0.5}))
 
+(deftest the-review-band-of-a-calibration-is-a-parameter
+  (let [preds (for [[i p] (map-indexed vector [0.05 0.2 0.3 0.6 0.7 0.96])] {:p p :y 0 :pair [i] :mention [i]})]
+    (testing "by default, the band of default-thresholds, [0.5, 0.95)"
+      (is (= 2 (:review-pairs (fs/calibration preds))))
+      (is (= [0.5 0.95] (:band (fs/calibration preds)))))
+    (testing "given, the model's own band"
+      (is (= 4 (:review-pairs (fs/calibration preds {:band [0.1 0.95]}))))
+      (is (= [0.1 0.95] (:band (fs/calibration preds {:band [0.1 0.95]})))))))
+
 (deftest a-probability-is-a-confidence-only-when-calibration-measured-it
   (let [fp-a (fs/pool-fingerprint pool-a)
         good (fs/calibration (well-calibrated) {:pool fp-a :gold "g" :model (fs/model-fingerprint tiny)})]

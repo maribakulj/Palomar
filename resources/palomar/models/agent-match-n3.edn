@@ -1,0 +1,63 @@
+;; The parameters of the Fellegi-Sunter model recalibrated on the hard
+;; benchmark (lot N4, docs/eval/person-reconciliation-hard.md, section N4).
+;; `palomar.agent-match/model` computes the weights from them.
+;;
+;; m, u and the prior are fitted on the N3 train split only: 697 transcribed
+;; mentions of the nine BnF design corpora, against the 292 person
+;; authorities of the benchmark, each name put in heading order. The
+;; thresholds were chosen on a 5-fold cross-validation of train, by person;
+;; dev only confirmed them. The test split fed neither.
+;;
+;; IN-SAMPLE on its train split: `palomar.reconciliation/refuse-in-sample!`
+;; refuses it on the persons and no-match names it was fitted on
+;; (`:train-keys`), and on its design corpora, the benchmark and the split
+;; file (`:data`, by their SHA-256).
+;;
+;; Derived from BnF data: Licence Ouverte / Etalab 2.0, "Source :
+;; Bibliothèque nationale de France" (see NOTICE).
+;;
+;; Not calibrated: its held-out calibration does not meet the bar, so it
+;; carries no `:calibration` report and no posterior it gives is written as
+;; a confidence. Written by palomar.eval.person-reconciliation-hard-n4/write-model!.
+{:prior 0.00296770896798412
+ :thresholds {:propose 0.8, :review 0.5}
+ :bar {:max-ece 0.05, :max-bin-gap 0.1, :min-pairs 300, :min-positives 100, :min-review-pairs 30, :bins 10}
+ :m-counts {:name {:n 604.0, :counts {:exact 555.0, :forenames-differ 10.0, :initials 14.0, :forename-overlap 12.0, :surname-only 9.0, :surname-typo 3.0, :same-tokens 1.0}}, :form {:n 604.0, :counts {:heading 509.0, :variant 95.0}}, :dates {:n 604.0, :counts {:unknown 604.0}}}
+ :u-counts {:name {:n 202920.0, :counts {:jaccard-low 3803.0, :jaccard-high 557.0, :exact 15.0, :none 197699.0, :forenames-differ 663.0, :surname-only 35.0, :forename-overlap 145.0, :initials 3.0}}, :form {:n 202920.0, :counts {:heading 202042.0, :variant 878.0}}, :dates {:n 202920.0, :counts {:unknown 202920.0}}}
+ :estimation {:m :supervised, :u :mention-pairs, :fitted-on :n3-train, :name-input :inverted, :thresholds-chosen-on :n3-train-cv5}
+ :provenance {:data [{:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-andre-maurois-100.xml", :sha256 "6d8e7aedce7a574048566b5d29081b2c728e7c9ea49bd3988e0532b9c202347b"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-bronte-100.xml", :sha256 "a0f3da81e4c48148fc334d434f80318c056716f42472cd729bbfdc9e21736b00"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-colette-100.xml", :sha256 "670734f0bb0021ac7c61bb272f031d11d0adf2b6bb448f1008c7547c5acf3c26"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-daudet-100.xml", :sha256 "000cf408643c2a191c4eacd261e3ae6ede96a1bbb55d5f44a93ad1423e1eb33a"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-goncourt-100.xml", :sha256 "e87a6befe1e92d1e949ca87278321444796a5e5af712e797df2e4b5ee1a2fccf"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-lewis-carroll-100.xml", :sha256 "29f258696ce285c2fba45111f24364a511692375f0cadb7602e5a043dc369a7d"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-pierre-loti-100.xml", :sha256 "73eb4fdd76236f7adf2dd3e7cdcba47ebcf617e5c2861214cf6f5e671c638bfd"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-poe-100.xml", :sha256 "30527d907b242665aff93f4265d1e45f8c5df3184213bf0c4d64fdff449c32e0"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/records/bnf-sru-rosny-100.xml", :sha256 "92bf0262a830a5cad89d5f800e1f3bf100e6e5d002bedcb03903ad689d121540"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/benchmark.edn", :sha256 "f03afdf5595add9de14aaf1d92c2e520b0e667756be9bc14c12b6d09804aeac5"}
+                     {:path "test/fixtures/er-gold/bnf-transcribed/splits.edn", :sha256 "e2eb5836d7aaa4d6702d4cb340852644a7f7d11d0ed8cdea0527f1e52cfc78e2"}]
+              :authorities {:path "test/fixtures/er-gold/bnf-transcribed/authorities.xml", :sha256 "e42b5ce7a3410f29a285c80b27f4638755482e3ba7e3c5342439f82cb21d04b7"}
+              :split :n3-train
+              :train-keys ["10504289" "10516499" "11199126" "11205164" "11213465" "11217386" "11226763" "11511983"
+                           "11885918" "11886331" "11891092" "11893937" "11894144" "11894146" "11897556" "11898724"
+                           "11899763" "11904318" "11910310" "11913405" "11914283" "11916562" "11917053" "11918633"
+                           "11920094" "11921219" "11921626" "11922639" "11923601" "11926193" "11927984" "11929807"
+                           "11950335" "11986326" "12015836" "12052350" "12056844" "12083386" "12095207" "12105472"
+                           "12110751" "12111196" "12150008" "12165755" "12208509" "12224946" "12235851" "12311529"
+                           "12364103" "12404952" "12589138" "12617482" "12619951" "12624439" "12641835" "12933692"
+                           "13162820" "13321102" "13561018" "14004451" "14063836" "14098789" "14413683" "14471401"
+                           "15312632" "15591532" "15604588" "15654970" "16567734" "16618201" "16754554" "16918027"
+                           "16940719" "16940721" "16994840" "17008338" "17713682" "17996481" "18177191" "18177193"
+                           "18177196" "18241974" "name:academy g" "name:aigle g" "name:albe m" "name:aplh" "name:arvay p" "name:baudelaire"
+                           "name:baudelaire c" "name:baudier p" "name:beltz r" "name:brenner j" "name:bronstein e" "name:carle r" "name:carroll" "name:chambelland g"
+                           "name:chardonne j" "name:chase l" "name:chevrillon a" "name:colette" "name:collodi c" "name:cor p" "name:dantec d" "name:davis j"
+                           "name:defoe d" "name:deleuil s" "name:dike v" "name:dufour e" "name:ellerbrock k" "name:erel p" "name:essenine s" "name:farneti c"
+                           "name:gerard" "name:gershwin i" "name:hanau" "name:harcourt r" "name:hugo v" "name:hugues w" "name:jennep" "name:labe l"
+                           "name:lauvriere e" "name:lewis j" "name:lewis l" "name:lison h" "name:magny c" "name:maiakowsky v" "name:mallarme s" "name:marcireau j"
+                           "name:maret j" "name:mitchell c" "name:mouveau p" "name:nardini" "name:naudin b" "name:nougier l" "name:pastoureau m" "name:rainger r"
+                           "name:robin l" "name:romains j" "name:sainte-croix" "name:salle b" "name:schubert f" "name:sennep" "name:simond c" "name:streadman r"
+                           "name:thieck f" "name:thomas j" "name:topia a" "name:tubergue j" "name:warren h" "name:washburn c" "name:wheeler b" "name:wright c"
+                           "name:wright s"]
+              :pool "5e12a4b01db957fd"
+              :licence "Licence Ouverte / Etalab 2.0"
+              :attribution "Source : Bibliothèque nationale de France"}}

@@ -114,44 +114,78 @@
   (let [m (model-of (edn/read-string (String. bytes "UTF-8")))]
     {:model m :version (assoc (model-version m) :path path)}))
 
+(def models-prefix
+  "The classpath directory of the shipped model files."
+  "palomar/models/")
+
+(defn- from [loaded source] (assoc-in loaded [:version :source] source))
+
 (def ^:private shipped
-  (delay (loaded (with-open [in (io/input-stream (io/resource default-model))] (.readAllBytes in)) default-model)))
+  (delay (from (loaded (with-open [in (io/input-stream (io/resource default-model))] (.readAllBytes in)) default-model)
+               :classpath)))
 
 (defn read-model
   "The model of a parameter file, `{:model m :version {:sha256 :weights
-   :path}}`: the shipped one (`default-model`, from the classpath), or the
-   file at `path`. The parameters are those `agent-match/model` takes from
-   counts (`:m-counts` and `:u-counts` for every feature; `:prior`;
-   `:thresholds`; `:bar`), plus an optional `:provenance` and `:calibration`
-   report; anything else is refused (`check-params!`, `check-model!`). The
-   version is `model-version`'s; `:path` is for information only."
+   :path :source}}`: the shipped one (`default-model`, from the classpath),
+   or the one `path` names. A path under `models-prefix` (such as
+   `palomar/models/agent-match-n3.edn`, lot N4) names a model shipped on
+   the classpath when there is one; any other path is a file. `:source`
+   says which was read, `:classpath` or `:file`. Refused: a classpath path
+   with a `..` segment, and a file on disk that shadows a shipped model at
+   the same path (name the file `./palomar/models/...` to read it). The
+   parameters are those `agent-match/model` takes from counts (`:m-counts`
+   and `:u-counts` for every feature; `:prior`; `:thresholds`; `:bar`),
+   plus an optional `:provenance` and `:calibration` report; anything else
+   is refused (`check-params!`, `check-model!`). The version is
+   `model-version`'s; `:path` is for information only."
   ([] @shipped)
   ([path]
    (if (nil? path)
      @shipped
-     (loaded (java.nio.file.Files/readAllBytes (.toPath (io/file path))) (str path)))))
+     (let [p      (str path)
+           f      (io/file p)
+           under? (str/starts-with? p models-prefix)]
+       (when (and under? (some #{".."} (str/split p #"[/\\]")))
+         (refuse (str p ": a shipped model is named without a .. segment") {:path p}))
+       (let [res (when under? (io/resource p))]
+         (cond
+           (and res (.exists f))
+           (refuse (str "the file " p " shadows the shipped model of that name: name the file ./" p
+                        " to read it, or remove it to read the shipped one")
+                   {:path p})
+           res   (from (loaded (with-open [in (io/input-stream res)] (.readAllBytes in)) p) :classpath)
+           :else (from (loaded (java.nio.file.Files/readAllBytes (.toPath f)) p) :file)))))))
 
 (defn in-sample?
-  "Whether `model` was fitted in-sample (`:provenance :split
-   :all-in-sample`) on pool `pool` (its entries, by `agent-match/pool-fingerprint`,
-   as the eval reads it or as `read-authorities` does), or on one of the
-   source files `sources` (by their SHA-256)."
+  "Whether `model` would score what it was fitted on:
+   - fitted in-sample (`:provenance :split :all-in-sample`), on pool `pool`
+     (its entries, by `agent-match/pool-fingerprint`, as the eval reads it
+     or as `read-authorities` does);
+   - any model, on one of the source files `sources` its provenance names
+     (`:data`, by their SHA-256);
+   - a model fitted on one split of a benchmark (lot N4, `:train-keys`, the
+     persons and no-match names of that split), on a mention whose split
+     key is one of `keys`. Its pool is not refused: every split of the
+     benchmark is matched against it."
   ([model pool] (in-sample? model pool nil))
-  ([model pool {:keys [sources]}]
-   (let [{:keys [split] :as prov} (:provenance model)
-         used (set (map :sha256 (:data prov)))]
-     (boolean (and (= :all-in-sample split)
-                   (or (and (seq pool) (#{(:pool prov) (:pool-as-read prov)} (fs/pool-fingerprint (vec pool))))
-                       (some #(used (:sha256 (manifest/fingerprint (io/file %)))) sources)))))))
+  ([model pool {:keys [sources] split-keys :keys}]
+   (let [{:keys [split train-keys] :as prov} (:provenance model)
+         used    (set (map :sha256 (:data prov)))
+         trained (set train-keys)]
+     (boolean (or (and (= :all-in-sample split) (seq pool)
+                       (#{(:pool prov) (:pool-as-read prov)} (fs/pool-fingerprint (vec pool))))
+                  (and (seq used) (some #(used (:sha256 (manifest/fingerprint (io/file %)))) sources))
+                  (and (seq trained) (some trained split-keys)))))))
 
 (defn refuse-in-sample!
-  "Refuse to score with `model` the pool or the sources it was fitted on
-   (`in-sample?`): an eval or a benchmark built from its training data
-   would measure nothing. Nil when it may."
+  "Refuse to score with `model` the pool, the sources or the mentions (by
+   their split keys, `:keys`) it was fitted on (`in-sample?`): an eval or a
+   benchmark built from its training data would measure nothing. Nil when
+   it may."
   ([model pool] (refuse-in-sample! model pool nil))
   ([model pool opts]
    (when (in-sample? model pool opts)
-     (throw (ex-info (str "this model was fitted in-sample on this pool or these records ("
+     (throw (ex-info (str "this model was fitted in-sample on this pool, these records or these mentions ("
                           (pr-str (select-keys (:provenance model) [:split :pool])) "): it must not score them")
                      {:provenance (:provenance model)})))))
 
@@ -205,7 +239,7 @@
   (cond (nil? model)     (read-model)
         (:version model) (let [{m :model v :version} model]
                            (check-model! m)
-                           (when-not (= (dissoc v :path) (model-version m))
+                           (when-not (= (dissoc v :path :source) (model-version m))
                              (throw (ex-info "model: this version is not its model's: a version is derived from the model it names"
                                              {:version v :expected (model-version m)})))
                            model)

@@ -355,3 +355,332 @@ chance (1 wrong on dev).
   authors (Rosny aîné, Charlotte Brontë; Simenon, Sand).
 - The pool is closed, 292 entries; 87 have no variants.
 - INTERMARC only; no MARC21 245 `$c` corpus yet.
+
+## N4 — the engines compared, the model recalibrated
+
+`palomar.eval.person-reconciliation-hard-n4-test`. The code is in
+`palomar.eval.person-reconciliation-hard-n4`. It calls the frozen N3
+namespace and does not change it. The section was revised after a
+contradictory review (the thresholds, the reading of the test run, the
+recommendation, the limits).
+
+### Method
+
+- **The same candidates.** Every engine reads every scored mention of a
+  split against the whole pool (292 entries), as N3's harness does. The
+  Jaccard and names+dates engines are N3's own functions. The three
+  Fellegi-Sunter engines share one comparison of each (mention, entry)
+  pair, on the name put in heading order (`hard/inverted`). They differ
+  only in their weights and thresholds. A test checks that the shipped
+  model, on these comparisons, gives N3's pinned inverted run exactly. A
+  cheap filter skips pairs that share no token and no near surname; a test
+  checks it drops no pair a full comparison would score.
+- **Fellegi-Sunter as shipped**: the M2 model file
+  (`palomar/models/agent-match.edn`), at its thresholds (0.95 / 0.5).
+- **Fellegi-Sunter recalibrated on N3 train** (the N3 model): m from the
+  604 true pairs of the 697 train mentions; u from every other train pair
+  (202 920, `:none` pairs included); the prior is the share of true pairs
+  (604 / 203 524 = 0.00297). The pool is not split, so u reads every pool
+  entry, but only train mentions.
+- **Fellegi-Sunter with roles**: the N3 model plus one feature. The role
+  phrase of the mention gets N3's class (`hard/role-class`: translator,
+  illustrator, preface, editor). The candidate's classes come from the
+  `$4` codes of its headings in the other design records
+  (`hard/code-classes`; any other code is "other"). The mention's own
+  record is never read, and no test record is. Levels: `:agree`,
+  `:disagree`, `:unknown` (no class, or no heading elsewhere). `:unknown`
+  weighs 0. On train: true pairs 46 agree, 20 disagree, 538 unknown; other
+  pairs 2 874 agree, 16 940 disagree, 183 106 unknown. Weights: agree
+  +2.43, disagree −1.33.
+- **Decisions** are the matcher's (`reconcile/agent-candidates`): two
+  candidates at or above review send the mention to review; else the top
+  one is proposed at or above propose. Only a proposal is a link. A tie is
+  an abstention (N3's rule).
+
+### The thresholds
+
+**First criterion, on dev (spent).** The first version chose the
+thresholds on dev, by a criterion written in the code before the dev
+numbers were seen: propose 0.95, review 0.1 (the roles run: 0.9 / 0.4).
+The single test run below was made with those thresholds.
+
+**Second criterion, on train by cross-validation (the shipped one).** The
+review found that dev is too small to choose on (every propose value from
+0.5 to 0.95 gave the same 165 links) and that review 0.1 sat on a cliff
+(below). The lot's coordinator then set this criterion, after the single
+test run and before the cross-validated choice was computed. It is in the
+code (`threshold-criterion`). The train split is cut into 5 folds by
+person; each fold is scored by the model fitted on the other four.
+
+1. **Propose.** With no review band, a grid value is admissible when its
+   cross-validated precision is at least 0.99 and the Wilson 95 % lower
+   bound of that precision is at least 0.95. Take the admissible value
+   with the highest recall; on a tie, the highest value. If none, keep the
+   shipped 0.95 / 0.5.
+2. **Review.** A grid value at or below propose is admissible when it
+   keeps the cross-validated recall within 0.01 of step 1, finds the truth
+   in at least half its reviews, and sends at least 30 mentions to review
+   (the bar's `:min-review-pairs`). Take the highest admissible value. If
+   none, keep the shipped 0.5.
+3. **Ship** the N3 model without roles, whatever the role run gives: the
+   engine has no role feature for a transcription, and the CLI's mentions
+   are headings.
+
+Synthetic tests make each condition decide one case: precision, the
+Wilson bound, the review hits, the 30 reviews, the highest admissible
+value, and the recall.
+
+**Chosen:** propose **0.8**, review **0.5**. On the folds, every propose
+value from 0.5 to 0.8 gives 556 links, 554 right (precision 0.996, Wilson
+lower bound 0.987, recall 0.917); 0.9 gives 549, 0.95 gives 521. So the
+tie goes to 0.8. No review value qualifies: from 0.2 to 0.8 the band holds
+13 to 15 reviews, fewer than 30; at 0.1 and 0.05 the competing rule loses
+over 300 links. So the shipped 0.5 stays. The roles run, by the same
+criterion on the same folds, also gets 0.8 / 0.5.
+
+**Dev confirms:** at 0.8 / 0.5, 165 links, precision 1.000, 5 reviews.
+The test split was not run with these thresholds: it is spent.
+
+### Dev, per stratum
+
+206 mentions: 186 linked, 20 no match. The N3 runs are at 0.8 / 0.5. They
+give the same figures at the first thresholds.
+
+| engine | correct | wrong | missed (tied) | false link | review | precision | recall | macro recall | abstention | no-match abstention |
+|--------|--------:|------:|--------------:|-----------:|-------:|----------:|-------:|-------------:|-----------:|--------------------:|
+| Jaccard        | 171 | 0 | 15 (3) | 1 | 0 | 0.994 | 0.919 | 0.911 | 0.165 | 0.950 |
+| names+dates    | 171 | 0 | 15 (3) | 1 | 0 | 0.994 | 0.919 | 0.911 | 0.165 | 0.950 |
+| FS as shipped  | 165 | 0 | 21     | 0 | 3 | 1.000 | 0.887 | 0.844 | 0.199 | 1.000 |
+| FS N3          | 165 | 0 | 21     | 0 | 5 | 1.000 | 0.887 | 0.844 | 0.199 | 1.000 |
+| FS N3 + roles  | 165 | 0 | 21     | 0 | 5 | 1.000 | 0.887 | 0.844 | 0.199 | 1.000 |
+
+Recall, then macro recall, by linked stratum (precision is 1.000 in every
+linked stratum, for every engine):
+
+| engine | easy (29) | homonym (127) | variant (16) | hand (14) |
+|--------|----------:|--------------:|-------------:|----------:|
+| Jaccard, names+dates | 1.000 / 1.000 | 0.961 / 0.723 | 0.375 / 0.800 | 1.000 / 1.000 |
+| FS as shipped        | 0.966 / 0.955 | 0.961 / 0.723 | 0.313 / 0.700 | 0.714 / 0.643 |
+| FS N3                | 0.966 / 0.955 | 0.961 / 0.723 | 0.313 / 0.700 | 0.714 / 0.643 |
+| FS N3 + roles        | 0.966 / 0.955 | 0.961 / 0.723 | 0.313 / 0.700 | 0.714 / 0.643 |
+
+No-match strata, abstention (and false links):
+
+| engine | hard negative (3) | no namesake (17) |
+|--------|------------------:|-----------------:|
+| Jaccard, names+dates | 2 of 3 (1 false link) | 17 of 17 |
+| FS, all three        | 3 of 3                | 17 of 17 |
+
+Review volume: the shipped model sends 3 homonym mentions to review (BnF
+duplicate authorities: "Claire Robert" ×2, "Léon Brodovikoff"). The N3
+model sends the same 3, and 2 hard negatives.
+
+**On dev, recalibration changes no link.** The N3 model makes the shipped
+model's 165 links and misses the same 21. The role weight changes no
+decision. The misses are not a matter of weights: "Currer Bell" (10, a
+pseudonym the pool does not carry as a variant), "Ch. Brontë" and "C.
+Brontë Currer Bell" (a two-letter initial is no initial, so the forenames
+differ), "Alexeïeff" and "Souvestre Lesbazeilles" (hand links the name
+levels cannot reach), "Samuel Loti-Viaud" (a hyphenated surname), and the
+BnF duplicates.
+
+### Two model defects, for the next lot
+
+Neither is fixed here: each changes `agent-match`, so every model.
+
+- **The name weights are flattened.** The N3 counts measure
+  `:surname-only` (9 true pairs, 35 others: log2 ratio +6.43) and
+  `:forename-overlap` (12 and 145: +4.80). Both weigh 0. The weights must
+  not increase along the name levels (`agent-match/constrain`), and two
+  levels above them are unmeasured, so weigh 0: `:same-tokens` (1 true
+  pair) and `:surname-typo` (3 true pairs, none among the others). Every
+  level below is capped at 0. `:same-tokens` is an artefact of the
+  inversion: as transcribed, 539 true pairs are `:same-tokens`; put in
+  heading order, 1 is. Lifting the cap alone makes things worse under the
+  current competing rule: on dev, 165 links fall to 99, because more
+  namesakes clear the review threshold and every mention with two of them
+  goes to review. The fix for the next lot is both: skip unmeasured levels
+  in the non-increasing chain, and make the competing rule relative (a
+  second candidate competes only when it is close to the first).
+- **The `:variant` form weighs +5.18 whatever the name level.** A
+  candidate reached through a variant at `:forenames-differ`,
+  `:surname-only` or `:jaccard-high` gets that weight on a name weight of
+  0, and a posterior of 0.0976. On dev, 89 mentions have their second
+  candidate just there. The first criterion's review threshold, 0.1, sat
+  right above that cliff. The form weight should apply only when the name
+  agrees.
+
+### Calibration, against the bar
+
+The bar (`agent-match/default-bar`): ECE ≤ 0.05, no bin off by more than
+0.1, at least 300 distinct pairs and 100 distinct true mentions, and 30
+distinct pairs in the review band for a review decision. The band is now
+the model's own, [review, propose) = [0.5, 0.8) (`fs/calibration` takes it
+as `:band`; by default it is still [0.5, 0.95), so M2's reports are
+unchanged). Predictions: every scored candidate of every mention, linked
+or not. A pair is distinct by the name read and the candidate; a mention
+by the name read.
+
+| report | predictions | distinct pairs | distinct true mentions | review-band pairs | Brier | ECE | largest bin gap | bar |
+|--------|------:|------:|-----:|---:|-------:|-------:|------:|---------|
+| dev, the N3 model itself, band [0.5, 0.8) | 1 674 | 329 ✓ | 43 ✗ | 2 ✗ | 0.0118 | 0.0069 ✓ | 0.710 ✗ | not met |
+| 5 folds of train+dev, by person, band [0.5, 0.95) | 7 499 | 1 641 ✓ | 164 ✓ | 13 ✗ | 0.0099 | 0.0079 ✓ | 0.401 ✗ | not met |
+
+Dev bins: [0.0, 0.1) 1 496 predictions, mean 0.012, observed 0.007;
+[0.7, 0.8) 4, mean 0.710, observed 0; [0.9, 1.0] 174, mean 0.979,
+observed 0.966. The cross-validation's worst bin is [0.5, 0.6): 6
+predictions, mean 0.568, observed 0.167.
+
+**The bar is not met, so the model file carries no calibration and no
+confidence is written.** The ECE is low because almost every prediction
+is a near-zero non-match; the middle bins are few and wrong. The dev
+report is bound to the fingerprint of the model as the file gives it
+(`3d5b1089592bc496`) and to the pool's (`5e12a4b01db957fd`). The
+cross-validation report names no model: it measures five fold models, not
+the shipped one. Even if it met the bar, binding it to the shipped
+model's fingerprint would claim what it does not show.
+
+**If a shipped model ever meets the bar.** The CLI refuses a `--model`
+file that carries a `:calibration`, and that holds for a shipped file
+named by `--model` too. Nothing ships one today, so nothing changes. The
+design for later: accept a calibration only from a model whose version
+says `:source :classpath` (part of the release, reviewed), never from a
+file on disk, and never by looking at the path string. Anyone can compute
+a fingerprint, so a file on disk could forge a matching report; the
+refusal stays for that. `calibrated?` still checks the report's model, its
+pool and the model's own bar.
+
+### The model file
+
+`resources/palomar/models/agent-match-n3.edn`, written by `write-model!`;
+a test checks it is the fit on train at the thresholds the
+cross-validation chose. Its `:provenance`: its `:data` (the nine design
+corpora, the benchmark and the split file, with their SHA-256), the
+authority file, `:split :n3-train`, the train keys, the pool's
+fingerprint, Licence Ouverte / Etalab 2.0, "Source : Bibliothèque
+nationale de France". No `:calibration`.
+
+- **Read it** with `--model palomar/models/agent-match-n3.edn` (or
+  `reconciliation/read-model`). A path under `palomar/models/` names a
+  shipped model when the classpath has one; the version then says
+  `:source :classpath` (else `:file`), and the manifest shows it, for
+  information (`manifest/diff` ignores it, as it ignores the path). A
+  `..` segment in such a path is refused. A file on disk at the same path
+  as a shipped model is refused, never read in its place: name it
+  `./palomar/models/...` to read the file. Version: SHA-256 `6547f220…`,
+  weights `b3454bd60a2ca517`.
+- **It refuses its own training split.** `reconciliation/refuse-in-sample!`
+  refuses it on a mention whose split key (person or no-match name) is one
+  of its `:train-keys`, and on its `:data` files by their SHA-256 (so on
+  the benchmark and split files too). The pool is not refused: every split
+  is matched against it. The roles model carries the same split and keys,
+  and is refused alike. The harness calls the guard for every model it
+  scores.
+- **The M2 model stays as it is**, and stays the default.
+
+### Leakage
+
+- The fit and the threshold choice read train mentions only (a test spies
+  on both). Dev is read only to confirm.
+- Dropping every test mention and test record, or changing their text and
+  truth, gives the same model and the same thresholds (tested).
+- The role profiles read design records only.
+
+### The N3 model on the M2 headings
+
+M2 (the easy benchmark, 142 heading mentions) is out of sample for the N3
+model. At 0.8 / 0.5 it proposes all 136 in-pool mentions outright and
+right, makes no false link, and sends one to review. For comparison, M4's
+leave-one-family-out models make 111 outright links there, with 26
+reviews. The shipped M2 model cannot be measured on M2: it is in-sample.
+M2 has 33 distinct true mentions.
+
+### Test, run once (spent)
+
+After the first model file and code were final, the test split was run
+once, with the first criterion's thresholds: **0.95 / 0.1** for the N3
+model, **0.9 / 0.4** for the roles run, 0.95 / 0.5 for the shipped model.
+No test asserts these numbers. The thresholds shipped now (0.8 / 0.5) were
+derived after that run, from the cross-validation and dev, without test.
+The test split is spent: it was not run again, and these numbers do not
+measure the shipped thresholds.
+
+475 mentions: 401 linked, 74 no match.
+
+| engine | correct | wrong | missed (tied) | false link | review | precision | recall | macro recall | abstention | no-match abstention |
+|--------|--------:|------:|--------------:|-----------:|-------:|----------:|-------:|-------------:|-----------:|--------------------:|
+| Jaccard        | 394 | 0 | 7 (4) | 3 | 0   | 0.992 | 0.983 | 0.966 | 0.164 | 0.959 |
+| names+dates    | 394 | 0 | 7 (4) | 3 | 0   | 0.992 | 0.983 | 0.966 | 0.164 | 0.959 |
+| FS as shipped (0.95 / 0.5)  | 277 | 0 | 124 | 1 | 112 | 0.996 | 0.691 | 0.786 | 0.415 | 0.986 |
+| FS N3 (0.95 / 0.1)          | 278 | 0 | 123 | 1 | 113 | 0.996 | 0.693 | 0.803 | 0.413 | 0.986 |
+| FS N3 + roles (0.9 / 0.4)   | 391 | 0 | 10  | 1 | 0   | 0.997 | 0.975 | 0.957 | 0.175 | 0.986 |
+
+Recall by stratum: easy (198) Jaccard 0.990, shipped 0.975, N3 0.975,
+roles 0.980; homonym (186) 0.984, 0.435, 0.435, 0.973; hand (16) 0.875,
+0.188, 0.188, 0.938; variant (1) 1, 0, 1, 1. Hard negatives (2): every
+engine links "Stendhal" (a body) to Stendhal. No namesake (72): the
+Jaccard makes 2 false links, the Fellegi-Sunter engines none.
+
+The shipped model's row is N3's test row exactly, as it should be.
+
+**What the run shows.** The N3 model's reviews are almost all Simenons
+("Georges Simenon" 52, "John Simenon" 44). Two pieces of evidence, neither
+from test, explain the gap with the roles run:
+
+- **The pool's ceiling.** The pool holds 11 Simenons. The surname's
+  frequency lowers an agreement on it, so an exact "Simenon, Georges"
+  heading reaches only **0.922** against its own entry; every other pool
+  entry reaches 0.95 or more (tested on the pool). At propose 0.95, no
+  Simenon can be proposed: the best goes to review. At 0.9 it can.
+- **The separation on the folds of train**, the N3 model and the roles
+  model at equal thresholds, `[correct, review, false link]`:
+
+  | thresholds | N3 | N3 + roles |
+  |------------|----|------------|
+  | 0.95 / 0.1 | 242, 361, 0 | 243, 360, 0 |
+  | 0.9 / 0.1  | 243, 360, 0 | 244, 359, 0 |
+  | 0.95 / 0.4 | 520, 50, 1  | 522, 48, 1  |
+  | 0.9 / 0.4  | 548, 22, 1  | 549, 21, 1  |
+  | 0.95 / 0.5 | 520, 50, 1  | 523, 47, 1  |
+  | 0.9 / 0.5  | 548, 22, 1  | 550, 20, 1  |
+
+  Lowering propose from 0.95 to 0.9 adds 28 links. Raising review from 0.1
+  to 0.4 adds about 300: two candidates above 0.1 send a mention to review.
+  The role weight adds 1 to 3. On dev, the role weight even costs links
+  at 0.95 / 0.1 (152 against 165).
+
+So the test gap is the thresholds, propose (the Simenon ceiling) and review
+(the competing rule), not the roles.
+
+### Recommendation
+
+**Keep the M2 model as the default of `--engine probabilistic`.** Ship
+the N3 model as a named file. The evidence is from dev, the
+cross-validation and the pool:
+
+- On dev, the N3 model makes exactly the M2 model's links (165, no wrong
+  one). That is no measured gain.
+- Its propose threshold must sit below the pool's ceiling: with 11
+  Simenons, an exact heading reaches 0.922. A threshold chosen on one pool
+  does not carry to another.
+- It inherits two model defects (flattened name weights, the variant
+  cliff) that the next lot should fix first.
+- It learnt no date weight: a transcription has no dates. The default
+  engine reads headings, which often carry dates; the M2 model weighs a
+  date agreement.
+- It is not calibrated either.
+
+The Jaccard stays the more complete engine on transcriptions. The
+Fellegi-Sunter engines are the more careful ones on no-match names.
+
+### Limits of N4
+
+- Dev is small (36 persons, 15 no-match names); its numbers tie across
+  propose 0.5 to 0.95, so it only confirms.
+- **The role feature is asymmetric.** It reads the relator codes of other
+  design records. On dev, 21 of the 186 true pairs have a known role level
+  (164 truths have a heading in another design record); in test, no
+  person has one (0 of 401). The test run measured the role weight on
+  almost nothing.
+- The non-increasing rule and the variant form weight (above) are left as
+  they are.
