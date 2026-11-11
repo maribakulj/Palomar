@@ -643,6 +643,16 @@ from a small real GND extract. `palomar.eval.gnd-person-reconciliation-test`.
 - The bridges are not independent of each other nor always right: the
   Hetzel/Stahl ISNIs show identity and pseudonym records crossed between two
   national files.
+- **As stated equivalences (lot N6, ADR 0059).** Read as what the records
+  say of their entity rather than as a truth, the ARK and ISNI bridges are
+  14 BnF–GND pairs, exactly the bridges above (3 pairs have both). The
+  Wikidata pairs are no statement of the records and are not read. 12
+  pairs are kept, one GND record each, and no two records of one file are
+  joined. The 2 Hetzel/Stahl pairs are refused. The ISNIs are crossed
+  between the files, and both files state which record is the pseudonym of
+  which: lifted to the two pairs, each pair is the other's pseudonym. The
+  numbers above do not use these equivalences, and do not move.
+  `palomar.agent-equivalence-test/the-gnd-and-bnf-extracts-state-which-of-their-records-are-one-person`.
 
 ## Typed events (M7)
 

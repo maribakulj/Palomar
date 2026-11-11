@@ -152,14 +152,23 @@
                               "Da Zhong ma" "大仲馬"]
               :dates         dumas-pere-life
               :entity-type   "person"
-              :isni          "0000000121012885"
+              :isni          ["0000000121012885"]
               :relations     [{:record-number "16258491" :tag "320" :kind :agent}
                               {:record-number "12306195" :tag "320" :kind :agent}
                               {:record-number "11901062" :tag "320" :kind :agent}]}
              (by-n "11901063"))))
     (testing "an ISNI the record cancels ($z) is not the ISNI; a VIAF number is none"
-      (is (= "0000000444583295" (:isni (by-n "11901062"))))
+      (is (= ["0000000444583295"] (:isni (by-n "11901062"))))
       (is (nil? (:isni (by-n "11105601")))))
+    (testing "every ISNI the record states, in its order (lot N6): two 031 $a"
+      (let [x   @bnf-authorities
+            f31 "<mxc:subfield code=\"a\">0000000121012885</mxc:subfield>"
+            x'  (str/replace-first x f31 (str "<mxc:subfield code=\"a\">0000000121012885</mxc:subfield><mxc:subfield code=\"2\">ISNI</mxc:subfield></mxc:datafield>"
+                                              "<mxc:datafield tag=\"031\" ind1=\" \" ind2=\" \"><mxc:subfield code=\"z\">0000000444583295</mxc:subfield><mxc:subfield code=\"2\">ISNI</mxc:subfield></mxc:datafield>"
+                                              "<mxc:datafield tag=\"031\" ind1=\" \" ind2=\" \"><mxc:subfield code=\"a\">0000000368528808</mxc:subfield>"))
+            e   (some #(when (= "11901063" (:record-number %)) %) (:entries (authorities/read-pool :intermarc x')))]
+        (is (str/includes? x f31))
+        (is (= ["0000000121012885" "0000000368528808"] (:isni e)) "the cancelled one ($z) is still skipped")))
     (testing "a death left open is no death"
       (is (= #{:text :birth} (set (keys (:dates (first (filter #(= "1933-...." (get-in % [:dates :text])) entries))))))))
     (testing "what it does not read is listed"
@@ -175,9 +184,10 @@
   (let [{:keys [entries unread]} (authorities/read-pool :intermarc @bnf-authorities)
         by-n (into {} (map (juxt :record-number identity)) entries)]
     (testing "a 331 is another identity of the person (Hetzel's pseudonym Stahl, and back); a 5xx a related agent; a 321 a work"
-      (is (= [{:record-number "16492882" :tag "331" :kind :pseudonym} {:record-number "15072723" :tag "511" :kind :agent}]
-             (:relations (by-n "12008284"))))
-      (is (= [{:record-number "12008284" :tag "331" :kind :pseudonym}] (:relations (by-n "16492882"))))
+      (is (= [{:record-number "16492882" :tag "331" :kind :pseudonym :target :pseudonym} {:record-number "15072723" :tag "511" :kind :agent}]
+             (:relations (by-n "12008284"))) "a 331 of second indicator 1 names a pseudonym of the record (lot N6)")
+      (is (= [{:record-number "12008284" :tag "331" :kind :pseudonym :target :real-identity}] (:relations (by-n "16492882")))
+          "of second indicator 2, the record's real identity")
       (is (= {:record-number "18021044" :tag "321" :kind :work}
              (first (filter #(= "321" (:tag %)) (:relations (by-n "11928016")))))))
     (testing "a 320 links an agent only with its relation code: Verne's museum, holding his manuscripts, is none"

@@ -28,7 +28,11 @@
    - `:entity-type`, `\"person\"`, `\"corporateBody\"` or `\"family\"`;
    - `:same-as`, the sorted IRIs of its `sameAs` links to VIAF, ISNI,
      Wikidata, the Library of Congress and the BnF — **data, never a
-     feature**: `palomar.agent-match` compares names and dates only.
+     feature**: `palomar.agent-match` compares names and dates only;
+   - `:pseudonym` and `:real-identity`, the sorted GND IRIs of its
+     `pseudonym` and `realIdentity` links (lot N6, ADR 0059): records the
+     GND states are this one's pseudonyms, or its real identity — data,
+     read by `palomar.agent-equivalence` only.
    A record of another kind (a subject heading, a place, a work) is no entry,
    nor is an undifferentiated person.
    Nothing here opens a network connection: a reader is given."
@@ -87,6 +91,12 @@
     (when-not (str/blank? text)
       (merge {:text text} (when sane? read)))))
 
+(defn- links
+  "The sorted ids of record `r`'s `k` links (objects with an `id`)."
+  [r k]
+  (vec (sort (distinct (keep #(when (map? %) (some-> (get % "id") str str/trim not-empty))
+                             (let [s (get r k)] (if (sequential? s) s [s])))))))
+
 (defn entry
   "The pool entry of one lobid GND record `r` (a parsed JSON object, string
    keys), or nil when it is no agent or has no id or preferred name."
@@ -103,7 +113,9 @@
                  :variants    (vec (remove #{label} (strs (get r "variantName"))))
                  :entity-type kind}
           life        (assoc :dates life)
-          (seq same)  (assoc :same-as same))))))
+          (seq same)  (assoc :same-as same)
+          (seq (links r "pseudonym"))    (assoc :pseudonym (links r "pseudonym"))
+          (seq (links r "realIdentity")) (assoc :real-identity (links r "realIdentity")))))))
 
 (defn read-line-entry
   "The entry of one line of a lobid GND JSON lines file: `{:entry e}`, or

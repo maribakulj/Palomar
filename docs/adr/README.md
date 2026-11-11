@@ -72,6 +72,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0056](./0056-who-did-what-and-what-it-shows-are-rules.md) | Who did what in an event, and what a work shows, are rules | Accepted |
 | [0057](./0057-the-identity-relation-between-persons.md) | Persons are clustered under constraints, and `skos:exactMatch` is written only where its transitivity holds | Accepted |
 | [0058](./0058-a-mention-is-one-occurrence.md) | A mention is one occurrence, read from itself alone, whatever the format | Accepted |
+| [0059](./0059-record-identity-is-not-entity-identity.md) | Record identity is not entity identity | Accepted |
 
 ## Template
 

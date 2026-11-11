@@ -112,17 +112,21 @@
 
 (defn- random-input
   "A small random graph from `seed`: 7 items (2 of them authorities, some
-   dated), random links of every basis, random cannot-links."
+   dated, some stating an ISNI), random links of every basis, random
+   cannot-links."
   [seed]
   (let [rnd   (java.util.Random. seed)
         n     7
         ids   (mapv #(keyword (str "i" %)) (range n))
         dts   [nil (d "1802-1870") (d "1824-1895") nil (d "1700-1750")]
+        isnis [nil "0000000121012885" "0000000121012885" "0000000444583295"]
         items (into {} (for [[i id] (map-indexed vector ids)
-                             :let [dt (nth dts (.nextInt rnd (count dts)))]]
+                             :let [dt (nth dts (.nextInt rnd (count dts)))
+                                   isni (nth isnis (.nextInt rnd (count isnis)))]]
                          [id (cond-> {}
-                               (< i 2) (assoc :authority? true)
-                               dt      (assoc :dates dt))]))
+                               (< i 2)            (assoc :authority? true)
+                               (and (< i 2) isni) (assoc :isni isni)
+                               dt                 (assoc :dates dt))]))
         pick  #(ids (.nextInt rnd n))]
     {:items       items
      :links       (vec (for [_ (range 12)
@@ -143,7 +147,9 @@
           :when (and (= kx ky) (neg? (compare (str x) (str y))))
           :let [ix (get items x) iy (get items y)]
           :when (or (given [x y]) (given [y x])
-                    (and (:authority? ix) (:authority? iy))
+                    ;; two authorities, unless both state one ISNI (lot N6)
+                    (and (:authority? ix) (:authority? iy)
+                         (not (and (:isni ix) (= (:isni ix) (:isni iy)))))
                     (and (:dates ix) (:dates iy)
                          (= :incompatible (:verdict (dates/compatibility (:dates ix) (:dates iy))))))]
       [x y])))
@@ -158,6 +164,8 @@
       (is (= (count (:cluster-of res)) (reduce + (map (comp count :members) (:clusters res))))))
     (testing "the result does not depend on the order the links come in"
       (is (= (:cluster-of res) (:cluster-of (ac/cluster (update input :links reverse)))) (str "seed " seed))))
+  (testing "some graphs join the two authorities, by the ISNI they both state"
+    (is (pos? (count (filter #(let [c (:cluster-of (ac/cluster (random-input %)))] (= (c :i0) (c :i1))) (range 300))))))
   (testing "while the naive closure, on the same graphs, does merge cannot-linked items"
     (is (pos? (count (filter #(let [input (random-input %)]
                                 (seq (oracle-violations input (ac/transitive-closure input))))

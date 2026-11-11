@@ -27,6 +27,14 @@
               "http://www.wikidata.org/entity/Q38337" "https://isni.org/isni/0000000121012885"]
              (:same-as e))))))
 
+(deftest a-gnd-record-states-its-pseudonyms-and-its-real-identity
+  (testing "Hetzel's record names his pseudonyms; Stahl's names his real identity (lot N6, ADR 0059)"
+    (is (= ["https://d-nb.info/gnd/111910582X" "https://d-nb.info/gnd/1147517274"]
+           (:pseudonym (entry-of "https://d-nb.info/gnd/118949047"))))
+    (is (= ["https://d-nb.info/gnd/118949047"] (:real-identity (entry-of "https://d-nb.info/gnd/111910582X")))))
+  (testing "a record stating neither has neither"
+    (is (not-any? (entry-of "https://d-nb.info/gnd/118528068") [:pseudonym :real-identity]))))
+
 (deftest every-record-of-the-extract-is-an-entry
   (let [es (:entries (gnd/pool (slurp extract)))]
     (is (= (count @lines) (count es)))
