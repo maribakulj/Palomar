@@ -1,0 +1,55 @@
+;; The parameters of the Fellegi-Sunter model the probabilistic engine of
+;; `palomar reconcile` scores with by default (lot N2, ADR 0058 amendment).
+;; `palomar.agent-match/model` computes the weights from them.
+;;
+;; They are the M4 model fitted on all five families of the M2 gold
+;; (docs/eval/person-reconciliation.md, "A Fellegi-Sunter score (M4)"):
+;; m from the 136 true pairs of 150 BnF INTERMARC records, u from the BnF
+;; person pool against itself, the prior the share of true pairs among the
+;; pairs the dates do not block. A test checks that the eval still fits
+;; these numbers (`palomar.reconciliation-test`).
+;;
+;; IN-SAMPLE. It is fitted on every mention of M2 (`:provenance :split
+;; :all-in-sample`): it must not score M2, nor any benchmark built from
+;; those records or that pool. `palomar.reconciliation/refuse-in-sample!`
+;; refuses it on that pool (as the eval reads it, `:pool`, or as
+;; `read-authorities` does, `:pool-as-read`) and on those records (by their
+;; SHA-256); the eval calls it.
+;;
+;; Derived from BnF data: Licence Ouverte / Etalab 2.0, "Source :
+;; Bibliothèque nationale de France" (see NOTICE).
+;;
+;; The model is not calibrated: it carries no `:calibration` report, so no
+;; posterior it gives is ever written as a confidence. Every true pair it
+;; learnt from is an exact heading; read its limits in the eval.
+;;
+;; The run manifest names the model by its version (`model-version`): the
+;; SHA-256 of its parameters as read, and the fingerprint of its weights. A
+;; comment or a layout change is no new version; a changed parameter is.
+{:prior 0.12890995260663507
+ :thresholds {:propose 0.95 :review 0.5}
+ :bar {:max-ece 0.05 :max-bin-gap 0.1 :min-pairs 300 :min-positives 100 :min-review-pairs 30 :bins 10}
+ :m-counts {:name {:n 136.0 :counts {:exact 136.0}}
+            :form {:n 136.0 :counts {:heading 136.0}}
+            :dates {:n 136.0 :counts {:agree 131.0 :unknown 5.0}}}
+ :u-counts {:name {:n 1056.0 :counts {:none 856.0 :jaccard-high 30.0 :jaccard-low 146.0 :exact 2.0
+                                      :forenames-differ 10.0 :forename-overlap 12.0}}
+            :form {:n 1056.0 :counts {:heading 1042.0 :variant 14.0}}
+            :dates {:n 264.0 :counts {:unknown 244.0 :agree 20.0}}}
+ :estimation {:m :supervised :trained-on ["Dumas" "Hetzel" "Hugo" "Verne" "others"]}
+ :provenance {:data [{:path "test/fixtures/documentary/intermarc/sru/intermarcXchange/bnf-sru-victor-hugo-50.xml"
+                      :query "bib.author all \"victor hugo\""
+                      :sha256 "818e4037a3766808e5a1dd140a5e197a765353f227e8dd381f4e8fd086b6ed4e"}
+                     {:path "test/fixtures/documentary/intermarc/sru/intermarcXchange/bnf-sru-jules-verne-50.xml"
+                      :query "bib.author all \"jules verne\""
+                      :sha256 "ecaea5c1496fc53749fb6f428fd6d6400d0a1e4555aea39216c62a58944ea172"}
+                     {:path "test/fixtures/documentary/intermarc/sru/intermarcXchange/bnf-sru-alexandre-dumas-50.xml"
+                      :query "(bib.author all \"alexandre dumas\") and (bib.recordtype any \"mon\")"
+                      :sha256 "b5e30a9e54fe954064ea5945136d2f3ea8706251a5362f944c3d2f473ecc3900"}]
+              :authorities {:path "test/fixtures/er-gold/bnf-persons/authorities.xml"
+                            :sha256 "f65414564e17ead106ecb3ff98db95b467612b9412946c32372ebf96d60ee3f5"}
+              :split :all-in-sample
+              :pool "d6f2139b923c07a0"
+              :pool-as-read "1fcf8f926254f5d8"
+              :licence "Licence Ouverte / Etalab 2.0"
+              :attribution "Source : Bibliothèque nationale de France"}}

@@ -30,7 +30,9 @@
             pivot export convert convert-stream collection
             accept-all reject-all flag-all accept-when confidence-at-least curate supersede history
             validate valid-record? explain-record audit loss-report manifest
-            ir-version ->edn read-edn ir-schema}
+            ir-version ->edn read-edn ir-schema
+            read-authorities reconciliation-model reconcile reconcile-explain reconcile-clusters
+            format-reconciliation format-explanation format-clusters}
          (set (keys (ns-publics 'palomar.api))))
       "adding to the API is a minor change; removing or renaming is a breaking one"))
 

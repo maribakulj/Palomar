@@ -209,7 +209,10 @@ end.
 
 Only this eval passes dated mentions. **No spoke and no CLI command does
 yet**: `palomar reconcile --authorities` passes the records' names as
-strings, so it rejects nothing.
+strings, so it rejects nothing. (Since lot N2, `palomar reconcile --engine probabilistic`
+passes whole mentions, dates and events included, scored by the M4 model
+fitted on all five families; the default engine is unchanged. ADR 0058,
+amendment N2. No number here moves.)
 
 Where a mention's dates live: in the IR as the importer's natives (the field
 fragment's subfields, the `:intermarc/f100_d` and `f700_d` assertions), read

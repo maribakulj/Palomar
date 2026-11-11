@@ -44,7 +44,8 @@
    Group node instead. `align-agents` reaches a record's agents only through
    the canonical floor's names: an INTERMARC 7XX, 110 or 710 heading, a
    UNIMARC `$a, $b` heading, none of which the floor carries, gets no
-   alignment until `align-agents` is fed mentions (lot N2).
+   alignment. The probabilistic engine (`palomar.reconciliation`, lot N2)
+   reads the mentions, so it reaches them; `align-agents` does not yet.
 
    **Per occurrence, never mixed.** A MARC-family mention reads the field
    fragment the importer keeps (`:locator {:tag :occurrence :subfields}`,

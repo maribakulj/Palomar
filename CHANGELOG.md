@@ -18,6 +18,24 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Reconciliation engines in the API and the CLI** (lot N2; ADR 0058
+  amendment): `palomar.api/reconcile` and `palomar reconcile --engine
+  historical|probabilistic`. The historical engine is the default, its
+  output unchanged. The probabilistic one decides every mention of the
+  batch (`palomar.mentions`: name, dates, roles, events), so INTERMARC
+  7XX/110/710 and UNIMARC `$a, $b` headings reach their candidates, with
+  the shipped Fellegi-Sunter model (`palomar/models/agent-match.edn`,
+  fitted in-sample on the BnF M2 records, its provenance in the file, not
+  calibrated: no confidence) or one given with `--model` (checked; a
+  calibration in it is refused). A calibration report now names the model
+  it measured, and proves no other. A candidate of another kind than the
+  mention's is rejected before it is weighed, and a person candidate is now
+  checked against the mention's events.
+  `reconcile explain --mention <id>` (`api/reconcile-explain`) says why one
+  mention was decided so; `reconcile clusters` (`api/reconcile-clusters`)
+  groups the mentions into persons. `--format edn` writes what the API
+  returns. The run manifest names the engine and the model's parameter
+  file by path and SHA-256 under `:reconcile`.
 - **Collective reconciliation** (lot M8; ADR 0018 amendment):
   `palomar.agent-relations` makes a mention's relational neighbourhood
   evidence — the role it plays (`$4`) against the candidate's roles in

@@ -16,7 +16,13 @@
    authority index (`palomar.authority-index/manifest-entry`), the dump it
    was built from (its name and fingerprint, as the index header records
    them), the build date, the format, the blocking scheme and the entry
-   count. A changed index is a changed `:authorities`.
+   count. A changed index is a changed `:authorities`. It names its engine
+   and model under `:reconcile` (lot N2): `{:engine :historical :model {:name
+   :threshold}}`, or `{:engine :probabilistic :model {:sha256 :weights :path}
+   :provenance {..}}`, the model by its version (the SHA-256 of its
+   parameters, the fingerprint of its weights; `reconciliation/model-version`)
+   and what it was fitted on. The path is for information: `diff` ignores
+   it. A changed parameter is a changed `:reconcile`.
 
    The engine stays pure: times, paths and the external block (e.g. the model
    and parameters an application used upstream) come from the caller; the CLI's
@@ -167,11 +173,11 @@
 (defn manifest
   "The manifest of a conversion. `run` is a map:
    `{:from :to :opts :inputs [{:path :content}] :outputs [{:path :content}] :loss
-   <conversion-report> :authorities [{:path :sha256 :bytes :index}] :started-at
-   inst :finished-at inst :external {…}}` — everything optional but `:from`
+   <conversion-report> :authorities [{:path :sha256 :bytes :index}] :reconcile
+   {:engine :model} :started-at inst :finished-at inst :external {…}}` — everything optional but `:from`
    and `:to`. The active rules are the spoke's
    mapping rules and the canonical validation rules."
-  [{:keys [from to opts inputs outputs loss authorities started-at finished-at external]}]
+  [{:keys [from to opts inputs outputs loss authorities reconcile started-at finished-at external]}]
   (let [onto  (for [p ontology/vendored :let [f (io/file p)] :when (.exists f)]
                 (assoc (fingerprint f) :path p))
         rules (concat (map :mapping/id (:mapping (spokes/plugin from))) (map :id (:rules canonical/plugin)))
@@ -195,6 +201,7 @@
       (seq vocabs) (assoc :vocabularies vocabs)
       loss         (assoc :loss (loss-summary loss))
       (seq authorities) (assoc :authorities (vec authorities))
+      (seq reconcile)   (assoc :reconcile reconcile)
       started-at   (assoc :started-at started-at)
       finished-at  (assoc :finished-at finished-at)
       (seq external) (assoc :external external))))
@@ -203,15 +210,22 @@
   "Keys that differ between two runs of the same conversion."
   #{:started-at :finished-at})
 
+(defn- informational
+  "`m` without what names a run's files but not what they hold: the path of
+   a reconciliation's model file (its version is its content, lot N2)."
+  [m]
+  (cond-> m (get-in m [:reconcile :model :path]) (update-in [:reconcile :model] dissoc :path)))
+
 (defn diff
-  "What differs between manifests `a` and `b`, ignoring the run times:
+  "What differs between manifests `a` and `b`, ignoring the run times and
+   the path of a reconciliation's model file (informational):
    `{key [in-a in-b]}` for each top-level key whose value differs, plugins
    compared by id. Empty when the two runs are reproductions of each other."
   [a b]
   (into (sorted-map)
         (for [k (sort-by str (distinct (concat (keys a) (keys b))))
               :when (not (volatile-keys k))
-              :let [va (get a k) vb (get b k)]
+              :let [va (get (informational a) k) vb (get (informational b) k)]
               :when (not= va vb)]
           [k [va vb]])))
 

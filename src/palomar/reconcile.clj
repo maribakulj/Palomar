@@ -157,6 +157,14 @@
             (:role m)   (assoc :role (:role m)))]
     (when (< 1 (count k)) k)))
 
+(defn matcher-key
+  "The `:mention` that `agent-candidates` (no anchors) puts on every
+   proposal, rejection and abstention it makes for mention `m`: what the
+   matcher read of it. Mentions with one key were scored as one (lot N2,
+   `palomar.reconciliation`, which finds each mention's decisions by it)."
+  [m]
+  (mention-key (mention m)))
+
 (defn- dates-evidence
   "The dates verdict of a mention against a candidate, with the values compared."
   [mention-dates candidate-dates]
@@ -167,16 +175,33 @@
 (defn- events-evidence
   "The events verdict of a mention's typed events against a candidate's life
    dates (lot M7), nil when the mention carries no events. A group candidate
-   (`:entity-type`) has no life: no check."
+   (a corporate body or a family by its `:entity-type`) has no life: no
+   check. A candidate typed a person is checked (lot N2 review: any
+   `:entity-type` used to skip the check, so no authority file's person was
+   ever constrained by events)."
   [mention-events candidate]
   (when (seq mention-events)
-    (events/compatibility mention-events (when-not (:entity-type candidate) (:dates candidate)))))
+    (events/compatibility mention-events (when-not (#{"corporateBody" "family"} (:entity-type candidate)) (:dates candidate)))))
+
+(def ^:private entity-kinds
+  "The kind an authority's `entity-type` states, as a mention states it."
+  {"person" :person "corporateBody" :group "family" :family})
+
+(defn- kind-evidence
+  "The kinds of a mention and a candidate when both state one and they
+   differ (lot N2 review): a person is not a corporate body nor a family. Nil
+   otherwise."
+  [mention-kind candidate]
+  (let [ck (entity-kinds (:entity-type candidate))]
+    (when (and mention-kind ck (not= mention-kind ck))
+      {:verdict :incompatible :mention mention-kind :candidate (:entity-type candidate)})))
 
 (defn- rejection
-  "Why a candidate of evidence `ev` is rejected, or nil: its dates first,
-   then the mention's events."
+  "Why a candidate of evidence `ev` is rejected, or nil: its kind first (a
+   scored path only), its dates, then the mention's events."
   [ev]
-  (cond (= :incompatible (get-in ev [:dates :verdict]))  :incompatible-dates
+  (cond (= :incompatible (get-in ev [:kind :verdict]))   :kind-mismatch
+        (= :incompatible (get-in ev [:dates :verdict]))  :incompatible-dates
         (= :incompatible (get-in ev [:events :verdict])) :incompatible-events))
 
 (defn- scored-candidates
@@ -209,7 +234,8 @@
                              lv (:levels c)]
                        :when (not= :none (:name lv))
                        :let [evs (events-evidence (:events m) cand)
-                             blocked? (or (= :incompatible (:dates lv)) (= :incompatible (:verdict evs)))
+                             kx  (kind-evidence (:kind m) cand)
+                             blocked? (or kx (= :incompatible (:dates lv)) (= :incompatible (:verdict evs)))
                              ;; lot M8: relational evidence, from the frozen
                              ;; anchors only, when it says anything
                              rc (when (and anchors (not blocked?))
@@ -224,6 +250,7 @@
                              ev (cond-> {:name-score (:name-score c) :dates (dates-evidence (:dates m) (:dates cand))
                                          :comparison lv}
                                   evs          (assoc :events evs)
+                                  kx           (assoc :kind kx)
                                   weights      (assoc :weights weights)
                                   (:surname c) (assoc :surname (:surname c))
                                   rc           (assoc :relations (assoc rc :fingerprint rel-fp)))]]
@@ -314,6 +341,13 @@
    `:relations {:levels :support :fingerprint ..}` (the mentions read); its
    posterior is a confidence only when the model's calibration measured
    these relational weights on this anchor set.
+
+   **Kinds** (lot N2 review), on the Fellegi-Sunter path: when the mention
+   states its kind (`:person`, `:group`, `:family`) and the candidate its
+   `:entity-type` (\"person\", \"corporateBody\", \"family\") and they
+   differ, the candidate is rejected before it is weighed, `:reason
+   :kind-mismatch`, the kinds under `:evidence :kind`. The name-only path
+   reads no kind.
 
    Either way, a candidate whose dates cannot be the mention's
    (`dates/compatibility` is `:incompatible`) is never proposed nor weighed:

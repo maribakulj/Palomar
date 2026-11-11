@@ -177,3 +177,125 @@ id, role and dates.
 - The CLI `reconcile` still matches the distinct canonical names
   (`agents/occurrences`); moving it to the mentions is left to a later lot.
 - INTERMARC 713, INTERMARC-NG, EAD and IIIF agents are not read.
+
+## Amendment (lot N2, 2026-11-11): the engines reach the API and the CLI
+
+The matcher of lots M3–M8 was library code. `palomar reconcile` matched the
+distinct names of the canonical floor, and no public function passed it a
+mention. This lot makes the probabilistic path a choice of the public API
+and of the CLI. It changes no default. It was revised after a
+contradictory review (items below marked *review*).
+
+1. **One namespace runs a reconciliation**: `palomar.reconciliation`.
+   `palomar.api` (`reconcile`, `reconcile-explain`, `reconcile-clusters`,
+   `read-authorities`, `reconciliation-model`, and the three `format-…`
+   functions) and the CLI `reconcile` verb both call it. The CLI renders
+   what the API returns, so the two give the same result (tested on both
+   engines, with `--model` and with `--record-id`).
+
+2. **Two engines.**
+   - `:historical`, the default: the floor's distinct names, matched by
+     token-set similarity at 0.5 (`reconcile/propose-agent-links`), beside
+     the reconciliation by authority id. Its output is byte for byte what
+     `palomar reconcile` wrote before. Its decisions are its proposals.
+   - `:probabilistic`: every mention of the batch (`mentions/batch`) is
+     passed whole to `reconcile/agent-candidates` under a Fellegi-Sunter
+     model. Its name, dates, kind and events are read; its roles are
+     reported (`explain`) but weigh nothing, as no anchors (lot M8) are
+     passed. The mentions are scored together, as the matcher scores them;
+     each finds its own results by the key the matcher put on them
+     (`reconcile/matcher-key`). A batch that names one mention twice (a
+     record given twice) is refused. A mention's decision is its best
+     proposal's (`:propose` or `:review`), else `:abstain`, else
+     `:rejected`, else `:none`.
+
+3. **A confidence is only a proven one** (*review*). A decision states a
+   `:confidence` only where `agent-match/proven-confidence` holds. A
+   calibration report now names the model it was computed on
+   (`agent-match/model-fingerprint`: the model without its calibration and
+   its relational weights), and `calibrated?` and `proven-confidence`
+   check it: a report computed on another model, or one that names no
+   model, proves nothing. A `--model` file that carries a `:calibration`
+   is refused, for now. Nothing else writes a confidence.
+
+4. **Kinds** (*review*). When a mention states its kind and a candidate its
+   entity type, and they differ, the candidate is rejected before it is
+   weighed (`:reason :kind-mismatch`). A group mention against a pool of
+   persons has no candidate, or is rejected; it is no longer abstained.
+   On the Verne records, no candidate of the mention's own kind is lost.
+   A candidate typed a person is now checked against the mention's events:
+   before, any `:entity-type` skipped the check.
+
+5. **The reach of §5 is lifted for the probabilistic engine.** It reads
+   mentions, not the floor, so an INTERMARC 700 or 710 and a UNIMARC `$a,
+   $b` heading reach their candidates. The tests use a model whose fold
+   held the mention's family out, not the shipped one. The historical
+   engine still reads the floor. `align-agents` is unchanged, and this lot
+   writes no alignment.
+
+6. **The model is a parameter file**, `palomar/models/agent-match.edn` on
+   the classpath. It is checked (*review*): counts for every feature on a
+   positive number of pairs, 0 < prior < 1, 0 < review ≤ propose < 1;
+   anything else is refused. `--model <file>` reads another one.
+   - **It is fitted in-sample on M2** (*review*): the M4 model fitted on
+     all five families of the M2 gold. It must not score M2, nor any
+     benchmark built from those records or that pool.
+     `reconciliation/refuse-in-sample!` refuses it there (its pool as the
+     eval reads it or as `read-authorities` does, its records by their
+     SHA-256); the eval calls it, and a benchmark can
+     (`palomar.eval.person-reconciliation/refuse-in-sample!`). The M-cycle
+     eval never reads the shipped model (tested).
+   - **Its provenance** is in the file, as data: the three SRU pages, the
+     authority file, the split, the pool fingerprints, the licence
+     (Licence Ouverte / Etalab 2.0) and the attribution ("Source :
+     Bibliothèque nationale de France"). It is not calibrated.
+
+7. **The version is the model's** (*review*). `model-version` derives it
+   from the model used: the SHA-256 of its parameters as the model holds
+   them, calibration and provenance included, and the fingerprint of its
+   computed weights. A comment or a layout change is no new version. A
+   `{:model :version}` whose version is not its model's is refused. The
+   path is for information only: classpath-relative for the shipped file,
+   ignored by `manifest/diff`, never in the text output.
+
+8. **The manifest names the engine and the model** under `:reconcile`:
+   `{:engine :historical :model {:name "token-jaccard" :threshold 0.5}}`,
+   or `{:engine :probabilistic :model version :provenance {..}}`.
+
+9. **`explain`** says why one mention was decided as it was: each
+   candidate's comparison levels, the weight of each field and of the
+   surname's frequency, their total, the prior's weight (log2 λ/(1-λ)),
+   the posterior, the thresholds, the decision and why; a rejected
+   candidate with its reason, never weighed.
+
+10. **`clusters`** groups the batch's mentions with `agent-cluster/cluster`
+    (ADR 0057): an outright proposal joins a mention to its authority, one
+    for review is a candidate merge left to a curator, a rejection is a
+    cannot-link (listed under `:cannot-link`), and two authorities are
+    never one cluster. Each cluster names its members' occurrences and the
+    decisions that joined them. It writes nothing into the records.
+
+11. **The CLI**, in the idiom of `authorities index`, a subcommand first:
+
+    ```
+    palomar reconcile          <input> --from <fmt> [--authorities <f>] [--engine historical|probabilistic] [--model <f>] [--format text|edn] [--manifest <f>] [--record-id <id>]
+    palomar reconcile explain  <input> --from <fmt> --authorities <f> --mention '<id>' [--model <f>] [--format text|edn] [--manifest <f>] [--record-id <id>]
+    palomar reconcile clusters <input> --from <fmt> --authorities <f> [--model <f>] [--format text|edn] [--manifest <f>] [--record-id <id>]
+    ```
+
+    A mention id is given as EDN, as the probabilistic output prints it.
+    Refused: `explain` or `clusters` with `--engine historical`, `--model`
+    with the historical engine, `--mention` outside `explain`, an unknown
+    `--from`, a model file that fails its checks or carries a calibration.
+
+### Limits
+
+- The shipped model learnt from 136 exact person headings of one
+  institution, in-sample. Its numbers on M2 measure nothing.
+- Roles weigh nothing without anchors, and the CLI passes none.
+- The probabilistic decisions are not written into the records: no
+  alignment, no membership. `align-agents` and `cluster-records` keep their
+  inputs.
+- With a star of links (each mention to its authorities), a rejection
+  cannot change a cluster's members: a mention never has a link to an
+  authority it was rejected against. It is listed as a cannot-link.

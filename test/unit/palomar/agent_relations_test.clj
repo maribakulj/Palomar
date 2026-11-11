@@ -384,7 +384,7 @@
   (let [cal    (fs/calibration (concat (for [i (range 100)] {:p 0.99 :y 1 :pair [:t i] :mention [:t i]})
                                        (for [i (range 200)] {:p 0.01 :y 0 :pair [:f i] :mention [:f i]})
                                        (for [i (range 40)] {:p 0.75 :y (if (< i 30) 1 0) :pair [:r i] :mention [:r i]}))
-                               {:pool (fs/pool-fingerprint pool)})
+                               {:pool (fs/pool-fingerprint pool) :model (fs/model-fingerprint fs-model)})
         frozen (ar/freeze-anchors anchors)
         m4cal  (ar/with-relations (fs/with-calibration fs-model cal) {:weights rel-weights})
         props  (fn [mdl] (:proposals (rec/agent-candidates [m-ferat] pool {:model mdl :anchors frozen})))]

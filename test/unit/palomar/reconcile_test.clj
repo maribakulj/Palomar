@@ -385,12 +385,13 @@
              :prior 0.05}))
 
 (defn- well-calibrated
-  "A calibration report on `pool` that meets `fs/default-bar`, review band included."
+  "A calibration report on `pool` that meets `fs/default-bar`, review band
+   included, measured on `fs-model`."
   [pool]
   (fs/calibration (concat (for [i (range 100)] {:p 0.99 :y 1 :pair [:t i] :mention [:t i]})
                           (for [i (range 200)] {:p 0.01 :y 0 :pair [:f i] :mention [:f i]})
                           (for [i (range 40)] {:p 0.75 :y (if (< i 30) 1 0) :pair [:r i] :mention [:r i]}))
-                  {:pool (fs/pool-fingerprint pool)}))
+                  {:pool (fs/pool-fingerprint pool) :model (fs/model-fingerprint fs-model)}))
 
 (deftest a-model-scores-each-candidate-and-explains-it
   (let [{:keys [proposals rejected]} (rec/agent-candidates [{:name "Dumas, Alexandre" :dates "1802-1870"}] dumas {:model fs-model})
@@ -521,7 +522,7 @@
     (testing "a review decision whose proof does not cover the review band writes none"
       (let [thin (fs/calibration (concat (for [i (range 100)] {:p 0.99 :y 1 :pair [:t i] :mention [:t i]})
                                          (for [i (range 200)] {:p 0.01 :y 0 :pair [:f i] :mention [:f i]}))
-                                 {:pool (fs/pool-fingerprint dumas)})
+                                 {:pool (fs/pool-fingerprint dumas) :model (fs/model-fingerprint fs-model)})
             ps   (rec/propose-agent-links [{:name "Dumas, Alexandre"}] dumas {:model (fs/with-calibration fs-model thin)})]
         (is (= [:review :review] (map :decision ps)))
         (is (not-any? #(contains? % :confidence) ps))

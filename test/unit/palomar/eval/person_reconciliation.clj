@@ -78,6 +78,7 @@
             [palomar.plugins.intermarc :as intermarc]
             [palomar.plugins.mapping :as mapping]
             [palomar.reconcile :as reconcile]
+            [palomar.reconciliation :as reconciliation]
             [palomar.runtime :as runtime]
             [palomar.text :as text]))
 
@@ -459,6 +460,16 @@
                       :by-family (into (sorted-map) (for [[f xs] (group-by :family out)] [f (link-summary xs)]))}
            :predictions (predictions ms))))
 
+(defn refuse-in-sample!
+  "Refuse `model` when it was fitted in-sample on `pool` or on the source
+   files `sources` (`palomar.reconciliation/in-sample?`): the shipped
+   model of `palomar reconcile` is fitted on all of M2, so it must not score
+   M2 or a benchmark built from its records (lot N2 review). A benchmark
+   calls it with each model it scores and its pool (and, optionally,
+   `{:sources [path ..]}`). Nil when the model may score them."
+  ([model pool] (reconciliation/refuse-in-sample! model pool))
+  ([model pool opts] (reconciliation/refuse-in-sample! model pool opts)))
+
 (defn task-a-fs
   "Task A with the Fellegi-Sunter matcher (lot M4): each mention as `{:name
    :dates}` through `candidates` (by default `reconcile/agent-candidates`)
@@ -472,7 +483,9 @@
    (fs-summaries c (run-task-a c {:mention identity
                                   :entries dated-entries
                                   :candidates (fn [[m] es]
-                                                (candidates [(select-keys m [:name :dates])] es {:model (model-of m)}))}))))
+                                                (let [mdl (model-of m)]
+                                                  (refuse-in-sample! mdl es)
+                                                  (candidates [(select-keys m [:name :dates])] es {:model mdl})))}))))
 
 (defn gold-fingerprint
   "The fingerprint of the gold of corpus `c`: each mention's name, dates and `$3`."
