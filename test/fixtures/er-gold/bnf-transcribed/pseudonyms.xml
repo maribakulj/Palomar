@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- BnF pseudonym authority records, the targets of the cited authorities' 331 links, (INTERMARC Xchange), fetched 2026-11-11 from the BnF SRU API
+     (https://catalogue.bnf.fr/api/SRU, recordSchema=intermarcxchange), one query per record:
+     aut.recordid any "<id>". Each <srw:record> below is copied verbatim from its own response;
+     the responses are concatenated here, sorted by id, under one searchRetrieveResponse wrapper
+     written for this fixture. Ids not served (0 records): see README.
+     Source : Bibliotheque nationale de France. Licence Ouverte / Etalab 2.0. -->
+<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/" xmlns="http://catalogue.bnf.fr/namespaces/InterXMarc" xmlns:ixm="http://catalogue.bnf.fr/namespaces/InterXMarc" xmlns:mn="http://catalogue.bnf.fr/namespaces/motsnotices" xmlns:sd="http://www.loc.gov/zing/srw/diagnostic/">
+<srw:version>1.2</srw:version>
+<srw:numberOfRecords>22</srw:numberOfRecords>
+<srw:records>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb10005280d" type="Authority">   <mxc:leader>00502c0 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF100052806</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb10005280d</mxc:controlfield>   <mxc:controlfield tag="008">970701240503frfref          18040701  18760608             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000464604671</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20180307</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Bonnin</mxc:subfield>      <mxc:subfield code="m">Blaise</mxc:subfield>      <mxc:subfield code="d">1804-1876</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="3">      <mxc:subfield code="3">11923601</mxc:subfield>      <mxc:subfield code="w"> 0 2b.....</mxc:subfield>      <mxc:subfield code="a">Sand</mxc:subfield>      <mxc:subfield code="m">George</mxc:subfield>      <mxc:subfield code="d">1804-1876</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de George Sand</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Fanchette / lettre de Blaise Bonnin à Claude Germain, 1843</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Bonnin (Blaise), pseud. Sand (Amantine Aurore Lucile Dupin, baronne Dudevant, dite George)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="917" ind1=" " ind2=" ">      <mxc:subfield code="o">CRI</mxc:subfield>      <mxc:subfield code="a">CG001600231001R</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb10005280d</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19970701</ixm:attr>
+<ixm:attr name="LastModificationDate">20240503</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb104104543" type="Authority">   <mxc:leader>00361c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF104104549</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb104104543</mxc:controlfield>   <mxc:controlfield tag="008">970701170721befrem          19030213  19890904             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Pertuis</mxc:subfield>      <mxc:subfield code="m">Maurice</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11924796</mxc:subfield>      <mxc:subfield code="w">.0. b.....</mxc:subfield>      <mxc:subfield code="a">Simenon</mxc:subfield>      <mxc:subfield code="m">Georges</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de Georges Simenon</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">L'amour en danger : roman d'amour inédit / par Maurice Pertuis, 1927</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén.</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb104104543</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19970701</ixm:attr>
+<ixm:attr name="LastModificationDate">20170721</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb10781025m" type="Authority">   <mxc:leader>00329c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF107810253</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb10781025m</mxc:controlfield>   <mxc:controlfield tag="008">970701170721befrem          19030213  19890904             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b     </mxc:subfield>      <mxc:subfield code="a">Bobette</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11924796</mxc:subfield>      <mxc:subfield code="w">.0. b.....</mxc:subfield>      <mxc:subfield code="a">Simenon</mxc:subfield>      <mxc:subfield code="m">Georges</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de Georges Simenon</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Bobette et ses satyres / Bobette, 1928</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. suppl.</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb10781025m</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19970701</ixm:attr>
+<ixm:attr name="LastModificationDate">20170721</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb10850766f" type="Authority">   <mxc:leader>00990c0 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF108507661</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb10850766f</mxc:controlfield>   <mxc:controlfield tag="008">970701250103frfref          18861231  19700327             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w"> 0 2b     </mxc:subfield>      <mxc:subfield code="a">Doré</mxc:subfield>      <mxc:subfield code="m">Manuel</mxc:subfield>      <mxc:subfield code="d">1886-1970</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">10746725</mxc:subfield>      <mxc:subfield code="w">.0.2b     </mxc:subfield>      <mxc:subfield code="a">Valence</mxc:subfield>      <mxc:subfield code="m">Odette</mxc:subfield>      <mxc:subfield code="d">1886-1970</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Romancière</mxc:subfield>      <mxc:subfield code="a">Nom de plume de Clara Droppe qui utilise également le pseudonyme Odette Valence</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="603" ind1=" " ind2=" ">      <mxc:subfield code="a">Toulouse-le-Château (Jura)</mxc:subfield>      <mxc:subfield code="b">Rochefort-sur-Mer (Charente-Maritime)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Une larme sur un gant : roman / Manuel Doré, 1951</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Cahiers Pierre Loti, 1970-12-01, p. 12-13 [article nécrologique]</mxc:subfield>      <mxc:subfield code="a">Le coin des pseudonymes et autres compléments biographiques (13e épisode) / par Patrick Ramseyer. In : Le Rocambole : Bulletin des amis du roman populaire, n° 107 / 108, automne-hiver 2024, p. 333</mxc:subfield>      <mxc:subfield code="a">Archives départementales du Jura. État civil de Toulouse-le-Château. Acte de naissance n° 9, 1886-12-31 : Droppe, Clara Joséphine</mxc:subfield>      <mxc:subfield code="u">https://archives39.fr</mxc:subfield>      <mxc:subfield code="d">2025-01-03</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén.: Valence (Odette), pseud. de Clara Droppe Mme Bourassin, autre pseud. Manuel Doré</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb10850766f</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19970701</ixm:attr>
+<ixm:attr name="LastModificationDate">20250103</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb10981271p" type="Authority">   <mxc:leader>01023c0 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF109812712</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb10981271p</mxc:controlfield>   <mxc:controlfield tag="008">970701230717frfrem          19120118  19980811             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000506849678</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20220504</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w"> 0 2b     </mxc:subfield>      <mxc:subfield code="a">Sèvres</mxc:subfield>      <mxc:subfield code="m">Cécile</mxc:subfield>      <mxc:subfield code="d">1912-1998</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">11344127</mxc:subfield>      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Borel-Rosny</mxc:subfield>      <mxc:subfield code="m">Robert</mxc:subfield>      <mxc:subfield code="d">1912-1998</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">   2b     </mxc:subfield>      <mxc:subfield code="a">Sèvres</mxc:subfield>      <mxc:subfield code="m">Cécil</mxc:subfield>      <mxc:subfield code="d">1912-1998</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Auteur de romans sentimentaux et de romans policiers</mxc:subfield>      <mxc:subfield code="a">Pseudonyme de Robert de Kalinowski qui écrit principalement sous le nom de plume de Robert Borel-Rosny</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="603" ind1=" " ind2=" ">      <mxc:subfield code="a">Épinay-sur-Seine (Seine-Saint-Denis)</mxc:subfield>      <mxc:subfield code="b">Carentan (Manche)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Mademoiselle José, première vendeuse : roman sentimental inédit / par Cécile Sèvres, 1952 (Mon roman d'amour ; n° 218)</mxc:subfield>      <mxc:subfield code="a">On a tué Buddy : roman policier inédit / par Cécil Sèvres, DL 1953 (Mon roman policier ; n° 283)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Répertoire Balzac</mxc:subfield>      <mxc:subfield code="u">https://www.sgdl-balzac.org</mxc:subfield>      <mxc:subfield code="d">2022-04-20</mxc:subfield>      <mxc:subfield code="a">Le coin des pseudonymes et autres compléments biographiques (11e épisode) / par Patrick Ramseyer. In : Rocambole : Bulletin des amis du roman populaire, n° 101-102, printemps-été 2023, p. 351</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb10981271p</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19970701</ixm:attr>
+<ixm:attr name="LastModificationDate">20230717</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb118999068" type="Authority">   <mxc:leader>00455c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF118999061</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb118999068</mxc:controlfield>   <mxc:controlfield tag="008">811002240130cafref          19200514  19951208             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000000130076</mxc:subfield>      <mxc:subfield code="2">VIAF</mxc:subfield>      <mxc:subfield code="d">20131024</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Dessane</mxc:subfield>      <mxc:subfield code="m">Odile</mxc:subfield>      <mxc:subfield code="d">1920-1995</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">11924795</mxc:subfield>      <mxc:subfield code="w">.0.1b.....</mxc:subfield>      <mxc:subfield code="a">Simenon</mxc:subfield>      <mxc:subfield code="m">Denyse</mxc:subfield>      <mxc:subfield code="d">1920-1995</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de Denyse Simenon</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Le phallus d'or / Odile Dessane, 1981</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Simenon / Pierre Assouline, 1992</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="907" ind1=" " ind2=" ">      <mxc:subfield code="o">GEA</mxc:subfield>      <mxc:subfield code="a">006848022</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="917" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">000689047</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="919" ind1=" " ind2=" ">      <mxc:subfield code="p">BN</mxc:subfield>      <mxc:subfield code="o">PNA</mxc:subfield>      <mxc:subfield code="a">00033637</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb118999068</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19850622</ixm:attr>
+<ixm:attr name="LastModificationDate">20240130</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb12994766p" type="Authority">   <mxc:leader>00495c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF129947660</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb12994766p</mxc:controlfield>   <mxc:controlfield tag="008">950124201127befrem          19030213  19890904             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Du Perry</mxc:subfield>      <mxc:subfield code="m">Jean</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11924796</mxc:subfield>      <mxc:subfield code="w">.0. b.....</mxc:subfield>      <mxc:subfield code="a">Simenon</mxc:subfield>      <mxc:subfield code="m">Georges</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...2b.....</mxc:subfield>      <mxc:subfield code="a">Perry</mxc:subfield>      <mxc:subfield code="m">Jean Du</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...2b.....</mxc:subfield>      <mxc:subfield code="a">Perry</mxc:subfield>      <mxc:subfield code="m">J. Du</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Romancier</mxc:subfield>      <mxc:subfield code="a">Pseudonyme de Georges Simenon</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Marie-Mystère / Jean Du Perry, 1931</mxc:subfield>      <mxc:subfield code="a">Le rêve qui meurt / J. Du Perry, 1931</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="917" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">010878911</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="918" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">00023075</mxc:subfield>      <mxc:subfield code="b">HS9301</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb12994766p</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19950127</ixm:attr>
+<ixm:attr name="LastModificationDate">20201127</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb129962496" type="Authority">   <mxc:leader>00387c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF129962491</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb129962496</mxc:controlfield>   <mxc:controlfield tag="008">950227170721befrem          19030213  19890904             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Gom Gut</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11924796</mxc:subfield>      <mxc:subfield code="w">.0. b.....</mxc:subfield>      <mxc:subfield code="a">Simenon</mxc:subfield>      <mxc:subfield code="m">Georges</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...2b.....</mxc:subfield>      <mxc:subfield code="a">Gut</mxc:subfield>      <mxc:subfield code="m">Gom</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de Georges Simenon</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Liquettes au vent / Gom Gut, 1926</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="917" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">010955329</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="918" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">00001078</mxc:subfield>      <mxc:subfield code="b">HS9301</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb129962496</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19950227</ixm:attr>
+<ixm:attr name="LastModificationDate">20170721</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb12999028d" type="Authority">   <mxc:leader>00690c0 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF129990284</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb12999028d</mxc:controlfield>   <mxc:controlfield tag="008">950227190204frfrem          18560217  19400215             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">000000047435272X</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20190213</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Noville</mxc:subfield>      <mxc:subfield code="m">Henri de</mxc:subfield>      <mxc:subfield code="d">1856-1940</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">11922639</mxc:subfield>      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Rosny aîné</mxc:subfield>      <mxc:subfield code="m">J.-H.</mxc:subfield>      <mxc:subfield code="d">1856-1940</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de J.-H. Rosny aîné</mxc:subfield>      <mxc:subfield code="a">Romancier</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="603" ind1=" " ind2=" ">      <mxc:subfield code="a">Bruxelles (Belgique)</mxc:subfield>      <mxc:subfield code="b">Proubazlanec (Côtes-d'Armor)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Le Trésor de Mérande : roman d'aventures contemporaines / Henri de Noville, 1903</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Henri de Noville</mxc:subfield>      <mxc:subfield code="u">http://jhrosny.overblog.com/tag/henri%20de%20noville/</mxc:subfield>      <mxc:subfield code="d">2019-02-04</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Noville (Henri de)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="612" ind1=" " ind2=" ">      <mxc:subfield code="a">ABF</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="917" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">011003752</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="918" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">00025872</mxc:subfield>      <mxc:subfield code="b">HS9301</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="996" ind1=" " ind2=" ">      <mxc:subfield code="o">OPP</mxc:subfield>      <mxc:subfield code="a">10446950</mxc:subfield>      <mxc:subfield code="d">20190204</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb12999028d</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19950228</ixm:attr>
+<ixm:attr name="LastModificationDate">20190213</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb13261582z" type="Authority">   <mxc:leader>00262c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF132615821</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb13261582z</mxc:controlfield>   <mxc:controlfield tag="008">990201120726usengm          18290528  19100513             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b     </mxc:subfield>      <mxc:subfield code="a">H.</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12169764</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Harrisse</mxc:subfield>      <mxc:subfield code="m">Henry</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Notes on Colombus / [preface by H.], 1866</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb13261582z</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19990201</ixm:attr>
+<ixm:attr name="LastModificationDate">20120726</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb154401490" type="Authority">   <mxc:leader>00423c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF154401492</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb154401490</mxc:controlfield>   <mxc:controlfield tag="008">100315120725usfrem          18290528  19100513             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000368614941</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20160216</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">B. A. V.</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12169764</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Harrisse</mxc:subfield>      <mxc:subfield code="m">Henry</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Bibliographe</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="603" ind1=" " ind2=" ">      <mxc:subfield code="a">Paris (France)</mxc:subfield>      <mxc:subfield code="b">Paris (France)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">A propos d'un manuscrit du Ministère des affaires étrangères / [signé : B. A. V. (Harrisse)], 1894</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb154401490</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20100330</ixm:attr>
+<ixm:attr name="LastModificationDate">20160216</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb15459688n" type="Authority">   <mxc:leader>00300c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF154596882</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb15459688n</mxc:controlfield>   <mxc:controlfield tag="008">100701170721befrem          19030213  19890904             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Dorsan</mxc:subfield>      <mxc:subfield code="m">Luc</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11924796</mxc:subfield>      <mxc:subfield code="w">.0. b.....</mxc:subfield>      <mxc:subfield code="a">Simenon</mxc:subfield>      <mxc:subfield code="m">Georges</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de Georges Simenon</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Nini violée / Luc Dorsan, [s.d.]</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb15459688n</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20100913</ixm:attr>
+<ixm:attr name="LastModificationDate">20170721</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb15467307q" type="Authority">   <mxc:leader>00491c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF154673072</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb15467307q</mxc:controlfield>   <mxc:controlfield tag="008">100701120726usfrem          18290528  19100513             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">H. H.</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12169764</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Harrisse</mxc:subfield>      <mxc:subfield code="m">Henry</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Bibliographe, historien et américaniste</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Lettre de Christophe Colomb annonçant aux rois catholiques la découverte du nouveau monde, bibliographie de la version latine / [signé : H. H. (Harrisse)], 1894</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Harrisse (Henry), pseud. Amigo, Sejus</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb15467307q</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20100913</ixm:attr>
+<ixm:attr name="LastModificationDate">20120726</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb16615421h" type="Authority">   <mxc:leader>00459c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF166154217</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb16615421h</mxc:controlfield>   <mxc:controlfield tag="008">120725120726usfrem          18290528  19100513             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">000000036861495X</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20160216</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b     </mxc:subfield>      <mxc:subfield code="a">Sejus</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12169764</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Harrisse</mxc:subfield>      <mxc:subfield code="m">Henry</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Bibliographe, historien et américaniste</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">L'origine de Christophe Colomb, démonstration critique et documentaire / par Sejus, 1885</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Harrisse (Henry), pseud. Amigo, Sejus</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb16615421h</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20120725</ixm:attr>
+<ixm:attr name="LastModificationDate">20160216</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb16615424j" type="Authority">   <mxc:leader>00419c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF166154249</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb16615424j</mxc:controlfield>   <mxc:controlfield tag="008">120725120726usfrem          18290528  19100513             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000368614925</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20160216</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b     </mxc:subfield>      <mxc:subfield code="a">Amigo</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12169764</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Harrisse</mxc:subfield>      <mxc:subfield code="m">Henry</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Bibliographe, historien et américaniste</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Pro Academia hispaniensi / [signé : Amigo], 1895</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Harrisse (Henry), pseud. Amigo, Sejus</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb16615424j</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20120725</ixm:attr>
+<ixm:attr name="LastModificationDate">20160216</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb16615425w" type="Authority">   <mxc:leader>00700c1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF166154256</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb16615425w</mxc:controlfield>   <mxc:controlfield tag="008">120725120725usfrem          18290528  19100513             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000368614933</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20170818</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b     </mxc:subfield>      <mxc:subfield code="a">Auteur de la Bibliotheca Americana vetustissima</mxc:subfield>      <mxc:subfield code="m">L'</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12169764</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Harrisse</mxc:subfield>      <mxc:subfield code="m">Henry</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...2b     </mxc:subfield>      <mxc:subfield code="a">Auteur de Bibliotheca Americana vetustissima</mxc:subfield>      <mxc:subfield code="m">L'</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...2b.spa </mxc:subfield>      <mxc:subfield code="a">Autor de la Bibliotheca Americana vetustissima</mxc:subfield>      <mxc:subfield code="m">El</mxc:subfield>      <mxc:subfield code="d">1829-1910</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Bibliographe, historien et américaniste</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Los estos de don Cristoval Colon / disquisicion por el autor de la "Bibliotheca americana vetustissima" [H. Harrisse], 1878</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Harrisse (Henry), pseud. Amigo, Sejus</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb16615425w</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20120725</ixm:attr>
+<ixm:attr name="LastModificationDate">20170818</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb170820159" type="Authority">   <mxc:leader>00361c1 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF170820155</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb170820159</mxc:controlfield>   <mxc:controlfield tag="008">161027161027frfrem          18440416  19241012             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b     </mxc:subfield>      <mxc:subfield code="a">Gerôme</mxc:subfield>      <mxc:subfield code="d">1844-1924</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11886331</mxc:subfield>      <mxc:subfield code="w"> 0 2b.....</mxc:subfield>      <mxc:subfield code="a">France</mxc:subfield>      <mxc:subfield code="m">Anatole</mxc:subfield>      <mxc:subfield code="d">1844-1924</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme d'Anatole France pour "L'Univers illustré" (chronique le "Courrier de Paris")</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Ernest Renan, Victor Hugo / Gérôme, 1924</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb170820159</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20161027</ixm:attr>
+<ixm:attr name="LastModificationDate">20161027</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb17141924v" type="Authority">   <mxc:leader>00309n1 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF171419247</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb17141924v</mxc:controlfield>   <mxc:controlfield tag="008">170724      befrem          19030213  19890904             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Sim</mxc:subfield>      <mxc:subfield code="m">Georges</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11924796</mxc:subfield>      <mxc:subfield code="w">.0. b.....</mxc:subfield>      <mxc:subfield code="a">Simenon</mxc:subfield>      <mxc:subfield code="m">Georges</mxc:subfield>      <mxc:subfield code="d">1903-1989</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de Georges Simenon</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Mademoiselle Million / Georges Sim, 1930</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb17141924v</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20170724</ixm:attr>
+<ixm:attr name="LastModificationDate">20170724</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb17324873f" type="Authority">   <mxc:leader>00480c0 ap22000272  45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF173248738</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb17324873f</mxc:controlfield>   <mxc:controlfield tag="008">190325250205gbengf          18160421  18550331             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Bell</mxc:subfield>      <mxc:subfield code="m">Currer</mxc:subfield>      <mxc:subfield code="d">1816-1855</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11894145</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Brontë</mxc:subfield>      <mxc:subfield code="m">Charlotte</mxc:subfield>      <mxc:subfield code="d">1816-1855</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Romancière</mxc:subfield>      <mxc:subfield code="a">Pseudonyme de Charlotte Brontë</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Jane Eyre, ou mémoires d'une institutrice / Currer Bell ; trad. par Mme Lesbazelles Souvestre, 1886</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Oxford Dictionary of National Biography</mxc:subfield>      <mxc:subfield code="u">https://doi.org/10.1093/ref:odnb/3523</mxc:subfield>      <mxc:subfield code="d">2025-02-05</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb17324873f</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20190404</ixm:attr>
+<ixm:attr name="LastModificationDate">20250205</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb178910029" type="Authority">   <mxc:leader>00466c1 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF178910028</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb178910029</mxc:controlfield>   <mxc:controlfield tag="008">200824200824fr   m          19430301  20131223             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Arpadys</mxc:subfield>      <mxc:subfield code="m">Peter</mxc:subfield>      <mxc:subfield code="d">1943-2013</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">13931996</mxc:subfield>      <mxc:subfield code="w"> 0  b     </mxc:subfield>      <mxc:subfield code="a">Dahan</mxc:subfield>      <mxc:subfield code="m">Pierre-Alain</mxc:subfield>      <mxc:subfield code="d">1943-2013</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Auteur-compositeur-interprète</mxc:subfield>      <mxc:subfield code="a">Pseudonyme de Pierre-Alain Dahan</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Pepper box [Musique imprimée] / musique de Peter Arpadys, Mat Camison, 1973</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Discogs</mxc:subfield>      <mxc:subfield code="u">https://www.discogs.com/fr/artist/780595-Peter-Arpadys</mxc:subfield>      <mxc:subfield code="d">2020-08-24</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb178910029</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20200824</ixm:attr>
+<ixm:attr name="LastModificationDate">20200824</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb18082672x" type="Authority">   <mxc:leader>00766c0 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF180826726</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb18082672x</mxc:controlfield>   <mxc:controlfield tag="008">230526230526frfrem          18440330  18960108             a 1   </mxc:controlfield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Herlagnèz</mxc:subfield>      <mxc:subfield code="m">Pablo de</mxc:subfield>      <mxc:subfield code="d">1844-1896</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2="2">      <mxc:subfield code="3">11927984</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Verlaine</mxc:subfield>      <mxc:subfield code="m">Paul</mxc:subfield>      <mxc:subfield code="d">1844-1896</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Poète</mxc:subfield>      <mxc:subfield code="a">Pseudonyme de Paul Verlaine (1844-1896)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="603" ind1=" " ind2=" ">      <mxc:subfield code="a">Metz (Moselle)</mxc:subfield>      <mxc:subfield code="b">Paris, 5e arrondissement (France)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Les Amies, scène d'amour sapphique / sonnets par le licencié Pablo de Herlagnèz, 1870</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">L'Enfer de la Bibliothèque nationale, bibliographie méthodique et critique de tous les ouvrages composant cette célèbre collection, avec une préface, un index des titres et une table des auteurs /par Guillaume Apollinaire, Fernand Fleuret, Louis Perceau, 1919 [p. 127 : Pablo de Herlagnèz (Paul Verlaine)]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén.</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb18082672x</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20230526</ixm:attr>
+<ixm:attr name="LastModificationDate">20230526</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb181747970" type="Authority">   <mxc:leader>00569n1 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF181747979</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb181747970</mxc:controlfield>   <mxc:controlfield tag="008">241016      frfrem          18370531  19210820             a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000368635136</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20241023</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Maufors</mxc:subfield>      <mxc:subfield code="d">1837-1921</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12103489</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Daudet</mxc:subfield>      <mxc:subfield code="m">Ernest</mxc:subfield>      <mxc:subfield code="d">1837-1921</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme d'Ernest Daudet, homme de lettres</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Les fils de ces dames / Maufors, 1880</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Comité des travaux historiques et scientifiques. CTHS, base prosopographique : Daudet Ernest dit Maufors</mxc:subfield>      <mxc:subfield code="u">http://cths.fr/an/prosopographie.php</mxc:subfield>      <mxc:subfield code="d">2024-10-16</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Daudet, Ernest, pseud. Maufors</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb181747970</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20241016</ixm:attr>
+<ixm:attr name="LastModificationDate">20241023</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+</srw:records>
+</srw:searchRetrieveResponse>

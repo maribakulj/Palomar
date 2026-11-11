@@ -1,0 +1,1 @@
+{:file "test/unit/palomar/eval/person_reconciliation_hard.clj", :sha256 "97bf7d84ffee963e8cb1c2218908e6eaceace87ed6ff89aa750f4b1629f62a6b", :note "Frozen 2026-11-11, after the design-time hand labels and hand check, before the test corpora (records-test/) were chosen or fetched."}

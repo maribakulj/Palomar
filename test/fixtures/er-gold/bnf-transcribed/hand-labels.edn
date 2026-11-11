@@ -1,0 +1,86 @@
+;; Hand labels of the hard benchmark (lot N3), 2026-11-11. Labelling, not tuning: allowed on
+;; any split. Each entry was decided by reading the record (245, headings, title) and the
+;; pool. :correct / :wrong settle a residual candidate; :same (with the pool :truth) /
+;; :different settle a no-match whose surname the pool holds. Design corpora: labelled
+;; before the test corpora were fetched.
+{:labels
+ {
+  ["cb40055941s" "f" 0 0] {:text "André Maurois" :verdict :same :truth "11915270" :note "the writer, with Jean Cocteau (France-URSS)"}
+  ["cb40055941s" "f" 0 1] {:text "Jean Cocteau" :verdict :same :truth "11897143" :note "the writer"}
+  ["cb35044068g" "f" 0 1] {:text "André Maurois" :verdict :same :truth "11915270" :note "the writer, among other writers"}
+  ["cb35044068g" "f" 0 3] {:text "Jacques Brenner" :verdict :different :note "Brenner, P S is another person; Jacques Brenner has no authority in the pool"}
+  ["cb43824620x" "f" 0 1] {:text "André Maurois" :verdict :same :truth "11915270" :note "with André Chevrillon, both writers (RTF)"}
+  ["cb330999249" "g" 0 0] {:text "André Maurois" :verdict :same :truth "11915270" :note "préface de M. André Maurois"}
+  ["cb416661598" "f" 1 0] {:text "André Maurois" :verdict :same :truth "11915270" :note "his answer to Cocteau's reception speech"}
+  ["cb324331139" "f" 1 0] {:text "André Maurois" :verdict :same :truth "11915270" :note "his answer to Cocteau's reception speech"}
+  ["cb35215179c" "f" 1 0] {:text "Anne Brontë" :verdict :same :truth "11894144" :note "Agnes Grey, with Wuthering Heights"}
+  ["cb470665088" "g" 0 0] {:text "Souvestre Lesbazeilles" :verdict :same :truth "16816266" :note "the translator of Jane Eyre, her name in the other order (found by the hand check)"}
+  ["cb41628640w" "f" 1 0] {:text "Anne Brontë" :verdict :same :truth "11894144" :note ""}
+  ["cb31877159z" "a" 0 1] {:text "Emilien Dufour" :verdict :different :note "Dufour-Grévoz, Colette is another person"}
+  ["cb401349221" "f" 0 2] {:text "Anne Brontë" :verdict :same :truth "11894144" :note ""}
+  ["cb401349221" "f" 0 3] {:text "Patrick Branwell Brontë" :verdict :same :truth "12026610" :note "Branwell Brontë"}
+  ["cb31877173h" "g" 0 0] {:text "Henriette Loreau" :verdict :correct :note "Loreaux, Henriette, the translator (0680)"}
+  ["cb318771814" "a" 0 0] {:text "George Edwin MacLean" :verdict :correct :note "Mac Lean, George Edwin, the introduction (0550)"}
+  ["cb43479737g" "g" 0 0] {:text "Le Bazeilles Souvestre" :verdict :correct :note "Lesbazeilles Souvestre, Madame Eugène, the translator (0680)"}
+  ["cb37792224f" "f" 0 0] {:text "Emilie Bronte" :verdict :same :truth "11894146" :note "Emily Brontë (Wuthering Heights)"}
+  ["cb37792224f" "f" 1 0] {:text "Charlotte Bronte" :verdict :same :truth "11894145" :note ""}
+  ["cb38080261w" "f" 0 0] {:text "Colette RENARD" :verdict :same :truth "13321102" :note "the singer (Vogue recording)"}
+  ["cb38080261w" "f" 1 0] {:text "Colette RENARD" :verdict :same :truth "13321102" :note "the singer (Vogue recording)"}
+  ["cb38080261w" "f" 2 0] {:text "Colette RENARD" :verdict :same :truth "13321102" :note "the singer (Vogue recording)"}
+  ["cb38080261w" "f" 3 0] {:text "Colette RENARD" :verdict :same :truth "13321102" :note "the singer (Vogue recording)"}
+  ["cb38080261w" "f" 4 0] {:text "Colette RENARD" :verdict :same :truth "13321102" :note "the singer (Vogue recording)"}
+  ["cb38080261w" "f" 5 0] {:text "Colette RENARD" :verdict :same :truth "13321102" :note "the singer (Vogue recording)"}
+  ["cb43886409k" "f" 0 0] {:text "Colette" :verdict :different :note "part of the duo \"Colette et Gérard\", not the writer"}
+  ["cb43886409k" "f" 0 1] {:text "Gérard" :verdict :different :note "part of the duo \"Colette et Gérard\", not Gerard, André-Marie"}
+  ["cb48655760n" "f" 0 0] {:text "Lewis Carroll" :verdict :same :truth "11885918" :note "Alice; the record heads him without $3"}
+  ["cb37987067h" "f" 0 0] {:text "LEWIS CARROLL" :verdict :same :truth "11885918" :note "Alice recording"}
+  ["cb377922295" "f" 0 0] {:text "Lewis Carroll" :verdict :same :truth "11885918" :note "Through the looking glass recording"}
+  ["cb377723260" "f" 0 0] {:text "Lewis Carroll" :verdict :same :truth "11885918" :note "Alice recording"}
+  ["cb379711403" "f" 0 0] {:text "Lewis Carroll" :verdict :same :truth "11885918" :note "Alice recording"}
+  ["cb378857920" "f" 0 0] {:text "Lewis CARROLL" :verdict :same :truth "11885918" :note "Alice recording"}
+  ["cb38326517z" "f" 0 0] {:text "Lewis Carroll" :verdict :same :truth "11885918" :note "tales for children, with Grimm and Defoe"}
+  ["cb37861437n" "f" 0 0] {:text "Lewis Carroll" :verdict :same :truth "11885918" :note "d'après le roman de Lewis Carroll (Disney)"}
+  ["cb346403985" "f" 0 0] {:text "Lewis Carroll" :verdict :same :truth "11885918" :note "anthology on cats"}
+  ["cb379749730" "f" 1 0] {:text "J. LEWIS" :verdict :different :note "a songwriter of a pop record; not Lewis, Cliff or Lewis, Jim"}
+  ["cb379749730" "f" 1 2] {:text "J. CARROLL" :verdict :different :note "a songwriter of a pop record; not a Carroll of the pool"}
+  ["cb37977991n" "f" 0 0] {:text "L. LEWIS" :verdict :different :note "a songwriter of a pop record"}
+  ["cb37977991n" "f" 0 2] {:text "J. CARROLL" :verdict :different :note "a songwriter of a pop record"}
+  ["cb37795521z" "f" 0 0] {:text "Jimmy Lewis" :verdict :different :note "a singer (Cameo Parkway); not Lewis, Jim (1963-) nor Lewis, Cliff"}
+  ["cb37795521z" "f" 2 0] {:text "Jay Thomas" :verdict :different :note "not Cordebar-Thomas, Colette"}
+  ["cb37829367d" "f" 2 0] {:text "Jerry Lee LEWIS" :verdict :different :note "the singer; not in the pool"}
+  ["cb37829367d" "f" 3 1] {:text "CARROLL" :verdict :different :note "a songwriter of a pop record"}
+  ["cb476569682" "f" 0 0] {:text "Pierre Loti" :verdict :same :truth "11913405" :note "the record heads him without $3"}
+  ["cb38487019x" "g" 1 0] {:text "Samuel Loti-Viaud" :verdict :same :truth "12151599" :note "Samuel Viaud, Loti's son"}
+  ["cb38487019x" "g" 1 2] {:text "Loti-Viaud" :verdict :different :note "\"Mme Loti-Viaud\": a woman, none of Pierre, Samuel or Daniel"}
+  ["cb321442919" "g" 0 0] {:text "Samuel Viaud" :verdict :same :truth "12151599" :note "\"fils de Pierre Loti\""}
+  ["cb321442919" "g" 0 1] {:text "Pierre Loti" :verdict :same :truth "11913405" :note ""}
+  ["cb31126319s" "a" 0 1] {:text "Alexeïeff" :verdict :same :truth "11888409" :note "the engraver of La Chute de la maison Usher"}
+  ["cb32536153f" "a" 0 1] {:text "Alexeïeff" :verdict :same :truth "11888409" :note "the engraver of La Chute de la maison Usher"}
+  ["cb311263518" "a" 0 0] {:text "Lavergnolle" :verdict :same :truth "10504289" :note "the translator of Poe"}
+  ["cb31126352m" "a" 0 0] {:text "Lavergnolle" :verdict :same :truth "10504289" :note "the translator of Poe"}
+  ["cb31126350x" "a" 0 0] {:text "Lavergnolle" :verdict :same :truth "10504289" :note "the translator of Poe"}
+  ["cb32536211s" "a" 0 0] {:text "Mary Newton Stanard" :verdict :same :truth "11213465" :note ""}
+  ;; Test corpora, labelled after the freeze and before any engine was run on them:
+  ["cb32079876q" "a" 0 0] {:text "Emilien Dufour" :verdict :different :note "an illustrator; not Dufour-Grévoz, Colette"}
+  ["cb320798892" "a" 0 1] {:text "Emilien Dufour" :verdict :different :note "an illustrator; not Dufour-Grévoz, Colette"}
+  ["cb392287696" "g" 0 2] {:text "Daniel Bernard" :verdict :different :note "not Bernard, Roland"}
+  ["cb37391992x" "g" 1 1] {:text "Maurice Sand" :verdict :same :truth "11923603" :note "George Sand's son, draughtsman"}
+  ["cb380464496" "f" 0 0] {:text "GEORGES SIMENON" :verdict :same :truth "11924796" :note "recording"}
+  ["cb47661562w" "f" 0 0] {:text "John Simenon" :verdict :same :truth "15991739" :note "his son, a participant"}
+  ["cb473923395" "f" 0 0] {:text "John Simenon" :verdict :same :truth "15991739" :note "his son, a participant"}
+  ["cb382268346" "f" 0 0] {:text "Marc Simenon" :verdict :same :truth "14700221" :note "his son, the director"}
+  ["cb43713849k" "f" 0 2] {:text "Georges Simenon" :verdict :same :truth "11924796" :note "interviews with writers"}
+  ["cb362571147" "f" 0 1] {:text "Georges Simenon" :verdict :same :truth "11924796" :note "among writers"}
+  ["cb47611942b" "g" 0 0] {:text "Georges Simenon" :verdict :same :truth "11924796" :note "adapted author"}
+  ["cb48523981w" "g" 2 0] {:text "Georges Simenon" :verdict :same :truth "11924796" :note "adapted author"}
+  ["cb468259432" "g" 0 0] {:text "John Simenon" :verdict :same :truth "15991739" :note "préface, his son"}
+  ["cb468908582" "g" 0 0] {:text "John Simenon" :verdict :same :truth "15991739" :note "préface, his son"}
+  ["cb38951846t" "f" 0 0] {:text "Simenon" :verdict :same :truth "11924796" :note "Omnibus edition of his novels"}
+  ["cb38818906j" "g" 1 0] {:text "Georges Simenon" :verdict :same :truth "11924796" :note "préface"}
+  ["cb334957652" "a" 0 0] {:text "L. Royer" :verdict :same :truth "10739960" :note "Louis Royer, the Grenoble Stendhal scholar"}
+  ["cb485118541" "f" 0 0] {:text "Stendhal" :verdict :same :truth "11925504" :note "the record heads him without $3"}
+  ["cb452495675" "f" 0 0] {:text "Stendhal" :verdict :different :note "\"Stendhal aujourd'hui\", a body"}
+  ["cb34013167d" "a" 0 0] {:text "Louis Royer" :verdict :same :truth "10739960" :note "editor of Stendhal's journal"}
+  ;; A design mention whose namesake entered the pool with the test corpora (labelled then):
+  ["cb31877152j" "a" 0 1] {:text "Maggie Salcedo" :verdict :same :truth "12933692" :note "the illustrator of Jane Eyre"}
+ }}

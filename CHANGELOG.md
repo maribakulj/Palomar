@@ -36,6 +36,22 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
   groups the mentions into persons. `--format edn` writes what the API
   returns. The run manifest names the engine and the model's parameter
   file by path and SHA-256 under `:reconcile`.
+- **A hard person-reconciliation benchmark** (lot N3,
+  `docs/eval/person-reconciliation-hard.md`): 1 300 BnF INTERMARC records
+  (Etalab 2.0) and the 292 person authorities they cite
+  (`test/fixtures/er-gold/bnf-transcribed/`). The 245 `$f`/`$g` (and the
+  role clauses of `$a`) are cut into transcribed mentions, each with its
+  role phrase. A stated rule links a mention to a heading of its record by
+  its surname, an authority's `400` variant or `331` pseudonym, or a
+  committed hand label; no-match cases are kept, a namesake in the pool as
+  a hard negative; the rest is set aside and counted. Train and dev are
+  the 9 design corpora, split by person; test is 4 corpora fetched after
+  the rules were frozen (`freeze.edn`), run once. Results are reported by
+  stratum (easy, homonym, variant/pseudonym, hand), a tie read as an
+  abstention. On dev the Jaccard (and names+dates: a transcription has no
+  dates) has precision 0.994, recall 0.919; M4's Fellegi-Sunter model
+  proposes nothing on the name as transcribed, and is precise but cautious
+  (recall 0.887) on the name put in heading order.
 - **Collective reconciliation** (lot M8; ADR 0018 amendment):
   `palomar.agent-relations` makes a mention's relational neighbourhood
   evidence — the role it plays (`$4`) against the candidate's roles in
