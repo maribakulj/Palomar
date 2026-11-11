@@ -437,3 +437,52 @@
                (select-keys model [:prior :thresholds :bar :weights :m-counts :u-counts])))))
     (testing "uncalibrated"
       (is (nil? (:calibration model))))))
+
+;; ---------------------------------------------------------------------------
+;; Lot O4 — the gap, the rules a file states, the explanations
+;; ---------------------------------------------------------------------------
+
+(deftest a-gap-is-a-finite-number-above-0-or-absent
+  (doseq [[why g] [["0" 0.0] ["negative" -3.0] ["a string" "12"] ["NaN" ##NaN] ["infinite" ##Inf] ["a keyword" :wide]]]
+    (testing why
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"gap"
+                            (api/reconciliation-model (tmp-model (assoc-in @shipped-params [:thresholds :gap] g)))))))
+  (testing "a bare model is checked too"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"gap"
+                          (api/reconcile @records nil {:engine :probabilistic
+                                                       :model  (assoc-in (held-out "Dumas") [:thresholds :gap] 0.0)}))))
+  (testing "a finite gap above 0, or none, passes"
+    (is (= 12.0 (get-in (api/reconciliation-model (tmp-model (assoc-in @shipped-params [:thresholds :gap] 12.0))) [:model :thresholds :gap])))
+    (is (some? (api/reconciliation-model (tmp-model @shipped-params))))))
+
+(deftest a-file-that-states-no-rules-predates-o4-and-is-read-as-it-was
+  (let [n3     (edn/read-string (slurp (io/resource "palomar/models/agent-match-n3.edn")))
+        n4-era (-> n3 (dissoc :rules) (assoc :thresholds {:propose 0.8 :review 0.5}))
+        {:keys [model version]} (rc/read-model (tmp-model n4-era))]
+    (testing "the N3 model as N4 shipped it: the same version, to the bit, and the N4 rules"
+      (is (= {:sha256 "6547f220552925540192ac805c06ec8bc16b6f9ae5d53265154375c958c6dd81" :weights "b3454bd60a2ca517"}
+             (select-keys version [:sha256 :weights])))
+      (is (= fs/n4-rules (fs/rules-of model)))
+      (is (= (:weights (fs/model (assoc n4-era :rules fs/n4-rules))) (:weights model)))
+      (is (nil? (fs/competing-gap model))))
+    (testing "the shipped files state their rules"
+      (is (= fs/o4-rules (:rules @shipped-params)))
+      (is (= fs/o4-rules (:rules n3))))))
+
+(deftest explain-says-when-the-gap-decided
+  (let [why (fn [th n p] (#'rc/candidate-why th n p))
+        th  {:propose 0.8 :review 0.5 :gap 6.0}]
+    (testing "an outright proposal under a gap names it"
+      (is (str/includes? (why th 0 {:decision :propose :score 0.99}) "within 6.0 bits")))
+    (testing "competing candidates under a gap name it"
+      (is (str/includes? (why th 2 {:decision :review :review-reason :competing :score 0.9}) "2 candidates of the mention are, within 6.0 bits")))
+    (testing "an outranked candidate says another weighs G bits or more above it"
+      (let [t (why th 2 {:decision :review :review-reason :outranked :score 0.9})]
+        (is (str/includes? t "outranked") t)
+        (is (str/includes? t "6.0 bits or more above it") t)))
+    (testing "without a gap, the N4 texts"
+      (is (str/includes? (why (dissoc th :gap) 0 {:decision :propose :score 0.99}) "no other candidate of the mention is at or above the review threshold 0.5"))))
+  (testing "the competing count is of the competing candidates, not of every proposal"
+    (is (= 2 (#'rc/competing-count [{:review-reason :competing} {:review-reason :competing} {:review-reason :outranked}
+                                    {:review-reason :no-name-agreement}])))
+    (is (= 2 (#'rc/competing-count [{:decision :propose} {:decision :review}])) "with none competing, every proposal")))

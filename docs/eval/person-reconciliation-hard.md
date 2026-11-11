@@ -360,7 +360,9 @@ chance (1 wrong on dev).
 
 `palomar.eval.person-reconciliation-hard-n4-test`. The code is in
 `palomar.eval.person-reconciliation-hard-n4`. It calls the frozen N3
-namespace and does not change it. The section was revised after a
+namespace and does not change it. Lot O4 changed the model's rules
+(section O4); the numbers in this section are those of N4's run, and those
+that moved are listed under O4, "Effect on the existing evals". The section was revised after a
 contradictory review (the thresholds, the reading of the test run, the
 recommendation, the limits).
 
@@ -486,7 +488,8 @@ BnF duplicates.
 
 ### Two model defects, for the next lot
 
-Neither is fixed here: each changes `agent-match`, so every model.
+Neither is fixed here: each changes `agent-match`, so every model. Lot O4
+fixed both, with the relative competing rule (section O4).
 
 - **The name weights are flattened.** The N3 counts measure
   `:surname-only` (9 true pairs, 35 others: log2 ratio +6.43) and
@@ -568,7 +571,7 @@ nationale de France". No `:calibration`.
   `..` segment in such a path is refused. A file on disk at the same path
   as a shipped model is refused, never read in its place: name it
   `./palomar/models/...` to read the file. Version: SHA-256 `6547f220…`,
-  weights `b3454bd60a2ca517`.
+  weights `b3454bd60a2ca517` (since O4: `3cdf97d3…`, `20d0b836a1d2ca2c`).
 - **It refuses its own training split.** `reconciliation/refuse-in-sample!`
   refuses it on a mention whose split key (person or no-match name) is one
   of its `:train-keys`, and on its `:data` files by their SHA-256 (so on
@@ -683,4 +686,364 @@ Fellegi-Sunter engines are the more careful ones on no-match names.
   person has one (0 of 401). The test run measured the role weight on
   almost nothing.
 - The non-increasing rule and the variant form weight (above) are left as
-  they are.
+  they are. (Resolved by O4.)
+
+## O4 — three rules of the model fixed, then measured
+
+`palomar.eval.person-reconciliation-hard-o4-test`. The code is in
+`palomar.eval.person-reconciliation-hard-o4`; the rules are in
+`palomar.agent-match` and `palomar.reconcile`; ADR 0062 states them. N4
+found three defects of the model. O4 fixes them and measures each fix
+alone and together. The test split is not run: it is spent, and
+`n4/test-run` refuses it. A contradictory review narrowed two rules; the
+numbers below are those of the narrowed rules, and what moved is listed.
+
+### The rules
+
+1. **The form weighs only on an exact name** (`:form :exact-name`). The
+   form weight (heading or variant) is added only at `:exact`
+   (`agent-match/form-weighed-levels`). Its evidence is that the mention
+   uses that very form, a variant or a pseudonym. Not at `:initials`: a
+   variant would win between equal initials matches. Not at
+   `:same-tokens`: a surname and a forename may be swapped. Below, a word
+   differs and the form read is only the closest one.
+2. **The chain runs over measured levels** (`:chain :measured-levels`).
+   A level is measured when at least 5 pairs reached it on both sides, or
+   5 on one side with a bound that proves something
+   (`agent-match/level-measured?`). The name weights never increase over
+   the measured levels. An unmeasured level is skipped and caps none
+   below it. It weighs 0; a level that says the surnames agree
+   (`agent-match/surname-levels`) takes the next measured weight below it
+   when that is above 0. It never weighs more than the measured level
+   above it. A disagreeing level still never weighs more than 0. In the N3
+   model, `:forename-overlap` now weighs +4.80, `:surname-only` +4.80 (its
+   own +6.43, capped by `:forename-overlap` above it), and the unmeasured
+   `:surname-typo` +4.80. The unmeasured `:same-tokens` stays 0: it does
+   not say the surnames agree. `:forenames-differ` (+2.34 measured) stays
+   0: it is a disagreement.
+3. **The competing rule is relative** (`:thresholds :gap`). A second
+   candidate at or above review makes the mention `:competing` only when
+   its weight is less than G bits below the top one's
+   (`agent-match/competes?`). A tie always competes, whatever the gap.
+   Otherwise the top candidate is decided on its own thresholds; another
+   candidate above propose is for review (`:review-reason :outranked`), so
+   a mention has one outright proposal at most. A model without a gap
+   keeps the N4 rule. A gap must be a finite number above 0: any other is
+   refused when the model is read, and the CLI exits 2. N5's rule is
+   unchanged: an unnamed candidate never makes a named one `:competing`,
+   and never is the top the gap is measured from. The decision code is
+   `reconcile/scored-candidates`; its per-mention step is the only part of
+   `reconcile.clj` changed.
+
+**Which rules a model follows.** A parameter file states `:rules`. A file
+that states none predates O4 and follows `agent-match/n4-rules`: an
+N4-era file read by this code has the very version it had (tested on the
+N3 model as N4 shipped it: `6547f220…`, weights `b3454bd60a2ca517`). Rules
+that are not a map, or an unknown rule, are refused. Both shipped files
+now state `agent-match/o4-rules`.
+
+### Method
+
+- **The same candidates.** As in N4: every train and dev mention against
+  the whole pool, one comparison per pair, the name put in heading order.
+- **Six Fellegi-Sunter configurations.** (a) the N4 rules; (b) each fix
+  alone, and the two weight fixes together under the absolute competing
+  rule; (c) all three. (d) the Jaccard, N3's engine at 0.5, fits nothing:
+  its "folds" figures are the train mentions themselves, which N3's rules
+  were written on.
+- **Thresholds and gap by the N4 criterion, on the folds only.** Each
+  configuration is fitted on the five folds of train (by person) and its
+  thresholds chosen on the held-out folds with `n4/threshold-criterion`.
+  The gap is chosen by `n4/gap-criterion`, written in the code before any
+  O4 number was seen: for each G in 0.5, 1, 2, 3, 4, 6, 8, 12 bits and no
+  gap, choose the thresholds with that gap; G is admissible when the
+  propose step found an admissible value; take the admissible G with the
+  highest recall; on a tie, the largest (no gap counts as the largest).
+  Dev only confirms, with the model fitted on all of train.
+- **The figures.** Precision is correct over outright links. False merges
+  are outright links to the wrong person or on a no-match. Abstention is
+  the share of mentions with no link and no review (N3's tables count a
+  review as an abstention; these do not). Curation cost is reviews per
+  mention, and the share of reviews whose truth is among the candidates at
+  or above review (a no-match review holds none). Generation recall is the
+  share of linked mentions whose truth is among the candidates.
+
+### The grid, held-out folds of train (697 mentions)
+
+| configuration | thresholds | correct | reviews | precision | recall | false merges | reviews / mention | reviews holding the truth | abstention | no-match abstention | generation recall |
+|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| a-current | 0.8 / 0.5 | 554 | 15 | 0.996 | 0.917 | 2 | 0.022 | 1.000 | 0.181 | 0.978 | 1.000 |
+| b-form | 0.5 / 0.5 | 554 | 15 | 0.996 | 0.917 | 2 | 0.022 | 1.000 | 0.181 | 0.978 | 1.000 |
+| b-chain | 0.95 / 0.5 | 404 | 179 | 0.998 | 0.669 | 1 | 0.257 | 0.994 | 0.162 | 0.978 | 1.000 |
+| b-relative | 0.8 / 0.5 | 554 | 15 | 0.996 | 0.917 | 2 | 0.022 | 1.000 | 0.181 | 0.978 | 1.000 |
+| b-form-chain | 0.5 / 0.5 | 553 | 26 | 0.996 | 0.916 | 2 | 0.037 | 1.000 | 0.166 | 0.978 | 1.000 |
+| c-all | 0.5 / 0.5, G 12.0 | 554 | 25 | 0.996 | 0.917 | 2 | 0.036 | 1.000 | 0.166 | 0.978 | 1.000 |
+| d-jaccard | 0.5 (N3) | 565 | 0 | 0.993 | 0.935 | 4 | 0.000 | n/a | 0.184 | 0.968 | 0.969 |
+
+Per stratum, correct / false merges / reviews / abstained:
+
+| configuration | easy | homonym | variant | hand | hard negative | no namesake |
+|---|---|---|---|---|---|---|
+| a-current | 272 / 0 / 0 / 12 | 233 / 0 / 15 / 9 | 32 / 0 / 0 / 10 | 17 / 0 / 0 / 4 | 0 / 2 / 0 / 8 | 0 / 0 / 0 / 83 |
+| b-form | 272 / 0 / 0 / 12 | 233 / 0 / 15 / 9 | 32 / 0 / 0 / 10 | 17 / 0 / 0 / 4 | 0 / 2 / 0 / 8 | 0 / 0 / 0 / 83 |
+| b-chain | 265 / 0 / 7 / 12 | 100 / 0 / 151 / 6 | 31 / 0 / 11 / 0 | 8 / 0 / 9 / 4 | 0 / 1 / 1 / 8 | 0 / 0 / 0 / 83 |
+| b-relative | 272 / 0 / 0 / 12 | 233 / 0 / 15 / 9 | 32 / 0 / 0 / 10 | 17 / 0 / 0 / 4 | 0 / 2 / 0 / 8 | 0 / 0 / 0 / 83 |
+| b-form-chain | 272 / 0 / 0 / 12 | 233 / 0 / 15 / 9 | 31 / 0 / 11 / 0 | 17 / 0 / 0 / 4 | 0 / 2 / 0 / 8 | 0 / 0 / 0 / 83 |
+| c-all | 272 / 0 / 0 / 12 | 233 / 0 / 15 / 9 | 32 / 0 / 10 / 0 | 17 / 0 / 0 / 4 | 0 / 2 / 0 / 8 | 0 / 0 / 0 / 83 |
+| d-jaccard | 270 / 0 / 0 / 14 | 233 / 1 / 0 / 23 | 42 / 0 / 0 / 0 | 20 / 0 / 0 / 1 | 0 / 1 / 0 / 9 | 0 / 2 / 0 / 81 |
+
+Per stratum, all figures, (a) the N4 rules:
+
+| stratum | n | correct | reviews | precision | recall | false merges | reviews / mention | reviews holding the truth | abstention | no-match abstention | generation recall |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| easy | 284 | 272 | 0 | 1.000 | 0.958 | 0 | 0.000 | n/a | 0.042 | n/a | 1.000 |
+| homonym | 257 | 233 | 15 | 1.000 | 0.907 | 0 | 0.058 | 1.000 | 0.035 | n/a | 1.000 |
+| variant | 42 | 32 | 0 | 1.000 | 0.762 | 0 | 0.000 | n/a | 0.238 | n/a | 1.000 |
+| hand | 21 | 17 | 0 | 1.000 | 0.810 | 0 | 0.000 | n/a | 0.190 | n/a | 1.000 |
+| hard-negative | 10 | 0 | 0 | 0.000 | n/a | 2 | 0.000 | n/a | 0.800 | 0.800 | n/a |
+| no-namesake | 83 | 0 | 0 | n/a | n/a | 0 | 0.000 | n/a | 1.000 | 1.000 | n/a |
+
+(c) all three rules:
+
+| stratum | n | correct | reviews | precision | recall | false merges | reviews / mention | reviews holding the truth | abstention | no-match abstention | generation recall |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| easy | 284 | 272 | 0 | 1.000 | 0.958 | 0 | 0.000 | n/a | 0.042 | n/a | 1.000 |
+| homonym | 257 | 233 | 15 | 1.000 | 0.907 | 0 | 0.058 | 1.000 | 0.035 | n/a | 1.000 |
+| variant | 42 | 32 | 10 | 1.000 | 0.762 | 0 | 0.238 | 1.000 | 0.000 | n/a | 1.000 |
+| hand | 21 | 17 | 0 | 1.000 | 0.810 | 0 | 0.000 | n/a | 0.190 | n/a | 1.000 |
+| hard-negative | 10 | 0 | 0 | 0.000 | n/a | 2 | 0.000 | n/a | 0.800 | 0.800 | n/a |
+| no-namesake | 83 | 0 | 0 | n/a | n/a | 0 | 0.000 | n/a | 1.000 | 1.000 | n/a |
+
+(d) the Jaccard, on the train mentions:
+
+| stratum | n | correct | reviews | precision | recall | false merges | reviews / mention | reviews holding the truth | abstention | no-match abstention | generation recall |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| easy | 284 | 270 | 0 | 1.000 | 0.951 | 0 | 0.000 | n/a | 0.049 | n/a | 0.951 |
+| homonym | 257 | 233 | 0 | 0.996 | 0.907 | 1 | 0.000 | n/a | 0.089 | n/a | 0.984 |
+| variant | 42 | 42 | 0 | 1.000 | 1.000 | 0 | 0.000 | n/a | 0.000 | n/a | 1.000 |
+| hand | 21 | 20 | 0 | 1.000 | 0.952 | 0 | 0.000 | n/a | 0.048 | n/a | 0.952 |
+| hard-negative | 10 | 0 | 0 | 0.000 | n/a | 1 | 0.000 | n/a | 0.900 | 0.900 | n/a |
+| no-namesake | 83 | 0 | 0 | 0.000 | n/a | 2 | 0.000 | n/a | 0.976 | 0.976 | n/a |
+
+### Dev, confirmation (206 mentions)
+
+| configuration | thresholds | correct | reviews | precision | recall | false merges | reviews / mention | reviews holding the truth | abstention | no-match abstention | generation recall |
+|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| a-current | 0.8 / 0.5 | 165 | 5 | 1.000 | 0.887 | 0 | 0.024 | 0.600 | 0.175 | 0.900 | 0.962 |
+| b-form | 0.5 / 0.5 | 165 | 5 | 1.000 | 0.887 | 0 | 0.024 | 0.600 | 0.175 | 0.900 | 0.962 |
+| b-chain | 0.95 / 0.5 | 99 | 74 | 1.000 | 0.532 | 0 | 0.359 | 0.959 | 0.160 | 0.850 | 0.962 |
+| b-relative | 0.8 / 0.5 | 165 | 5 | 1.000 | 0.887 | 0 | 0.024 | 0.600 | 0.175 | 0.900 | 0.962 |
+| b-form-chain | 0.5 / 0.5 | 165 | 5 | 1.000 | 0.887 | 0 | 0.024 | 0.600 | 0.175 | 0.900 | 0.962 |
+| c-all | 0.5 / 0.5, G 12.0 | 165 | 5 | 1.000 | 0.887 | 0 | 0.024 | 0.600 | 0.175 | 0.900 | 0.962 |
+| d-jaccard | 0.5 (N3) | 171 | 0 | 0.994 | 0.919 | 1 | 0.000 | n/a | 0.165 | 0.950 | 0.935 |
+
+Per stratum, correct / false merges / reviews / abstained:
+
+| configuration | easy | homonym | variant | hand | hard negative | no namesake |
+|---|---|---|---|---|---|---|
+| a-current | 28 / 0 / 0 / 1 | 122 / 0 / 3 / 2 | 5 / 0 / 0 / 11 | 10 / 0 / 0 / 4 | 0 / 0 / 2 / 1 | 0 / 0 / 0 / 17 |
+| b-form | 28 / 0 / 0 / 1 | 122 / 0 / 3 / 2 | 5 / 0 / 0 / 11 | 10 / 0 / 0 / 4 | 0 / 0 / 2 / 1 | 0 / 0 / 0 / 17 |
+| b-chain | 28 / 0 / 0 / 1 | 62 / 0 / 63 / 2 | 5 / 0 / 1 / 10 | 4 / 0 / 7 / 3 | 0 / 0 / 3 / 0 | 0 / 0 / 0 / 17 |
+| b-relative | 28 / 0 / 0 / 1 | 122 / 0 / 3 / 2 | 5 / 0 / 0 / 11 | 10 / 0 / 0 / 4 | 0 / 0 / 2 / 1 | 0 / 0 / 0 / 17 |
+| b-form-chain | 28 / 0 / 0 / 1 | 122 / 0 / 3 / 2 | 5 / 0 / 0 / 11 | 10 / 0 / 0 / 4 | 0 / 0 / 2 / 1 | 0 / 0 / 0 / 17 |
+| c-all | 28 / 0 / 0 / 1 | 122 / 0 / 3 / 2 | 5 / 0 / 0 / 11 | 10 / 0 / 0 / 4 | 0 / 0 / 2 / 1 | 0 / 0 / 0 / 17 |
+| d-jaccard | 29 / 0 / 0 / 0 | 122 / 0 / 0 / 5 | 6 / 0 / 0 / 10 | 14 / 0 / 0 / 0 | 0 / 1 / 0 / 2 | 0 / 0 / 0 / 17 |
+
+Per stratum, all figures, (a) and (c), which are equal on dev:
+
+| stratum | n | correct | reviews | precision | recall | false merges | reviews / mention | reviews holding the truth | abstention | no-match abstention | generation recall |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| easy | 29 | 28 | 0 | 1.000 | 0.966 | 0 | 0.000 | n/a | 0.034 | n/a | 1.000 |
+| homonym | 127 | 122 | 3 | 1.000 | 0.961 | 0 | 0.024 | 1.000 | 0.016 | n/a | 1.000 |
+| variant | 16 | 5 | 0 | 1.000 | 0.313 | 0 | 0.000 | n/a | 0.688 | n/a | 0.563 |
+| hand | 14 | 10 | 0 | 1.000 | 0.714 | 0 | 0.000 | n/a | 0.286 | n/a | 1.000 |
+| hard-negative | 3 | 0 | 2 | n/a | n/a | 0 | 0.667 | 0.000 | 0.333 | 0.333 | n/a |
+| no-namesake | 17 | 0 | 0 | n/a | n/a | 0 | 0.000 | n/a | 1.000 | 1.000 | n/a |
+
+(d) the Jaccard:
+
+| stratum | n | correct | reviews | precision | recall | false merges | reviews / mention | reviews holding the truth | abstention | no-match abstention | generation recall |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| easy | 29 | 29 | 0 | 1.000 | 1.000 | 0 | 0.000 | n/a | 0.000 | n/a | 1.000 |
+| homonym | 127 | 122 | 0 | 1.000 | 0.961 | 0 | 0.000 | n/a | 0.039 | n/a | 0.984 |
+| variant | 16 | 6 | 0 | 1.000 | 0.375 | 0 | 0.000 | n/a | 0.625 | n/a | 0.375 |
+| hand | 14 | 14 | 0 | 1.000 | 1.000 | 0 | 0.000 | n/a | 0.000 | n/a | 1.000 |
+| hard-negative | 3 | 0 | 0 | 0.000 | n/a | 1 | 0.000 | n/a | 0.667 | 0.667 | n/a |
+| no-namesake | 17 | 0 | 0 | n/a | n/a | 0 | 0.000 | n/a | 1.000 | 1.000 | n/a |
+
+### What moved when the review narrowed the rules
+
+The form now weighs at `:exact` only (it weighed at `:initials` and
+`:same-tokens` too), and an unmeasured `:same-tokens` stays 0 (it took
++4.80). On the grid, every figure is unchanged. Only the thresholds moved:
+(b) form, (b) form + chain and (c) all three now propose at **0.5**, not
+0.8. Without the variant weight at `:initials`, 5 initials links fall below
+0.8 on the folds (551 links from 0.6 to 0.8, 556 at 0.5), so the criterion
+takes 0.5. No review value below 0.5 is admissible, so review is 0.5 too:
+**the N3 model now has no review band.** A mention goes to review only
+when its candidates compete.
+
+### What the grid shows, and what it does not
+
+- **No fix changes a link at the chosen thresholds, except the chain
+  alone, which loses them.** The chain gives the measured agreements a
+  weight, so more namesakes pass review; under the absolute rule each
+  sends its mention to review. On dev, 165 links fall to 99, as N4 said;
+  on the folds, 554 to 404.
+- **The 10 differences on the folds are one mention.** With all three
+  rules, the variant stratum moves 10 cases from abstention to review.
+  They are 10 copies of "Pierre P. Loti-Viaud", and they come from the
+  chain: its three namesakes (Pierre, Samuel, Daniel Loti-Viaud) tie at
+  `:forename-overlap`, +4.80, a posterior of 0.515. On dev nothing moves.
+- **The cliff moved; it is not gone.** The second candidate's posterior,
+  on the folds and on dev, under (a) and (c):
+
+  | | second candidates in [0.05, 0.5), by posterior | mentions with a second ≥ 0.1 | ≥ 0.2 | ≥ 0.3 | ≥ 0.5 |
+  |---|---|--:|--:|--:|--:|
+  | folds, (a) | 0.0525 ×9, 0.0672 ×17, 0.1003 ×27, 0.1128 ×90, 0.1195 ×114, 0.1345 ×106 | 352 | 15 | 15 | 15 |
+  | folds, (c) | 0.0685 ×5, 0.0788 ×1, 0.2367 ×47, 0.2793 ×66 | 139 | 139 | 26 | 26 |
+  | dev, (a) | 0.0976 ×89 | 5 | 5 | 5 | 5 |
+  | dev, (c) | 0.1024 ×66, 0.2549 ×1 | 72 | 6 | 5 | 5 |
+
+  The variant cliff at 0.0976 is gone, but the chain makes a new one: the
+  namesakes at `:forename-overlap` and `:surname-only` sit together at
+  0.10 on dev and 0.24 or 0.28 on the folds. A review threshold below
+  them would send each of those mentions to review.
+- **The gap binds on one mention, and G = 12 comes from the tie rule.**
+  With all three rules, the only second candidate at or above 0.5 that is
+  not tied with the top is on "Pierre Loti-Viaud", 13.78 bits below. Gaps
+  of 0.5 to 2, 8 and 12 bits all give 556 links on the folds (3 to 6 take
+  review 0.2 and keep 551); no gap gives 555. The tie rule takes the
+  largest, 12.
+- **The relative rule alone.** Under the N4 weights, gaps of 0.5 to 4 bits
+  give 556 links but move review to 0.1 (47 reviews, 28 with their truth);
+  G = 6 gives 553; 8 and 12 give 556 at review 0.5, as no gap does. The
+  tie goes to no gap, so (b) relative is (a).
+- **No configuration makes a new false merge**, on the folds or on dev.
+- **The Jaccard stays the more complete engine on transcriptions**
+  (recall 0.919 on dev against 0.887). It makes 1 false merge on dev and 4
+  on train; the Fellegi-Sunter engines 0 on dev.
+
+### The N3 model file, refitted
+
+`resources/palomar/models/agent-match-n3.edn` now states `:rules` (the O4
+rules) and `:thresholds {:propose 0.5 :review 0.5 :gap 12.0}`, chosen as
+above. Its counts and prior are unchanged. Version: SHA-256 `3cdf97d3…`,
+weights `20d0b836a1d2ca2c` (N4: `6547f220…`, `b3454bd60a2ca517`).
+
+### Effect on the existing evals
+
+Every eval was run before and after (M2 to M8, M6 GND, N3 dev, N5 lanes).
+These numbers moved; everything else is unchanged.
+
+- **The shipped M2 model** now states the O4 rules in its file. Its
+  weights are the same (its unmeasured levels sit between `:exact` and a
+  negative level, so they stay 0; its variant weighs 0); its version is
+  SHA-256 `d84056ed…` (was `cab6dbee…`), weights `22fb57898f6f5d52`
+  (unchanged). It states no gap: the absolute rule. The form rule drops
+  its heading's +0.019 bits on names that are not exact.
+- **M4** (its leave-one-family-out models now state the O4 rules, as the
+  shipped file does): calibration Brier 0.0360 → 0.0355, ECE 0.1082 →
+  0.1073, the bins below 0.9 down by 0.001 to 0.003; EM Brier 0.0832 →
+  0.0826, ECE 0.1776 → 0.1767. Reason: the +0.019 heading weight no longer
+  reaches names that are not exact. Same decisions.
+- **M4 stress set: worse, by ties.** A tied top proposal is now its own
+  outcome, never right by pool order. Under the N4 rules: 126 right and 1
+  tie (127 when pool order broke the tie). Under the O4 rules: **122 right
+  and 5 ties** (initials 28 + 1, reversed 27 + 2, typo 27 + 2). All five
+  are Hetzel against his pseudonym Stahl, heading against variant; the
+  heading's +0.019 bits broke them before. None is proposed outright
+  either way.
+- **N4, dev**: the roles run, at the thresholds the criterion now chooses
+  for it (0.5 / 0.5), links the two "Alexeïeff" hand mentions (a surname
+  alone, +4.80, plus the role agreement): 167 correct, 5 reviews.
+- **N4, separation table** (no gap, the O4 weights): on the folds, review
+  0.1 costs about 110 links against 0.4, not about 300; propose 0.9 against
+  0.95 is 31 links, not 28; the role weight is −1 to 3. On dev, review 0.1
+  gives 99 links, not 165 (the chain's new competitors). The roles run's
+  dev reviews at propose 0.95 go from 8 to 10.
+- **N4, calibration**: dev review-band pairs 2 → 0 (the band [0.5, 0.5)
+  is empty), ECE 0.0069 → 0.0110, largest bin gap 0.710 → 0.743; the
+  report is bound to the new fingerprint `7e41a4ab1975f751`. Five folds of
+  train+dev: review-band pairs 13 → 19, ECE 0.0079 → 0.0060, largest bin
+  gap 0.401 → 0.776 (3 predictions in [0.2, 0.3), all true). The bar is
+  still missed; no calibration ships.
+- **N4, the thresholds chosen**: 0.8 / 0.5 → 0.5 / 0.5 with G = 12; on the
+  folds 556 links and 25 reviews (15 before); on dev 165 links and 5
+  reviews, as before.
+- **Unchanged**: M2/M3 Jaccard tasks, M4 task A, M5 and M8 (relational,
+  at the absolute rule), M6 on the GND (held out and in-sample), M7
+  events, N3's dev table, the N5 lane recalls, the Simenon ceiling
+  (0.922).
+
+### The relative rule on the M2 gold (no recommendation before O5)
+
+On M4's leave-one-family-out models, 26 mentions have two candidates at or
+above review. Their gaps fall in four steps:
+
+| gap (bits) | mentions | names |
+|--:|--:|---|
+| 0 | 1 | "Dumas, Alexandre", père and fils tied |
+| 7.699 | 1 | "Hetzel, Pierre-Jules" (Stahl second) |
+| 8.699 | 1 | "Stahl, P.-J." (Hetzel second) |
+| 9.998 | 23 | "Férat, Jules" ×20 (Jules Verne second, 0.54), and three Víctor Hugo authors |
+
+Outright links (correct, abstained, false) and reviews, at the thresholds
+the models hold (0.95 / 0.5): no gap 111, 25, 0 and 26; any G up to 7.699:
+136, 0, 0 and 1; G in (7.699, 8.699]: 135, 1, 0 and 2; G in (8.699,
+9.998]: 134, 2, 0 and 3; above 9.998: as no gap. The 25 links a gap can
+free belong to **6 names**, not one family: Férat, the three Víctor Hugo
+authors, Hetzel and Stahl. The M2 gold has 33 distinct true mentions. **No
+gap is recommended for the M2 model before O5**, which builds the next
+test. Its file states no gap.
+
+### Mutants
+
+Each mutant changes one line of the rules; each was run against the unit
+tests of `agent-match`, `reconcile`, `candidates`, `reconciliation`, the CLI
+and N4's decision test (M14 also against the EM eval test; M16 and M17
+against the threshold and grid tests). Failures counted per mutant:
+
+| id | mutant | failures |
+|---|---|--:|
+| M01 | form gate zeroes only positive form weights | 9 |
+| M02 | outranked becomes abstain | 1 |
+| M03 | outranked clause removed | 4 |
+| M04 | top weight over every candidate (unnamed, abstained) | 1 |
+| M05 | chain floor removed (unmeasured takes a negative weight below) | 242 |
+| M06 | unmeasured not capped by the measured level above | 808 |
+| M07 | unmeasured never raised | 106 |
+| M07b | raise not limited to surname levels | 31 |
+| M08 | measured needs both sides | 11 |
+| M09 | competes at exactly G | 1 |
+| M09b | tie no longer always competes | 6 |
+| M10 | explain counts every proposal as competing | 1 |
+| M11 | explain outranked text falls to between-thresholds | 2 |
+| M12 | a file without rules reads as O4 | 7 |
+| M13 | form weighed at initials too | 3 |
+| M14 | EM E-step under O4 rules | 4 |
+| M15 | outranked also on far candidates between thresholds | 1 |
+| M16 | gap tie goes to the smallest G | 1 |
+| M17 | gap admissibility ignored | 0 |
+| M18 | gap not validated | 13 |
+| M19 | non-map rules not checked | 4 |
+| M20 | N4 decide ignores the gap | 1 |
+| M21 | O4 chain rule is the N4 one | 6 |
+
+M17 survives and is kept as an equivalent mutant: on N3 every G of the
+grid is admissible, so ignoring admissibility chooses the same G.
+
+### Limits of O4
+
+- On the hard benchmark the three rules change no link; they move one
+  mention (10 copies) from abstention to review on the folds, none on dev.
+  Most of the remaining misses are generation misses (a pseudonym the pool
+  lacks) or hand links no name level reaches.
+- The chain makes a new cluster of second candidates (0.10 on dev, 0.24
+  and 0.28 on the folds). A review threshold below it would send many
+  mentions to review.
+- The N3 model has no review band (0.5 / 0.5).
+- The form weight is still estimated over every pair and applied only on
+  an exact name; the files hold no joint counts of name level and form.
+- On N3 the gap binds on one mention, and G = 12 is the tie rule's choice.
+- The stress set has 4 more ties than under the N4 rules.

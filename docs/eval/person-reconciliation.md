@@ -367,6 +367,21 @@ weigh nothing. The 5 mentions whose authority is not in the pool are all
 abstained (Paltsits at 0.18). 577 candidates are rejected for their dates,
 never a mention's own authority.
 
+**The relative competing rule (lot O4, ADR 0062).** These held-out models
+state no gap, so the numbers above use the absolute rule. With a gap G in
+their thresholds, a second candidate competes only when it weighs less
+than G bits below the top one. The 26 mentions with two candidates at or
+above review have gaps in four steps: 0 (the père/fils tie), 7.699
+(Hetzel, Stahl second), 8.699 (Stahl, Hetzel second) and 9.998 (the 20
+"Férat, Jules" mentions, Jules Verne second at 0.54, and three Víctor
+Hugo authors). Outright links (correct, abstained, false) and reviews: no
+gap 111, 25, 0 and 26; any G up to 7.699: 136, 0, 0 and 1; up to 8.699:
+135, 1, 0 and 2; up to 9.998: 134, 2, 0 and 3; above: as no gap. The 25
+links a gap can free belong to 6 names, not one family.
+`palomar.eval.person-reconciliation-hard-o4-test/the-relative-rule-on-the-m2-gold-held-out-by-family`
+pins these numbers. No gap is recommended for the M2 model before O5;
+its file states none.
+
 ### Task B, M3 and M4
 
 | rule             | merged pairs | right | false merges | precision | recall | F1    | B-cubed P | B-cubed R |
@@ -383,15 +398,17 @@ The held-out predictions: every scored candidate (proposed, for review or
 abstained) of the 141 determined mentions, each from its family's held-out
 model. 351 predictions, but **125 distinct (mention, candidate) pairs and
 33 distinct true mentions** (35 identical "Dumas, Alexandre" mentions are
-one), 7 distinct pairs in the review band. **Brier 0.0360, ECE 0.1082,
-largest bin gap 0.740.**
+one), 7 distinct pairs in the review band. **Brier 0.0355, ECE 0.1073,
+largest bin gap 0.740.** (Before lot O4: Brier 0.0360, ECE 0.1082. Since
+O4 the form weighs only on an exact name, so a non-match no longer gets
+the heading's +0.019 bits; the bins below 0.9 moved down by 0.001 to 0.003.)
 
 | bin | predictions | mean predicted | observed |
 |-----|------:|---------------:|---------:|
-| [0.0, 0.1) | 113 | 0.0697 | 0.000 |
-| [0.1, 0.2) | 53  | 0.1285 | 0.000 |
-| [0.3, 0.4) | 23  | 0.3716 | 0.000 |
-| [0.5, 0.6) | 24  | 0.5397 | 0.000 |
+| [0.0, 0.1) | 113 | 0.0688 | 0.000 |
+| [0.1, 0.2) | 53  | 0.1270 | 0.000 |
+| [0.3, 0.4) | 23  | 0.3685 | 0.000 |
+| [0.5, 0.6) | 24  | 0.5364 | 0.000 |
 | [0.6, 0.7) | 1   | 0.6517 | 0.000 |
 | [0.7, 0.8) | 1   | 0.7401 | 0.000 |
 | [0.9, 1.0] | 136 | 0.9969 | 1.000 |
@@ -412,7 +429,8 @@ What the table shows: the model is right where it is sure (136 at 0.997,
 all true) and does not know elsewhere — its negatives sit at 0.07 to 0.54
 because the weights that would push them down (different surnames, different
 forenames) rest on bounds, not measures. EM, measured the same way, gives
-the same top proposals, 88 outright, Brier 0.0832 and ECE 0.1776.
+the same top proposals, 88 outright, Brier 0.0826 and ECE 0.1767 (0.0832
+and 0.1776 before lot O4, for the same reason).
 
 ### Stress set (synthetic)
 
@@ -425,12 +443,21 @@ Pierre-Jules"); the dates kept. Not a sample of real cataloguing.
 
 | perturbation | n | truth a candidate, M3 (Jaccard >= 0.5) | truth a candidate, M4 | top proposal right, M4 | proposed outright, M4 |
 |--------------|--:|---:|---:|---:|---:|
-| initials         | 33  | 7  | 33  | 29  | 1  |
+| initials         | 33  | 7  | 33  | 28 (1 tied) | 1  |
 | dropped forename | 33  | 29 | 33  | 29  | 1  |
-| reversed         | 33  | 33 | 33  | 29  | 0  |
+| reversed         | 33  | 33 | 33  | 27 (2 tied) | 0  |
 | accents removed  | 11  | 11 | 11  | 11  | 8  |
-| typo             | 33  | 17 | 33  | 29  | 0  |
-| **all**          | 143 | 97 | 143 | 127 | 10 |
+| typo             | 33  | 17 | 33  | 27 (2 tied) | 0  |
+| **all**          | 143 | 97 | 143 | 122 (5 tied) | 10 |
+
+Since lot O4 a tied top proposal is its own outcome, never right by pool
+order. Under the N4 rules: 126 right and 1 tie ("Hetzel, P.-J."), 127 when
+pool order broke the tie. Under the O4 rules, which the models now state:
+122 right and 5 ties. All five are Hetzel against his pseudonym Stahl,
+heading against variant ("Hetzel, P.-J.", "Pierre-Jules Hetzel",
+"Htezel, Pierre-Jules", "P.-J. Stahl", "Sathl, P.-J."): the heading's
++0.019 bits broke four of them before, and the form now weighs only on an
+exact name. None is proposed outright either way.
 
 The model's candidates hold every truth; the Jaccard misses initials and
 typos. Every perturbed level but accents (which `text/norm` undoes) weighs

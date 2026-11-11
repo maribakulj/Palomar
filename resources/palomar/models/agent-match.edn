@@ -23,11 +23,17 @@
 ;; posterior it gives is ever written as a confidence. Every true pair it
 ;; learnt from is an exact heading; read its limits in the eval.
 ;;
+;; Lot O4 (ADR 0062): its weights follow the rules it states (`:rules`: the
+;; form weighs only on an exact name; the chain of name weights runs over the
+;; measured levels). It states no `:gap`: a second candidate at or above the
+;; review threshold always competes.
+;;
 ;; The run manifest names the model by its version (`model-version`): the
 ;; SHA-256 of its parameters as read, and the fingerprint of its weights. A
 ;; comment or a layout change is no new version; a changed parameter is.
 {:prior 0.12890995260663507
  :thresholds {:propose 0.95 :review 0.5}
+ :rules {:form :exact-name :chain :measured-levels}
  :bar {:max-ece 0.05 :max-bin-gap 0.1 :min-pairs 300 :min-positives 100 :min-review-pairs 30 :bins 10}
  :m-counts {:name {:n 136.0 :counts {:exact 136.0}}
             :form {:n 136.0 :counts {:heading 136.0}}

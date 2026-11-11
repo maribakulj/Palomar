@@ -65,10 +65,13 @@
 (defn- refuse [msg data] (throw (ex-info (str "model: " msg) data)))
 
 (defn- check-model!
-  "`model`, refused unless its prior is in (0, 1) and its thresholds are
-   0 < review <= propose < 1 (lot N2 review)."
+  "`model`, refused unless its prior is in (0, 1), its thresholds are
+   0 < review <= propose < 1 (lot N2 review), and its gap (lot O4,
+   `agent-match/competing-gap`) is absent or a finite number above 0."
   [{:keys [prior thresholds] :as model}]
-  (let [{:keys [propose review]} thresholds]
+  (let [{:keys [propose review gap]} thresholds]
+    (when-not (or (nil? gap) (and (number? gap) (Double/isFinite (double gap)) (pos? gap)))
+      (refuse (str "the gap must be a finite number of bits above 0, or absent, got " (pr-str gap)) {:gap gap}))
     (when-not (and (number? prior) (< 0.0 prior 1.0))
       (refuse (str "the prior must be a number strictly between 0 and 1, got " (pr-str prior)) {:prior prior}))
     (when-not (and (number? propose) (number? review) (< 0.0 review) (<= review propose) (< propose 1.0))
@@ -93,9 +96,10 @@
 (defn model-version
   "The version of `model`, derived from the model itself: `:sha256`, the
    SHA-256 of its parameters as the model holds them (counts, prior,
-   thresholds, bar, estimation, provenance, calibration — not the weights,
-   which are computed), and `:weights`, the fingerprint of the weights it
-   computed. A comment or a layout change in its file is no new version."
+   thresholds and gap, bar, the `:rules` it states, estimation, provenance,
+   calibration — not the weights, which are computed), and `:weights`, the
+   fingerprint of the weights it computed. A model that states no rules
+   (an N4-era file) has the version it had. A comment or a layout change in its file is no new version."
   [model]
   {:sha256  (model/content-digest (dissoc model :weights) 64)
    :weights (fs/fingerprint (:weights model))})
@@ -134,7 +138,8 @@
    with a `..` segment, and a file on disk that shadows a shipped model at
    the same path (name the file `./palomar/models/...` to read it). The
    parameters are those `agent-match/model` takes from counts (`:m-counts`
-   and `:u-counts` for every feature; `:prior`; `:thresholds`; `:bar`),
+   and `:u-counts` for every feature; `:prior`; `:thresholds`, with an
+   optional `:gap`; `:bar`; `:rules`, lot O4, the N4 rules when absent),
    plus an optional `:provenance` and `:calibration` report; anything else
    is refused (`check-params!`, `check-model!`). The version is
    `model-version`'s; `:path` is for information only."
@@ -361,13 +366,23 @@
                (str/join ", "))))
 
 (defn- candidate-why
-  [{:keys [propose review]} competing {:keys [decision score reason review-reason evidence]}]
+  [{:keys [propose review gap]} competing {:keys [decision score reason review-reason evidence]}]
   (case (or reason decision)
-    :propose  (fmt "posterior %.4f is at or above the propose threshold %s, and no other candidate of the mention is at or above the review threshold %s"
-                   score propose review)
-    :review   (if (= :competing review-reason)
-                (fmt "posterior %.4f is at or above the review threshold %s, but %d candidates of the mention are: all go to review"
-                     score review competing)
+    :propose  (if gap
+                (fmt "posterior %.4f is at or above the propose threshold %s, and no other candidate of the mention at or above the review threshold %s is within %s bits of it"
+                     score propose review gap)
+                (fmt "posterior %.4f is at or above the propose threshold %s, and no other candidate of the mention is at or above the review threshold %s"
+                     score propose review))
+    :review   (case review-reason
+                :competing
+                (if gap
+                  (fmt "posterior %.4f is at or above the review threshold %s, but %d candidates of the mention are, within %s bits of the top one: all go to review"
+                       score review competing gap)
+                  (fmt "posterior %.4f is at or above the review threshold %s, but %d candidates of the mention are: all go to review"
+                       score review competing))
+                :outranked
+                (fmt "posterior %.4f is at or above the propose threshold %s, but another candidate of the mention weighs %s bits or more above it: outranked, for review"
+                     score propose gap)
                 (fmt "posterior %.4f is between the review threshold %s and the propose threshold %s" score review propose))
     :abstain  (fmt "posterior %.4f is below the review threshold %s: abstained, no claim" score review)
     :incompatible-dates
@@ -379,6 +394,13 @@
     (str "its kind (" (get-in evidence [:kind :candidate]) ") is not the mention's ("
          (some-> (get-in evidence [:kind :mention]) name) "): rejected, never weighed")
     (str "decided " (pr-str (or reason decision)))))
+
+(defn- competing-count
+  "How many of a mention's `proposals` compete (`:review-reason
+   :competing`); with none, how many proposals it has."
+  [proposals]
+  (let [k (count (filter #(= :competing (:review-reason %)) proposals))]
+    (if (pos? k) k (count proposals))))
 
 (defn- explained [thresholds competing p]
   (let [c (fs/proven-confidence p)]
@@ -417,7 +439,7 @@
                     (throw (ex-info (str "no mention " (pr-str mention-id) " in the batch") {:mention mention-id})))
          {:keys [proposals abstained rejected]} cs
          th     (:thresholds model)
-         n      (count proposals)
+         n      (competing-count proposals)
          all    (mapv #(explained th n %) (concat proposals abstained rejected))
          d      (mention-decision cs)
          prior  (:prior model)]

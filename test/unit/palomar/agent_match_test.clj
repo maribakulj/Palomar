@@ -122,18 +122,27 @@
       (is (= 0.0 (get-in w [:name :forenames-differ])) "m <= 0.1 against u = 0.015 proves nothing")
       (is (= 0.0 (get-in w [:form :variant])) "a bound above u is no evidence either"))))
 
+(def ^:private ordered-shares
+  {:m {:name {:exact 0.5 :initials 0.01 :forename-overlap 0.2 :forenames-differ 0.2
+              :jaccard-low 0.05 :none 0.04}
+       :form {:heading 1.0} :dates {:agree 0.5 :unknown 0.5}}
+   :u {:name {:exact 0.001 :initials 0.001 :forename-overlap 0.002 :forenames-differ 0.01
+              :jaccard-low 0.01 :none 0.9}
+       :form {:heading 1.0} :dates {:agree 0.05 :unknown 0.95}}
+   :prior 0.1})
+
 (deftest weights-follow-the-order-of-agreement
-  (let [w (:weights (fs/model {:m {:name {:exact 0.5 :initials 0.01 :forename-overlap 0.2 :forenames-differ 0.2
-                                          :jaccard-low 0.05 :none 0.04}
-                                   :form {:heading 1.0} :dates {:agree 0.5 :unknown 0.5}}
-                               :u {:name {:exact 0.001 :initials 0.001 :forename-overlap 0.002 :forenames-differ 0.01
-                                          :jaccard-low 0.01 :none 0.9}
-                                   :form {:heading 1.0} :dates {:agree 0.05 :unknown 0.95}}
-                               :prior 0.1}))]
+  (let [w (:weights (fs/model ordered-shares))]
     (testing "along name-levels, a weight never exceeds the one before it"
       (is (apply >= (map #(get-in w [:name %]) fs/name-levels)))
       (is (close? (fs/weight 0.01 0.001) (get-in w [:name :initials])))
-      (is (= 0.0 (get-in w [:name :forename-overlap])) "estimated log2 100, capped by the levels above it, which weigh 0"))
+      (is (= 0.0 (get-in w [:name :forename-overlap]))
+          "estimated log2 100, capped by the levels above it, which weigh 0: the N4 rules, which parameters that state none follow"))
+    (testing "under the O4 rules, the unmeasured :same-tokens (0) and :surname-typo no longer cap it: :initials (log2 10) does"
+      (let [o4 (:weights (fs/model (assoc ordered-shares :rules fs/o4-rules)))]
+        (is (close? (fs/weight 0.01 0.001) (get-in o4 [:name :forename-overlap])))
+        (is (close? (fs/weight 0.01 0.001) (get-in o4 [:name :surname-typo])))
+        (is (= 0.0 (get-in o4 [:name :same-tokens])))))
     (testing "a disagreeing level never weighs more than 0, whatever was estimated"
       (is (= 0.0 (get-in w [:name :forenames-differ])) "estimated log2 20")
       (is (= 0.0 (get-in w [:name :jaccard-low])) "estimated log2 5")
@@ -341,3 +350,149 @@
           (is (false? (fs/calibrated? m pool-a)))
           (is (nil? (fs/proven-confidence {:score 0.99 :confidence 0.99 :decision :propose
                                            :calibration-proof (fs/confidence-proof m pool-a)}))))))))
+
+;; ---------------------------------------------------------------------------
+;; Lot O4 — the form on an exact name, the chain over measured levels, the
+;; relative competing rule
+;; ---------------------------------------------------------------------------
+
+(def ^:private o4-counts
+  "Counts shaped like the N3 model's: `:same-tokens` (1, 0) and
+   `:surname-typo` (3, 0) unmeasured above the measured `:forename-overlap`
+   (12, 145) and `:surname-only` (9, 35); the variant measured on both
+   sides. They state the O4 rules."
+  {:m-counts {:name  (counts 600 {:exact 500 :initials 20 :same-tokens 1 :surname-typo 3 :forename-overlap 12
+                                  :surname-only 9 :forenames-differ 10 :none 45})
+              :form  (counts 600 {:heading 500 :variant 100})
+              :dates (counts 600 {:unknown 600})}
+   :u-counts {:name  (counts 200000 {:exact 15 :initials 3 :forename-overlap 145 :surname-only 35 :forenames-differ 663
+                                     :jaccard-high 557 :jaccard-low 3800 :none 194782})
+              :form  (counts 200000 {:heading 199100 :variant 900})
+              :dates (counts 200000 {:unknown 200000})}
+   :prior    0.003
+   :rules    fs/o4-rules})
+
+(deftest a-level-is-measured-with-five-pairs-on-a-side-and-a-bound-that-proves-something
+  (is (= 5 fs/min-observed))
+  (testing "five or more on both sides: measured"
+    (is (true? (fs/level-measured? 12 600 145 200000))))
+  (testing "on one side, with a bound that proves something: measured"
+    (is (true? (fs/level-measured? 20 600 3 200000)) "an agreement almost never seen among different persons")
+    (is (true? (fs/level-measured? 0 600 3800 200000)) "a disagreement almost never seen among the same persons"))
+  (testing "fewer than five on both sides: unmeasured"
+    (is (false? (fs/level-measured? 1 600 0 200000)))
+    (is (false? (fs/level-measured? 4 600 4 200000))))
+  (testing "on one side, but the bound it gives proves nothing (clamped to 0): unmeasured"
+    (is (false? (fs/level-measured? 0 600 557 200000)) "u = 557/200000 is below the bound 5/600 on m")))
+
+(deftest an-unmeasured-level-no-longer-caps-the-measured-levels-below-it
+  (let [w      (:weights (fs/model o4-counts))
+        n4     (:weights (fs/model (assoc o4-counts :rules fs/n4-rules)))
+        fo     (fs/weight (/ 12.0 600) (/ 145.0 200000))]
+    (testing "the measured agreements below the unmeasured :same-tokens and :surname-typo keep their weight"
+      (is (close? fo (get-in w [:name :forename-overlap])))
+      (is (< 4.5 fo 5.0)))
+    (testing "an unmeasured level of the same surname takes the next measured weight below it"
+      (is (close? fo (get-in w [:name :surname-typo]))))
+    (testing "an unmeasured level that does not say the surnames agree stays 0: :same-tokens may be a surname and a forename swapped"
+      (is (= 0.0 (get-in w [:name :same-tokens])))
+      (is (not (contains? fs/surname-levels :same-tokens))))
+    (testing "the chain still holds over the measured levels: :surname-only (log2 ratio 6.4) is capped by :forename-overlap above it"
+      (is (< 6.0 (fs/weight (/ 9.0 600) (/ 35.0 200000))))
+      (is (close? fo (get-in w [:name :surname-only]))))
+    (testing "a disagreeing level still never weighs more than 0 (:forenames-differ, log2 ratio 2.3)"
+      (is (= 0.0 (get-in w [:name :forenames-differ])))
+      (is (= 0.0 (get-in w [:name :jaccard-high])) "unmeasured, between a 0 and a negative level: 0"))
+    (testing "the measured levels above are unchanged"
+      (is (close? (get-in n4 [:name :exact]) (get-in w [:name :exact])))
+      (is (close? (get-in n4 [:name :initials]) (get-in w [:name :initials])))
+      (is (close? (get-in n4 [:name :jaccard-low]) (get-in w [:name :jaccard-low]))))
+    (testing "under the N4 rules, every level below the unmeasured ones weighed 0"
+      (is (= [0.0 0.0 0.0 0.0] (map #(get-in n4 [:name %]) [:same-tokens :surname-typo :forename-overlap :surname-only]))))))
+
+(deftest an-unmeasured-level-weighs-no-more-than-the-measured-one-above-and-no-less-than-the-one-below
+  (testing "an unmeasured agreement above a negative measured level weighs 0, not that negative weight"
+    (let [w (:weights (fs/model {:m-counts {:name (counts 136 {:exact 136}) :form (counts 136 {:heading 136})
+                                            :dates (counts 136 {:unknown 136})}
+                                 :u-counts {:name (counts 1056 {:exact 2 :forename-overlap 12 :forenames-differ 10
+                                                                :jaccard-high 30 :jaccard-low 146 :none 856})
+                                            :form (counts 1056 {:heading 1056}) :dates (counts 1056 {:unknown 1056})}
+                                 :prior 0.1 :rules fs/o4-rules}))]
+      (is (= (repeat 7 0.0) (map #(get-in w [:name %]) [:initials :same-tokens :surname-typo :forename-overlap
+                                                        :surname-only :forenames-differ :jaccard-high])))
+      (is (neg? (get-in w [:name :jaccard-low])))))
+  (testing "on random count tables: the measured weights never increase along the name levels; an unmeasured level weighs no more than the measured one above it, and 0 or (a level of the same surname) the next measured weight below when that is above 0; no disagreement weighs for"
+    (let [rnd (java.util.Random. 20261111)
+          pick (fn [] (let [x (.nextInt rnd 10)] (cond (< x 4) 0 (< x 6) (.nextInt rnd 5) :else (.nextInt rnd 400))))]
+      (dotimes [_ 300]
+        (let [mc (zipmap fs/name-levels (repeatedly pick))
+              uc (zipmap fs/name-levels (repeatedly pick))
+              mn (max 1 (reduce + (vals mc))) un (max 1 (reduce + (vals uc)))
+              w  (get (:weights (fs/model {:m-counts {:name {:n (double mn) :counts (update-vals mc double)}
+                                                      :form (counts 1 {:heading 1}) :dates (counts 1 {:unknown 1})}
+                                           :u-counts {:name {:n (double un) :counts (update-vals uc double)}
+                                                      :form (counts 1 {:heading 1}) :dates (counts 1 {:unknown 1})}
+                                           :prior 0.1 :rules fs/o4-rules}))
+                      :name)
+              measured? (fn [l] (fs/level-measured? (mc l) mn (uc l) un))
+              why (pr-str [mc uc])]
+          (is (let [ms (map w (filter measured? fs/name-levels))] (or (empty? ms) (apply >= ms))) why)
+          (is (every? #(<= (w %) 0.0) fs/disagreeing-levels) why)
+          (doseq [[i l] (map-indexed vector fs/name-levels)
+                  :when (not (measured? l))
+                  :let [above (last (map w (filter measured? (take i fs/name-levels))))
+                        below (first (map w (filter measured? (drop (inc i) fs/name-levels))))
+                        base  (if (and (contains? fs/surname-levels l) below (pos? below)) below 0.0)]]
+            (is (= (w l) (if above (min above base) base)) (pr-str [l mc uc]))))))))
+
+(deftest the-form-weighs-only-on-an-exact-name
+  (let [model (fs/model o4-counts)
+        n4    (fs/model (assoc o4-counts :rules fs/n4-rules))
+        wv    (get-in model [:weights :form :variant])
+        form  (fn [mdl level f] (get-in (fs/score mdl {:levels {:name level :form f :dates :unknown}}) [:weights :form]))]
+    (is (< 5.0 wv) "the variant weighs, as in the N3 model")
+    (is (= #{:exact} fs/form-weighed-levels))
+    (testing "on an exact name the form weighs"
+      (is (close? wv (form model :exact :variant)))
+      (is (close? (get-in model [:weights :form :heading]) (form model :exact :heading))))
+    (testing "below, the form contributes nothing: not on initials (a variant would win between equal initials), not on the same words swapped, not on a disagreeing name"
+      (doseq [l [:initials :same-tokens :surname-typo :forename-overlap :surname-only :forenames-differ :jaccard-high :jaccard-low :none]]
+        (is (= 0.0 (form model l :variant)) (str l))
+        (is (= 0.0 (form model l :heading)) (str l))))
+    (testing "a variant at :forenames-differ stays at the prior, not at 0.0976"
+      (is (close? (fs/posterior 0.0 0.003) (fs/posterior (:match-weight (fs/score model {:levels {:name :forenames-differ :form :variant :dates :unknown}})) 0.003))))
+    (testing "the N4 rules weighed the form at every level"
+      (doseq [l fs/name-levels]
+        (is (close? (get-in n4 [:weights :form :variant]) (form n4 l :variant)) (str l))))))
+
+(deftest the-rules-a-model-follows-are-part-of-it
+  (is (= fs/o4-rules (:rules (fs/model o4-counts))))
+  (is (= {:form :exact-name :chain :measured-levels} fs/o4-rules))
+  (is (= {:form :every-level :chain :every-level} fs/n4-rules))
+  (is (not= (fs/model-fingerprint (fs/model o4-counts)) (fs/model-fingerprint (fs/model (assoc o4-counts :rules fs/n4-rules)))))
+  (testing "parameters that state no rules predate O4: they follow the N4 rules, and the model holds none, so its fingerprint is as before"
+    (let [old (dissoc o4-counts :rules)
+          m   (fs/model old)]
+      (is (= fs/n4-rules (fs/rules-of old)))
+      (is (not (contains? m :rules)))
+      (is (= (:weights (fs/model (assoc old :rules fs/n4-rules))) (:weights m)))
+      (is (close? (get-in m [:weights :form :variant])
+                  (get-in (fs/score m {:levels {:name :surname-only :form :variant :dates :unknown}}) [:weights :form])))))
+  (testing "an unknown rule, an unknown value or rules that are not a map are refused"
+    (doseq [r [{:form :sometimes} {:chain :none} {:extra 1} [:x] "o4" :o4 42]]
+      (is (thrown? clojure.lang.ExceptionInfo (fs/model (assoc o4-counts :rules r))) (pr-str r))))
+  (is (= fs/n4-rules (:rules (fs/model (assoc o4-counts :rules {:form :every-level :chain :every-level}))))))
+
+(deftest a-second-candidate-competes-only-when-close-to-the-top
+  (testing "without a gap (the N4 rule), every candidate at or above review competes"
+    (is (true? (fs/competes? nil 20.0 1.0))))
+  (testing "with a gap G, a candidate competes when its weight is less than G bits below the top's"
+    (is (true? (fs/competes? 3.0 10.0 7.5)))
+    (is (false? (fs/competes? 3.0 10.0 7.0)) "exactly G below: not close")
+    (is (false? (fs/competes? 3.0 10.0 2.0))))
+  (testing "a tie always competes, whatever the gap, even one a model file could not hold"
+    (doseq [g [0.5 0.0 -1.0 ##NaN]]
+      (is (true? (fs/competes? g 10.0 10.0)) (str g))))
+  (testing "the gap is a threshold of the model"
+    (is (= 4.0 (fs/competing-gap {:thresholds {:propose 0.9 :review 0.5 :gap 4.0}})))
+    (is (nil? (fs/competing-gap {:thresholds {:propose 0.9 :review 0.5}})))))

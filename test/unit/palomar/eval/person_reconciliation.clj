@@ -412,6 +412,7 @@
         hits (filter #(= (:truth %) (:id %)) tr)]
     (fs/model {:m-counts (fs/level-counts (map :cmp hits)) :u-counts u-counts
                :prior (/ (double (count hits)) (count tr))
+               :rules fs/o4-rules
                :estimation {:m :supervised :trained-on (vec (sort train))}})))
 
 (defn fold-models
@@ -427,7 +428,7 @@
   [{:keys [pairs u-counts u-shares]} pool-size]
   (let [{:keys [m-counts prior iterations]} (fs/em (map :cmp (remove blocked? pairs))
                                                    {:u u-shares :prior (/ 1.0 pool-size) :alpha alpha})]
-    (fs/model {:m-counts m-counts :u-counts u-counts :prior prior
+    (fs/model {:m-counts m-counts :u-counts u-counts :prior prior :rules fs/o4-rules
                :estimation {:m :em :iterations iterations :alpha alpha}})))
 
 (defn- predictions
@@ -563,7 +564,10 @@
    candidate of the M3 matcher (Jaccard >= 0.5, dates not incompatible:
    `:m3-candidate`) and of the Fellegi-Sunter one (name level above `:none`,
    dates not incompatible: `:fs-candidate`), and, for the latter, whose top
-   proposal is the truth (`:fs-top-1`), outright (`:fs-outright`)."
+   proposal is the truth (`:fs-top-1`), outright (`:fs-outright`); a top
+   proposal another one ties (the same weight) is `:fs-tied`, never a right
+   top proposal: pool order decides no tie (lot O4). `:rows`, one per
+   variant."
   [c model-of]
   (let [es (dated-entries (:pool c))
         rows (for [s (stress-set c)
@@ -571,16 +575,20 @@
                          m3  (reconcile/agent-candidates [m] es)
                          r   (reconcile/agent-candidates [m] es {:model (model-of s)})
                          has (fn [cs] (boolean (some #(= (:truth s) (:authority-id %)) cs)))
-                         top (first (:proposals r))]]
+                         [top second] (:proposals r)
+                         tied (boolean (and second (= (:match-weight top) (:match-weight second))))]]
                {:kind         (:kind s)
+                :name         (:name s)
                 :m3-candidate (has (:proposals m3))
                 :fs-candidate (has (concat (:proposals r) (:abstained r)))
-                :fs-top-1     (= (:truth s) (:authority-id top))
+                :fs-tied      tied
+                :fs-top-1     (and (not tied) (= (:truth s) (:authority-id top)))
                 :fs-outright  (and (= (:truth s) (:authority-id top)) (= :propose (:decision top)))})
-        sum  (fn [xs] (into {:n (count xs)} (for [k [:m3-candidate :fs-candidate :fs-top-1 :fs-outright]]
+        sum  (fn [xs] (into {:n (count xs)} (for [k [:m3-candidate :fs-candidate :fs-top-1 :fs-tied :fs-outright]]
                                               [k (count (filter k xs))])))]
     (assoc (into (sorted-map) (for [[k xs] (group-by :kind rows)] [k (sum xs)]))
-           :all (sum rows))))
+           :all (sum rows)
+           :rows (vec rows))))
 
 (def clusterings
   "Task B's clusterings of a mention, by key. `:record-scoped` is what Palomar
