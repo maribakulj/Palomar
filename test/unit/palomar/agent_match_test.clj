@@ -258,7 +258,7 @@
 
 (deftest a-probability-is-a-confidence-only-when-calibration-measured-it
   (let [fp-a (fs/pool-fingerprint pool-a)
-        good (fs/calibration (well-calibrated) {:pool fp-a :gold "g"})]
+        good (fs/calibration (well-calibrated) {:pool fp-a :gold "g" :model (fs/model-fingerprint tiny)})]
     (testing "a fitted model is not calibrated: it states no confidence"
       (is (false? (fs/calibrated? tiny pool-a)))
       (is (nil? (fs/confidence tiny pool-a 0.99 :propose))))
@@ -276,7 +276,7 @@
           (is (false? (fs/calibrated? m pool-b)))
           (is (nil? (fs/confidence m pool-b 0.99 :propose))))))
     (testing "a review decision needs the review band covered"
-      (let [thin (fs/calibration (remove #(= :r (first (:pair %))) (well-calibrated)) {:pool fp-a})
+      (let [thin (fs/calibration (remove #(= :r (first (:pair %))) (well-calibrated)) {:pool fp-a :model (fs/model-fingerprint tiny)})
             m    (fs/with-calibration tiny thin)]
         (is (true? (:meets-bar? thin)))
         (is (false? (:review-covered? thin)))
@@ -295,7 +295,7 @@
 
 (deftest a-confidence-is-written-only-with-its-proof
   (let [fp-a (fs/pool-fingerprint pool-a)
-        m    (fs/with-calibration tiny (fs/calibration (well-calibrated) {:pool fp-a}))
+        m    (fs/with-calibration tiny (fs/calibration (well-calibrated) {:pool fp-a :model (fs/model-fingerprint tiny)}))
         p    {:score 0.99 :confidence 0.99 :decision :propose :calibration-proof (fs/confidence-proof m pool-a)}]
     (is (= 0.99 (fs/proven-confidence p)))
     (testing "a confidence put on a proposal by hand, with no proof, is none"
@@ -304,3 +304,31 @@
       (is (nil? (fs/proven-confidence (assoc p :calibration-proof (fs/confidence-proof tiny pool-a)))))
       (is (nil? (fs/proven-confidence (assoc p :confidence 0.999))))
       (is (nil? (fs/proven-confidence (assoc-in p [:calibration-proof :pool] (fs/pool-fingerprint pool-b))))))))
+
+(deftest a-calibration-proves-only-the-model-it-was-computed-on
+  (let [fp-a  (fs/pool-fingerprint pool-a)
+        other (fs/model {:m {:name {:exact 0.99 :none 0.01} :form {:heading 1.0} :dates {:unknown 1.0}}
+                         :u {:name {:exact 0.01 :none 0.99} :form {:heading 1.0} :dates {:unknown 1.0}}
+                         :prior 0.9})
+        own   (fs/calibration (well-calibrated) {:pool fp-a :model (fs/model-fingerprint tiny)})]
+    (testing "a report names the model it measured, by the fingerprint of the model without its calibration"
+      (is (= (fs/model-fingerprint tiny) (:model own)))
+      (is (= (fs/model-fingerprint tiny) (fs/model-fingerprint (fs/with-calibration tiny own)))))
+    (testing "on its own model, it proves the confidence"
+      (let [m (fs/with-calibration tiny own)]
+        (is (true? (fs/calibrated? m pool-a)))
+        (is (= 0.99 (fs/proven-confidence {:score 0.99 :confidence 0.99 :decision :propose
+                                           :calibration-proof (fs/confidence-proof m pool-a)})))))
+    (testing "a report computed on another model proves nothing"
+      (let [m (fs/with-calibration other own)]
+        (is (false? (fs/calibrated? m pool-a)))
+        (is (nil? (fs/confidence m pool-a 0.99 :propose)))
+        (is (nil? (fs/proven-confidence {:score 0.99 :confidence 0.99 :decision :propose
+                                         :calibration-proof (fs/confidence-proof m pool-a)})))))
+    (testing "a forged report, written by hand or naming no model, proves nothing"
+      (doseq [forged [{:pool fp-a :ece 0.0 :max-bin-gap 0.0 :distinct-pairs 1000000 :distinct-positives 1000000 :review-pairs 1000}
+                      (dissoc own :model)]]
+        (let [m (fs/with-calibration tiny forged)]
+          (is (false? (fs/calibrated? m pool-a)))
+          (is (nil? (fs/proven-confidence {:score 0.99 :confidence 0.99 :decision :propose
+                                           :calibration-proof (fs/confidence-proof m pool-a)}))))))))

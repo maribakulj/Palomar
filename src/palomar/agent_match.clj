@@ -449,6 +449,14 @@
   [x]
   (model/content-digest x 16))
 
+(defn model-fingerprint
+  "The fingerprint of `model` as a calibration report names it: of the
+   model without its `:calibration` and its relational weights (`:relations`,
+   which a report names apart, by `agent-relations/relations-fingerprint`).
+   A report proves the posterior of that model, no other (lot N2 review)."
+  [model]
+  (fingerprint (dissoc model :calibration :relations)))
+
 (defn pool-fingerprint
   "The fingerprint of an authority pool: of its entries' ids, labels,
    variants and date texts, in a canonical order."
@@ -508,9 +516,12 @@
    the review band [`:review`, `:propose`) of `default-thresholds`. With
    `:relations` (lot M8, `agent-relations/relations-fingerprint`), the report
    says the predictions were scored with that relational evidence: the
-   relational weights and the anchor set they read."
+   relational weights and the anchor set they read. With `:model`
+   (`model-fingerprint`), it names the model whose posteriors `preds` are:
+   a report proves the confidence of that model alone (`calibrated?`), so a
+   report without it proves nothing."
   ([preds] (calibration preds nil))
-  ([preds {:keys [bar pool gold relations]}]
+  ([preds {:keys [bar pool gold relations model]}]
    (let [bar      (merge default-bar bar)
          keyed    (map-indexed (fn [i x] (assoc x ::pair (get x :pair [::i i]) ::mention (get x :mention [::i i]))) preds)
          uniq     (vals (into {} (map (juxt ::pair identity)) keyed))
@@ -529,7 +540,8 @@
                    :pool               pool
                    :gold               gold}]
      (cond-> (assoc r :meets-bar? (meets? r bar) :review-covered? (review-covered? r bar))
-       relations (assoc :relations relations)))))
+       relations (assoc :relations relations)
+       model     (assoc :model model)))))
 
 (defn with-calibration
   "`model` with calibration `report` attached (`calibration`): the step that
@@ -542,11 +554,14 @@
 (defn calibrated?
   "Whether `model`'s calibration report meets the model's own bar (pinned when
    it was built, never laxer than `default-bar`; never the bar the report
-   carries) and was measured on `pool` (a pool, or its fingerprint): a
-   calibration holds for the pool it was measured on, no other."
+   carries), was measured on `pool` (a pool, or its fingerprint) and on this
+   model (its `:model` is `model-fingerprint` of `model`): a calibration
+   holds for the pool and the model it was measured on, no other."
   [model pool]
   (let [r (:calibration model)]
-    (boolean (and r (:pool r) (= (:pool r) (pool-fp pool)) (meets? r (strictest (:bar model)))))))
+    (boolean (and r (:pool r) (= (:pool r) (pool-fp pool))
+                  (:model r) (= (:model r) (model-fingerprint model))
+                  (meets? r (strictest (:bar model)))))))
 
 (defn confidence
   "Posterior `p` of a `decision` as a confidence: `p` when `model` is
@@ -563,25 +578,27 @@
 
 (defn confidence-proof
   "What a proposal carries to show its confidence was measured: the model's
-   calibration report, its bar and the fingerprint of the pool matched
-   against."
+   calibration report, its bar, the fingerprint of the pool matched against
+   and that of the model that scored it (`model-fingerprint`)."
   [model pool]
-  {:report (:calibration model) :bar (:bar model) :pool (pool-fp pool)})
+  {:report (:calibration model) :bar (:bar model) :pool (pool-fp pool) :model (model-fingerprint model)})
 
 (defn proven-confidence
   "The `:confidence` of `proposal` when its `:calibration-proof` holds — a
    report that meets the proof's bar (made no laxer than `default-bar`), on the
-   pool the proposal was matched against, for its decision (a `:review` one
-   needs the band covered), the confidence being its `:score`, and, when
+   pool the proposal was matched against and on the model that scored it,
+   for its decision (a `:review` one needs the band covered), the confidence being its `:score`, and, when
    the proposal's evidence holds relational evidence (lot M8), a report
    measured with the same relational weights and anchors (its `:relations`
    fingerprint) — else nil."
   [{:keys [confidence score decision calibration-proof evidence]}]
-  (let [{:keys [report bar pool]} calibration-proof
+  (let [{:keys [report bar pool model]} calibration-proof
         bar (strictest bar)
         rel (get-in evidence [:relations :fingerprint])]
     (when (and confidence report pool
                (= pool (:pool report))
+               ;; the report measured the model that scored the proposal
+               model (= model (:model report))
                ;; relational evidence (lot M8): the report measured it, with
                ;; these weights and this anchor set
                (or (nil? (:relations evidence)) (and rel (= rel (:relations report))))

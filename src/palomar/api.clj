@@ -24,6 +24,7 @@
             [palomar.loss-report :as lr]
             [palomar.manifest :as manifest]
             [palomar.model :as model]
+            [palomar.reconciliation :as reconciliation]
             [palomar.validate :as validate]))
 
 ;; --- formats -----------------------------------------------------------------
@@ -150,6 +151,67 @@
   "The manifest of a conversion run: what its output depends on."
   [run]
   (manifest/manifest run))
+
+;; --- reconciliation (lot N2, ADR 0058 amendment) ---------------------------
+
+(defn read-authorities
+  "The authority pool of file `path`, `{:entries :block :manifest}`: an
+   authority index (`palomar authorities index`), looked up by its blocking
+   keys, or an authority file (MADS, SKOS, EAC-CPF, BnF INTERMARC
+   authorities) read whole. A dump is refused: index it first."
+  [path]
+  (reconciliation/read-authorities path))
+
+(defn reconciliation-model
+  "The probabilistic engine's model, `{:model m :version {:path :sha256
+   :bytes}}`: the shipped parameter file, or the one at `path`."
+  ([] (reconciliation/read-model))
+  ([path] (reconciliation/read-model path)))
+
+(defn reconcile
+  "Reconcile the agents of `records` against `pool` (`read-authorities`, a
+   vector of entries, or nil). `opts`: `:engine` `:historical` (the
+   default: the canonical floor's distinct names, by token-set similarity,
+   as before) or `:probabilistic` (every mention of the batch, read from
+   the source by `palomar.mentions`, scored by a Fellegi-Sunter model and
+   decided at its thresholds); `:model`, a `reconciliation-model` result
+   (default the shipped one). Returns `{:engine :model :pool? :agents
+   :decisions [..]}`; a probabilistic decision is one per mention, and
+   states a `:confidence` only where the model's calibration proves it.
+   See `palomar.reconciliation/reconcile`."
+  ([records pool] (reconciliation/reconcile records pool))
+  ([records pool opts] (reconciliation/reconcile records pool opts)))
+
+(defn reconcile-explain
+  "Why the probabilistic engine decided mention `mention-id` of `records`
+   as it did: its candidates, each with its comparison levels, the weight
+   of each field, their total, the posterior, the decision and why; the
+   prior and the thresholds. See `palomar.reconciliation/explain`."
+  ([records pool mention-id] (reconciliation/explain records pool mention-id))
+  ([records pool mention-id opts] (reconciliation/explain records pool mention-id opts)))
+
+(defn reconcile-clusters
+  "The mentions of `records` clustered into persons (`palomar.agent-cluster`)
+   from their probabilistic decisions against `pool`, each cluster with its
+   members' occurrences and the decisions that joined them. See
+   `palomar.reconciliation/clusters`."
+  ([records pool] (reconciliation/clusters records pool))
+  ([records pool opts] (reconciliation/clusters records pool opts)))
+
+(defn format-reconciliation
+  "The text `palomar reconcile` writes for a `reconcile` result."
+  [result]
+  (reconciliation/format-reconciliation result))
+
+(defn format-explanation
+  "The text `palomar reconcile explain` writes for a `reconcile-explain` result."
+  [explanation]
+  (reconciliation/format-explanation explanation))
+
+(defn format-clusters
+  "The text `palomar reconcile clusters` writes for a `reconcile-clusters` result."
+  [result]
+  (reconciliation/format-clusters result))
 
 ;; --- the pivot as a file -----------------------------------------------------
 

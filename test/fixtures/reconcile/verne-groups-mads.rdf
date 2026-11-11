@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-made for lot N2: two corporate bodies the BnF's Jules Verne records
+     name in a 710 ($a), by the ISNI their $1 gives, and one person whose
+     name shares no word with them. MADS/RDF, read by
+     palomar.plugins.authorities (:rdfxml). -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:madsrdf="http://www.loc.gov/mads/rdf/v1#">
+  <madsrdf:CorporateName rdf:about="http://isni.org/isni/0000000122005134">
+    <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Authority"/>
+    <madsrdf:authoritativeLabel>Centre international Jules Verne</madsrdf:authoritativeLabel>
+  </madsrdf:CorporateName>
+  <madsrdf:CorporateName rdf:about="http://isni.org/isni/0000000119602202">
+    <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Authority"/>
+    <madsrdf:authoritativeLabel>Musée Jules Verne</madsrdf:authoritativeLabel>
+  </madsrdf:CorporateName>
+  <madsrdf:PersonalName rdf:about="http://id.loc.gov/authorities/names/n79021164">
+    <rdf:type rdf:resource="http://www.loc.gov/mads/rdf/v1#Authority"/>
+    <madsrdf:authoritativeLabel>Kelsey, Alan</madsrdf:authoritativeLabel>
+  </madsrdf:PersonalName>
+</rdf:RDF>

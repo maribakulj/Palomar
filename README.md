@@ -208,6 +208,7 @@ plugin (ADR 0013), never the core.
 │   ├── conformance.clj      # Institutional-profile conformance (WP-6)
 │   ├── curate.clj           # apply-repairs / curation engine (ADR 0005)
 │   ├── reconcile.clj        # Cross-record agent reconciliation (ADR 0018)
+│   ├── reconciliation.clj   # A reconciliation run: historical or probabilistic engine (ADR 0058)
 │   ├── loss-report.clj      # Conversion loss report (ADR 0015)
 │   └── cli.clj              # Command-line entry point (all verbs)
 ├── test/
@@ -318,6 +319,15 @@ clojure -M:run conformance path/to/record.xml --from intermarc --profile interma
 # Other verbs: report (X→Y loss only) · inspect (the parsed floor + minted entities)
 #   · reconcile (agents by authority id, ADR 0018) · apply-repairs (curate :proposed)
 clojure -M:run report path/to/record.xml --from marc21 --to dc
+
+# Reconcile agents against an authority file or index. The default engine
+# (historical) matches the floor's names; --engine probabilistic decides every
+# mention (name, dates, roles, events) with a Fellegi-Sunter model (ADR 0058,
+# amendment N2). explain says why one mention was decided so; clusters groups
+# the mentions into persons. --format edn writes what palomar.api returns.
+clojure -M:run reconcile records.xml --from intermarc --authorities auth.xml --engine probabilistic
+clojure -M:run reconcile explain records.xml --from intermarc --authorities auth.xml --mention '[:bnf/cb123 "700" 0]'
+clojure -M:run reconcile clusters records.xml --from intermarc --authorities auth.xml
 
 # List the supported source and target formats
 clojure -M:run formats

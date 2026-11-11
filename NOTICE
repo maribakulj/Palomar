@@ -5,10 +5,14 @@ Licensed under the Apache License, Version 2.0. See the LICENSE file for the
 full terms.
 
 Third-party material redistributed in this repository keeps its own licence and
-is not covered by the above. All of it lives under test/fixtures/, and each
-directory's README.md names the source and the licence it carries — among them
-BnF open data (Licence Ouverte / Etalab), the BIB-R benchmark gold (CC BY-NC,
-non-commercial evaluation only), OpenLibrary data (CC0), Library of Congress
+is not covered by the above. It lives under test/fixtures/, where each
+directory's README.md names the source and the licence it carries, and under
+resources/palomar/models/: agent-match.edn holds parameters fitted on BnF
+records and authorities (Licence Ouverte / Etalab 2.0, "Source :
+Bibliothèque nationale de France"), its provenance stated in the file.
+Among the sources are BnF open data (Licence Ouverte / Etalab), the BIB-R
+benchmark gold (CC BY-NC, non-commercial evaluation only), OpenLibrary data
+(CC0), Library of Congress
 MARC crosswalk stylesheets (US Government work, public domain), the Linked
 Art JSON schemas (Apache-2.0), and five records of the Yale Center for British
 Art (Data Source: Yale Center for British Art, under the Center's Open Data

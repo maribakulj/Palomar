@@ -9,7 +9,9 @@
      palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]
      palomar report        <input-file> --from <fmt> --to <fmt> [--record-id <id>]
      palomar inspect       <input-file> --from <fmt> [--record-id <id>]
-     palomar reconcile     <input-file> --from <fmt> [--authorities <file|index>] [--manifest <file>] [--record-id <id>]
+     palomar reconcile     <input-file> --from <fmt> [--authorities <file|index>] [--engine historical|probabilistic] [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
+     palomar reconcile explain  <input-file> --from <fmt> --authorities <file|index> --mention <id> [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
+     palomar reconcile clusters <input-file> --from <fmt> --authorities <file|index> [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
      palomar authorities index <dump> --out <index> [--built YYYY-MM-DD]
      palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]
      palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]
@@ -20,7 +22,12 @@
    - `report`        — the X→Y loss report alone (the auditor's view), no document.
    - `inspect`       — what the source parses to: the canonical floor + minted
                        WEMI/agent entities (the developer's view).
-   - `reconcile`     — cross-record agent reconciliation by authority id (ADR 0018).
+   - `reconcile`     — cross-record agent reconciliation by authority id (ADR 0018),
+                       and against an authority pool by `--engine`: `historical`
+                       (the default, the floor's names) or `probabilistic` (every
+                       mention, a Fellegi-Sunter score, lot N2); `reconcile explain`
+                       says why one mention was decided so, `reconcile clusters`
+                       groups the mentions into persons.
    - `authorities index` — prepare an authority dump (lobid GND JSON lines) once
                        into a local index that `reconcile --authorities` reads
                        offline (lot M6, ADR 0038).
@@ -35,6 +42,7 @@
    without printing or exiting — so tests drive it directly; `-main` is the thin
    shell that prints the streams and calls `System/exit`."
   (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.pprint :as pprint]
             [clojure.string :as str]
@@ -42,13 +50,11 @@
             [palomar.convert :as convert]
             [palomar.curate :as curate]
             [palomar.diagnostics :as dx]
-            [palomar.plugins.agents :as agents]
             [palomar.authority-index :as index]
-            [palomar.plugins.authorities :as authorities]
             [palomar.ir :as ir]
             [palomar.loss-report :as lr]
             [palomar.manifest :as manifest]
-            [palomar.reconcile :as reconcile]
+            [palomar.reconciliation :as reconciliation]
             [palomar.validate :as validate]))
 
 (def ^:private usage
@@ -62,7 +68,10 @@
     "  palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]"
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
     "  palomar inspect       <input-file> --from <fmt> [--record-id <id>]"
-    "  palomar reconcile     <input-file> --from <fmt> [--authorities <file.rdf|file.nt|index>] [--manifest <file>] [--record-id <id>]"
+    "  palomar reconcile     <input-file> --from <fmt> [--authorities <file.rdf|file.nt|index>] [--engine historical|probabilistic]"
+    "                        [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
+    "  palomar reconcile explain  <input-file> --from <fmt> --authorities <file|index> --mention <id> [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
+    "  palomar reconcile clusters <input-file> --from <fmt> --authorities <file|index> [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
     "  palomar authorities index <dump.jsonl[.gz]> --out <index> [--built YYYY-MM-DD]"
     "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]"
     "  palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]"
@@ -78,6 +87,13 @@
     "  --record-id   record id for single-record spokes (Dublin Core; default: from the filename)"
     "  --authorities reconcile: a MADS or SKOS authority file (RDF/XML, or N-Triples as .nt), an EAC-CPF record, BnF INTERMARC authority records,"
     "                or an authority index (palomar authorities index) to match names against; a dump is never read here"
+    "  --engine      reconcile: historical (default; the canonical floor's names, by token-set similarity) or"
+    "                probabilistic (every mention, with its dates, roles and events, scored by a Fellegi-Sunter model;"
+    "                a confidence only where the model's calibration proves it). explain and clusters are probabilistic"
+    "  --model       reconcile --engine probabilistic, explain, clusters: a model parameter file (EDN, counts for every"
+    "                feature, 0 < prior < 1, 0 < review <= propose < 1, no :calibration); default the shipped"
+    "                palomar/models/agent-match.edn, fitted in-sample on the BnF M2 records and not calibrated"
+    "  --mention     reconcile explain: the mention id, as EDN, e.g. '[:bnf/cb123 \"700\" 0]'"
     "  --built       authorities index: the build date the index records (default: today, UTC); same dump and date, same bytes"
     "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
     "  --out         write the output to a file instead of stdout (convert)"
@@ -87,14 +103,16 @@
     "  --with-proposals  convert: also state the proposed claims (uncurated inferences) as facts; by default a"
     "                plain RDF or record export holds facts only, and trig/nquads/prov keep each claim with its status"
     "  --manifest    convert: write the run manifest (versions, digests, options, loss) as EDN;"
-    "                reconcile: the same, naming each authority file or index matched against"
-    "  --format      report output: text (default), edn or json (the raw loss-report map, ADR 0015)"
+    "                reconcile: the same, naming each authority file or index matched against, the engine and its model"
+    "  --format      report output: text (default), edn or json (the raw loss-report map, ADR 0015);"
+    "                reconcile, explain, clusters: text (default) or edn (the result map palomar.api returns)"
     ""
     "convert writes the document to stdout, the loss report to stderr;"
     "validate writes the diagnostics report to stderr and exits non-zero on failure;"
     "report writes the X→Y loss report to stdout (no document; --format edn|json for the raw map);"
     "inspect writes what the source parses to (the canonical floor + minted entities) to stdout;"
-    "reconcile writes the cross-record agent reconciliation (by authority id) to stdout;"
+    "reconcile writes the cross-record agent reconciliation (by authority id, then the engine's decisions) to stdout;"
+    "reconcile explain writes why one mention was decided so; reconcile clusters, the mentions grouped into persons;"
     "authorities index writes the index to --out and a summary to stderr;"
     "apply-repairs curates the inferred :proposed claims (ADR 0005) and writes the outcome to stdout;"
     "conformance reports profile diagnostics to stderr and exits non-zero under the acceptance policy."]))
@@ -381,6 +399,9 @@
     (not (.exists (java.io.File. ^String input)))
     {:err (str "input file not found: " input)}
 
+    (not (some #{(keyword from)} (convert/source-formats)))
+    {:err (str "unknown format: --from " from "; one of " (str/join " " (sort (map name (convert/source-formats)))))}
+
     :else
     (let [rid (cond record-id    (->record-id record-id)
                     (= from "dc") (keyword "doc" (file-stem input))
@@ -579,52 +600,78 @@
       (guard #(let [{:keys [records ingest]} (convert/to-wemi from opts source)]
                 {:exit 0 :out (format-inspect records ingest) :err ""})))))
 
-(defn- dump-file?
-  "Whether `f` looks like an authority dump, which `reconcile` never reads (a
-   dump is indexed first, lot M6): a compressed file (`.gz`, `.bz2`, `.xz`,
-   `.zst`, `.zip`), or JSON — a first character, after a byte-order mark and
-   blank lines, that opens a JSON object with a key or an array. Only the
-   first 4096 characters are read."
-  [^java.io.File f]
-  (or (boolean (re-find #"(?i)\.(gz|bz2|xz|zst|zip)$" (.getName f)))
-      (with-open [r (io/reader f :encoding "UTF-8")]
-        (let [buf  (char-array 4096)
-              n    (.read r buf)
-              head (str/triml (str/replace-first (String. buf 0 (max 0 n)) #"^\uFEFF" ""))]
-          (boolean (re-find #"^(?:\{\s*\"|\[)" head))))))
+(def ^:private reconcile-subcommands #{"explain" "clusters"})
 
-(defn- authority-pool
-  "The pool of `--authorities` file `path`: `{:entries :block :manifest}`, an
-   authority index read with its blocking lookup, else an authority file
-   read whole; `:manifest` what the run manifest says of it."
-  [path]
-  (let [f (io/file path)]
+(defn- reconcile-output
+  "What `reconcile [sub]` writes for `result`: its text, or the result as
+   EDN (`--format edn`)."
+  [sub fmt result]
+  (if (= "edn" fmt)
+    (str (binding [*print-namespace-maps* false] (pr-str result)) "\n")
+    (case sub
+      nil        (reconciliation/format-reconciliation result)
+      "explain"  (reconciliation/format-explanation result)
+      "clusters" (reconciliation/format-clusters result))))
+
+(defn- reconcile-problem
+  "Why the `reconcile` flags cannot run, or nil."
+  [sub {:strs [engine model format mention authorities]}]
+  (let [eng (some-> engine keyword)]
     (cond
-      (index/index-file? f)
-      (let [idx (index/read-index f)]
-        {:entries (:entries idx) :block (index/block idx) :manifest (index/manifest-entry path)})
+      (and engine (not (reconciliation/engines eng)))
+      (str "--engine must be historical or probabilistic, got " (pr-str engine))
 
-      (dump-file? f)
-      (throw (ex-info (str path " is an authority dump, which is not read during a reconciliation:"
-                           " build an index first with `palomar authorities index " path " --out <index>`")
-                      {:path path}))
+      (and format (not (#{"text" "edn"} format)))
+      (str "reconcile --format must be text or edn, got " (pr-str format))
 
-      :else
-      (let [s (slurp f)]
-        {:entries  (:entries (authorities/read-pool (authorities/sniff-format path s) s))
-         :manifest (assoc (manifest/fingerprint f) :path path)}))))
+      (and sub (= :historical eng))
+      (str "reconcile " sub " is the probabilistic engine's: the historical engine reads names, not mentions")
+
+      (and model (not sub) (not= :probabilistic eng))
+      "--model is the probabilistic engine's: give --engine probabilistic"
+
+      (and model (not (.isFile (io/file model))))
+      (str "model file not found: " model)
+
+      (and sub (not authorities))
+      (str "reconcile " sub " needs --authorities <file|index>\n\n" usage)
+
+      (and mention (not= "explain" sub))
+      "--mention is reconcile explain's: palomar reconcile explain <input-file> --mention <id> ..."
+
+      (and (= "explain" sub) (not (vector? (try (edn/read-string mention) (catch Exception _ nil)))))
+      (str "reconcile explain needs --mention <id>, a mention id as EDN (e.g. '[:bnf/cb123 \"700\" 0]'),"
+           " as `reconcile --engine probabilistic` lists them"))))
 
 (defn- do-reconcile
-  "Cross-record agent reconciliation (ADR 0018, by authority id) to stdout. Real
-   for INTERMARC, whose 100 $1 ISNI mints identified agents; other spokes report
-   no authority-identified agents (honest, not an error). With `--authorities`,
-   the names are matched against an authority file or index (lot M6: an index
-   is looked up by its blocking keys, offline); with `--manifest`, the run
-   manifest names the input and each authority file or index used."
-  [{:strs [from record-id authorities manifest] :as flags} input]
-  (let [{:keys [err from source opts]} (read-source from input record-id "reconcile")]
+  "Cross-record agent reconciliation (ADR 0018) to stdout. By authority id
+   (ISNI) always; with `--authorities`, the agents are matched against an
+   authority file or index (lot M6: an index is looked up by its blocking
+   keys, offline) by `--engine`: `historical` (the default, the canonical
+   floor's names by token-set similarity, its output unchanged) or
+   `probabilistic` (every mention, scored by a Fellegi-Sunter model, lot
+   N2). `reconcile explain --mention <id>` says why one mention was decided
+   as it was, `reconcile clusters` groups the mentions into persons; both
+   are the probabilistic engine's. The work is `palomar.reconciliation`'s,
+   as `palomar.api`'s is. With `--manifest`, the run manifest names the
+   input, each authority file or index used, the engine and its model."
+  [{:strs [from record-id authorities manifest engine model format mention] :as flags} positional]
+  (let [[sub input] (if (reconcile-subcommands (first positional)) [(first positional) (second positional)] [nil (first positional)])
+        {:keys [err from source opts]} (read-source from input record-id (str "reconcile" (when sub (str " " sub))))
+        problem (when-not err (reconcile-problem sub flags))
+        loaded  (when (and model (not err) (not problem))
+                  (try (reconciliation/read-model model)
+                       (catch Exception e {:error (str "--model " model ": " (.getMessage e))})))]
     (cond
       err {:exit 2 :out "" :err err}
+
+      problem {:exit 2 :out "" :err problem}
+
+      (:error loaded) {:exit 2 :out "" :err (:error loaded)}
+
+      (:calibration (:model loaded))
+      {:exit 2 :out "" :err (str "--model " model ": a model file may not carry a :calibration report yet:"
+                                 " a calibration is computed on the model it proves, not given with it")}
 
       (and authorities (not (.isFile (io/file authorities))))
       {:exit 2 :out "" :err (str "authority file not found: " authorities)}
@@ -634,26 +681,27 @@
        (path-collision (select-keys flags ["manifest"]) input)
        (guard (fn [] (let [started (java.util.Date.)
                            {:keys [records]} (convert/to-wemi from opts source)
-                           pool  (when authorities (authority-pool authorities))
-                           names (distinct (map :name (mapcat agents/occurrences records)))
-                           out   (str (reconcile/format-agent-reconciliation (reconcile/reconcile-agents records))
-                                      (when pool
-                                        (str "\n" (reconcile/format-proposals
-                                                   (reconcile/propose-agent-links names (:entries pool)
-                                                                                  (cond-> {:threshold 0.5}
-                                                                                    (:block pool) (assoc :block (:block pool))))))))
-                           m     (when manifest
-                                   (doto (staging manifest "palomar-manifest-")
-                                     (#(spit (:tmp %)
-                                             (manifest/->edn
-                                              (manifest/manifest {:from        from
-                                                                  :to          nil
-                                                                  :opts        opts
-                                                                  :inputs      [{:path input :content (let [f (io/file input)] (when (.isFile f) f))}]
-                                                                  :outputs     [{:path "-" :content out}]
-                                                                  :authorities (when pool [(:manifest pool)])
-                                                                  :started-at  started
-                                                                  :finished-at (java.util.Date.)}))))))]
+                           pool   (when authorities (reconciliation/read-authorities authorities))
+                           ropts  (cond-> {:engine (if engine (keyword engine) reconciliation/default-engine)}
+                                    loaded (assoc :model loaded))
+                           result (case sub
+                                    nil        (reconciliation/reconcile records pool ropts)
+                                    "explain"  (reconciliation/explain records pool (edn/read-string mention) ropts)
+                                    "clusters" (reconciliation/clusters records pool ropts))
+                           out    (reconcile-output sub format result)
+                           m      (when manifest
+                                    (doto (staging manifest "palomar-manifest-")
+                                      (#(spit (:tmp %)
+                                              (manifest/->edn
+                                               (manifest/manifest {:from        from
+                                                                   :to          nil
+                                                                   :opts        opts
+                                                                   :inputs      [{:path input :content (let [f (io/file input)] (when (.isFile f) f))}]
+                                                                   :outputs     [{:path "-" :content out}]
+                                                                   :authorities (when pool [(:manifest pool)])
+                                                                   :reconcile   (reconciliation/manifest-entry result)
+                                                                   :started-at  started
+                                                                   :finished-at (java.util.Date.)}))))))]
                        (try
                          (if-let [e (publish! nil nil m manifest)]
                            {:exit 2 :out "" :err e}
@@ -770,7 +818,7 @@
       (= command "validate")    (do-validate flags (first positional))
       (= command "report")      (do-report flags (first positional))
       (= command "inspect")     (do-inspect flags (first positional))
-      (= command "reconcile")   (do-reconcile flags (first positional))
+      (= command "reconcile")   (do-reconcile flags positional)
       (= command "authorities") (do-authorities flags positional)
       (= command "apply-repairs") (do-apply-repairs flags (first positional))
       (= command "conformance") (do-conformance flags (first positional))
