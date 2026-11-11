@@ -54,7 +54,15 @@
     (is (= :review (:decision (n4/decide [{:id "a" :p 0.99} {:id "b" :p 0.6}] {:propose 0.95 :review 0.5}))))
     (is (= {:link {:authority-id "a" :score 0.99} :review? false :decision :propose}
            (n4/decide [{:id "a" :p 0.99} {:id "b" :p 0.4}] {:propose 0.95 :review 0.5})))
-    (is (= :abstain (:decision (n4/decide [] {:propose 0.95 :review 0.5}))))))
+    (is (= :abstain (:decision (n4/decide [] {:propose 0.95 :review 0.5})))))
+  (testing "lot O4: with a gap G, a second candidate competes only when its weight is less than G bits below the top's"
+    (let [th {:propose 0.95 :review 0.5 :gap 4.0}]
+      (is (= {:link {:authority-id "a" :score 0.99} :review? false :decision :propose}
+             (n4/decide [{:id "a" :w 12.0 :p 0.99} {:id "b" :w 7.0 :p 0.6}] th)))
+      (is (= :review (:decision (n4/decide [{:id "a" :w 12.0 :p 0.99} {:id "b" :w 9.0 :p 0.6}] th))))
+      (is (= :review (:decision (n4/decide [{:id "a" :w 6.0 :p 0.9} {:id "b" :w 1.0 :p 0.55}] th)))
+          "far ahead, but below propose: its own thresholds send it to review")
+      (is (= :review (:decision (n4/decide [{:id "a" :w 12.0 :p 0.99} {:id "b" :w 12.0 :p 0.99}] th))) "a tie competes"))))
 
 ;; ---------------------------------------------------------------------------
 ;; The engines on dev
@@ -66,12 +74,15 @@
 (def expected-dev
   "The engines on dev, a tie read as an abstention. The N3 model and the
    N3 model with roles make the shipped model's 165 links, no wrong one;
-   they send 5 mentions to review, not 3."
+   they send 5 mentions to review, not 3. Since lot O4, the roles model,
+   at the thresholds the criterion now chooses for it (0.5 / 0.5), links
+   the two hand mentions \"Alexeïeff\" too: a surname alone, which weighs
+   +4.80 by the chain over measured levels, plus the role agreement."
   {:jaccard     (:jaccard n3t/expected-dev)
    :names-dates (:names-dates n3t/expected-dev)
    :fs-shipped  fs-dev
    :fs-n3       (assoc fs-dev :review 5)
-   :fs-n3-roles (assoc fs-dev :review 5)})
+   :fs-n3-roles (assoc fs-dev :review 5 :correct 167 :missed 19 :recall 167/186 :macro-recall 27491/31860 :abstention 39/206)})
 
 (def expected-strata
   "Per stratum: correct, wrong link, missed (tied included), false link,
@@ -81,7 +92,7 @@
         jc {:easy [29 0 0 0 0] :hand [14 0 0 0 0] :hard-negative [0 0 0 1 0] :homonym [122 0 5 0 0]
             :no-namesake [0 0 0 0 0] :variant [6 0 10 0 0]}
         n3 (assoc fs :hard-negative [0 0 0 0 2])]
-    {:jaccard jc :names-dates jc :fs-shipped fs :fs-n3 n3 :fs-n3-roles n3}))
+    {:jaccard jc :names-dates jc :fs-shipped fs :fs-n3 n3 :fs-n3-roles (assoc n3 :hand [12 0 2 0 0])}))
 
 (deftest the-engines-on-dev
   (let [{:keys [results]} @dev-run]
@@ -97,31 +108,40 @@
 ;; ---------------------------------------------------------------------------
 
 (def expected-choice
-  "No review value holds 30 reviews on the folds: the shipped 0.5 stays."
-  {:thresholds {:propose 0.8 :review 0.5}})
+  "Lot O4. Under the O4 rules the form weighs only on an exact name, so 5
+   initials links fall below 0.8 and propose goes to 0.5, where they stay
+   (556 links); no review value below it is admissible at a gap of 8 or
+   more, so review is 0.5 too: no review band. Gaps of 0.5 to 2, 8 and 12
+   bits give 556 links; 3 to 6 give 551; no gap gives 555. The tie goes to
+   the largest, 12."
+  {:thresholds {:propose 0.5 :review 0.5 :gap 12.0}})
 
-(def expected-cv-point {:precision 277/278 :recall 277/302 :links 556 :review 15})
+(def expected-cv-point {:precision 277/278 :recall 277/302 :links 556 :review 25})
 
 (def expected-dev-point {:precision 1 :recall 55/62 :links 165 :review 5})
 
-(def expected-roles-thresholds {:propose 0.8 :review 0.5})
+(def expected-roles-thresholds {:propose 0.5 :review 0.5})
 
 (def expected-separation
   "[correct review false-link] of the N3 model and the roles model at equal
-   thresholds: on the folds, propose 0.9 against 0.95 is 28 links; review
-   0.1 against 0.4 is about 300; the role weight is 1 to 3."
-  {:cv  {[0.9 0.1]  {:n3 [243 360 0] :roles [244 359 0]}
-         [0.9 0.4]  {:n3 [548 22 1] :roles [549 21 1]}
-         [0.9 0.5]  {:n3 [548 22 1] :roles [550 20 1]}
-         [0.95 0.1] {:n3 [242 361 0] :roles [243 360 0]}
-         [0.95 0.4] {:n3 [520 50 1] :roles [522 48 1]}
-         [0.95 0.5] {:n3 [520 50 1] :roles [523 47 1]}}
-   :dev {[0.9 0.1]  {:n3 [165 5 0] :roles [154 17 0]}
-         [0.9 0.4]  {:n3 [165 5 0] :roles [165 5 0]}
-         [0.9 0.5]  {:n3 [165 5 0] :roles [165 5 0]}
-         [0.95 0.1] {:n3 [165 5 0] :roles [152 19 0]}
-         [0.95 0.4] {:n3 [165 5 0] :roles [162 8 0]}
-         [0.95 0.5] {:n3 [165 5 0] :roles [162 8 0]}}})
+   thresholds, no gap (the absolute competing rule), under the O4 weight
+   rules: on the folds, propose 0.9 against 0.95 is 31 links; review 0.1
+   against 0.4 is about 110 (about 300 under the N4 rules: the variant
+   cliff moved, from 0.10 to 0.24 and 0.28); the role weight is -1 to 3. On dev, review 0.1 now loses
+   66 links: the chain gives namesakes at :surname-only and
+   :forename-overlap a weight, so more pass 0.1 and compete."
+  {:cv  {[0.9 0.1]  {:n3 [437 148 1] :roles [436 149 1]}
+         [0.9 0.4]  {:n3 [545 35 1] :roles [544 36 1]}
+         [0.9 0.5]  {:n3 [545 35 1] :roles [544 36 1]}
+         [0.95 0.1] {:n3 [406 179 1] :roles [409 176 1]}
+         [0.95 0.4] {:n3 [514 66 1] :roles [517 63 1]}
+         [0.95 0.5] {:n3 [514 66 1] :roles [517 63 1]}}
+   :dev {[0.9 0.1]  {:n3 [99 77 0] :roles [99 77 0]}
+         [0.9 0.4]  {:n3 [165 5 0] :roles [165 7 0]}
+         [0.9 0.5]  {:n3 [165 5 0] :roles [165 7 0]}
+         [0.95 0.1] {:n3 [99 77 0] :roles [97 79 0]}
+         [0.95 0.4] {:n3 [165 5 0] :roles [162 10 0]}
+         [0.95 0.5] {:n3 [165 5 0] :roles [162 10 0]}}})
 
 (deftest the-wilson-lower-bound
   (is (close? 0.7224598312333834 (n4/wilson-lower 10 10)))
@@ -144,12 +164,12 @@
   (let [{:keys [thresholds cv dev]} (:choice @fitted)
         train-pms (n4/prepared @ctx (n4/split-mentions @bench :train))]
     (testing "the choice is the criterion's on the held-out folds of train"
-      (is (= thresholds (:thresholds (n4/choose-thresholds (n4/cv-scored @ctx train-pms nil n4/cv-folds)))))
+      (is (= thresholds (:thresholds (n4/choose-gapped (n4/cv-scored @ctx train-pms nil n4/cv-folds)))))
       (is (= thresholds (:thresholds (:params @fitted)))))
     (testing "the criterion reads train mentions only; dev is a confirmation"
       (let [seen  (atom #{})
             choose n4/choose-thresholds]
-        (with-redefs [n4/choose-thresholds (fn [sms] (swap! seen into (map (comp :split :mention) sms)) (choose sms))]
+        (with-redefs [n4/choose-thresholds (fn [sms & more] (swap! seen into (map (comp :split :mention) sms)) (apply choose sms more))]
           (n4/n3-params @bench @ctx))
         (is (= #{:train} @seen))))
     (testing "every fold scores persons the model of that fold never saw"
@@ -243,18 +263,18 @@
   (let [model (n4/n3-model)
         dev   (n4/calibration-report model @ctx (n4/scored-mentions model @dev-pms))]
     (testing "on dev, the model itself: too few distinct true mentions, a bin far off, no review band"
-      (is (= [1674 329 179 43 2 false false]
+      (is (= [1674 329 179 43 0 false false]
              ((juxt :n :distinct-pairs :positives :distinct-positives :review-pairs :meets-bar? :review-covered?) dev)))
-      (is (close? 0.006918504310373037 (:ece dev)))
-      (is (< 0.71 (:max-bin-gap dev) 0.72))
+      (is (close? 0.011010923248932951 (:ece dev)) "0.0069 under the N4 rules")
+      (is (< 0.74 (:max-bin-gap dev) 0.75) "0.71 under the N4 rules")
       (is (= (fs/model-fingerprint model) (:model dev)) "bound to the model as the file gives it")
       (is (= ((juxt :review :propose) (:thresholds model)) (:band dev)) "the review band is the model's own")
       (is (= (:pool @ctx) (:pool dev))))
-    (testing "five folds of train+dev by person: enough pairs and true mentions, but a bin 0.40 off"
+    (testing "five folds of train+dev by person: enough pairs and true mentions, but a bin 0.78 off (4 predictions in [0.2, 0.3); 0.40 under the N4 rules)"
       (let [cv (n4/cv-report @ctx @bench 5)]
-        (is (= [7499 1641 164 13 false] ((juxt :n :distinct-pairs :distinct-positives :review-pairs :meets-bar?) cv)))
-        (is (< 0.0079 (:ece cv) 0.0080))
-        (is (< 0.40 (:max-bin-gap cv) 0.41))
+        (is (= [7499 1641 164 19 false] ((juxt :n :distinct-pairs :distinct-positives :review-pairs :meets-bar?) cv)))
+        (is (< 0.0059 (:ece cv) 0.0060))
+        (is (< 0.77 (:max-bin-gap cv) 0.78))
         (is (nil? (:model cv)) "it measures the procedure, not one model")))
     (testing "the model file carries no calibration, so no proposal states a confidence"
       (is (not (contains? (edn/read-string (slurp n4/model-path)) :calibration)))
@@ -327,7 +347,7 @@
           fit        n4/fit-counts
           choose     n4/choose-thresholds]
       (with-redefs [n4/fit-counts        (fn [c pms p] (swap! fit-splits into (map (comp :split :mention) pms)) (fit c pms p))
-                    n4/choose-thresholds (fn [sms] (swap! choice-splits into (map (comp :split :mention) sms)) (choose sms))]
+                    n4/choose-thresholds (fn [sms & more] (swap! choice-splits into (map (comp :split :mention) sms)) (apply choose sms more))]
         (n4/n3-params @bench @ctx))
       (is (= #{:train} @fit-splits))
       (is (= #{:train} @choice-splits))))

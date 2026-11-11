@@ -75,6 +75,7 @@ decision from being read as shipped code (an audit honesty rule).
 | [0059](./0059-record-identity-is-not-entity-identity.md) | Record identity is not entity identity | Accepted |
 | [0060](./0060-candidate-generation-is-not-ranking.md) | Candidate generation is not ranking: lanes find, the matcher decides | Accepted |
 | [0061](./0061-an-agent-is-no-skos-concept.md) | An agent is no SKOS concept: identity has its own relations, and each export writes its own term | Accepted |
+| [0062](./0062-what-a-weight-may-say-and-when-a-candidate-competes.md) | What a weight may say, and when a second candidate competes | Accepted |
 
 ## Template
 

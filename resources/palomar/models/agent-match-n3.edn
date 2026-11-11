@@ -8,6 +8,10 @@
 ;; thresholds were chosen on a 5-fold cross-validation of train, by person;
 ;; dev only confirmed them. The test split fed neither.
 ;;
+;; Lot O4 (ADR 0062): its weights follow `:rules` (the form on an exact name
+;; only, the chain over measured levels), and `:thresholds :gap` is the gap
+;; of the relative competing rule, in bits, chosen on the same folds.
+;;
 ;; IN-SAMPLE on its train split: `palomar.reconciliation/refuse-in-sample!`
 ;; refuses it on the persons and no-match names it was fitted on
 ;; (`:train-keys`), and on its design corpora, the benchmark and the split
@@ -20,8 +24,9 @@
 ;; carries no `:calibration` report and no posterior it gives is written as
 ;; a confidence. Written by palomar.eval.person-reconciliation-hard-n4/write-model!.
 {:prior 0.00296770896798412
- :thresholds {:propose 0.8, :review 0.5}
+ :thresholds {:propose 0.5, :review 0.5, :gap 12.0}
  :bar {:max-ece 0.05, :max-bin-gap 0.1, :min-pairs 300, :min-positives 100, :min-review-pairs 30, :bins 10}
+ :rules {:form :exact-name, :chain :measured-levels}
  :m-counts {:name {:n 604.0, :counts {:exact 555.0, :forenames-differ 10.0, :initials 14.0, :forename-overlap 12.0, :surname-only 9.0, :surname-typo 3.0, :same-tokens 1.0}}, :form {:n 604.0, :counts {:heading 509.0, :variant 95.0}}, :dates {:n 604.0, :counts {:unknown 604.0}}}
  :u-counts {:name {:n 202920.0, :counts {:jaccard-low 3803.0, :jaccard-high 557.0, :exact 15.0, :none 197699.0, :forenames-differ 663.0, :surname-only 35.0, :forename-overlap 145.0, :initials 3.0}}, :form {:n 202920.0, :counts {:heading 202042.0, :variant 878.0}}, :dates {:n 202920.0, :counts {:unknown 202920.0}}}
  :estimation {:m :supervised, :u :mention-pairs, :fitted-on :n3-train, :name-input :inverted, :thresholds-chosen-on :n3-train-cv5}

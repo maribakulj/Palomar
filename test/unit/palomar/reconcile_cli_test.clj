@@ -167,6 +167,10 @@
     (testing "and so is a model that is no model"
       (doseq [p [{:prior 1.0} {:prior 0} {:prior 2.5} {:prior 0.5}
                  (assoc params :thresholds {:propose 0.1 :review 0.9})
+                 (assoc-in params [:thresholds :gap] 0.0)
+                 (assoc-in params [:thresholds :gap] -2.0)
+                 (assoc-in params [:thresholds :gap] ##NaN)
+                 (assoc params :rules [:o4])
                  {:prior 0.5 :m {:name {:exact 0.99 :none 0.01}} :u {:name {:exact 0.01 :none 0.99}}}]]
         (let [{:keys [exit err]} (run p)]
           (is (= 2 exit) (pr-str p))

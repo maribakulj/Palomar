@@ -412,9 +412,12 @@
     (testing "351 held-out predictions, but 125 distinct (mention, candidate) pairs and 33 distinct true mentions"
       (is (= {:n 351 :distinct-pairs 125 :positives 136 :distinct-positives 33 :review-pairs 7}
              (select-keys calibration [:n :distinct-pairs :positives :distinct-positives :review-pairs])))
-      (is (= [0.036 0.1082 0.7401] (map (comp r4 calibration) [:brier :ece :max-bin-gap]))))
+      ;; lot O4: the form weighs only on an agreeing name, so the
+      ;; heading's +0.019 no longer reaches the non-matches below; under the
+      ;; N4 rules, 0.036 0.1082 and bins 0.0697 0.1285 0.3716 0.5397
+      (is (= [0.0355 0.1073 0.7401] (map (comp r4 calibration) [:brier :ece :max-bin-gap]))))
     (testing "the reliability table, as measured"
-      (is (= [[[0.0 0.1] 113 0.0697 0.0] [[0.1 0.2] 53 0.1285 0.0] [[0.3 0.4] 23 0.3716 0.0] [[0.5 0.6] 24 0.5397 0.0]
+      (is (= [[[0.0 0.1] 113 0.0688 0.0] [[0.1 0.2] 53 0.127 0.0] [[0.3 0.4] 23 0.3685 0.0] [[0.5 0.6] 24 0.5364 0.0]
               [[0.6 0.7] 1 0.6517 0.0] [[0.7 0.8] 1 0.7401 0.0] [[0.9 1.0] 136 0.9969 1.0]]
              (map (juxt :bin :n (comp r4 :mean-p) (comp r4 :observed)) (:bins calibration)))))
     (testing "the report names the pool and the gold it was measured on"
@@ -494,7 +497,7 @@
       (is (= (:all (:task-a @fsr)) (:all a)))
       (is (= [88 48 0] ((juxt :correct :abstained :false-links) (:all (:outright a))))))
     (testing "and worse calibrated"
-      (is (= [0.0832 0.1776] [(r4 (:brier k)) (r4 (:ece k))]))
+      (is (= [0.0826 0.1767] [(r4 (:brier k)) (r4 (:ece k))]) "0.0832 0.1776 under the N4 rules (lot O4: the form on an exact name only)")
       (is (false? (:meets-bar? k))))))
 
 (deftest a-synthetic-stress-set-measures-candidate-recall
@@ -505,14 +508,24 @@
     (is (= {:initials 33 :dropped-forename 33 :reversed 33 :accents-removed 11 :typo 33}
            (frequencies (map :kind (pr/stress-set @c))))))
   (let [s (pr/stress-recall @c (comp (:models @fsr) :family))]
+    (testing "a tie at the top is its own outcome, never a right top proposal by pool order"
+      (is (contains? (:all s) :fs-tied))
+      (is (every? #(not (and (:fs-tied %) (:fs-top-1 %))) (:rows s))))
     (testing "the truth among the candidates: M3's Jaccard >= 0.5 lets 97 of 143 through, the model's blocking all"
-      (is (= {:n 143 :m3-candidate 97 :fs-candidate 143 :fs-top-1 127 :fs-outright 10} (:all s)))
-      (is (= {:initials         {:n 33 :m3-candidate 7  :fs-candidate 33 :fs-top-1 29 :fs-outright 1}
-              :dropped-forename {:n 33 :m3-candidate 29 :fs-candidate 33 :fs-top-1 29 :fs-outright 1}
-              :reversed         {:n 33 :m3-candidate 33 :fs-candidate 33 :fs-top-1 29 :fs-outright 0}
-              :accents-removed  {:n 11 :m3-candidate 11 :fs-candidate 11 :fs-top-1 11 :fs-outright 8}
-              :typo             {:n 33 :m3-candidate 17 :fs-candidate 33 :fs-top-1 29 :fs-outright 0}}
-             (dissoc s :all))))))
+      ;; lot O4: a tie is now its own outcome; under the N4 rules, 126
+      ;; right and 1 tie (127 when the tie counted by pool order)
+      (is (= {:n 143 :m3-candidate 97 :fs-candidate 143 :fs-top-1 122 :fs-tied 5 :fs-outright 10} (:all s)))
+      (is (= {:initials         {:n 33 :m3-candidate 7  :fs-candidate 33 :fs-top-1 28 :fs-tied 1 :fs-outright 1}
+              :dropped-forename {:n 33 :m3-candidate 29 :fs-candidate 33 :fs-top-1 29 :fs-tied 0 :fs-outright 1}
+              :reversed         {:n 33 :m3-candidate 33 :fs-candidate 33 :fs-top-1 27 :fs-tied 2 :fs-outright 0}
+              :accents-removed  {:n 11 :m3-candidate 11 :fs-candidate 11 :fs-top-1 11 :fs-tied 0 :fs-outright 8}
+              :typo             {:n 33 :m3-candidate 17 :fs-candidate 33 :fs-top-1 27 :fs-tied 2 :fs-outright 0}}
+             (dissoc s :all :rows))))
+    (testing "the five ties are Hetzel and his pseudonym Stahl, heading against variant: the heading's +0.019 bits no longer breaks them (under the N4 rules, 126 right and 1 tie)"
+      (is (= #{"Hetzel, P.-J." "Pierre-Jules Hetzel" "Htezel, Pierre-Jules" "P.-J. Stahl" "Sathl, P.-J."}
+             (set (map :name (filter :fs-tied (:rows s))))))))
+  (testing "no Fellegi-Sunter task-A mention counts a tied top proposal as right"
+    (is (not-any? #(and (:tied? %) (= :correct (:outcome %))) (:mentions (:task-a @fsr))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Lot M5 — constrained clustering

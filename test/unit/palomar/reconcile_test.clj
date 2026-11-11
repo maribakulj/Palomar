@@ -470,6 +470,69 @@
       (is (every? #(< 0.8 (:score %)) ps))
       (is (= [[:review :competing] [:review :competing]] (map (juxt :decision :review-reason) ps))))))
 
+(deftest a-second-candidate-competes-only-when-its-weight-is-close-to-the-top
+  (let [d     dates/parse-life-dates
+        pool2 [{:id "http://x/a" :label "Martin, Jean" :dates (d "1900-1980")}
+               {:id "http://x/b" :label "Martin, Jean-Pierre" :variants ["Martin, Jean"] :dates (d "1901-1979")}]
+        m     [{:name "Martin, Jean" :dates "1900-1980" :record :doc/r}]
+        dec   (fn [gap] (->> (rec/agent-candidates m pool2 {:model (cond-> fs-model gap (assoc-in [:thresholds :gap] gap))})
+                             :proposals
+                             (mapv (juxt :authority-id :decision :review-reason))))
+        ws    (into {} (map (juxt :authority-id :match-weight)) (:proposals (rec/agent-candidates m pool2 {:model fs-model})))
+        g     (- (ws "http://x/a") (ws "http://x/b"))]
+    (is (< 1.0 g) "the heading and its dates outweigh the variant")
+    (testing "no gap (the N4 rule): both at or above review, both compete"
+      (is (= [["http://x/a" :review :competing] ["http://x/b" :review :competing]] (dec nil))))
+    (testing "a gap above the weight difference: still close, both compete"
+      (is (= [["http://x/a" :review :competing] ["http://x/b" :review :competing]] (dec (+ g 0.5)))))
+    (testing "a gap below it: the top is decided on its own thresholds; the other, above propose too, is outranked, for review"
+      (is (= [["http://x/a" :propose nil] ["http://x/b" :review :outranked]] (dec (- g 0.5)))))
+    (testing "at most one outright proposal, whatever the gap"
+      (doseq [gap [nil 0.01 (- g 0.5) g (+ g 0.5) 100.0]]
+        (is (<= (count (filter #(= :propose (second %)) (dec gap))) 1) (str gap)))))
+  (testing "a tie competes whatever the gap: undated père and fils both go to review"
+    (let [ps (rec/propose-agent-links [{:name "Dumas, Alexandre"}] dumas
+                                      {:model (assoc fs-model :thresholds {:propose 0.8 :review 0.5 :gap 0.5})})]
+      (is (= [[:review :competing] [:review :competing]] (map (juxt :decision :review-reason) ps))))))
+
+(deftest a-tie-is-never-two-outright-proposals-whatever-the-gap
+  (testing "undated père and fils weigh alike: under any gap, even one a model file may not hold, both go to review"
+    (doseq [g [12.0 1.0e-9 0.0 -1.0 ##NaN]
+            :let [ps (rec/propose-agent-links [{:name "Dumas, Alexandre"}] dumas
+                                              {:model (assoc fs-model :thresholds {:propose 0.8 :review 0.5 :gap g})})]]
+      (is (= [[:review :competing] [:review :competing]] (map (juxt :decision :review-reason) ps)) (str g)))))
+
+(deftest only-a-candidate-above-propose-is-outranked
+  (let [d   dates/parse-life-dates
+        pl  [{:id "http://x/a" :label "Martin, Jean" :dates (d "1900-1980")}
+             {:id "http://x/c" :label "Martin, Jean" :dates (d "ca 1900-ca 1980")}]
+        dec (fn [gap] (mapv (juxt :authority-id :decision :review-reason)
+                            (:proposals (rec/agent-candidates [{:name "Martin, Jean" :dates "1900-1980"}] pl
+                                                              {:model (assoc-in fs-model [:thresholds :gap] gap)}))))]
+    (testing "a far candidate between the thresholds keeps its own decision, review, with no reason"
+      (is (= [["http://x/a" :propose nil] ["http://x/c" :review nil]] (dec 2.0))))
+    (testing "close, both compete"
+      (is (= [["http://x/a" :review :competing] ["http://x/c" :review :competing]] (dec 100.0))))))
+
+(deftest an-unnamed-candidate-is-not-the-top-the-gap-is-measured-from
+  (let [d     dates/parse-life-dates
+        model (fs/model {:m {:name {:exact 0.8 :initials 0.02 :same-tokens 0.02 :surname-typo 0.01 :forename-overlap 0.01
+                                    :surname-only 0.01 :forenames-differ 0.01 :jaccard-high 0.01 :jaccard-low 0.01 :none 0.1}
+                             :form {:heading 0.95 :variant 0.05} :dates {:agree 0.9 :compatible 0.05 :unknown 0.05}}
+                         :u {:name {:exact 0.01 :initials 0.002 :same-tokens 0.002 :surname-typo 0.001 :forename-overlap 0.01
+                                    :surname-only 0.005 :forenames-differ 0.05 :jaccard-high 0.02 :jaccard-low 0.2 :none 0.7}
+                             :form {:heading 0.9 :variant 0.1} :dates {:agree 0.001 :compatible 0.199 :unknown 0.8}}
+                         :prior 0.3 :thresholds {:propose 0.85 :review 0.5 :gap 1.0}})
+        pl    [{:id "named" :label "Hetzel, Pierre-Jules" :dates (d "18..-18..")}
+               {:id "unnamed" :label "Stahl, P.-J." :dates (d "1814-1886")}]
+        r     (rec/agent-candidates [{:name "Hetzel, Pierre-Jules" :dates "1814-1886"}] pl {:model model :score-unnamed #{"unnamed"}})
+        by    (into {} (map (juxt :authority-id identity)) (:proposals r))]
+    (testing "the unnamed candidate (an id found it, no name agrees) weighs more than the named one"
+      (is (< (:match-weight (by "named")) (:match-weight (by "unnamed")))))
+    (testing "yet the named one is the top: it is proposed, not outranked; the unnamed one is for review only"
+      (is (= [:propose nil] ((juxt :decision :review-reason) (by "named"))))
+      (is (= [:review :no-name-agreement] ((juxt :decision :review-reason) (by "unnamed")))))))
+
 (deftest an-uncalibrated-score-is-never-written-as-a-confidence
   (let [dated [{:name "Dumas, Alexandre" :dates "1802-1870"}]
         conf  (fn [props] (map :confidence (mappings (first (rec/align-agents [(named :doc/d "Dumas, Alexandre")] props)))))]

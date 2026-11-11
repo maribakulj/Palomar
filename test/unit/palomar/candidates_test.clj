@@ -319,7 +319,13 @@
         (is (< 0.95 (:score (first (filter #(= "wrong" (:authority-id %)) (:proposals r))))))
         (is (= [["right" :propose nil] ["wrong" :review :no-name-agreement]] (sort (dec r))))))
     (testing "alone, it is still for review only"
-      (is (= [["wrong" :review :no-name-agreement]] (dec (candidates/rank [m] pool' {:model dates-model :lanes [:identifier]})))))))
+      (is (= [["wrong" :review :no-name-agreement]] (dec (candidates/rank [m] pool' {:model dates-model :lanes [:identifier]})))))
+    (testing "under the relative competing rule (lot O4), an unnamed candidate still never makes a named one competing, however close"
+      (doseq [gap [0.01 1.0 100.0]
+              :let [mdl (assoc-in dates-model [:thresholds :gap] gap)]]
+        (is (= [["right" :propose nil] ["wrong" :review :no-name-agreement]]
+               (sort (dec (candidates/rank [m] pool' {:model mdl :lanes [:name :identifier]}))))
+            (str gap))))))
 
 (deftest rank-deduplicates-as-the-matcher-does
   (testing "name-only: agent-candidates scores a name given twice twice; so does rank"

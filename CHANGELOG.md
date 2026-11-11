@@ -18,6 +18,29 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Three rules of the Fellegi-Sunter model fixed** (lot O4, ADR 0062;
+  `docs/eval/person-reconciliation-hard.md`, section O4). The form weight
+  (heading or variant) counts only on an exact name: the variant cliff at
+  0.0976 is gone, though the chain makes a new cluster of second
+  candidates. The non-increasing chain of name weights skips unmeasured
+  levels (fewer than 5 pairs on a side, or a bound that proves nothing);
+  an unmeasured level that says the surnames agree takes the next
+  measured weight below. A model may state a gap G (`:thresholds :gap`,
+  a finite number above 0, else refused): a second candidate then
+  competes only when it weighs less than G bits below the top one; a tie
+  always competes; another above propose is `:review-reason :outranked`.
+  A model states its `:rules` (`agent-match/o4-rules`); a file that states
+  none follows `n4-rules` and keeps its N4 version. The N3 model file
+  states its rules, thresholds 0.5 / 0.5 and G = 12, chosen on the folds of
+  train; version `3cdf97d3…` / weights `20d0b836a1d2ca2c`. The M2 model
+  file states the O4 rules and no gap; its weights are unchanged, its
+  version is `d84056ed…`. On the hard benchmark the three rules make the
+  same links as N4 and no new false merge. M4's calibration moves: Brier
+  0.0360 → 0.0355, ECE 0.1082 → 0.1073; on N4's five folds the largest
+  bin gap goes from 0.401 to 0.776 (3 predictions). The M4 stress set now
+  counts ties apart: 122 right and 5 ties, against 126 and 1 under the N4
+  rules. No gap is recommended for the M2 model before O5.
+
 - **Reconciliation engines in the API and the CLI** (lot N2; ADR 0058
   amendment): `palomar.api/reconcile` and `palomar reconcile --engine
   historical|probabilistic`. The historical engine is the default, its

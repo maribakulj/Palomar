@@ -356,7 +356,12 @@ after a contradictory review.
 - Its propose threshold is a pool's: with 11 Simenons in the N3 pool, an
   exact heading reaches only 0.922, so a threshold above that proposes no
   Simenon. Another pool needs its own.
-- **For the next lot, two model defects in `agent-match`:**
+- **For the next lot, two model defects in `agent-match`** (resolved by
+  lot O4, [ADR 0062](./0062-what-a-weight-may-say-and-when-a-candidate-competes.md):
+  the chain now skips unmeasured levels, the form weighs only on an
+  exact name, and a model may state a gap that makes the competing rule
+  relative; the N3 model now states the O4 rules, G = 12 and thresholds
+  0.5 / 0.5):
   - the non-increasing rule caps every name level below an unmeasured one
     at 0 (here `:same-tokens`, an artefact of the inversion, and
     `:surname-typo`), so measured agreements weigh nothing. Lifting the

@@ -41,6 +41,14 @@
    - `:dates :unknown` weighs 0 by rule: missing dates are no evidence (M3);
    - along `name-levels`, weights never increase, and a disagreeing level
      (`disagreeing-levels`) never weighs more than 0.
+   Under `o4-rules` (lot O4, ADR 0062), the chain runs over the measured
+   levels only (`level-measured?`): an unmeasured level caps none below it;
+   it weighs 0, or, for a level that says the surnames agree
+   (`surname-levels`), the next measured weight below it when that is above
+   0, and never more than the measured level above it. And the form weighs
+   only on an exact name (`form-weighed-levels`). Under `n4-rules`, the
+   rules of a model that states none, the chain runs over every level and
+   the form weighs at every level.
 
    **Term frequency.** An agreement on a surname weighs by that surname's
    rarity in the pool: the weight of a surname-agreeing name level with a
@@ -57,6 +65,9 @@
    **Decision.** The total weight w and the prior λ give a posterior
    1/(1+2^-(w + log2(λ/(1-λ)))) (`posterior`); `decide` proposes above
    `:propose`, abstains below `:review`, and flags for review between.
+   With a gap G (`competing-gap`, lot O4), a second candidate competes with
+   the top one only when it weighs less than G bits below it
+   (`competes?`).
 
    **Calibration, and confidence (ADR 0005 L2).** `calibration` measures
    held-out predictions — reliability bins, Brier score, expected calibration
@@ -319,35 +330,132 @@
       (and u-ok (pos? mn)) (min 0.0 (weight (/ (double k) mn) (/ uc un)))
       :else 0.0)))
 
+(defn level-measured?
+  "Whether a level observed `mc` times among `mn` same-person pairs and `uc`
+   times among `un` different-person pairs was measured (lot O4): at least
+   `min-observed` (5) pairs on both sides, or on one side with a bound that
+   proves something (`measured-weight` not 0). A level seen fewer than 5
+   times on both sides, or on one side only with a bound that proves
+   nothing, is unmeasured: its weight of 0 says only that it was not
+   measured."
+  [mc mn uc un]
+  (let [k    min-observed
+        m-ok (and (pos? mn) (>= mc k))
+        u-ok (and (pos? un) (>= uc k))]
+    (or (and m-ok u-ok)
+        (and (or m-ok u-ok) (not (zero? (measured-weight mc mn uc un)))))))
+
 (defn share-weight
   "log2(m/u) of two hand-set shares, 0 when either is missing or 0."
   [m u] (if (and m u (pos? m) (pos? u)) (weight m u) 0.0))
 
+(def o4-rules
+  "The rules of lot O4 (ADR 0062), which a model follows when its
+   parameters state them (`:rules`):
+   - `:form :exact-name`: the form (heading or variant) weighs only when the
+     name level is `:exact` (`form-weighed-levels`); below, it weighs 0;
+   - `:chain :measured-levels`: the name weights never increase along
+     `name-levels` over the measured levels (`level-measured?`). An
+     unmeasured level is skipped and caps none below it: it weighs 0, or,
+     for a level that says the surnames agree (`surname-levels`), the next
+     measured weight below it when that is above 0; never more than the
+     measured level above it.
+
+   `n4-rules` are the rules up to lot N4: the form at every level, the chain
+   over every level, an unmeasured level read as 0 and capping every level
+   below it. Parameters that state no `:rules` predate O4 and follow them."
+  {:form :exact-name :chain :measured-levels})
+
+(def n4-rules
+  "The rules up to lot N4 (see `o4-rules`), those of parameters that state
+   none."
+  {:form :every-level :chain :every-level})
+
+(def ^:private rule-values
+  {:form #{:exact-name :every-level} :chain #{:measured-levels :every-level}})
+
+(defn rules-of
+  "The rules of model parameters `params`: its `:rules` over `n4-rules` (a
+   file that states none predates O4); rules that are not a map, an unknown
+   rule or an unknown value are refused."
+  [params]
+  (let [given (:rules params)]
+    (when-not (or (nil? given) (map? given))
+      (throw (ex-info (str "agent-match: :rules must be a map of rules, got " (pr-str given)) {:rules given})))
+    (let [r (merge n4-rules given)]
+      (doseq [[k v] r]
+        (when-not (contains? (get rule-values k #{}) v)
+          (throw (ex-info (str "agent-match: unknown rule " (pr-str k) " " (pr-str v)
+                               ", one of " (pr-str (into (sorted-map) (update-vals rule-values (comp vec sort)))))
+                          {:rule k :value v}))))
+      r)))
+
+(def form-weighed-levels
+  "The name levels at which the form weighs under `:form :exact-name`: the
+   same name only. The form's evidence is that the mention uses that very
+   form, a variant or a pseudonym. At `:initials`, a variant would win
+   between equal initials matches; at `:same-tokens`, a surname and a
+   forename may be swapped; below, a word differs and the form read is only
+   the closest one."
+  #{:exact})
+
+(defn- chain
+  "The name weights `nw` made non-increasing along `name-levels`. With
+   `measured` (a set of levels), only over those: an unmeasured level weighs
+   0, or, if it is one of `surname-levels`, the next measured weight below
+   it when that is above 0; never more than the measured level above it.
+   Without, over every level (the N4 rule)."
+  [nw measured]
+  (if (nil? measured)
+    (zipmap name-levels (reductions min (map #(get nw % 0.0) name-levels)))
+    (let [ms     (filter measured name-levels)
+          capped (if (seq ms) (zipmap ms (reductions min (map #(get nw % 0.0) ms))) {})]
+      (loop [[l & more] name-levels above nil out {}]
+        (if (nil? l)
+          out
+          (if (contains? capped l)
+            (recur more (capped l) (assoc out l (capped l)))
+            (let [below (some capped more)
+                  base  (if (and (surname-levels l) below (pos? below)) below 0.0)]
+              (recur more above (assoc out l (cond-> base above (min above)))))))))))
+
 (defn- constrain
   "The rules every model's weights obey, however they were estimated:
    `:dates :unknown` 0; disagreeing name levels at most 0; name weights
-   non-increasing along `name-levels`."
-  [ws]
+   non-increasing along `name-levels` (`chain`), over the `measured` levels
+   when given."
+  [ws measured]
   (-> ws
       (assoc-in [:dates :unknown] 0.0)
       (update :name (fn [nw]
-                      (let [clamped (map (fn [l] (let [w (get nw l 0.0)]
-                                                   (if (disagreeing-levels l) (min 0.0 w) w)))
-                                         name-levels)]
-                        (zipmap name-levels (reductions min clamped)))))))
+                      (chain (into {} (map (fn [l] (let [w (get nw l 0.0)]
+                                                     [l (if (disagreeing-levels l) (min 0.0 w) w)])))
+                                   name-levels)
+                             measured)))))
 
 (defn level-weights
   "The weight of every level: from `m-counts` and `u-counts` (`level-counts`)
    by `measured-weight`, or from hand-set shares `m` and `u`; then
-   `constrain`ed."
-  [{:keys [m u m-counts u-counts]}]
-  (constrain
-   (into {} (for [[f levels] features]
-              [f (into {} (for [l levels]
-                            [l (if (and m-counts u-counts)
-                                 (measured-weight (get-in m-counts [f :counts l] 0.0) (get-in m-counts [f :n] 0.0)
-                                                  (get-in u-counts [f :counts l] 0.0) (get-in u-counts [f :n] 0.0))
-                                 (share-weight (get-in m [f l]) (get-in u [f l])))]))]))))
+   `constrain`ed under the parameters' rules (`rules-of`). A name level is
+   measured by counts as `level-measured?` says, by shares when both are
+   above 0."
+  [{:keys [m u m-counts u-counts] :as params}]
+  (let [counts?  (and m-counts u-counts)
+        c        (fn [side f k] (get-in side (if (= :n k) [f :n] [f :counts k]) 0.0))
+        measured (when (= :measured-levels (:chain (rules-of params)))
+                   (set (filter (fn [l] (if counts?
+                                          (level-measured? (c m-counts :name l) (c m-counts :name :n)
+                                                           (c u-counts :name l) (c u-counts :name :n))
+                                          (let [a (get-in m [:name l]) b (get-in u [:name l])]
+                                            (and a b (pos? a) (pos? b)))))
+                                name-levels)))]
+    (constrain
+     (into {} (for [[f levels] features]
+                [f (into {} (for [l levels]
+                              [l (if counts?
+                                   (measured-weight (c m-counts f l) (c m-counts f :n) (c u-counts f l) (c u-counts f :n))
+                                   (share-weight (get-in m [f l]) (get-in u [f l])))]))]))
+     measured)))
 
 (def default-thresholds
   "Propose at a posterior of 0.95 or more; abstain below 0.5; review between."
@@ -374,15 +482,19 @@
 (defn model
   "A model: from observed `:m-counts` and `:u-counts` (`level-counts`), or
    hand-set shares `:m` and `:u`; the `:prior` λ; `:thresholds` (default
-   `default-thresholds`); a `:bar`, pinned here and never laxer than
-   `default-bar`; any `:estimation` note. Its `:weights` are computed here
-   (`level-weights`). It is not calibrated: `with-calibration` attaches a
-   report."
+   `default-thresholds`; an optional `:gap`, `competing-gap`); a `:bar`,
+   pinned here and never laxer than `default-bar`; the `:rules` its weights
+   obey (`rules-of`), which the model holds when the parameters state them,
+   so its fingerprint names them (parameters that state none follow
+   `n4-rules`, and their model is the one N4 built); any `:estimation`
+   note. Its `:weights` are computed here (`level-weights`). It is not
+   calibrated: `with-calibration` attaches a report."
   [{:keys [m u m-counts u-counts prior thresholds bar estimation] :as params}]
   (cond-> {:prior      prior
            :thresholds (or thresholds default-thresholds)
            :bar        (strictest bar)
            :weights    (level-weights params)}
+    (some? (:rules params)) (assoc :rules (rules-of params))
     m-counts   (assoc :m-counts m-counts)
     u-counts   (assoc :u-counts u-counts)
     m          (assoc :m m)
@@ -393,9 +505,14 @@
   "The weights of comparison `c` under `model`: `{:weights {:name :form :dates
    :tf} :match-weight w}`, w their sum; `:tf` the term-frequency adjustment
    (the comparison's own `:tf-mean` and `:surname-u`, one pool), 0 unless the
-   name level is a surname agreement with a positive weight."
-  [{:keys [weights]} {:keys [levels surname-u tf-mean]}]
-  (let [ws (into {} (for [f [:name :form :dates]] [f (get-in weights [f (get levels f)] 0.0)]))
+   name level is a surname agreement with a positive weight; `:form` 0 unless
+   the name level is one of `form-weighed-levels`, under the model's `:form`
+   rule `:exact-name` (a model without `:rules` follows `n4-rules`: the
+   form at every level)."
+  [{:keys [weights rules]} {:keys [levels surname-u tf-mean]}]
+  (let [form? (or (not= :exact-name (:form rules)) (contains? form-weighed-levels (:name levels)))
+        ws (into {} (for [f [:name :form :dates]]
+                      [f (if (and (= :form f) (not form?)) 0.0 (get-in weights [f (get levels f)] 0.0))]))
         tf (if (and surname-u tf-mean (surname-levels (:name levels)) (pos? (:name ws)))
              (log2 (/ tf-mean surname-u))
              0.0)
@@ -414,6 +531,22 @@
         (>= p review)  :review
         :else          :abstain))
 
+(defn competing-gap
+  "The gap G, in bits, of `model`'s relative competing rule (lot O4,
+   `:thresholds :gap`), or nil: the N4 rule, where every other candidate at
+   or above review competes."
+  [model]
+  (get-in model [:thresholds :gap]))
+
+(defn competes?
+  "Whether a candidate of weight `w` competes with the mention's top
+   candidate, of weight `top-w`, both at or above the review threshold: when
+   `gap` is nil, always (the N4 rule); else when its weight is less than
+   `gap` bits below the top's. A tie always competes, whatever the gap. A candidate that does
+   not compete leaves the top to be decided on its own thresholds."
+  [gap top-w w]
+  (or (nil? gap) (== top-w w) (< (- (double top-w) (double w)) (double gap))))
+
 (defn em
   "m and λ by expectation-maximisation over `comparisons` (no labels), u held
    fixed (`:u`, shares): starting from `:prior` and a start m that favours the
@@ -427,7 +560,11 @@
                                  ws (map #(StrictMath/pow 2.0 (- k %)) (range k))
                                  t  (reduce + ws)]
                              (zipmap levels (map #(/ % t) ws))))
-        raw   (fn [m] {:weights (into {} (for [[f ls] features]
+        ;; the E-step scores every feature on every pair (`n4-rules`): the
+        ;; counts it re-estimates are per feature, every level and form
+        ;; counted, so the likelihood it weighs by must be theirs
+        raw   (fn [m] {:rules   n4-rules
+                       :weights (into {} (for [[f ls] features]
                                            [f (into {} (for [l ls] [l (share-weight (get-in m [f l]) (get-in u [f l]))]))]))})
         cs    (remove #(= :incompatible (get-in % [:levels :dates])) comparisons)]
     (loop [m (into {} (for [[f ls] features] [f (start ls)])) lam (double prior) i 0]

@@ -213,7 +213,11 @@
    `model`: abstained below the review threshold, for review between the
    thresholds, proposed outright above — but only when it is the mention's
    one candidate at or above the review threshold; with several, all of them
-   go to review (`:review-reason :competing`). A proposal carries
+   go to review (`:review-reason :competing`). With a gap G in the model's
+   thresholds (lot O4, `fs/competing-gap`), only the candidates less than G
+   bits below the top one compete; with none, the top one is decided on its
+   own thresholds, and any other candidate above propose is for review
+   (`:review-reason :outranked`). A proposal carries
    `:confidence` and its `:calibration-proof` only when the model is
    calibrated on this pool for its decision (`fs/confidence`). With `block`
    (lot M6), a mention is compared with the entries `(block name)` returns
@@ -272,13 +276,24 @@
         cap    #(if (and (not (named? %)) (= :propose (:decision %)))
                   (assoc % :decision :review :review-reason :no-name-agreement)
                   %)
+        ;; lot O4: with a gap G (`fs/competing-gap`), only a candidate
+        ;; less than G bits below the top competes; the top, with no close
+        ;; competitor, is decided on its own thresholds, and any other
+        ;; candidate is for review at most (`:outranked`)
+        gap    (fs/competing-gap model)
         one    (fn [cs]
-                 (let [cs (map cap cs)
-                       n  (count (filter #(and (named? %) (#{:propose :review} (:decision %))) cs))]
+                 (let [cs    (map cap cs)
+                       live? #(and (named? %) (#{:propose :review} (:decision %)))
+                       live  (filter live? cs)
+                       top-w (when (seq live) (apply max (map :match-weight live)))
+                       close #(fs/competes? gap top-w (:match-weight %))
+                       n     (count (filter close live))]
                    (for [c cs]
-                     (if (and (< 1 n) (named? c) (#{:propose :review} (:decision c)))
-                       (assoc c :decision :review :review-reason :competing)
-                       c))))
+                     (cond (not (live? c))                    c
+                           (and (< 1 n) (close c))            (assoc c :decision :review :review-reason :competing)
+                           (and (= :propose (:decision c))
+                                (< (:match-weight c) top-w))  (assoc c :decision :review :review-reason :outranked)
+                           :else                              c))))
         ;; a decision rests on every candidate's relational evidence (a
         ;; competitor pushed down counts): its support is their union
         support (fn [cs] (let [sup (vec (sort-by str (distinct (mapcat #(get-in % [:evidence :relations :support]) cs))))]
@@ -319,7 +334,10 @@
    `:decision` `:propose` (at or above the model's `:propose` threshold, and
    the mention's only candidate at or above `:review`) or `:review` (between
    the thresholds, or one of several candidates above `:review`:
-   `:review-reason :competing`), and its `:evidence` adds the `:comparison`
+   `:review-reason :competing`; with a gap G in the model's thresholds, lot
+   O4, only those less than G bits below the top one compete, and another
+   candidate above propose is `:review-reason :outranked`), and its
+   `:evidence` adds the `:comparison`
    levels and the `:weights`. A candidate below the `:review` threshold is not
    proposed: it is listed under `:abstained`, with its evidence. The proposal
    carries `:confidence` (and its `:calibration-proof`) only when the model's

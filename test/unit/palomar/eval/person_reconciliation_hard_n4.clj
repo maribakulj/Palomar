@@ -75,6 +75,24 @@
   "The folds of the cross-validation the thresholds are chosen on."
   5)
 
+(def gap-criterion
+  "Lot O4: how the gap G of the relative competing rule
+   (`agent-match/competes?`) is chosen, written before any O4 number was
+   seen. On the same held-out folds of train as `threshold-criterion`; dev
+   only confirms; test is not read.
+
+   1. For each G of `:grid` (bits; nil is no gap, the N4 rule), choose the
+      thresholds by `threshold-criterion`, every candidate decided with that
+      gap.
+   2. G is admissible when step 1 of `threshold-criterion` found an
+      admissible propose value with it (precision at least 0.99, Wilson
+      lower bound at least 0.95), not its fallback.
+   3. Take the admissible G whose chosen thresholds give the highest
+      cross-validated recall of outright links; on a tie, the largest G
+      (nil counting as the largest): the closest to the N4 rule. If none is
+      admissible, no gap."
+  {:grid [0.5 1.0 2.0 3.0 4.0 6.0 8.0 12.0 nil]})
+
 (defn wilson-lower
   "The lower bound of the Wilson score interval of `k` successes in `n`, at
    `z` (1.96: 95 %); nil when `n` is 0."
@@ -242,15 +260,18 @@
 (defn model-params
   "The parameters of the model fitted on `counts` (`fit-counts`): m and u
    the level counts, the prior the share of true pairs among all pairs,
-   with `thresholds`."
-  [counts thresholds]
-  {:prior      (/ (double (:true counts)) (:pairs counts))
-   :thresholds thresholds
-   :bar        fs/default-bar
-   :m-counts   (:m-counts counts)
-   :u-counts   (:u-counts counts)
-   :estimation {:m :supervised :u :mention-pairs :fitted-on :n3-train
-                :name-input :inverted :thresholds-chosen-on :n3-train-cv5}})
+   with `thresholds` and the weight `rules` (default
+   `agent-match/o4-rules`, lot O4), which the parameters state."
+  ([counts thresholds] (model-params counts thresholds fs/o4-rules))
+  ([counts thresholds rules]
+   {:prior      (/ (double (:true counts)) (:pairs counts))
+    :thresholds thresholds
+    :bar        fs/default-bar
+    :rules      rules
+    :m-counts   (:m-counts counts)
+    :u-counts   (:u-counts counts)
+    :estimation {:m :supervised :u :mention-pairs :fitted-on :n3-train
+                 :name-input :inverted :thresholds-chosen-on :n3-train-cv5}}))
 
 (defn fit-model
   "The model of `params` (`fs/model`, as `reconciliation/read-model` builds
@@ -279,10 +300,12 @@
    `reconcile/agent-candidates` takes it: two or more candidates at or
    above review send the mention to review; else the top candidate is
    proposed at or above propose, reviewed at or above review, else the
-   mention is abstained. `{:link top-or-nil :review? bool :decision}`."
-  [cands {:keys [propose review]}]
-  (let [above (count (filter #(>= (:p %) review) cands))
-        top   (first cands)
+   mention is abstained. With a `:gap` G (lot O4, `fs/competes?`), only a
+   candidate less than G bits below the top one counts as a second.
+   `{:link top-or-nil :review? bool :decision}`."
+  [cands {:keys [propose review gap]}]
+  (let [top   (first cands)
+        above (count (filter #(and (>= (:p %) review) (fs/competes? gap (:w top) (:w %))) cands))
         d     (cond (< 1 above)                     :review
                     (and top (>= (:p top) propose)) :propose
                     (and top (>= (:p top) review))  :review
@@ -378,28 +401,46 @@
 (defn choose-thresholds
   "The thresholds `threshold-criterion` chooses on `scored-ms` (held-out
    scored mentions, `cv-scored`): `{:thresholds :propose-point
-   :review-point :grid :review-grid}`."
+   :review-point :grid :review-grid}`. With a `gap` (lot O4), every point
+   is decided with it, and the thresholds carry it."
+  ([scored-ms] (choose-thresholds scored-ms nil))
+  ([scored-ms gap]
+   (let [{:keys [propose-grid review-grid min-precision min-wilson-lower max-recall-loss min-review-hit min-reviews]}
+         threshold-criterion
+         fallback (cond-> (:fallback threshold-criterion) gap (assoc :gap gap))
+         th    (fn [p r] (cond-> {:propose p :review r} gap (assoc :gap gap)))
+         grid  (mapv #(point scored-ms (th % %)) propose-grid)
+         ok    (filter #(and (:precision %) (>= (:precision %) min-precision) (>= (:wilson %) min-wilson-lower)) grid)
+         best  (when (seq ok) (last (sort-by (juxt :recall (comp :propose :thresholds)) ok)))
+         tp    (get-in best [:thresholds :propose])
+         revs  (when best
+                 (vec (for [r review-grid :when (<= r tp)]
+                        (point scored-ms (th tp r)))))
+         rbest (last (filter #(and (>= (:recall %) (- (:recall best) max-recall-loss))
+                                   (:review-hit %) (>= (:review-hit %) min-review-hit)
+                                   (>= (:review %) min-reviews))
+                             revs))]
+     {:thresholds    (cond (nil? best) fallback
+                           rbest       (:thresholds rbest)
+                           :else       (th tp (min tp (:review fallback))))
+      :propose-point best
+      :review-point  rbest
+      :grid          grid
+      :review-grid   (vec revs)})))
+
+(defn choose-gapped
+  "The gap and thresholds `gap-criterion` chooses on `scored-ms` (held-out
+   scored mentions): `{:thresholds :gap :per-gap}`, `:per-gap` each G's
+   choice and its point, and whether it is admissible."
   [scored-ms]
-  (let [{:keys [propose-grid review-grid min-precision min-wilson-lower max-recall-loss min-review-hit min-reviews fallback]}
-        threshold-criterion
-        grid  (mapv #(point scored-ms {:propose % :review %}) propose-grid)
-        ok    (filter #(and (:precision %) (>= (:precision %) min-precision) (>= (:wilson %) min-wilson-lower)) grid)
-        best  (when (seq ok) (last (sort-by (juxt :recall (comp :propose :thresholds)) ok)))
-        tp    (get-in best [:thresholds :propose])
-        revs  (when best
-                (vec (for [r review-grid :when (<= r tp)]
-                       (point scored-ms {:propose tp :review r}))))
-        rbest (last (filter #(and (>= (:recall %) (- (:recall best) max-recall-loss))
-                                  (:review-hit %) (>= (:review-hit %) min-review-hit)
-                                  (>= (:review %) min-reviews))
-                            revs))]
-    {:thresholds    (cond (nil? best) fallback
-                          rbest       (:thresholds rbest)
-                          :else       {:propose tp :review (min tp (:review fallback))})
-     :propose-point best
-     :review-point  rbest
-     :grid          grid
-     :review-grid   (vec revs)}))
+  (let [per  (vec (for [g (:grid gap-criterion)
+                        :let [c (choose-thresholds scored-ms g)]]
+                    {:gap g :thresholds (:thresholds c) :admissible? (some? (:propose-point c))
+                     :point (point scored-ms (:thresholds c))}))
+        best (last (sort-by (juxt (comp :recall :point) #(or (:gap %) ##Inf)) (filter :admissible? per)))]
+    {:thresholds (if best (:thresholds best) (:thresholds (choose-thresholds scored-ms nil)))
+     :gap        (:gap best)
+     :per-gap    per}))
 
 (defn scored-mentions
   "Each prepared mention of `pms` with its candidates scored under `model`
@@ -466,15 +507,17 @@
   "The held-out scored mentions of a `k`-fold cross-validation of the
    prepared mentions `pms` by person (`fold-of`): each fold scored by the
    model fitted on the others (with the role weights fitted on them when
-   `profiles` is given)."
-  [ctx pms profiles k]
-  (let [fold #(fold-of (:mention %) k)]
-    (vec (mapcat (fn [i]
-                   (let [counts (fit-counts ctx (remove #(= i (fold %)) pms) profiles)
-                         mdl    (fit-model (model-params counts fs/default-thresholds))
-                         role-w (when profiles (role-weights counts))]
-                     (scored-mentions mdl (filter #(= i (fold %)) pms) role-w profiles)))
-                 (range k)))))
+   `profiles` is given), its weights under `rules` (default
+   `agent-match/o4-rules`)."
+  ([ctx pms profiles k] (cv-scored ctx pms profiles k fs/o4-rules))
+  ([ctx pms profiles k rules]
+   (let [fold #(fold-of (:mention %) k)]
+     (vec (mapcat (fn [i]
+                    (let [counts (fit-counts ctx (remove #(= i (fold %)) pms) profiles)
+                          mdl    (fit-model (model-params counts fs/default-thresholds rules))
+                          role-w (when profiles (role-weights counts))]
+                      (scored-mentions mdl (filter #(= i (fold %)) pms) role-w profiles)))
+                  (range k))))))
 
 ;; ---------------------------------------------------------------------------
 ;; The model file
@@ -510,14 +553,16 @@
      :attribution "Source : Bibliothèque nationale de France"}))
 
 (defn n3-params
-  "The parameters of the N3 model: fitted on train, thresholds chosen by
-   `threshold-criterion` on the cross-validated train folds, with its
-   provenance. `{:params :choice}`, the choice with the chosen thresholds'
-   cross-validated point (`:cv`) and their dev confirmation (`:dev`)."
+  "The parameters of the N3 model: fitted on train, its weights under
+   `agent-match/o4-rules` (lot O4), its thresholds and its gap chosen
+   by `threshold-criterion` and `gap-criterion` on the cross-validated
+   train folds (`choose-gapped`), with its provenance. `{:params :choice}`,
+   the choice with the chosen thresholds' cross-validated point (`:cv`) and
+   their dev confirmation (`:dev`)."
   [b ctx]
   (let [train  (prepared ctx (split-mentions b :train))
         cv     (cv-scored ctx train nil cv-folds)
-        choice (choose-thresholds cv)
+        choice (choose-gapped cv)
         th     (:thresholds choice)
         counts (fit-counts ctx train nil)
         mdl    (fit-model (model-params counts th))]
@@ -536,6 +581,10 @@
 ;; authorities of the benchmark, each name put in heading order. The
 ;; thresholds were chosen on a 5-fold cross-validation of train, by person;
 ;; dev only confirmed them. The test split fed neither.
+;;
+;; Lot O4 (ADR 0062): its weights follow `:rules` (the form on an exact name
+;; only, the chain over measured levels), and `:thresholds :gap` is the gap
+;; of the relative competing rule, in bits, chosen on the same folds.
 ;;
 ;; IN-SAMPLE on its train split: `palomar.reconciliation/refuse-in-sample!`
 ;; refuses it on the persons and no-match names it was fitted on
@@ -566,7 +615,7 @@
 (defn model-file-content
   "The text of the model file for `params`."
   [params]
-  (let [ks [:prior :thresholds :bar :m-counts :u-counts :estimation :provenance]]
+  (let [ks [:prior :thresholds :bar :rules :m-counts :u-counts :estimation :provenance]]
     (str file-header
          "{" (str/join "\n " (for [k ks :when (contains? params k)]
                                (str (pr-str k) " " (if (= :provenance k) (provenance-text (get params k)) (pr-str (get params k))))))
