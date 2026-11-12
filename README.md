@@ -329,6 +329,16 @@ clojure -M:run reconcile records.xml --from intermarc --authorities auth.xml --e
 clojure -M:run reconcile explain records.xml --from intermarc --authorities auth.xml --mention '[:bnf/cb123 "700" 0]'
 clojure -M:run reconcile clusters records.xml --from intermarc --authorities auth.xml
 
+# The probabilistic engine finds candidates by lanes (ADR 0060). --lanes name
+# is the default. --lanes name,identifier also reads the ids a mention states
+# (INTERMARC $1, MARC21 $0 and $1, UNIMARC $o, LIDO actorID, EAC-CPF entityId
+# and otherRecordId; never a $3) against the authorities' ids. A candidate no
+# name agrees with is for review at most. explain then says which lane found
+# each candidate, and what the identifier lane reports.
+# The historical engine reads the name lane alone.
+clojure -M:run reconcile records.xml --from intermarc --authorities auth.xml --engine probabilistic --lanes name,identifier
+clojure -M:run reconcile explain records.xml --from intermarc --authorities auth.xml --mention '[:bnf/cb123 "700" 0]' --lanes name,identifier
+
 # List the supported source and target formats
 clojure -M:run formats
 #  from: dc iiif intermarc intermarc-ng marc21 mods unimarc

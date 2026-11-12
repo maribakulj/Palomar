@@ -62,7 +62,8 @@
 
 (defn index
   "The candidate index of `x`: `{:entries [..] :postings {blocking-key
-   [ordinal ..]} :identifiers {id-key [ordinal ..]}}`. `x` is an authority
+   [ordinal ..]} :identifiers {id-key [ordinal ..]}}`, and `:name-block`
+   when one is given (`name-lane`). `x` is an authority
    index read (`authority-index/read-index`), whose postings are kept, a
    pool (a sequence of entries), indexed here in its order, or an index
    already made, returned as is."
@@ -82,10 +83,19 @@
 (defn name-lane
   "The `:name` lane: the entries of `idx` sharing a blocking key with the
    mention's name, in index order, each with the keys it shares. The
-   entries are exactly `authority-index/block`'s."
-  [{:keys [entries postings]} m]
-  (let [hits (reduce (fn [acc k] (reduce (fn [acc i] (update acc i (fnil conj []) k)) acc (get postings k)))
-                     (sorted-map) (index/blocking-keys [(mention-name m)]))]
+   entries are exactly `authority-index/block`'s. With a hand-made block
+   (`:name-block f` on the index, lot O6 review: a pool `{:entries :block}`
+   read from no index), the entries are those `(f name)` returns, in index
+   order, each with the blocking keys it shares (none, perhaps), as the
+   matcher was given them before lot O6."
+  [{:keys [entries postings name-block]} m]
+  (let [nm   (mention-name m)
+        hits (reduce (fn [acc k] (reduce (fn [acc i] (update acc i (fnil conj []) k)) acc (get postings k)))
+                     (sorted-map) (index/blocking-keys [nm]))
+        hits (if name-block
+               (let [in (set (name-block nm))]
+                 (into (sorted-map) (for [[i e] (map-indexed vector entries) :when (in e)] [i (get hits i [])])))
+               hits)]
     {:candidates (vec (for [[i ks] hits] {:ordinal i :id (:id (entries i)) :lane :name :keys ks}))
      :reports    []}))
 
@@ -188,6 +198,38 @@
   (cond-> {:name (mention-name m)}
     (and (map? m) (some? (:id m))) (assoc :id (:id m))))
 
+(defn- ranked
+  "Each of `ms`, ranked alone on its union: `[{:result {:proposals ..}
+   :generation {..}}]`, in the order of `ms`."
+  [ms authority opts]
+  (let [idx    (index (or (:index opts) authority))
+        ls     (or (:lanes opts) default-lanes)
+        model? (some? (:model opts))
+        ;; the pool's statistics, once per run (lot O6): never per mention
+        ropts  (cond-> (dissoc opts :lanes :index)
+                 (and model? (nil? (:prepared opts)))
+                 (assoc :prepared (reconcile/prepare authority (select-keys opts [:model :anchors])))
+                 (not model?) (dissoc :prepared))]
+    (vec (for [m ms
+               :let [g       (generate idx m ls)
+                     es      (mapv (:entries idx) (map :ordinal (:candidates g)))
+                     unnamed (set (for [c (:candidates g) :when (some #(not= :name (:lane %)) (:by c))] (:id c)))
+                     by      (into {} (map (juxt :id :by)) (:candidates g))
+                     r       (reconcile/agent-candidates [m] authority
+                                                         (cond-> (assoc ropts :block (constantly es))
+                                                           (and model? (seq unnamed)) (assoc :score-unnamed unnamed)))
+                     tag     (fn [xs] (mapv #(if-some [b (by (:authority-id %))] (assoc % :generated-by b) %) xs))]]
+           {:result     (update-vals r tag)
+            :generation {:mention    (mention-ref m)
+                         :candidates (mapv #(select-keys % [:id :by]) (:candidates g))
+                         :reports    (:reports g)}}))))
+
+(defn- lane-mention
+  "What a lane and the matcher are given of mention `m`: never its
+   `:authority-record` (a `$3`, the link already made)."
+  [m]
+  (if (map? m) (dissoc m :authority-record) m))
+
 (defn rank
   "`reconcile/agent-candidates` on the candidates the lanes generate:
    `(rank mentions authority opts)`, `opts` those of `agent-candidates`
@@ -197,10 +239,13 @@
    `:block`; with a model, the candidates no name key found are weighed
    too (`:score-unnamed`): every candidate a lane other than the name lane
    found, so that a name key whose name level is `:none` hides none.
+   With a model, the pool's statistics are computed once for the run
+   (`reconcile/prepare`, lot O6), or taken from `:prepared`.
    Mentions are deduplicated as `agent-candidates` does: with a model, the
    mentions the matcher reads alike (`reconcile/mention`) are scored once,
    their ids telling them apart when the identifier lane runs; name-only,
-   none is. The result is `agent-candidates`', its items in
+   none is. A mention's `:authority-record` is given to no lane nor to the
+   matcher. The result is `agent-candidates`', its items in
    the same order, each with `:generated-by` (the lanes that found it,
    `generate`'s `:by`), plus `:generation`, per mention scored `{:mention
    {:name :id} :candidates [{:id :by}] :reports [..]}`. A name-only
@@ -209,25 +254,12 @@
   ([mentions authority] (rank mentions authority {}))
   ([mentions authority opts]
    (let [opts   (if (map? opts) opts {:threshold opts})
-         idx    (index (or (:index opts) authority))
          ls     (or (:lanes opts) default-lanes)
          model? (some? (:model opts))
-         ropts  (dissoc opts :lanes :index)
+         ms     (map lane-mention mentions)
          ;; as `agent-candidates`: with a model, each distinct mention once
-         ms     (if model? (distinct-by (dedupe-key opts ls) mentions) mentions)
-         per    (vec (for [m ms
-                           :let [g       (generate idx m ls)
-                                 es      (mapv (:entries idx) (map :ordinal (:candidates g)))
-                                 unnamed (set (for [c (:candidates g) :when (some #(not= :name (:lane %)) (:by c))] (:id c)))
-                                 by      (into {} (map (juxt :id :by)) (:candidates g))
-                                 r       (reconcile/agent-candidates [m] authority
-                                                                     (cond-> (assoc ropts :block (constantly es))
-                                                                       (and model? (seq unnamed)) (assoc :score-unnamed unnamed)))
-                                 tag     (fn [xs] (mapv #(if-some [b (by (:authority-id %))] (assoc % :generated-by b) %) xs))]]
-                       {:result     (update-vals r tag)
-                        :generation {:mention    (mention-ref m)
-                                     :candidates (mapv #(select-keys % [:id :by]) (:candidates g))
-                                     :reports    (:reports g)}}))
+         ms     (if model? (distinct-by (dedupe-key opts ls) ms) ms)
+         per    (ranked ms authority opts)
          all    (fn [k] (vec (mapcat (comp k :result) per)))
          ;; the order `agent-candidates` gives a batch: best first across mentions
          best   (fn [k] (vec (sort-by (if model? (comp - :match-weight) (comp - :score)) (all k))))]
@@ -235,6 +267,29 @@
               :rejected   (if model? (all :rejected) (best :rejected))
               :generation (mapv :generation per)}
        model? (assoc :abstained (best :abstained))))))
+
+(defn rank-each
+  "`rank` mention by mention: for each of `mentions`, in order, `{:mention m
+   :proposals :abstained :rejected :generation}`, what `rank` gives that
+   mention alone (its items `agent-candidates`' order, with
+   `:generated-by`). With a model, the mentions the matcher and the lanes
+   read alike are scored once and share their result. What a
+   reconciliation run decides each mention by (lot O6): unlike `rank`'s
+   batch, two mentions read alike keep their own `:mention`."
+  [mentions authority opts]
+  (let [ls     (or (:lanes opts) default-lanes)
+        model? (some? (:model opts))
+        ms     (mapv lane-mention mentions)
+        k      (if model? (dedupe-key opts ls) identity)
+        ds     (if model? (distinct-by k ms) ms)
+        per    (ranked ds authority opts)
+        by-key (when model? (zipmap (map k ds) per))]
+    (vec (map-indexed (fn [i m]
+                        (let [{:keys [result generation]} (if model? (by-key (k m)) (per i))]
+                          (assoc (select-keys result [:proposals :abstained :rejected])
+                                 ;; a shared result, each mention's own reference
+                                 :mention (nth mentions i) :generation (assoc generation :mention (mention-ref m)))))
+                      ms))))
 
 ;; ---------------------------------------------------------------------------
 ;; Recall of generation

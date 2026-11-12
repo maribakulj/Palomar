@@ -18,6 +18,25 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **Candidate lanes in the API and the CLI; pool statistics prepared once**
+  (lot O6, ADR 0060 amendment). `palomar reconcile`, `reconcile explain`
+  and `reconcile clusters` take `--lanes name,identifier`; the API takes
+  `:lanes`. The default is the name lane: its decisions are lot N2's and
+  the output is byte for byte what it was (186 CLI runs compared). The
+  probabilistic engine ranks the lanes' candidates with
+  `candidates/rank-each`. The historical engine refuses any lane but the
+  name lane (exit 2). Lanes asked are stated in the result and the run
+  manifest; `explain` names the lanes and keys that found each candidate
+  (`:generated-by`), and each decision and explanation carries the
+  identifier lane's reports (an id several entries state, an unread or
+  invalid id…). A pool's hand-made `:block` is still honoured. A candidate
+  an identifier alone brings is for review at most. `reconcile/prepare`
+  computes the pool's statistics once per run (surname frequencies and their mean, size, fingerprint, relations
+  fingerprint); `agent-candidates` and `candidates/rank` take them as
+  `:prepared`; the map is sealed, its pool checked by identity, the model
+  and anchors by value. Results are unchanged. On a synthetic pool of 10 000
+  entries and 1 000 mentions, `rank` goes from 207 s to 2.0 s (50 000
+  entries: 1 289 s to 7.3 s). No eval number moves.
 - **An external test of person reconciliation on transcribed mentions**
   (lot O5; `docs/eval/person-reconciliation-external.md`). N3's test split
   is spent, so a new one was pre-registered: a protocol (22 candidate

@@ -39,7 +39,7 @@
   "A value for every flag the CLI reads, so that each role a command declares
    shows."
   (into {} (for [f ["out" "manifest" "authorities" "model" "from" "to" "policy" "profile" "record-id"
-                    "engine" "format" "mention" "built" "metadata-prefix" "by"]]
+                    "engine" "format" "mention" "built" "metadata-prefix" "by" "lanes"]]
              [f (str "p-" f)])))
 
 (deftest every-command-declares-the-files-it-reads-and-writes

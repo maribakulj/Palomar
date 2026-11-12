@@ -243,9 +243,12 @@
    evidence); `:surname`, and `:surname-u` and `:tf-mean` (both from the
    pool's `:surname-counts` and `:pool-size`, the pool the mention is matched
    against), only when the name level is a surname agreement and the pool is
-   given."
+   given. The pool's mean, when `reconcile/prepare` computed it once for
+   the run (lot O6), is read from `::tf-mean`, which only `prepare` sets;
+   a plain `:tf-mean` is never read. An explicit nil `::tf-mean` beside
+   surname counts is refused: such a pool has a mean."
   ([mention candidate] (compare-pair mention candidate nil))
-  ([{:keys [name] :as mention} candidate {:keys [surname-counts pool-size]}]
+  ([{:keys [name] :as mention} candidate {:keys [surname-counts pool-size] :as pool}]
    (let [label  (:label candidate)
          forms  (remove str/blank? (cons label (:variants candidate)))
          lv     (map (fn [f] [(name-level name f) f]) forms)
@@ -255,7 +258,12 @@
          tm     (tokens name)
          compat (dates/compatibility (:dates mention) (:dates candidate))
          s      (when (surname-levels level) (surname (second best)))
-         mean   (when (and s pool-size (pos? pool-size)) (tf-mean surname-counts pool-size))]
+         mean   (when (and s pool-size (pos? pool-size)) (if (contains? pool ::tf-mean)
+                                                           (or (::tf-mean pool)
+                                                               (when (some pos? (vals surname-counts))
+                                                                 (throw (ex-info "compare-pair: a nil mean for a pool with surname counts: prepare the pool's statistics with reconcile/prepare"
+                                                                                 {:pool-size pool-size}))))
+                                                           (tf-mean surname-counts pool-size)))]
      (cond-> {:levels     {:name level :form form :dates (dates-level compat)}
               :name-score (apply max 0.0 (map #(jaccard tm (tokens %)) forms))
               :dates      compat}

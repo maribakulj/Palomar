@@ -9,9 +9,9 @@
      palomar validate      <input-file> --from <fmt> [--policy <p>] [--record-id <id>]
      palomar report        <input-file> --from <fmt> --to <fmt> [--record-id <id>]
      palomar inspect       <input-file> --from <fmt> [--record-id <id>]
-     palomar reconcile     <input-file> --from <fmt> [--authorities <file|index>] [--engine historical|probabilistic] [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
-     palomar reconcile explain  <input-file> --from <fmt> --authorities <file|index> --mention <id> [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
-     palomar reconcile clusters <input-file> --from <fmt> --authorities <file|index> [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
+     palomar reconcile     <input-file> --from <fmt> [--authorities <file|index>] [--engine historical|probabilistic] [--lanes name,identifier] [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
+     palomar reconcile explain  <input-file> --from <fmt> --authorities <file|index> --mention <id> [--lanes name,identifier] [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
+     palomar reconcile clusters <input-file> --from <fmt> --authorities <file|index> [--lanes name,identifier] [--model <file>] [--format text|edn] [--manifest <file>] [--record-id <id>]
      palomar authorities index <dump> --out <index> [--built YYYY-MM-DD]
      palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]
      palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]
@@ -70,9 +70,9 @@
     "  palomar report        <input-file> --from <fmt> --to <fmt> [--format text|edn|json] [--record-id <id>]"
     "  palomar inspect       <input-file> --from <fmt> [--record-id <id>]"
     "  palomar reconcile     <input-file> --from <fmt> [--authorities <file.rdf|file.nt|index>] [--engine historical|probabilistic]"
-    "                        [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
-    "  palomar reconcile explain  <input-file> --from <fmt> --authorities <file|index> --mention <id> [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
-    "  palomar reconcile clusters <input-file> --from <fmt> --authorities <file|index> [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
+    "                        [--lanes name,identifier] [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
+    "  palomar reconcile explain  <input-file> --from <fmt> --authorities <file|index> --mention <id> [--lanes name,identifier] [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
+    "  palomar reconcile clusters <input-file> --from <fmt> --authorities <file|index> [--lanes name,identifier] [--model <file.edn>] [--format text|edn] [--manifest <file>] [--record-id <id>]"
     "  palomar authorities index <dump.jsonl[.gz]> --out <index> [--built YYYY-MM-DD]"
     "  palomar apply-repairs <input-file> --from <fmt> [--policy <p>] [--to <fmt>] [--by <curator>] [--record-id <id>]"
     "  palomar conformance   <input-file> --from <fmt> --profile <p> [--policy <p>] [--record-id <id>]"
@@ -95,6 +95,10 @@
     "                feature, 0 < prior < 1, 0 < review <= propose < 1, no :calibration); default the shipped"
     "                palomar/models/agent-match.edn, fitted in-sample on the BnF M2 records and not calibrated;"
     "                palomar/models/agent-match-n3.edn names the one fitted on the hard benchmark's train split (N4)"
+    "  --lanes       reconcile --engine probabilistic, explain, clusters: the candidate lanes, comma-separated: name (default;"
+    "                the decisions as before) and identifier (the ids the mention states: INTERMARC $1, MARC21 $0 and $1,"
+    "                UNIMARC $o, LIDO actorID, EAC-CPF entityId and otherRecordId, against the authorities' ids; never a $3;"
+    "                a candidate no name agrees with is for review at most). The historical engine reads the name lane alone"
     "  --mention     reconcile explain: the mention id, as EDN, e.g. '[:bnf/cb123 \"700\" 0]'"
     "  --built       authorities index: the build date the index records (default: today, UTC); same dump and date, same bytes"
     "  --metadata-prefix  convert --from oai: the OAI metadata format (oai_dc, marcxml, mods; default oai_dc)"
@@ -669,13 +673,27 @@
       "explain"  (reconciliation/format-explanation result)
       "clusters" (reconciliation/format-clusters result))))
 
+(defn- parse-lanes
+  "The lanes `--lanes` names, as keywords, or nil when one is no lane."
+  [s]
+  (let [ls (map keyword (str/split (str s) #"," -1))]
+    (when (and (seq ls) (every? reconciliation/lane-names ls)) (vec ls))))
+
 (defn- reconcile-problem
   "Why the `reconcile` flags cannot run, or nil."
-  [sub {:strs [engine model format mention authorities]}]
-  (let [eng (some-> engine keyword)]
+  [sub {:strs [engine model format mention authorities lanes]}]
+  (let [eng (some-> engine keyword)
+        ls  (when lanes (parse-lanes lanes))]
     (cond
       (and engine (not (reconciliation/engines eng)))
       (str "--engine must be historical or probabilistic, got " (pr-str engine))
+
+      (and lanes (nil? ls))
+      (str "--lanes is a comma-separated list of name and identifier, got " (pr-str lanes))
+
+      (and lanes (not sub) (not= :probabilistic eng) (not= #{:name} (set ls)))
+      (str "--lanes " lanes " is the probabilistic engine's: the historical engine reads the name lane alone;"
+           " give --engine probabilistic")
 
       (and format (not (#{"text" "edn"} format)))
       (str "reconcile --format must be text or edn, got " (pr-str format))
@@ -706,12 +724,14 @@
    keys, offline) by `--engine`: `historical` (the default, the canonical
    floor's names by token-set similarity, its output unchanged) or
    `probabilistic` (every mention, scored by a Fellegi-Sunter model, lot
-   N2). `reconcile explain --mention <id>` says why one mention was decided
+   N2). `--lanes` (lot O6) names the probabilistic engine's candidate
+   lanes (`palomar.candidates`); the historical engine refuses any but
+   `name`. `reconcile explain --mention <id>` says why one mention was decided
    as it was, `reconcile clusters` groups the mentions into persons; both
    are the probabilistic engine's. The work is `palomar.reconciliation`'s,
    as `palomar.api`'s is. With `--manifest`, the run manifest names the
    input, each authority file or index used, the engine and its model."
-  [{:strs [from record-id authorities manifest engine model format mention] :as flags} positional]
+  [{:strs [from record-id authorities manifest engine model format mention lanes] :as flags} positional]
   (let [[sub input] (reconcile-args positional)
         {:keys [err from source opts]} (read-source from input record-id (str "reconcile" (when sub (str " " sub))))
         problem (when-not err (reconcile-problem sub flags))
@@ -737,7 +757,8 @@
                           {:keys [records]} (convert/to-wemi from opts source)
                           pool   (when authorities (reconciliation/read-authorities authorities))
                           ropts  (cond-> {:engine (if engine (keyword engine) reconciliation/default-engine)}
-                                   loaded (assoc :model loaded))
+                                   loaded (assoc :model loaded)
+                                   lanes  (assoc :lanes (parse-lanes lanes)))
                           result (case sub
                                    nil        (reconciliation/reconcile records pool ropts)
                                    "explain"  (reconciliation/explain records pool (edn/read-string mention) ropts)
