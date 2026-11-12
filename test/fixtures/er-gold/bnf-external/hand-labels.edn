@@ -1,0 +1,28 @@
+;; Hand labels of the external test (lot O5), 2026-11-11. N3's rule, unchanged: :correct /
+;; :wrong settle a residual candidate; :same (with the pool :truth) / :different settle a
+;; no-match whose surname the pool holds. Each was decided by reading the record (245,
+;; headings, title, imprint) and the pool only, before any engine ran on these mentions
+;; (labels-freeze.edn records their SHA-256 before run.edn exists).
+{:labels
+ {
+  ["cb47273453n" "g" 0 0] {:text "Bertrand Rouziès-Léonardi" :verdict :correct :note "the translator of the record (700 Rouziès, Bertrand, 0680); the 245 gives his full hyphenated name"}
+  ["cb45232070s" "g" 1 0] {:text "Eric Hicks" :verdict :same :truth "11907488" :note "Eric Hicks (1937-2004), editor of Christine de Pizan, in a Christine de Pizan edition"}
+  ["cb456831105" "f" 0 0] {:text "J.-C. Mardrus" :verdict :same :truth "11914482" :note "\"le Dr J.-C. Mardrus\": Joseph Charles Mardrus, the translator (variant Mardrus, Joseph-Charles-Victor)"}
+  ["cb32476630t" "a" 0 1] {:text "Paul de Musset" :verdict :same :truth "12448191" :note "\"Portrait d'Alfred et de Paul de Musset enfants\": Alfred's brother Paul (1804-1880)"}
+  ["cb33146975m" "a" 0 0] {:text "Jean Plattard" :verdict :same :truth "11920023" :note "Jean Plattard (1873-1939), editor of Rabelais's Oeuvres complètes"}
+  ["cb33146966n" "a" 0 0] {:text "Jean Plattard" :verdict :same :truth "11920023" :note "the same edition, 5e édition"}
+  ["cb33146959c" "a" 0 0] {:text "Jean Plattard" :verdict :same :truth "11920023" :note "the same edition, 4e édition"}
+  ["cb33146960k" "a" 0 0] {:text "Jean Plattard" :verdict :same :truth "11920023" :note "the same edition, 4e édition"}
+  ["cb33146961x" "a" 0 0] {:text "Jean Plattard" :verdict :same :truth "11920023" :note "the same edition, 4e édition"}
+  ["cb331469628" "a" 0 0] {:text "Jean Plattard" :verdict :same :truth "11920023" :note "the same edition, 4e édition"}
+  ["cb32551695z" "a" 0 1] {:text "Roger Pons" :verdict :same :truth "16243872" :note "Larousse \"Pages choisies\" of Rabelais by Chappon and Pons; record cb325393542 of the same series cites Pons, Roger (1905-1961), 0360"}
+  ["cb325516938" "a" 0 1] {:text "Pons" :verdict :same :truth "16243872" :note "the same series, \"par Chappon et Pons\""}
+  ["cb35425464q" "g" 0 0] {:text "F. Van Hamme" :verdict :same :truth "12643901" :note "Roissard's illustrated Rabelais; record cb34706524z of the same edition cites Van Hamme, Fernand, 0440"}
+  ["cb354254652" "g" 0 0] {:text "F. Van Hamme" :verdict :same :truth "12643901" :note "the same edition"}
+  ["cb380729106" "f" 1 0] {:text "Rabelais" :verdict :same :truth "11920939" :note "a Pathé recording of \"Panurge et les moutons\", from Pantagruel: \"Rabelais, aut.\" is François Rabelais"}
+  ["cb32551726d" "a" 0 0] {:text "Abel Lefranc Eaux-fortes de Barta" :verdict :wrong :note "the splitter ran two people together (Abel Lefranc, and Barta the etcher): the mention names no single person"}
+  ["cb37308321k" "f" 0 0] {:text "Hôtel Voltaire" :verdict :different :note "a hotel, not a person: a hard negative"}
+  ["cb372124412" "f" 0 0] {:text "Réseau Voltaire" :verdict :different :note "a body (110 Réseau Voltaire pour la liberté d'expression): a hard negative"}
+  ["cb31853890n" "a" 0 0] {:text "Paul Janet" :verdict :same :truth "12156756" :note "presiding a prize day in 1919: Paul Janet (1863-1937), the physicist; the philosopher died in 1899"}
+  ["cb310659849" "a" 0 0] {:text "Henry-Paté" :verdict :correct :note "\"M. Henry-Paté\": Henry Paté, the record's 100, hyphenated as he signed"}
+ }}

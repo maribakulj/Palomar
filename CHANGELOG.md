@@ -18,6 +18,28 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Added
 
+- **An external test of person reconciliation on transcribed mentions**
+  (lot O5; `docs/eval/person-reconciliation-external.md`). N3's test split
+  is spent, so a new one was pre-registered: a protocol (22 candidate
+  authors, none of N3's or M2's, five picked by a hash order; N3's frozen
+  construction; four frozen engines; fixed metrics with Wilson intervals;
+  decision rules) hashed before the fetch. Five BnF corpora (Voltaire,
+  Musset, Christine de Pizan, Mardrus, Rabelais; 500 records) give 566
+  scored mentions, 519 linked, against a pool of 457. One run, as it
+  came: the Jaccard 436 correct and 63 false merges (recall 0.840); the
+  M2 model 347 and 0 (0.669); the N3 model 431 and 0 (0.830); the M2
+  model with G = 6 is the M2 model exactly. The rules say: no gap for M2;
+  the N3 model is better than M2 on transcribed mentions; the N3 model
+  matches the Jaccard's recall with no false merge. No default changes in
+  this lot. `run-once!` refuses a second run. After a contradictory
+  review, post-run figures from `run.edn` alone: four persons hold 61.8 %
+  of the linked mentions; rule 3 survives leaving out any one person or
+  corpus, and its person-cluster interval for (c) − (b) is [0.036, 0.359];
+  rule 4 flips without Mardrus. The raw headers, the scripts, the raw
+  SHA-256 and the engine code's hashes (`postrun.edn`, recorded after the
+  run, checked against the base commit by a dev script) are committed; the order is consistent with the protocol, not
+  proven. The guard on eval files that read a shipped model now names
+  them exactly.
 - **Three rules of the Fellegi-Sunter model fixed** (lot O4, ADR 0062;
   `docs/eval/person-reconciliation-hard.md`, section O4). The form weight
   (heading or variant) counts only on an exact name: the variant cliff at

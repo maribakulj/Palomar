@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- BnF pseudonym authority records, the targets of the cited authorities' 331 links, (INTERMARC Xchange), fetched 2026-11-11 from the BnF SRU API
+     (https://catalogue.bnf.fr/api/SRU, recordSchema=intermarcxchange), one query per record:
+     aut.recordid any "<id>". Each <srw:record> below is copied verbatim from its own response;
+     the responses are concatenated here, sorted by id, under one searchRetrieveResponse wrapper
+     written for this fixture (lot O5). Ids not served (0 records): see README.
+     Source : Bibliotheque nationale de France. Licence Ouverte / Etalab 2.0. -->
+<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/" xmlns="http://catalogue.bnf.fr/namespaces/InterXMarc" xmlns:ixm="http://catalogue.bnf.fr/namespaces/InterXMarc" xmlns:mn="http://catalogue.bnf.fr/namespaces/motsnotices" xmlns:sd="http://www.loc.gov/zing/srw/diagnostic/">
+<srw:version>1.2</srw:version>
+<srw:numberOfRecords>3</srw:numberOfRecords>
+<srw:records>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb10097360d" type="Authority">   <mxc:leader>00998c1 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF100973600</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb10097360d</mxc:controlfield>   <mxc:controlfield tag="008">970701181018frfref          1899      1978                 a 010 </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000402184579</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20180926</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w">.0.1b     </mxc:subfield>      <mxc:subfield code="a">Gaubry</mxc:subfield>      <mxc:subfield code="m">Juliette</mxc:subfield>      <mxc:subfield code="d">1899-1978</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">12497468</mxc:subfield>      <mxc:subfield code="w">.0.2b.....</mxc:subfield>      <mxc:subfield code="a">Gaubry</mxc:subfield>      <mxc:subfield code="m">Élise</mxc:subfield>      <mxc:subfield code="d">1899-1978</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...1b     </mxc:subfield>      <mxc:subfield code="a">Lafeychine-Gaubry</mxc:subfield>      <mxc:subfield code="m">Juliette</mxc:subfield>      <mxc:subfield code="d">1899-1978</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...1b     </mxc:subfield>      <mxc:subfield code="a">Gréco</mxc:subfield>      <mxc:subfield code="m">Juliette</mxc:subfield>      <mxc:subfield code="d">1899-1978</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">...1b     </mxc:subfield>      <mxc:subfield code="a">Gaubry</mxc:subfield>      <mxc:subfield code="m">Juliette Lafeychine-</mxc:subfield>      <mxc:subfield code="d">1899-1978</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="400" ind1=" " ind2=" ">      <mxc:subfield code="w">....b     </mxc:subfield>      <mxc:subfield code="a">Lafeychine</mxc:subfield>      <mxc:subfield code="m">Juliette</mxc:subfield>      <mxc:subfield code="d">1899-1978</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Résistante, déportée à Ravensbruck puis à Holleinsehen, s'engage en mai 1947 dans les Services Féminins de la Flotte pour l'Indochine. Directrice générale des Foyers de la Marine en Indochine</mxc:subfield>      <mxc:subfield code="a">Mère de Juliette Gréco (1927-....)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Nom de naissance : Juliette Lafeychine</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="603" ind1=" " ind2=" ">      <mxc:subfield code="a">Bordeaux (Gironde)</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Tricornes et bérets / Juliette Gaubry, 1954</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. suppl.</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Wikipédia</mxc:subfield>      <mxc:subfield code="u">https://fr.wikipedia.org/wiki/Juliette_Gréco#cite_note-Lafitte-1</mxc:subfield>      <mxc:subfield code="d">2018-09-19</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="624" ind1=" " ind2=" ">      <mxc:subfield code="a">944</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="917" ind1=" " ind2=" ">      <mxc:subfield code="o">CRI</mxc:subfield>      <mxc:subfield code="a">SU066310450001R</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb10097360d</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19970701</ixm:attr>
+<ixm:attr name="LastModificationDate">20181018</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb13488329d" type="Authority">   <mxc:leader>01067n0 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF134883298</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb13488329d</mxc:controlfield>   <mxc:controlfield tag="008">980514981119frfrm           14..      15..                 a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000000506299</mxc:subfield>      <mxc:subfield code="2">VIAF</mxc:subfield>      <mxc:subfield code="d">20131024</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w"> 0 2b.....</mxc:subfield>      <mxc:subfield code="a">Misogyne</mxc:subfield>      <mxc:subfield code="m">André</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">11920939</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Rabelais</mxc:subfield>      <mxc:subfield code="m">François</mxc:subfield>      <mxc:subfield code="d">1494?-1553</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme qui serait celui de François Rabelais, d'après Paul Lacroix</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Louenge des femmes. Invention extraite du commentaire de Pantagruel sus l'Androgyne de Platon. [A honneste et vertueuse dame Coelie de Romirville. Le Blason de la femme. Épistre de messire André Misogyne, gentilhomme florentin, envoyée au seigneur Pamphile, théliarche, qui luy avait demandé conseil sus le propos de se marier, traduite d'italien en françois. Description d'amour, par dialogue. Épigrammes touchant tous les moeurs, conditions et natures des femmes], 1551</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">Quérard Supercheries : Misogyne (André) [François Rabelais ?]</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén.</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">BN Cat. gén. : Misogyne (André) ET titre entré sous la vedette : Rabelais (François), pseud. Alcofribas Nasier</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="907" ind1=" " ind2=" ">      <mxc:subfield code="o">GEA</mxc:subfield>      <mxc:subfield code="a">007976644</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="917" ind1=" " ind2=" ">      <mxc:subfield code="o">OPL</mxc:subfield>      <mxc:subfield code="a">014145130</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb13488329d</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">19981125</ixm:attr>
+<ixm:attr name="LastModificationDate">20131024</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+<srw:record>
+<srw:recordSchema>marcxchange</srw:recordSchema>
+<srw:recordPacking>xml</srw:recordPacking>
+<srw:recordData>
+<mxc:record xmlns:mxc="info:lc/xmlns/marcxchange-v2" format="INTERMARC" id="ark:/12148/cb18232075m" type="Authority">   <mxc:leader>00489c1 ap2200027   45  </mxc:leader>   <mxc:controlfield tag="001">FRBNF182320752</mxc:controlfield>   <mxc:controlfield tag="003">http://catalogue.bnf.fr/ark:/12148/cb18232075m</mxc:controlfield>   <mxc:controlfield tag="008">250822250909frfref          19..                           a 1   </mxc:controlfield>   <mxc:datafield tag="031" ind1=" " ind2=" ">      <mxc:subfield code="a">0000000528116096</mxc:subfield>      <mxc:subfield code="2">ISNI</mxc:subfield>      <mxc:subfield code="d">20250827</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="045" ind1=" " ind2=" ">      <mxc:subfield code="a">a</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="100" ind1=" " ind2=" ">      <mxc:subfield code="w"> 0 2b     </mxc:subfield>      <mxc:subfield code="a">L'Oeil de loup</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="331" ind1=" " ind2=" ">      <mxc:subfield code="3">14522212</mxc:subfield>      <mxc:subfield code="w">.0..b.....</mxc:subfield>      <mxc:subfield code="a">Desgrugillers</mxc:subfield>      <mxc:subfield code="m">Nathalie</mxc:subfield>      <mxc:subfield code="d">1978-....</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="600" ind1=" " ind2=" ">      <mxc:subfield code="a">Pseudonyme de l'autrice sur Instagram</mxc:subfield>   </mxc:datafield>   <mxc:datafield tag="610" ind1=" " ind2=" ">      <mxc:subfield code="a">La couleur des saisons / [oeuvres textiles de] L'Oeil de loup [alias] Nathalie Desgrugillers. - Clermont-Ferrand : Éditions Paleo, copyright 2023. - [Texte noté. Image fixe]</mxc:subfield>   </mxc:datafield>
+</mxc:record>      </srw:recordData>
+<srw:recordIdentifier>ark:/12148/cb18232075m</srw:recordIdentifier>
+<srw:recordPosition>1</srw:recordPosition>
+<srw:extraRecordData>
+<ixm:attr name="CreationDate">20250822</ixm:attr>
+<ixm:attr name="LastModificationDate">20250909</ixm:attr>
+<mn:score>7.18145</mn:score>
+</srw:extraRecordData>
+</srw:record>
+</srw:records>
+</srw:searchRetrieveResponse>

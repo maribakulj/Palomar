@@ -329,11 +329,20 @@
     (testing "the M-cycle eval refuses it"
       (is (thrown? clojure.lang.ExceptionInfo (pr/task-a-fs c (constantly model)))))))
 
+(def ^:private model-readers
+  "The eval files that read a shipped model on purpose, by exact name: N4's
+   harness and its test (the hard benchmark), and the O5 external test's
+   frozen namespace. Any other person-reconciliation eval file must not."
+  #{"person_reconciliation_hard_n4.clj" "person_reconciliation_hard_n4_test.clj" "person_reconciliation_external.clj"})
+
 (deftest the-m-cycle-eval-never-reads-the-shipped-model
+  (testing "every allowed reader exists"
+    (doseq [n model-readers]
+      (is (.isFile (io/file "test/unit/palomar/eval" n)) n)))
   (testing "its sources name neither the resource nor the function that reads it"
     (doseq [f (.listFiles (io/file "test/unit/palomar/eval"))
             :let [n (.getName ^java.io.File f)]
-            :when (and (str/includes? n "person_reconciliation") (not (str/includes? n "hard")))]
+            :when (and (str/includes? n "person_reconciliation") (not (model-readers n)))]
       (let [src (slurp f)]
         (is (not (str/includes? src "agent-match.edn")) n)
         (is (not (str/includes? src "reconciliation-model")) n)
