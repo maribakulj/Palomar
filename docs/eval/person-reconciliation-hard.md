@@ -276,7 +276,9 @@ more proposals clear 0.95. A calibration is the pool's, as M4 said.
 ## Test, reported once
 
 The test split was run once, after the freeze and the test labelling. No
-test asserts these numbers. Do not tune on them.
+test asserts these numbers. Do not tune on them. The split is spent (N4); a new,
+unseen test is in [`person-reconciliation-external.md`](./person-reconciliation-external.md)
+(lot O5).
 
 475 mentions: 401 linked, 74 no match. Ties as abstention:
 

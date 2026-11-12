@@ -1,0 +1,143 @@
+;; The protocol of the external test of person reconciliation on transcribed
+;; mentions (lot O5, docs/eval/person-reconciliation-external.md, "Protocol").
+;; Written and hashed in freeze.edn before any corpus was fetched. Nothing in
+;; this file may change after the freeze; a test checks its SHA-256.
+{:lot "O5"
+ :written "2026-11-11"
+ :purpose "A test split for the hard benchmark's engines that nobody has seen. N3's test split is spent: N4 changed thresholds after seeing it."
+
+ ;; ---------------------------------------------------------------------------
+ ;; 1. The corpora
+ ;; ---------------------------------------------------------------------------
+ :candidates
+ ;; Written before any record of these authors was looked at, for variety:
+ ;; pseudonyms, homonyms, translators, illustrators, periods. Each :query is
+ ;; the name as the SRU query reads it (lowercase, accents dropped).
+ [{:query "gerard de nerval"     :why "pseudonym (Labrunie); translator of Goethe; 19th c."}
+  {:query "gustave dore"         :why "illustrator; 19th c."}
+  {:query "anatole france"       :why "pseudonym (Thibault); 19th-20th c."}
+  {:query "vercors"              :why "pseudonym (Jean Bruller); illustrator; 20th c."}
+  {:query "marguerite yourcenar" :why "pseudonym (Crayencour); translator; 20th c."}
+  {:query "segur"                :why "homonyms (the comtesse, the general); illustrated; 19th c."}
+  {:query "moliere"              :why "pseudonym (Poquelin); 17th c."}
+  {:query "voltaire"             :why "pseudonym (Arouet); 18th c."}
+  {:query "musset"               :why "homonyms (Alfred, Paul); 19th c."}
+  {:query "rostand"              :why "homonyms (Edmond, Jean, Maurice); 19th-20th c."}
+  {:query "tharaud"              :why "two brothers writing together; 20th c."}
+  {:query "jules romains"        :why "pseudonym (Farigoule); 20th c."}
+  {:query "grandville"           :why "illustrator, pseudonym; 19th c."}
+  {:query "joseph conrad"        :why "translated author, translators; 20th c."}
+  {:query "tolstoi"              :why "translators, transliterations, homonyms (Leo, Alexis); 19th-20th c."}
+  {:query "marivaux"             :why "18th c."}
+  {:query "christine de pizan"   :why "medieval; spelling variants (Pisan)"}
+  {:query "apollinaire"          :why "pseudonym (Kostrowitzky); 20th c."}
+  {:query "benjamin rabier"      :why "illustrator; 20th c."}
+  {:query "mardrus"              :why "translator (J.-C. Mardrus); homonym (Lucie Delarue-Mardrus)"}
+  {:query "rabelais"             :why "pseudonym (Alcofribas Nasier); 16th c."}
+  {:query "montaigne"            :why "homonyms; 16th c."}]
+
+ :excluded-queries
+ ;; No candidate may be one of these, nor share its surname (last word).
+ {:n3 ["andre maurois" "bronte" "colette" "daudet" "goncourt" "rosny" "edgar poe" "lewis carroll" "pierre loti"
+       "george sand" "simenon" "stendhal" "erckmann chatrian"]
+  :m2 ["victor hugo" "jules verne" "alexandre dumas"]}
+
+ :selection
+ {:rule "Order the candidates by the SHA-256 (hex) of salt + query, ascending. Fetch them in that order, one SRU page each; keep a corpus when the SRU says it has at least 100 records; stop when :n corpora are kept. A query with fewer than 100 records is logged and skipped, never fetched again."
+  :salt "palomar-o5-external/"
+  :n 5
+  :min-records 100}
+
+ :sru
+ {:endpoint "https://catalogue.bnf.fr/api/SRU"
+  :params {"version" "1.2" "operation" "searchRetrieve" "recordSchema" "intermarcxchange"
+           "maximumRecords" "100" "startRecord" "1"}
+  :query-form "(bib.author all \"<query>\") and (bib.recordtype any \"mon\")"
+  :authorities "aut.recordid any \"<id>\", one query per person authority id the kept records cite ($3), and one per 331 pseudonym those authorities link"
+  :trim "Keep in each record only the leader, the control fields and the data fields 1XX, 245, 260 and 7XX (N3's trim). The SRU envelope is kept verbatim."
+  :checks "Before the build, only record counts (100 per page) and well-formed XML are checked."
+  :licence "Licence Ouverte / Etalab 2.0"
+  :attribution "Source : Bibliothèque nationale de France"}
+
+ ;; ---------------------------------------------------------------------------
+ ;; 2. The construction
+ ;; ---------------------------------------------------------------------------
+ :construction
+ {:frozen-namespace {:file "test/unit/palomar/eval/person_reconciliation_hard.clj"
+                     :sha256 "97bf7d84ffee963e8cb1c2218908e6eaceace87ed6ff89aa750f4b1629f62a6b"}
+  :rule "hard/build's own steps, unchanged, called from the frozen namespace: the splitter, the labelling rule, the hand rule (resolve-hand), the pool rule (pool-of), the own-record rule, the duplicate rule, the split rule (assign-splits), the strata. A test checks the composition rebuilds N3's committed benchmark from N3's own inputs exactly."
+  :parts "Every kept record is part :test. N3's 1 300 records are not rebuilt."
+  :dropped-records "A record whose id is in an N3 fixture (records/, records-test/) or an M2 fixture (bnf-sru-victor-hugo-50, bnf-sru-jules-verne-50, bnf-sru-alexandre-dumas-50) is dropped before labelling, and counted."
+  :seen "A scored mention whose split key (truth, or no-match name) is the key of any scored N3 mention, of any split, is set aside :seen-in-design (assign-splits, N3's scored mentions passed as the design part). So no person or no-match name of N3 is scored, and the N3 model's refusal of its train keys never fires."
+  :split "No train or dev: every scored mention is :test. Nothing is fitted or tuned on it."
+  :hand "N3's rule, unchanged: a no-match whose surname the candidate pool holds is settled by hand (:same with its pool id, or :different), and a residual candidate is verified by hand; unsettled, it is set aside. The hand reads the record (245, headings) and the pool only. All hand labels are written before any engine runs on these mentions; labels-freeze.edn records their SHA-256 and the benchmark's, with a timestamp, and run.edn is refused unless they match."}
+
+ :pool
+ {:rule "The candidate pool is N3's committed pool (292 entries, unchanged), plus every entry pool-of builds for an authority the kept records cite that N3's pool lacks; on a shared id, N3's entry is kept. Sorted by id. The construction (the hand rule's surname-in-pool, the own-record rule, the strata) and every engine read this same pool."}
+
+ ;; ---------------------------------------------------------------------------
+ ;; 3. The engines, frozen
+ ;; ---------------------------------------------------------------------------
+ :engines
+ [{:id :a-jaccard
+   :what "N3's Jaccard (hard/engines :jaccard): reconcile/propose-agent-links at 0.5, the name as transcribed."}
+  {:id :b-m2
+   :what "Fellegi-Sunter, the M2 model as shipped, no gap."
+   :model "palomar/models/agent-match.edn"
+   :file-sha256 "5ee248770d8052408a33230b8a31128c393e1063b0831ec156eb85df33b4da15"
+   :sha256 "d84056ed14fa3ace51efeb94988d3e1dfc819e39aecbeb45cb59f3b2db58e7ed"
+   :weights "22fb57898f6f5d52"
+   :thresholds {:propose 0.95 :review 0.5}}
+  {:id :c-n3
+   :what "Fellegi-Sunter, the N3 model as shipped (O4 rules, 0.5 / 0.5, G 12)."
+   :model "palomar/models/agent-match-n3.edn"
+   :file-sha256 "b5dd5d1be5217917d21f15d4edf89dff37f2d74dae4bb084e1243263ddad30ea"
+   :sha256 "3cdf97d38f3b35fd879c29c92d654f87763b6614ba728615f20f57e36535e90e"
+   :weights "20d0b836a1d2ca2c"
+   :thresholds {:propose 0.5 :review 0.5 :gap 12.0}}
+  {:id :d-m2-g6
+   :what "Fellegi-Sunter, the M2 model with a gap of 6 bits (O4's withheld option); nothing else changed."
+   :model "palomar/models/agent-match.edn"
+   :file-sha256 "5ee248770d8052408a33230b8a31128c393e1063b0831ec156eb85df33b4da15"
+   :sha256 "e9c369d1a727fa0b845a38059f87c5dc953167bb80f3e407410be9878f7c0017"
+   :weights "22fb57898f6f5d52"
+   :thresholds {:propose 0.95 :review 0.5 :gap 6.0}}]
+
+ :engine-rules
+ {:name-order "The Fellegi-Sunter engines read the name put in heading order by N3's hard/inverted, as N3 and N4 did. The Jaccard reads it as transcribed."
+  :call "Fellegi-Sunter: reconcile/agent-candidates [{:name (hard/inverted text) :dates nil}] (pr/dated-entries pool) {:model m}, the engine as shipped. A link is only a top proposal with :decision :propose."
+  :ties "A tied top (two proposals with the same score for the Jaccard, the same match weight for Fellegi-Sunter) is an abstention for every engine: no link, and not a review."
+  :refusal "Each model is passed to reconciliation/refuse-in-sample! with the pool and the mentions' split keys; a refusal stops the run."
+  :versions "The run refuses to start unless each model's file SHA-256, model SHA-256 and weights fingerprint are those above."}
+
+ ;; ---------------------------------------------------------------------------
+ ;; 4. The metrics, fixed
+ ;; ---------------------------------------------------------------------------
+ :metrics
+ {:where "Overall and per stratum (easy, homonym, variant, hand, residual, hard-negative, no-namesake)."
+  :figures "O4's figures (o4/figures): precision = correct / outright links; recall = correct / linked mentions; false merges = outright links to the wrong person or on a no-match; abstention = share of mentions with no link and no review; no-match abstention = share of no-match mentions with no link and no review (overall, and in the hard-negative stratum); reviews per mention; share of reviews whose truth is among the candidates at or above review; generation recall = share of linked mentions whose truth is among the candidates generated. Also the count of ties."
+  :intervals "Wilson 95 % intervals (z 1.96) for precision (k correct of n outright links) and recall (k correct of n linked)."}
+
+ ;; ---------------------------------------------------------------------------
+ ;; 5. The decision rules, written in advance
+ ;; ---------------------------------------------------------------------------
+ :decision-rules
+ [{:id :power
+   :rule "If the test has fewer than 100 linked mentions or fewer than 20 distinct persons, every other rule reads :inconclusive."}
+  {:id :gap-for-m2
+   :rule "(d) replaces (b) as M2's default if, overall, false merges (d) <= false merges (b) and recall (d) >= recall (b) + 0.02. Else (b) stays."
+   :outcomes [:adopt-gap-6 :keep-no-gap]}
+  {:id :n3-against-m2
+   :rule "The N3 model (c) is better than M2 (b) on transcribed mentions if, overall, false merges (c) <= false merges (b), recall (c) >= recall (b) + 0.02, and the Wilson lower bound of (c)'s precision >= 0.95. It is worse if false merges (c) > false merges (b) or recall (c) < recall (b) - 0.02. Else no difference is shown."
+   :outcomes [:n3-better :n3-worse :no-difference]}
+  {:id :fs-against-jaccard
+   :rule "For each Fellegi-Sunter engine X: X matches the Jaccard (a) if, overall, false merges X <= false merges (a) and recall X >= recall (a) - 0.02; else the Jaccard stays the more complete engine on transcriptions."
+   :outcomes [:matches-jaccard :jaccard-more-complete]}
+  {:id :action
+   :rule "No default changes in lot O5, whatever the rules say. A rule that says to change a default is reported; the change, if any, is the next lot's, after review."}]
+
+ ;; ---------------------------------------------------------------------------
+ ;; 6. A single run
+ ;; ---------------------------------------------------------------------------
+ :single-run
+ {:rule "run-once! scores the test once and writes run.edn with its timestamp, the labels' SHA-256 and every figure. It refuses to run when run.edn exists. The results are reported as they come; no test asserts them."}}
