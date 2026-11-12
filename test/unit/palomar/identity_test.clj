@@ -65,14 +65,15 @@
 ;; ---------------------------------------------------------------------------
 
 (deftest the-three-identity-relations-are-palomar-s-own-and-kept-apart
-  (testing "four relations, each with its own IRI in the palomar: vocabulary"
+  (testing "five relations, each with its own IRI in the palomar: vocabulary"
     (is (= {identity/authority-match     "urn:palomar:vocab#matchesAuthority"
             identity/authority-candidate "urn:palomar:vocab#resemblesAuthority"
             identity/same-entity         "urn:palomar:vocab#sameEntityAs"
-            identity/cluster-membership  "urn:palomar:vocab#inCluster"}
+            identity/cluster-membership  "urn:palomar:vocab#inCluster"
+            identity/same-agent          "urn:palomar:vocab#sameAgentAs"}
            identity/relation-iris)))
-  (testing "(a) a link to an authority, (b) two authority records, (c) a cluster: three kinds"
-    (is (= {:reconciliation 2 :equivalence 1 :cluster 1} (frequencies (map :kind (vals identity/relations))))))
+  (testing "(a) a link to an authority, (b) two authority records, (c) a cluster, (d) two occurrences of one record (lot O3): four kinds"
+    (is (= {:reconciliation 2 :equivalence 1 :cluster 1 :local 1} (frequencies (map :kind (vals identity/relations))))))
   (testing "an outright proposal is a matchesAuthority, a review candidate a resemblesAuthority"
     (let [[a b] (rec/align-agents [(named :doc/a "Dumas, Alexandre") (named :doc/b "Dumas, Alexandre")]
                                   [(prop :doc/a "Dumas, Alexandre" isni) (prop :doc/b "Dumas, Alexandre" isni :review nil)])]
@@ -197,21 +198,36 @@
 
 (deftest linked-art-attaches-an-equivalent-only-to-an-actor-of-the-claim-s-type
   (let [r     (first (:records (convert/to-wemi :dc {:record-id :dc/x} homonym-dc)))
-        [acc] (curate-all (rec/align-agents [r] [(prop :dc/x "Dumas, Alexandre" isni)]))
-        docs  (mapv json/read-str (lines (nt :linked-art [acc] {})))
-        actors (let [xs (atom [])]
-                 (walk/postwalk #(do (when (and (map? %) (#{"Person" "Group"} (get % "type")) (= "Dumas, Alexandre" (get % "_label")))
-                                       (swap! xs conj %))
-                                     %)
-                                docs)
-                 @xs)]
-    (is (= #{"Person" "Group"} (set (map #(get % "type") actors))) "one name, a Person (the creator) and a Group (the publisher)")
-    (testing "the name maps to actors of two types: no equivalent on either"
-      (is (not-any? #(contains? % "equivalent") actors)))
-    (testing "and it is reported"
-      (is (some #(and (= identity/authority-match (get-in % [:detail :loss/source-field]))
-                      (str/includes? (str (:message %)) "actors of different types"))
-                (linked-art/export-losses acc))))))
+        actors (fn [docs]
+                 (let [xs (atom [])]
+                   (walk/postwalk #(do (when (and (map? %) (#{"Person" "Group"} (get % "type")) (= "Dumas, Alexandre" (get % "_label")))
+                                         (swap! xs conj %))
+                                       %)
+                                  docs)
+                   ;; the actors, not the authorities they name as equivalent
+                   (remove #(= isni (get % "id")) @xs)))
+        la    (fn [rec] (mapv json/read-str (lines (nt :linked-art [rec] {}))))]
+    (testing "a name-only claim: the name is a creator's and a publisher's, two occurrences, so it reaches neither (lot O3)"
+      (let [[acc] (curate-all (rec/align-agents [r] [(prop :dc/x "Dumas, Alexandre" isni)]))]
+        (is (= #{"Person" "Group"} (set (map #(get % "type") (actors (la acc))))) "one name, a Person (the creator) and a Group (the publisher)")
+        (is (not-any? #(contains? % "equivalent") (actors (la acc))))
+        (is (empty? (claims acc identity/authority-match)))))
+    (testing "a claim about the creator's occurrence: its local agent is the Person, which bears the equivalent; the Group none"
+      (let [[acc] (curate-all (rec/align-agents [r] [(assoc-in (prop :dc/x "Dumas, Alexandre" isni) [:mention :id] [:dc/x "dc:creator" 0])]))
+            as    (actors (la acc))
+            [p]   (filter #(= "Person" (get % "type")) as)]
+        (is (= [{"id" isni "type" "Person" "_label" "Dumas, Alexandre"}] (get p "equivalent")))
+        (is (= (export/entity-iri (mentions/local-node r "Dumas, Alexandre" {:mention [:dc/x "dc:creator" 0]})) (get p "id")))
+        (is (not-any? #(contains? % "equivalent") (filter #(= "Group" (get % "type")) as)))
+        (testing "and it is no loss"
+          (is (not-any? #(= identity/authority-match (get-in % [:detail :loss/source-field])) (linked-art/export-losses acc))))))
+    (testing "a claim about the publisher's occurrence: the publishing Group bears no id, and the name is on id-less actors of two types: no equivalent on either, and it is reported"
+      (let [[acc] (curate-all (rec/align-agents [r] [(assoc-in (prop :dc/x "Dumas, Alexandre" isni) [:mention :id] [:dc/x "dc:publisher" 0])]))]
+        (is (seq (claims acc identity/authority-match)))
+        (is (not-any? #(contains? % "equivalent") (actors (la acc))))
+        (is (some #(and (= identity/authority-match (get-in % [:detail :loss/source-field]))
+                        (str/includes? (str (:message %)) "actors of different types"))
+                  (linked-art/export-losses acc)))))))
 
 (deftest the-non-rdf-exports-are-unchanged-by-an-identity-claim
   (let [r     (dc-record)

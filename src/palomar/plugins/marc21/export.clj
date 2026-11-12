@@ -33,6 +33,7 @@
    a require cycle — wiring is a later assembly step."
   (:require [clojure.string :as str]
             [palomar.diagnostics :as dx]
+            [palomar.mentions :as mentions]
             [palomar.plugins.agents :as agents]
             [palomar.plugins.export-coverage :as cov]
             [palomar.plugins.marc21 :as marc21]
@@ -60,21 +61,46 @@
        (filter #(and (= pred (:predicate %)) (string? (:value %))))
        (map :value)))
 
+(defn- repeat-relators
+  "The subfields a 7XX that repeats the main entry's name `nm` carries after
+   its `$a`, so the two fields say which is which (review of lot O3): from a
+   MARC21 source, the `$e` and `$4` of the occurrence it is (`palomar.mentions`,
+   the first agent occurrence of that name and `role` past the main entry);
+   from any other, `$e` the floor's role (`contributor`), the source's codes
+   being of another scheme."
+  [record nm role]
+  (let [ms (filter #(and (= :agent (:type %)) (= nm (:name %)) (= role (:responsibility %))) (mentions/mentions record))
+        m  (first ms)
+        sf (get-in m [:source :subfields])]
+    (if (and m (= :marc21 (get-in m [:source :format])))
+      (vec (concat (for [[c v] sf :when (and (= "e" c) (not (str/blank? v)))] ["e" (str/trim v)])
+                   (for [[c v] sf :when (and (= "4" c) (not (str/blank? v)))] ["4" (str/trim v)])))
+      (if role [["e" (name role)]] []))))
+
 (defn- agent-fields
   "`[tag code value]` for each of `record`'s agents, by role: the first creator
    (stated, else role-less, see `agents/creators`) is the 100 main entry; a
    publisher is 260 $b; every other agent is a 700 added entry. One field per
-   tag and name: a creator who is also the publisher is 100 and 260 $b."
+   tag and name: a creator who is also the publisher is 100 and 260 $b. The
+   main entry is one occurrence (lot O3): another agent of its name, a
+   contributor, is a 700, not dropped as the main entry's double, with its
+   relator (`repeat-relators`), so that the two fields say which is which."
   [record]
-  (let [main (first (agents/creators record))]
+  (let [occs  (agents/occurrences record)
+        main  (first (agents/creators record))
+        main? (fn [{nm :name role :role}]
+                (and (= nm main) (if (some #(= :creator (:role %)) occs) (= :creator role) (nil? role))))]
     (distinct
      (concat
       (when main [["100" "a" main]])
       ;; a provider of a digital surrogate is not written
       ;; (`export-coverage/provider-losses`)
-      (for [{nm :name role :role} (agents/occurrences record)
-            :when (and (not= :provider role) (or (= :publisher role) (not= nm main)))]
-        (if (= :publisher role) ["260" "b" nm] ["700" "a" nm]))))))
+      (for [{nm :name role :role :as o} occs
+            :when (and (not= :provider role) (or (= :publisher role) (not (main? o))))]
+        (cond
+          (= :publisher role) ["260" "b" nm]
+          (= nm main)         ["700" "a" nm nil (repeat-relators record nm role)]
+          :else               ["700" "a" nm]))))))
 
 (def ^:private note-kind->tag
   "MARC field for a note of a known `:canon/note-kind`; a general note is 500."
@@ -122,7 +148,7 @@
                  f)
         imprint (->> fields (filter #(= "260" (first %))) (sort-by second) (mapv (fn [[_ c v]] [c v])))]
     (sort-by first
-             (cond-> (vec (for [[tag code v pre] fields :when (not= "260" tag)] [tag (conj (vec pre) [code v])]))
+             (cond-> (vec (for [[tag code v pre post] fields :when (not= "260" tag)] [tag (into (conj (vec pre) [code v]) post)]))
                (seq imprint) (conj ["260" imprint])))))
 
 (defn ->marcxml
@@ -215,6 +241,7 @@
                 :aspect       :qualifier
                 :message      "field indicators are not carried by the floor; every datafield is written with blank indicators"})])
    (cov/provider-losses record "MARC21")
+   (cov/occurrence-losses record "MARC21")
    (for [f (pivot-dropped-fields record)]
      (dx/loss {:category     :dropped
                :subject      (:id record)

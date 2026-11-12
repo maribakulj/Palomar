@@ -199,7 +199,8 @@ ARK), the export types the record's IRI as the person, while the same
 claim stays `palomar:matchesAuthority` by gate 5. The two say different
 things of one IRI. This lot does not change `apply-agent-links`. Lot O3,
 which re-models the agent nodes (the occurrence, the local agent, the
-entity), takes it as input.
+entity), takes it as input. (Resolved by lot O3, ADR 0063 §4: an applied
+link keeps the local agent's node and links it to an untyped authority.)
 
 ### 4. Older records still load
 

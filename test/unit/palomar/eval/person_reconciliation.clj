@@ -594,7 +594,9 @@
   "Task B's clusterings of a mention, by key. `:record-scoped` is what Palomar
    does today with a name-only agent (ADR 0041): its node is minted from the
    record and the name (`reconcile/align-agents`' local agent, the Linked Art
-   actor), so two records' same names are never merged. `:same-name` is the
+   actor), so two records' same names are never merged. Since lot O3 a local
+   agent is minted per occurrence (ADR 0063); no M2 record gives one name
+   twice, so the rule groups the same mentions. `:same-name` is the
    simplest name rule, same `text/norm` name -> same person, which no Palomar
    code applies across records today."
   {:record-scoped (juxt :record :name)

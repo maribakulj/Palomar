@@ -532,6 +532,39 @@ targets, loss-aware; conformance; streaming; the full CLI). WP-9
 
 ### Changed
 
+- **A local agent per occurrence; an applied link keeps it** (lot O3, ADR
+  0063; ADR 0058 and 0041 amended; revised after a contradictory review).
+  Three levels: the occurrence (a mention), the local agent (a hypothetical
+  person or group, minted per occurrence), the identity (an authority or a
+  cluster, reached by reconciliation). Two fields of one record with one
+  heading are now two local agents. A name given once keeps its id (record
+  and name); a name given twice or more is keyed by each occurrence's
+  content (field, relators, dates, name parts), so an edit orphans an id
+  and never re-points it. On the fixtures, 66 of 730 occurrence ids change,
+  22 of 613 agent ones. A local agent's IRI is no stable identifier and must
+  not be published as an identity. A mention id is taken only when its
+  occurrence has the name and is an agent's; a proposal no occurrence takes
+  is reported (`:reconcile/unplaced-proposal`). Two occurrences of one name
+  are a `:proposed` `palomar:sameAgentAs` (`mentions/same-agent-proposals`),
+  made by `agent-cluster/cluster-records` first and shown by `palomar
+  reconcile` (`:same-agent-proposals`), unless their life dates cannot
+  overlap, they give one name part two values, or, in one field (a MARC tag,
+  a LIDO event), their relators (`$4`, role IRIs, MARC21 `$e` by the relator
+  table) differ without the same dates. A curator's acceptance of that
+  claim alone joins the two in the clustering; a policy's acceptance is a
+  candidate for review; a rejection keeps them apart everywhere, the export
+  and `apply-agent-links` included. `apply-agent-links` no longer types the
+  authority's IRI as the person: the local agent keeps its node and an
+  in-force `palomar:matchesAuthority` links it to an untyped authority. It
+  never decides a pending or for-review claim (`:pending-here`,
+  `:needs-review`), refuses a conflict with a
+  `:reconcile/apply-identity-conflict` diagnostic, and removes a node an
+  older version applied once a claim covers it. `agents/identified` reads
+  the claims too (`:via`). Linked Art writes two creator occurrences of one
+  name as two `Person`s; MARC21 writes a contributor named as the main entry
+  as a 700 with its relator; DC, MODS and MARC21 report two identical
+  occurrences they write as one name (`:ambiguity-collapsed`). No eval
+  number moves.
 - **An agent is no SKOS concept** (lot O2, ADR 0061). SKOS gives
   `skos:exactMatch` and `skos:closeMatch` the domain and range
   `skos:Concept` (SKOS Reference S19, S20, S39–S42), so a reasoner typed

@@ -329,6 +329,16 @@
        :decisions   (mapv (fn [[m cs]] (decision-entry m cs)) (candidates records pool model))}
       model)))
 
+(defn same-agent-proposals
+  "The proposals that two occurrences of one name in one record of
+   `records` are one agent (`mentions/same-agent-proposals`, lot O3), as
+   `reconcile` shows them: `[{:record :name :occurrences [id id] :evidence}
+   ..]`. They are proposals for a curator; `agent-cluster/cluster-records`
+   writes them into the records."
+  [records]
+  (vec (for [r records p (mentions/same-agent-proposals r)]
+         (select-keys p [:record :name :occurrences :evidence]))))
+
 (defn reconcile
   "Reconcile the agents of `records` against `pool` (nil: none) with
    `(:engine opts)`, `:historical` by default (see the ns doc). Returns
@@ -345,13 +355,16 @@
       :proposals [{:authority-id :authority-label :decision :score :match-weight :review-reason :confidence}]
       :abstained n :rejected n}
 
-   `:confidence` only where the calibration proof holds. `opts`: `:engine`,
-   `:model` (`read-model`'s result, default the shipped model)."
+   `:confidence` only where the calibration proof holds. Both engines also
+   give `:same-agent-proposals` (`same-agent-proposals`, review of lot O3):
+   two occurrences of one name in one record that may be one agent. `opts`:
+   `:engine`, `:model` (`read-model`'s result, default the shipped model)."
   ([records pool] (reconcile records pool {}))
   ([records pool opts]
-   (case (engine-of opts)
-     :historical    (historical records pool)
-     :probabilistic (probabilistic records pool opts))))
+   (assoc (case (engine-of opts)
+            :historical    (historical records pool)
+            :probabilistic (probabilistic records pool opts))
+          :same-agent-proposals (same-agent-proposals records))))
 
 ;; ---------------------------------------------------------------------------
 ;; Explaining one mention
@@ -508,7 +521,12 @@
                                    [(:id m) (cond-> {:record (:record m)}
                                               (dates/dated? (:dates m)) (assoc :dates (:dates m))
                                               (seq (:events m))         (assoc :events (:events m)))])))
-         res     (ac/cluster {:items items :links links :cannot-link cannot})]
+         ;; two occurrences of one name in one record that may be one agent
+         ;; (lot O3): a candidate merge for a curator, never a join
+         same    (vec (for [{[x y] :occurrences} (same-agent-proposals records)
+                            :when (and (ms x) (ms y))]
+                        {:a x :b y :basis :review :same-agent? true}))
+         res     (ac/cluster {:items items :links (into links same) :cannot-link cannot})]
      (with-provenance
        {:engine     :probabilistic
         :model      version
@@ -573,14 +591,26 @@
                                  (map proposal-line proposals)))
                          decisions))))))
 
+(defn- format-same-agents
+  "The text of `:same-agent-proposals`, nil when there are none."
+  [ps]
+  (when (seq ps)
+    (str/join "\n" (cons (str "Same-agent proposals: " (count ps)
+                              " (two occurrences of one name in one record that may be one agent; a curator decides)")
+                         (for [{:keys [name occurrences evidence]} ps]
+                           (str "  " (pr-str name) " " (pr-str (first occurrences)) " ~ " (pr-str (second occurrences))
+                                "  dates " (clojure.core/name (:dates evidence)) ", roles " (clojure.core/name (:roles evidence))))))))
+
 (defn format-reconciliation
   "The text of a `reconcile` result. The historical engine's is what
-   `palomar reconcile` wrote before lot N2, byte for byte."
-  [{:keys [engine agents pool?] :as result}]
-  (case engine
-    :historical    (str (reconcile/format-agent-reconciliation agents)
-                        (when pool? (str "\n" (reconcile/format-proposals (:proposals result)))))
-    :probabilistic (str (reconcile/format-agent-reconciliation agents) "\n" (format-decisions result))))
+   `palomar reconcile` wrote before lot N2, byte for byte, when no record
+   gives one name twice; else the same-agent proposals follow (lot O3)."
+  [{:keys [engine agents pool? same-agent-proposals] :as result}]
+  (str (case engine
+         :historical    (str (reconcile/format-agent-reconciliation agents)
+                             (when pool? (str "\n" (reconcile/format-proposals (:proposals result)))))
+         :probabilistic (str (reconcile/format-agent-reconciliation agents) "\n" (format-decisions result)))
+       (when-let [t (format-same-agents same-agent-proposals)] (str "\n" t))))
 
 (defn- weights-line
   "Each field's level and, when the pair was weighed, its weight."

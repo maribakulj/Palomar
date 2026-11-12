@@ -111,6 +111,7 @@
                           :message      "relation/source distinction not recoverable — emitted as dc:relation"})))
         (concat (cov/unexpressed record written "Dublin Core")
                 (cov/provider-losses record "Dublin Core")
+                (cov/occurrence-losses record "Dublin Core")
                 (cov/scope-losses record "dc:rights"))))
 
 (defn exporter

@@ -7,7 +7,8 @@
    whose source does not leaves a plain literal with no role. Consumers read
    both shapes through this namespace, so the choice of *which* agent counts as
    a creator lives in one place."
-  (:require [palomar.model :as model]
+  (:require [palomar.identity :as identity]
+            [palomar.model :as model]
             [palomar.plugins.qualified :as qualified]))
 
 (defn occurrences
@@ -39,22 +40,45 @@
   #{:crm/E21_Person :crm/E74_Group})
 
 (defn identified
-  "`record`'s identified agents — the agent entities carrying an authority
-   `:iri` — as `[{:id :iri :name}]`, each with the name it identifies: the
-   string written on it (`:crm/P190_has_symbolic_content`, as
-   `palomar.reconcile/apply-agent-links` writes it), or, for the one identified
-   agent with no name of its own (the INTERMARC ISNI of the 100 main entry),
-   the record's first creator. `:name` is nil when it cannot be told (post-audit
-   2, D1: one name never stands for several agents)."
+  "`record`'s identified agents, as `[{:id :iri :name :via}]`, each with the
+   name it identifies. Two ways (lot O3, ADR 0063):
+   - `:via :source`: an agent entity the source identifies, carrying an
+     authority `:iri` (the INTERMARC ISNI of the 100 main entry; a record an
+     older Palomar's `apply-agent-links` wrote), named by the string written
+     on it (`:crm/P190_has_symbolic_content`), or, for the one with no name
+     of its own, the record's first creator;
+   - `:via :claim`: a local agent (an agent entity with no `:iri`) with an
+     in-force `identity/authority-match` to an authority entity (`:iri`),
+     which no conflict diagnostic of the record names
+     (`identity/conflicted-claims`): the agent keeps its own node (`:id`),
+     the authority is `:iri`, the name is the one written on the agent.
+   `:name` is nil when it cannot be told (post-audit 2, D1: one name never
+   stands for several agents)."
   [record]
-  (let [ids     (filter #(and (identified-kinds (:kind %)) (:iri %)) (:entities record))
+  (let [ents    (into {} (map (juxt :id identity)) (:entities record))
+        ids     (filter #(and (identified-kinds (:kind %)) (:iri %)) (:entities record))
         by-id   (into {} (map (juxt :id identity)) ids)
-        written (for [a (:assertions record)
+        live    (filter model/in-force? (:assertions record))
+        names   (into {} (for [a live
+                               :when (and (= :crm/P190_has_symbolic_content (:predicate a)) (string? (:value a)))]
+                           [(:subject a) (:value a)]))
+        written (for [a live
                       :when (and (= :crm/P190_has_symbolic_content (:predicate a))
-                                 (by-id (:subject a)) (string? (:value a)) (model/in-force? a))]
+                                 (by-id (:subject a)) (string? (:value a)))]
                   [(:subject a) (:value a)])
         named   (set (map first written))
         unnamed (remove #(named (:id %)) ids)
-        lone    (when (= 1 (count unnamed)) (first (creators record)))]
-    (vec (concat (for [[id nm] (distinct written)] {:id id :iri (:iri (by-id id)) :name nm})
-                 (for [e unnamed] {:id (:id e) :iri (:iri e) :name lone})))))
+        lone    (when (= 1 (count unnamed)) (first (creators record)))
+        held    (identity/conflicted-claims record)
+        claimed (for [a live
+                      :let [s (ents (:subject a))
+                            t (when (model/reference-value? (:value a)) (ents (:value/target (:value a))))]
+                      :when (and (= identity/authority-match (:predicate a)) s t
+                                 (identified-kinds (:kind s)) (nil? (:iri s))
+                                 (= :reconcile/authority (:kind t)) (:iri t)
+                                 (not (contains? held (model/assertion-id a))))]
+                  {:id (:id s) :iri (:iri t) :name (names (:id s)) :via :claim})]
+    (vec (distinct
+          (concat (for [[id nm] (distinct written)] {:id id :iri (:iri (by-id id)) :name nm :via :source})
+                  (for [e unnamed] {:id (:id e) :iri (:iri e) :name lone :via :source})
+                  claimed)))))

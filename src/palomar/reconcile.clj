@@ -12,10 +12,11 @@
    tier, not done here).
 
    The output is the agent *store* — distinct agents, each with the records that
-   mention it. `apply-agent-links` is the rewrite step: it attaches an accepted,
-   certifiable name→authority link to every record naming that creator, as the
-   same authority-identified agent entity, so the records share one agent node
-   and `reconcile-agents` sees them as one person (audit S29).
+   mention it. `apply-agent-links` is the rewrite step: it links the local
+   agent of each occurrence an accepted, certifiable link names to the
+   authority (lot O3, ADR 0063: the local agent keeps its node, the authority
+   is never typed the person), so `reconcile-agents` sees the records'
+   agents as one person through the authority (audit S29).
 
    The fuzzy tier (ADR 0018 decisions 3/4) is `propose-agent-links`: for agents
    that have only a *name* (no authority id), it proposes equivalences to an
@@ -30,6 +31,7 @@
    never a closure through the authority."
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [palomar.agent-cluster :as ac]
             [palomar.agent-dates :as dates]
             [palomar.agent-events :as events]
             [palomar.agent-match :as fs]
@@ -531,17 +533,25 @@
       (seq support)                     (assoc '?support support))))
 
 (defn- proposals-for
-  "The proposals among `ps` (one name's) that record `rid` takes: those of the
-   mention made in it (`:mention :record`) when there is one, else those of
-   the one mention that names no record. A record that cannot tell which of
-   several mentions of its name it is takes none: one mention's candidates
-   and evidence never reach another's record."
+  "The proposals among `ps` (one name's) that record `rid` takes, as groups,
+   one per mention: those of each mention made in it (`:mention :record`)
+   when there are some, each to its own occurrence's local agent (lot O3);
+   else those of the one mention that names no record. A record that cannot
+   tell which of several unscoped mentions of its name it is takes none:
+   one mention's candidates and evidence never reach another's record."
   [rid ps]
   (let [key-of  #(or (:mention %) {:name (:name %)})
         groups  (group-by key-of (filter #(contains? #{nil rid} (:record (key-of %))) ps))
-        scoped  (filter #(= rid (:record (key %))) groups)
-        chosen  (if (seq scoped) scoped groups)]
-    (when (= 1 (count chosen)) (distinct (val (first chosen))))))
+        scoped  (filter #(= rid (:record (key %))) groups)]
+    (cond
+      (seq scoped)           (map (comp distinct val) (sort-by (comp pr-str key) scoped))
+      (= 1 (count groups))   [(distinct (val (first groups)))])))
+
+(def unplaced-code
+  "The diagnostic of a proposal `align-agents` puts on no local agent: the
+   record gives its name twice or more, and no valid occurrence id says
+   which (review of lot O3)."
+  :reconcile/unplaced-proposal)
 
 (defn align-agents
   "Put `propose-agent-links` proposals into `records` as data (ADR 0032): for
@@ -565,21 +575,40 @@
    `identity/export-rule`), and a rejected alignment stays in the record's history.
 
    A proposal stays with the mention that made it (`:mention`, lot M3): a
-   record takes the proposals of the mention scoped to it (`:record`), else of
-   the one unscoped mention of its name; when several dated mentions of one
-   name could be its own, it takes none (`proposals-for`), so a record never
-   gets two homonyms' authorities or another mention's evidence, and a
-   candidate rejected for its mention is no assertion. Returns the records."
+   record takes the proposals of each mention scoped to it (`:record`), each
+   on that occurrence's own local agent (lot O3: two occurrences of one name
+   are two local agents), else of the one unscoped mention of its name; when
+   several unscoped mentions of one name could be its own, it takes none,
+   and a name-only proposal reaches no record that gives the name twice
+   (`proposals-for`, `mentions/local-agent`), so a record never gets two
+   homonyms' authorities or another mention's evidence, and a candidate
+   rejected for its mention is no assertion. Returns the records."
   [records proposals]
   (let [by-name (group-by :name proposals)]
     (mapv
      (fn [r]
        (let [rid   (:id r)
-             hits  (for [nm (distinct (map :name (agents/occurrences r)))
-                         p (proposals-for rid (get by-name nm))
-                         :when (and (:authority-id p) (nil? (nt/iri-problem (:authority-id p)))
-                                    (named-agent r nm p))]
-                     p)]
+             cands (for [nm (distinct (map :name (agents/occurrences r)))
+                         g (proposals-for rid (get by-name nm))
+                         p g
+                         :when (and (:authority-id p) (nil? (nt/iri-problem (:authority-id p))))]
+                     [nm p])
+             hits  (for [[nm p] cands :when (named-agent r nm p)] p)
+             ;; a proposal no occurrence of the record takes is reported, never
+             ;; put on another (review of lot O3)
+             lost  (distinct
+                    (for [[nm p] cands
+                          :when (and (nil? (named-agent r nm p)) (not (#{:lido :eac-cpf} (mentions/source-format r))))
+                          :let [why (:reason (mentions/resolve-local r nm {:kind        (get-in p [:mention :kind])
+                                                                           :entity-type (:entity-type p)
+                                                                           :mention     (get-in p [:mention :id])}))]
+                          :when why]
+                      (model/diagnostic {:severity :warning :code unplaced-code :subject rid
+                                         :message  (str "a proposal for " (pr-str nm) " reaches no occurrence of the record ("
+                                                        (name why) "): not aligned")
+                                         :detail   (cond-> {:reason why :name nm :authority-id (:authority-id p)}
+                                                     (get-in p [:mention :id]) (assoc :mention (get-in p [:mention :id])))})))
+             r     (if (seq lost) (update r :diagnostics (fnil into []) (remove (set (:diagnostics r)) lost)) r)]
          (reduce
           (fn [r {:keys [name authority-id authority-label evidence] :as p}]
             (let [local (named-agent r name p)
@@ -613,7 +642,9 @@
    agent to an authority entity. A close match is never a link: it says the two
    are alike, not the same. Each link is scoped to the record it was accepted
    in (`:records #{rid}`, ADR 0041): that this record's \"Gustave Flaubert\" is
-   the authority says nothing of another record's. A link carries the
+   the authority says nothing of another record's, and to the local agent
+   it is about (`:local`, lot O3): nor of another occurrence of the name in
+   the same record. A link carries the
    `:dates` its mention was matched with, when the alignment states them.
    A curator's confirmed review candidate (`confirm-identity`) is an
    accepted exact match like any other.
@@ -636,6 +667,8 @@
               :when (and auth (:iri auth) (names (:subject a)))]
           (cond-> {:name (names (:subject a)) :authority-id (:iri auth) :certifiable? true :status :accepted
                    :records #{(:id r)}
+                   ;; the occurrence's local agent the claim is about (lot O3)
+                   :local (:subject a)
                    ;; what `agent-relations/freeze-anchors` reads (lot M8)
                    :id (model/assertion-id a) :record (:id r)
                    :mention (let [m (get-in a [:provenance :bindings '?mention])] (if (some? m) m (:subject a)))
@@ -646,37 +679,92 @@
             (get-in a [:provenance :bindings '?mention-dates])
             (assoc :dates (get-in a [:provenance :bindings '?mention-dates])))))))
 
-(defn apply-agent-links
-  "Rewrite `records` onto shared agent nodes from `links`: `propose-agent-links`
-   proposals that a curator has accepted (`:status :accepted`, or `:asserted`).
-   Links apply name by name, not record by record (post-audit 2, D1): for each
-   agent a record names (a creator, a contributor, a publisher…) that is not
-   identified yet, the link for that name adds the agent entity of the
-   authority id — a `:crm/E21_Person`, or a `:crm/E74_Group` when the link's
-   `:entity-type` is a corporate body or a family (`agent-kind`), its id minted
-   from the id, as the INTERMARC spoke does, so every record names the same
-   node — and writes the name on it (`:crm/P190_has_symbolic_content`), so each
-   identified agent says which of the record's names it is.
+(def apply-conflict-code
+  "The diagnostic of accepted claims `apply-agent-links` refuses as a
+   conflict (lot O3): two links to one authority whose mentions' dates
+   cannot be one person's, or whose local agents the clustering keeps
+   apart. Named by `identity/conflict-codes`, so neither
+   claim is `owl:sameAs` nor identifies its agent."
+  :reconcile/apply-identity-conflict)
 
-   A link applies only to the records it is scoped to (ADR 0041): its
-   `:records`, a set of record ids (`accepted-links` scopes each link to the
-   record it was accepted in), or `:all`, a curator's explicit decision that
-   the name is one person across the corpus. A same name in another record is
-   a homonym until shown otherwise.
+(defn- add-entity [r e] (if (some #(= (:id e) (:id %)) (:entities r)) r (update r :entities (fnil conj []) e)))
+
+(defn- add-claim
+  "`r` with assertion `a`, unless it already holds a claim of that fact."
+  [r a]
+  (let [id (model/assertion-id a)]
+    (if (some #(= id (model/assertion-id %)) (:assertions r)) r (update r :assertions (fnil conj []) a))))
+
+(defn- authority-entity [iri entity-type]
+  (model/entity (cond-> {:id (model/mint-entity-id :reconcile/authority iri) :kind :reconcile/authority :iri iri}
+                  (string? entity-type) (assoc :entity-type entity-type))))
+
+(defn- retract-legacy
+  "`r` without the nodes `ids` an older `apply-agent-links` made of an
+   authority (an `E21_Person` or `E74_Group` whose `:iri` is the authority's,
+   ADR 0061's known inconsistency), now that an in-force claim from a local
+   agent covers it (review of lot O3): the entity is removed, so no export
+   types the authority's IRI as the person, and the claims about it are
+   `:retracted`, kept in the record's history."
+  [r ids]
+  (if (empty? ids)
+    r
+    (-> r
+        (update :entities (partial filterv #(not (ids (:id %)))))
+        (update :assertions (partial mapv #(if (and (ids (:subject %)) (not (model/out-of-force? %))) (assoc % :status :retracted) %))))))
+
+(defn apply-agent-links
+  "Link the local agents of `records` to the authorities of `links`:
+   `propose-agent-links` proposals that a curator has accepted (`:status
+   :accepted`, or `:asserted`; `accepted-links` reads them from records).
+
+   **Three levels** (lot O3, ADR 0063). The occurrence is a mention; its
+   local agent a hypothetical person or group of the record, one per
+   occurrence (`mentions/local-agent`); the entity the person the authority
+   identifies. An applied link is an in-force `identity/authority-match`
+   (`palomar:matchesAuthority`) from the occurrence's local agent, which
+   keeps its own node and its name (`:crm/P190_has_symbolic_content`), to
+   the authority, a `:reconcile/authority` entity whose `:iri` is the
+   authority id. The authority is never typed a `:crm/E21_Person` or a
+   `:crm/E74_Group`: its IRI may be a catalogue record's (a BnF ARK), and a
+   record is not the entity (ADR 0059). What each export writes for the
+   claim is `identity/export-rule`'s: `owl:sameAs` or the internal
+   relation. The local agent is then identified (`agents/identified`), and
+   `reconcile-agents` groups the records by the authority.
+
+   A link applies to the local agent it names (`:local`, in its own
+   `:record`), or, by its name, to the record's one occurrence of that name
+   (a name given twice says not which: `:skipped`, `:several-occurrences`).
+   Only to the records it is scoped to (ADR 0041): its `:records`, a set of
+   record ids, or `:all`, a curator's explicit decision that the name is one
+   person across the corpus. In a record that holds the claim already: in
+   force, it is applied as it is; otherwise it is never decided by a link
+   (review of lot O3): pending, it is `:skipped` `:pending-here`; for
+   review, `:needs-review`; rejected, `:rejected-here`; superseded or
+   retracted, `:out-of-force-here`. A claim the link adds is `:accepted`,
+   unsigned, so never `owl:sameAs` by itself. Once a claim to an authority
+   is in force, a node an older `apply-agent-links` made of that authority
+   (its IRI typed the person, ADR 0061's known inconsistency) is removed,
+   and its claims retracted (`retract-legacy`).
 
    Nothing is left out silently. A link that cannot apply at all is returned
    under `:refused` with a `:reason`: `:unscoped` (a link that names no
    records: a name alone identifies no one), `:not-accepted` (a bare proposal
    is never applied, D7), `:not-certifiable` (no determinate authority id: the
    metro-station guard), `:invalid-iri` (an authority id that is no IRI, which
-   would corrupt every RDF output), `:ambiguous` (one name accepted for
-   several authority ids) or `:conflict` (two links to one authority whose
-   mentions' `:dates` cannot be one person's: joining them on its node would
-   make two persons one, ADR 0057; neither is applied, and each names the
-   other under `:conflict`). A usable link a record does not take because the
-   record already identifies that name is listed under `:skipped`, `{:record
-   :name :iri :reason :already-identified}`. Returns `{:records [..] :applied
-   [{:record :name :iri}] :skipped [..] :refused [link…]}`."
+   would corrupt every RDF output), `:ambiguous` (one local agent, or one name,
+   accepted for several authority ids) or `:conflict` (two links to one
+   authority whose mentions' `:dates` cannot be one person's, ADR 0057, or
+   whose local agents the clustering is given as a cannot-link: a rejected
+   `palomar:sameAgentAs`, review of lot O3; neither is applied, each names
+   the other under `:conflict` with `:because`, and each claim a record
+   holds of them gets an `apply-conflict-code` diagnostic, restated on
+   every run). A usable link a record does not take is listed under
+   `:skipped`, `{:record :name :iri :reason}`: `:already-identified` (the
+   source identifies that name, or the local agent is identified by
+   another authority), `:several-occurrences`, or one of the reasons
+   above. Returns `{:records [..] :applied [{:record :name :iri :local}]
+   :skipped [..] :refused [link…]}`."
   [records links]
   (let [accepted?   #(contains? #{:accepted :asserted} (:status %))
         certifiable #(boolean (and (:certifiable? %) (:authority-id %)))
@@ -684,19 +772,34 @@
         scoped?     #(let [rs (:records %)] (or (= :all rs) (and (set? rs) (seq rs))))
         in-scope?   (fn [l rid] (or (= :all (:records l)) (contains? (:records l) rid)))
         candidates  (filter #(and (scoped? %) (accepted? %) (certifiable %) (valid-iri? %)) links)
-        ;; one name accepted for two authorities where both reach one record
+        overlap?    (fn [l o] (or (= :all (:records l)) (= :all (:records o))
+                                  (seq (set/intersection (:records l) (:records o)))))
+        ;; one local agent (or one name, for a link that names none) accepted
+        ;; for two authorities where both reach one record
         ambiguous?  (fn [l] (some #(and (= (:name l) (:name %)) (not= (:authority-id l) (:authority-id %))
-                                        (or (= :all (:records l)) (= :all (:records %))
-                                            (seq (set/intersection (:records l) (:records %)))))
+                                        (or (nil? (:local l)) (nil? (:local %)) (= (:local l) (:local %)))
+                                        (overlap? l %))
                                   candidates))
         profile     #(let [d (:dates %)] (if (string? d) (dates/parse-life-dates d) d))
-        ;; two links that would make two mentions whose dates cannot be one
-        ;; person's one authority node (ADR 0057): neither is applied
+        ;; two local agents the clustering keeps apart: a cannot-link it is
+        ;; given (a rejected `sameAgentAs`, review of lot O3), `{#{a b} reason}`
+        apart       (into {} (for [{:keys [a b reason]} (:cannot-link (ac/clustering-input records))
+                                   :when (not= a b)]
+                               [#{a b} reason]))
+        ;; two links that would make two mentions one authority's whose dates
+        ;; cannot be one person's (ADR 0057), or whose local agents the
+        ;; clustering keeps apart: neither is applied. `[other because]`
         conflict    (fn [l] (first (for [o (remove ambiguous? candidates)
-                                         :when (and (not= l o) (= (:authority-id l) (:authority-id o))
-                                                    (profile l) (profile o)
-                                                    (= :incompatible (:verdict (dates/compatibility (profile l) (profile o)))))]
-                                     o)))
+                                         :when (and (not= l o) (= (:authority-id l) (:authority-id o)))
+                                         :let [why (cond
+                                                     (and (:local l) (:local o) (not= (:local l) (:local o))
+                                                          (apart (hash-set (:local l) (:local o))))
+                                                     (apart (hash-set (:local l) (:local o)))
+                                                     (and (profile l) (profile o)
+                                                          (= :incompatible (:verdict (dates/compatibility (profile l) (profile o)))))
+                                                     :incompatible-dates)]
+                                         :when why]
+                                     [o why])))
         usable      (remove #(or (ambiguous? %) (conflict %)) candidates)
         refused     (vec (for [l links
                                :let [c (when (and (accepted? l) (scoped? l) (certifiable l) (valid-iri? l)
@@ -710,29 +813,82 @@
                                              c                        :conflict)]
                                :when r]
                            (cond-> (assoc l :reason r)
-                             c (assoc :conflict {:with (select-keys c [:name :records :dates])
-                                                 :because :incompatible-dates}))))
+                             c (assoc :conflict {:with (select-keys (first c) [:name :records :dates :local])
+                                                 :because (second c)}))))
+        ;; the claims a conflict names, by record: `{rid #{claim-id}}`
+        in-conflict (reduce (fn [m l] (if (and (= :conflict (:reason l)) (:id l) (:record l))
+                                        (assoc-in m [(:record l) (:id l)] (get-in l [:conflict :because]))
+                                        m))
+                            {} refused)
         rewrite     (fn [r]
-                      (let [rid   (:id r)
-                            known (set (keep :name (agents/identified r)))
-                            hits  (for [nm (distinct (map :name (agents/occurrences r)))
-                                        l  usable
-                                        :when (and (= nm (:name l)) (in-scope? l rid))]
-                                    l)
-                            [skip take] ((juxt filter remove) #(known (:name %)) hits)
-                            prov  (model/provenance {:pass :repair :rule :reconcile/apply-agent-link :derivation [rid]})
-                            add   (fn [r {:keys [name authority-id entity-type]}]
-                                    (let [kind (agent-kind entity-type)
-                                          e    (model/entity {:id (model/mint-entity-id kind authority-id) :kind kind
-                                                              :iri authority-id :provenance prov})]
-                                      (-> r
-                                          (update :entities (fnil (fn [es] (if (some #(= (:id e) (:id %)) es) es (conj es e))) []))
-                                          (update :assertions (fnil conj [])
-                                                  (model/assertion {:subject (:id e) :predicate :crm/P190_has_symbolic_content
-                                                                    :value name :provenance prov})))))]
-                        {:record  (reduce add r take)
-                         :applied (for [l take] {:record rid :name (:name l) :iri (:authority-id l)})
-                         :skipped (for [l skip] {:record rid :name (:name l) :iri (:authority-id l) :reason :already-identified})}))
+                      (let [rid    (:id r)
+                            ents   (into {} (map (juxt :id identity)) (:entities r))
+                            ids    (agents/identified r)
+                            ;; a node an older `apply-agent-links` made of an
+                            ;; authority (its IRI typed the person) is no source's
+                            legacy (fn [iri] (set (for [e (:entities r)
+                                                        :when (and (agents/identified-kinds (:kind e)) (= iri (:iri e))
+                                                                   (= :reconcile/apply-agent-link (get-in e [:provenance :rule])))]
+                                                    (:id e))))
+                            stated (fn [nm iri] (some #(and (= :source (:via %)) (= nm (:name %)) (not ((legacy iri) (:id %)))) ids))
+                            by-loc (group-by :id (filter #(= :claim (:via %)) ids))
+                            floor  (set (map :name (agents/occurrences r)))
+                            hits   (for [l usable
+                                         :when (in-scope? l rid)
+                                         :let [own? (and (:local l) (= rid (:record l)) (ents (:local l)))]
+                                         :when (or own? (floor (:name l)))]
+                                     [l (if own?
+                                          {:id (:local l) :kind (:kind (ents (:local l)))}
+                                          (mentions/local-agent r (:name l) {:entity-type (:entity-type l)}))])
+                            prov   (model/provenance {:pass :repair :rule :reconcile/apply-agent-link :derivation [rid]})
+                            step   (fn [{:keys [record applied skipped]} [{:keys [name authority-id entity-type]} local]]
+                                     (let [skip  #(assoc {:record rid :name name :iri authority-id} :reason %)
+                                           auth  (authority-entity authority-id entity-type)
+                                           claim (model/assertion {:subject (:id local) :predicate identity/authority-match
+                                                                   :value (model/reference (:id auth)) :status :accepted
+                                                                   :provenance prov})
+                                           held  (first (filter #(= (model/assertion-id claim) (model/assertion-id %)) (:assertions record)))
+                                           other (some #(when (not= authority-id (:iri %)) %) (get by-loc (:id local)))]
+                                       (cond
+                                         (nil? local)            {:record record :applied applied :skipped (conj skipped (skip :several-occurrences))}
+                                         (and (stated name authority-id) (not held)) {:record record :applied applied :skipped (conj skipped (skip :already-identified))}
+                                         other                   {:record record :applied applied :skipped (conj skipped (skip :already-identified))}
+                                         ;; a claim a curator has not decided is never decided
+                                         ;; by a link (review of lot O3)
+                                         (and held (not (model/in-force? held)))
+                                         {:record record :applied applied
+                                          :skipped (conj skipped (skip (case (:status held)
+                                                                         :proposed     :pending-here
+                                                                         :needs-review :needs-review
+                                                                         :rejected     :rejected-here
+                                                                         :out-of-force-here)))}
+                                         :else
+                                         (let [r1 (cond
+                                                    held record
+                                                    :else (-> record
+                                                              (add-entity (model/entity {:id (:id local) :kind (:kind local)}))
+                                                              (add-entity auth)
+                                                              (add-claim (model/assertion {:subject (:id local) :predicate :crm/P190_has_symbolic_content
+                                                                                           :value name :status :asserted :provenance prov}))
+                                                              (add-claim claim)))]
+                                           {:record (retract-legacy r1 (legacy authority-id))
+                                            :applied (conj applied {:record rid :name name :iri authority-id :local (:id local)})
+                                            :skipped skipped}))))
+                            out    (reduce step {:record r :applied [] :skipped []} hits)
+                            cs     (get in-conflict rid)
+                            kept   (vec (remove #(= apply-conflict-code (:code %)) (:diagnostics (:record out))))
+                            diags  (for [a (:assertions (:record out))
+                                         :let [id (model/assertion-id a)]
+                                         :when (contains? cs id)]
+                                     (model/diagnostic {:severity :warning :code apply-conflict-code :subject (:subject a)
+                                                        :message  (str "accepted identity claims to one authority whose agents cannot be one ("
+                                                                       (name (get cs id)) "): not applied, written as palomar:matchesAuthority, not owl:sameAs")
+                                                        :detail   {:reason (get cs id) :claims [id]}}))
+                            rec    (:record out)
+                            rec    (if (or (seq diags) (not= kept (vec (:diagnostics rec))))
+                                     (assoc rec :diagnostics (into kept diags))
+                                     rec)]
+                        (assoc out :record rec)))
         results     (map rewrite records)]
     {:records (mapv :record results)
      :applied (vec (mapcat :applied results))
@@ -767,3 +923,13 @@
                                                          %)))
                  r2)]
      {:record r3 :transitions (into t1 t2)})))
+
+(def same-agent-rule
+  "The rule that proposes two occurrences of one record one agent (lot O3)."
+  ac/same-agent-rule)
+
+(def propose-same-agents
+  "Two occurrences of one name in one record proposed one agent:
+   `agent-cluster/propose-same-agents`, which `agent-cluster/cluster-records`
+   runs first (review of lot O3)."
+  ac/propose-same-agents)
