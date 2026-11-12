@@ -207,6 +207,65 @@
         (= :incompatible (get-in ev [:dates :verdict]))  :incompatible-dates
         (= :incompatible (get-in ev [:events :verdict])) :incompatible-events))
 
+(def ^:private sealed-keys
+  "What a prepared map states and seals (`prepare`)."
+  [:surname-counts :tf-mean ::fs/tf-mean :pool-size :pool-fingerprint :relations-fingerprint ::model-fingerprint])
+
+(defn prepare
+  "What the matcher reads of the whole pool `authority`, computed once per
+   run (lot O6, ADR 0060 amendment) instead of once per call of
+   `agent-candidates`: `{:surname-counts :tf-mean :pool-size
+   :pool-fingerprint}` (`agent-match/surname-counts`, `tf-mean`, the count,
+   `pool-fingerprint`). With `{:model m :anchors a}` (lot M8), also
+   `:relations-fingerprint` and the pool's stated relations resolved to its
+   entries. Pass it as `agent-candidates`' or `candidates/rank`'s
+   `:prepared`: the result is the one computed without it.
+
+   The map is opaque. The matcher reads the mean from a namespaced key
+   only `prepare` sets (`agent-match/compare-pair`), and the map seals
+   what it states: a map whose public statistics were changed since is
+   refused. It is checked against the run that uses it: the pool **by
+   identity** (the same object; comparing a pool by value would cost what
+   preparing it saves), the model and the anchors **by value** (the model's
+   fingerprint, `agent-match/model-fingerprint`, and the relations
+   fingerprint, `agent-relations/relations-fingerprint`). Another pool, or
+   another model or anchors, is refused."
+  ([authority] (prepare authority nil))
+  ([authority {:keys [model anchors]}]
+   (let [counts (fs/surname-counts authority)
+         size   (count authority)
+         mean   (when (pos? size) (fs/tf-mean counts size))
+         p      (cond-> {::pool             authority
+                         :surname-counts    counts
+                         :tf-mean           mean
+                         ::fs/tf-mean       mean
+                         :pool-size         size
+                         :pool-fingerprint  (fs/pool-fingerprint authority)}
+                  anchors (assoc ::model-fingerprint (fs/model-fingerprint model)
+                                 :relations-fingerprint (relations/relations-fingerprint model anchors)
+                                 ::resolved (zipmap authority (relations/resolve-relations authority))))]
+     (assoc p ::sealed (select-keys p sealed-keys)))))
+
+(defn- prepared-for!
+  "`prepared`, refused unless `prepare` made it and nothing changed since
+   (its sealed statistics), it was prepared for this
+   pool (the same object) and, with anchors, for this model and these
+   anchors (by value: their fingerprints)."
+  [prepared authority model anchors]
+  (when-not (and (map? prepared) (contains? prepared ::pool) (contains? prepared ::sealed))
+    (throw (ex-info "agent-candidates: :prepared is not prepared statistics (reconcile/prepare)"
+                    {:keys (when (map? prepared) (keys prepared))})))
+  (when-not (identical? (::pool prepared) authority)
+    (throw (ex-info "agent-candidates: these statistics were prepared for another pool" {:pool-size (:pool-size prepared)})))
+  (when-not (= (::sealed prepared) (select-keys prepared sealed-keys))
+    (throw (ex-info "agent-candidates: these prepared statistics were tampered with: they are not what reconcile/prepare stated"
+                    {:pool-size (:pool-size prepared)})))
+  (when (and anchors (not (and (contains? prepared ::model-fingerprint)
+                               (= (::model-fingerprint prepared) (fs/model-fingerprint model))
+                               (= (:relations-fingerprint prepared) (relations/relations-fingerprint model anchors)))))
+    (throw (ex-info "agent-candidates: these statistics were not prepared with these anchors and this model" {})))
+  prepared)
+
 (defn- scored-candidates
   "The Fellegi-Sunter path of `agent-candidates` (lot M4): every entry whose
    name level is above `:none` is compared (`fs/compare-pair`, the surname
@@ -227,19 +286,21 @@
    pool's fingerprint are still the whole pool's. An entry whose id is in
    `unnamed` (lot N5: a candidate another lane than the name brought) is
    compared and weighed even when no name level agrees."
-  [mentions authority model block anchors unnamed]
+  [mentions authority model block anchors unnamed prepared]
   (when (and (some? anchors) (not (relations/frozen? anchors)))
     (throw (ex-info "agent-candidates: :anchors must be a frozen anchor set (agent-relations/freeze-anchors), unchanged since"
                     {:anchors (if (map? anchors) (select-keys anchors [:fingerprint]) (type anchors))})))
-  (let [counts (fs/surname-counts authority)
-        rel-fp (when anchors (relations/relations-fingerprint model anchors))
+  (let [pp     (if prepared
+                 (prepared-for! prepared authority model anchors)
+                 (prepare authority {:model model :anchors anchors}))
+        rel-fp (when anchors (:relations-fingerprint pp))
         ;; stated relations resolved to pool entries (lot M8)
-        resolved (when anchors (zipmap authority (relations/resolve-relations authority)))
-        size   (count authority)
-        fp     (fs/pool-fingerprint authority)
+        resolved (when anchors (::resolved pp))
+        fp     (:pool-fingerprint pp)
+        pool   (select-keys pp [:surname-counts :pool-size ::fs/tf-mean])
         per-m  (for [m (distinct (map (if anchors relational-mention mention) mentions))]
                  (for [cand (cond->> (if block (block (:name m)) authority) resolved (map #(get resolved % %)))
-                       :let [c (fs/compare-pair m cand {:surname-counts counts :pool-size size})
+                       :let [c (fs/compare-pair m cand pool)
                              lv (:levels c)]
                        :when (or (not= :none (:name lv)) (contains? unnamed (:id cand)))
                        :let [evs (events-evidence (:events m) cand)
@@ -365,6 +426,14 @@
    (`:review-reason :no-name-agreement`), never proposed outright, and it
    never makes a candidate a name agrees with `:competing`.
 
+   **Prepared statistics (O6)**: with `{:prepared p}`, `p` the pool's
+   statistics computed once per run (`prepare`), nothing pool-wide is
+   recomputed: the surname frequencies and their mean, the pool size, its
+   fingerprint and, with anchors, the relations fingerprint and the
+   resolved relations. The result is the one without it. Statistics
+   prepared for another pool (another object), or without these anchors
+   and this model, are refused. The name-only path reads none.
+
    **Relations (M8)**: with `{:model m :anchors a}`, `a` a frozen anchor set
    (`agent-relations/freeze-anchors`; anything else is refused), a mention
    `{:id :record :role :event :works}` is also compared with each candidate
@@ -416,7 +485,8 @@
   ([mentions authority] (agent-candidates mentions authority 0.5))
   ([mentions authority opts]
    (if (and (map? opts) (:model opts))
-     (scored-candidates mentions authority (:model opts) (:block opts) (:anchors opts) (set (:score-unnamed opts)))
+     (scored-candidates mentions authority (:model opts) (:block opts) (:anchors opts) (set (:score-unnamed opts))
+                        (:prepared opts))
      (let [threshold (if (map? opts) (:threshold opts 0.5) opts)
            block     (when (and (map? opts) (pos? threshold)) (:block opts))
            scored (for [m    (map mention mentions)

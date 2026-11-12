@@ -157,7 +157,7 @@
 (defn read-authorities
   "The authority pool of file `path`, `{:entries :block :manifest}`: an
    authority index (`palomar authorities index`), looked up by its blocking
-   keys, or an authority file (MADS, SKOS, EAC-CPF, BnF INTERMARC
+   keys (and kept as `:index`, which the name lane reads), or an authority file (MADS, SKOS, EAC-CPF, BnF INTERMARC
    authorities) read whole. A dump is refused: index it first."
   [path]
   (reconciliation/read-authorities path))
@@ -175,7 +175,9 @@
    as before) or `:probabilistic` (every mention of the batch, read from
    the source by `palomar.mentions`, scored by a Fellegi-Sunter model and
    decided at its thresholds); `:model`, a `reconciliation-model` result
-   (default the shipped one). Returns `{:engine :model :pool? :agents
+   (default the shipped one); `:lanes` (lot O6), the probabilistic
+   engine's candidate lanes (`[:name]`, the default, `[:identifier]` or
+   both; the historical engine refuses any but `[:name]`). Returns `{:engine :model :pool? :agents
    :decisions [..]}`; a probabilistic decision is one per mention, and
    states a `:confidence` only where the model's calibration proves it.
    See `palomar.reconciliation/reconcile`."
@@ -186,7 +188,8 @@
   "Why the probabilistic engine decided mention `mention-id` of `records`
    as it did: its candidates, each with its comparison levels, the weight
    of each field, their total, the posterior, the decision and why; the
-   prior and the thresholds. See `palomar.reconciliation/explain`."
+   prior and the thresholds. With `:lanes`, each candidate names the lanes
+   that found it (`:generated-by`). See `palomar.reconciliation/explain`."
   ([records pool mention-id] (reconciliation/explain records pool mention-id))
   ([records pool mention-id opts] (reconciliation/explain records pool mention-id opts)))
 

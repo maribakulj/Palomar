@@ -198,3 +198,137 @@ a ranking study (lot N4) can call.
   Reading them moved the M6 truth (20 bridged authorities, not 19) and ADR
   0059's counts (19 stated pairs, 17 kept). See
   `docs/eval/person-reconciliation.md`, section M6, "Correction".
+
+## Amendment (lot O6, 2026-11-12): lanes reach the API and the CLI; pool statistics are prepared once
+
+### Context
+
+Lot N5 left two things open. The CLI and the API still called
+`agent-candidates` with the name block, so no run could use the
+identifier lane. And `rank` called `agent-candidates` once per mention.
+Each call recomputed what it reads of the whole pool: the surname
+frequencies and their mean, the pool size, the pool's fingerprint and,
+with anchors, the relations fingerprint and the resolved relations. The
+cost grew with mentions × pool size.
+
+### Decision
+
+**1. Prepared statistics.** `reconcile/prepare` computes them once per
+run, from the pool (and from the model and anchors, when relations are
+read). `agent-candidates` and `candidates/rank` take the result as
+`:prepared`. Without it they prepare it themselves, once per call; `rank`
+does so once for all its mentions. The mean (`tf-mean`) is now computed
+once too: before, it was computed per compared pair. The result is the
+same, item for item. A prepared map names the pool it was made from (the
+same object), and with anchors the model and anchors. Given with another
+pool, or other anchors or another model, it is refused. The name-only
+path reads none of it.
+
+The prepared map is opaque. The matcher reads the mean only from a
+namespaced key that `prepare` sets (`compare-pair` never reads a plain
+`:tf-mean`, and refuses an explicit nil mean beside surname counts). The
+map seals what it states: a map whose size, fingerprint, counts or mean
+were changed since is refused. The rule of the check:
+
+- the **pool by identity**: the same object. Comparing a pool by value
+  costs what preparing it saves;
+- the **model and the anchors by value**: the model's fingerprint
+  (`agent-match/model-fingerprint`) and the relations fingerprint
+  (`agent-relations/relations-fingerprint`). An equal model or equal
+  anchors, other objects, are accepted.
+
+**2. The probabilistic engine ranks the lanes' candidates.**
+`palomar.reconciliation` decides each mention with
+`candidates/rank-each`: `rank`, one result per mention, the pool
+prepared once. The name lane reads the postings of an authority index
+when the pool was read from one (`read-authorities` keeps it as
+`:index`). A pool `{:entries :block}` read from no index keeps its own
+block: the name lane's candidates are then the entries `(block name)`
+returns, in pool order, as the matcher was given them before. Otherwise
+the entries are indexed in memory. A mention reaches
+the lanes and the matcher without its `:authority-record` (the `$3`) and
+without its `:source` (whose subfields hold the `$3`). Neither reads them.
+`reconcile/align-agents` still calls `agent-candidates` with the name
+block; moving it is left open.
+
+**3. `:lanes` and `--lanes`.** `reconcile`, `explain` and `clusters` take
+`:lanes` (`[:name]`, `[:identifier]` or both). The CLI takes `--lanes
+name,identifier` on `reconcile`, `reconcile explain` and `reconcile
+clusters`. The default is the name lane. Its decisions are lot N2's, and
+the output is byte for byte what it was. The order the lanes are named in
+does not matter. An unknown or empty lane is refused (exit 2).
+
+**4. Lanes asked are stated.** When lanes are asked, the result carries
+`:lanes`, in lane order, and so does the run manifest's `:reconcile`.
+`explain` then gives each candidate its `:generated-by`: the lanes that
+found it and the keys that matched. Its text adds a line `found by: …`.
+Each decision, and each explanation, then carries the mention's
+`:reports`: what the identifier lane reports (`:several-authorities`,
+`:ids-disagree`, `:no-authority`, `:invalid-identifier`,
+`:unread-identifier`, §4). The text adds a line `report: …` for each.
+`rank-each` gives each mention its own `:generation`, its own reference
+included, even when it shares a result with a mention read alike.
+With no lane asked, none of this is added: the default output does not
+change. A candidate an identifier alone brings, with no name agreement,
+is for review at most. `explain` says why: "no name agrees".
+
+The manifest states `:lanes` only when lanes are asked: absent by
+default, `[:name]` for `--lanes name`. So `manifest/diff` reports a
+default run and a `--lanes name` run as different. That is right: their
+outputs differ too (the EDN states `:lanes` and the reports).
+
+**5. The historical engine reads names alone.** It refuses any lane but
+the name lane (exit 2 in the CLI; an error from the API). `--lanes name`
+is accepted: it is what the engine does already. Its text does not
+change; its EDN states `:lanes [:name]`.
+
+### What the tests show
+
+- Prepared and unprepared statistics give equal results, on random pools
+  and mentions, for `agent-candidates`, `rank` and `compare-pair`; and
+  `rank` by the name lane with prepared statistics equals the unprepared
+  full scan (`palomar.prepared-pool-property-test`).
+- A ranking computes the pool's statistics once, whatever the number of
+  mentions; prepared statistics of another pool are refused
+  (`palomar.prepared-pool-test`).
+- The default decisions equal lot N2's on five inputs and three pools, one
+  an authority index; the CLI writes the same text; the CLI's EDN is the
+  API's with lanes, for `reconcile`, `explain` and `clusters`; the
+  historical engine refuses the identifier lane; explain names the lanes
+  and keys; the manifest names the lanes; a Cyrillic heading reaches
+  Schlienger by its ISNI and is `:review`, never `:propose`; no `$3`
+  reaches a lane or the matcher on this path; `--lanes` names no file; a
+  hand-made block decides as before; the name lane reads the index
+  file's own postings; the identifier lane's reports reach each decision
+  and each explanation (`palomar.reconciliation-lanes-test`).
+- A tampered prepared map is refused; the mean is read only from
+  `prepare`'s key; an equal model and equal anchors are accepted, an equal
+  pool that is another object is not (`palomar.prepared-pool-test`).
+  Prepared equals unprepared with random frozen anchors too, on pools of
+  up to 40 entries with homonyms and frequent surnames
+  (`palomar.prepared-pool-property-test`).
+- No eval number moves. The evals run with the name lane alone, as before.
+- Review of this lot (a contradictor's mutants). Each was killed by a test,
+  except three that are equivalent, and so cannot be:
+  - M4b, no stripping of `:authority-record` in `candidates/rank`: the
+    reconciliation path strips it first, and no lane reads it; the strip
+    in `rank` is defence in depth.
+  - M4c, the reconciliation path stripping `:source` only: `rank-each`
+    strips `:authority-record` itself.
+  - M9, no `:prepared` passed by the run: `rank-each` then prepares the
+    pool once itself. The statistics are still computed once per run.
+
+  The mutant that reads no index postings (M8) is killed by
+  `the-name-lane-reads-the-index-postings`.
+
+### Measured
+
+A synthetic pool, 1 000 mentions, the shipped model, `candidates/rank`:
+
+| Pool | Before (name lane) | After (name lane) | After (name and identifier) |
+|------|--------------------|-------------------|-----------------------------|
+| 10 000 entries | 207 s | 2.0 s | 1.7 s |
+| 50 000 entries | 1 289 s | 7.3 s | 7.5 s |
+
+The proposals are the same before and after. The benchmark is not in the
+suite.
